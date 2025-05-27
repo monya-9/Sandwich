@@ -1,0 +1,21 @@
+package com.sandwich.SandWich.domain;
+
+import com.sandwich.SandWich.domain.common.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+public class ProjectRanking extends BaseEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+
+    private int rankType;
+    private LocalDateTime rankDate;
+    private int rank;
+}
