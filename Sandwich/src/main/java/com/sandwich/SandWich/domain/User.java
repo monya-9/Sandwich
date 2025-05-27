@@ -6,6 +6,7 @@ import lombok.*;
 import java.util.*;
 
 @Entity
+@Table(name = "users")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class User extends BaseEntity {
     @Id
