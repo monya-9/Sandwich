@@ -25,8 +25,9 @@ public class JwtUtil {
                 .compact();
     }
 
-    public String createRefreshToken() {
+    public String createRefreshToken(String username) {
         return Jwts.builder()
+                .setSubject(username)
                 .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXP))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
