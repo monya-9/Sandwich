@@ -1,9 +1,7 @@
 package com.sandwich.SandWich.controller;
 
 import com.sandwich.SandWich.domain.User;
-import com.sandwich.SandWich.dto.LoginRequest;
-import com.sandwich.SandWich.dto.SignupRequest;
-import com.sandwich.SandWich.dto.TokenResponse;
+import com.sandwich.SandWich.dto.*;
 import com.sandwich.SandWich.repository.UserRepository;
 import com.sandwich.SandWich.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -45,11 +43,40 @@ public class AuthController {
             throw new RuntimeException("비밀번호 불일치");
 
         String accessToken = jwtUtil.createAccessToken(user.getUsername());
-        String refreshToken = jwtUtil.createRefreshToken();
+        String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
 
-        String redisKey = "refresh:" + user.getId();
+        String redisKey = "refresh:userId:" + user.getId();
         redisTemplate.opsForValue().set(redisKey, refreshToken, Duration.ofDays(7));
 
         return ResponseEntity.ok(new TokenResponse(accessToken, refreshToken));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody RefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        String username;
+        try {
+            username = jwtUtil.validateToken(refreshToken);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Refresh Token이 유효하지 않습니다.");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
+        String redisKey = "refresh:userId:" + user.getId();
+        String storedToken = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedToken == null || !storedToken.equals(refreshToken)) {
+            return ResponseEntity.status(401).body("Refresh Token이 서버에 존재하지 않거나 일치하지 않습니다.");
+        }
+
+        String newAccessToken = jwtUtil.createAccessToken(username);
+        String newRefreshToken = jwtUtil.createRefreshToken(username);
+
+        redisTemplate.opsForValue().set(redisKey, newRefreshToken, Duration.ofDays(7));
+
+        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken));
     }
 }
