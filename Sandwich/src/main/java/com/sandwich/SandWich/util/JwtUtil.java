@@ -41,4 +41,8 @@ public class JwtUtil {
                 .getBody()
                 .getSubject();
     }
+
+    public String createToken(String username) {
+        return createAccessToken(username);
+    }
 }
