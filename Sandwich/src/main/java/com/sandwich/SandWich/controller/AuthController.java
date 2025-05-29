@@ -25,10 +25,12 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest req) {
         // Optional: 이메일 중복 체크는 생략 가능
-        User user = new User();
-        user.setEmail(req.getEmail());
-        user.setUsername(req.getUsername());
-        user.setPassword(passwordEncoder.encode(req.getPassword())); // 비밀번호 암호화
+        User user = User.builder()
+                .email(req.getEmail())
+                .username(req.getUsername())
+                .password(passwordEncoder.encode(req.getPassword()))
+                .provider("local")
+                .build();
         userRepository.save(user);
 
         return ResponseEntity.ok("가입 완료");

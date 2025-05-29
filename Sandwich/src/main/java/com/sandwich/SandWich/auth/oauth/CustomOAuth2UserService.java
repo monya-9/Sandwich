@@ -23,22 +23,35 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest request) throws OAuth2AuthenticationException {
         OAuth2User user = super.loadUser(request);
 
-        String provider = request.getClientRegistration().getRegistrationId(); // e.g., "github"
-        String socialId = user.getAttribute("id").toString();
+        String provider = request.getClientRegistration().getRegistrationId();
         String email = user.getAttribute("email");
-        String username = user.getAttribute("login");
+        String username;
 
-        // 이메일이 없을 경우 임의 이메일 대체
-        if (email == null || email.isEmpty()) {
-            email = username + "@github.local";
+        if ("google".equals(provider)) {
+            username = user.getAttribute("name");
+            if (username == null || username.isBlank()) {
+                username = user.getAttribute("given_name");
+            }
+
+            // 그래도 null이면 email 앞부분으로 fallback
+            if (username == null || username.isBlank()) {
+                username = email != null ? email.split("@")[0] : "googleuser";
+            }
+        } else {
+            username = user.getAttribute("login");
         }
 
-        Optional<User> existingUser = userRepository.findByEmail(email);
+        if (email == null || email.isEmpty()) {
+            email = username + "@" + provider + ".local";
+        }
+
+        Optional<User> existingUser = userRepository.findByEmailAndProvider(email, provider);
         if (existingUser.isEmpty()) {
-            System.out.println("회원가입됨: " + email);
+            System.out.println("회원가입됨: " + email + " (" + provider + ")");
             User newUser = User.builder()
                     .email(email)
                     .username(username)
+                    .provider(provider)
                     .password(null)
                     .build();
             userRepository.save(newUser);
@@ -47,7 +60,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return new DefaultOAuth2User(
                 Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
                 user.getAttributes(),
-                "login"
+                "email"
         );
     }
 }
