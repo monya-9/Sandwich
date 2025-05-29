@@ -3,6 +3,7 @@ package com.sandwich.SandWich.auth.oauth;
 import com.sandwich.SandWich.domain.User;
 import com.sandwich.SandWich.repository.UserRepository;
 import com.sandwich.SandWich.util.JwtUtil;
+import com.sandwich.SandWich.auth.redis.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -19,6 +20,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final RedisUtil redisUtil;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -38,10 +40,12 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         // JWT 생성
         String accessToken = jwtUtil.createToken(user.getUsername());
+        String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
+
+        redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
         // 프론트엔드 리다이렉트 URI (필요 시 수정 가능)
         String redirectUri = "http://localhost:3000/oauth2/success?token=" + accessToken;
-
         response.sendRedirect(redirectUri);
     }
 }
