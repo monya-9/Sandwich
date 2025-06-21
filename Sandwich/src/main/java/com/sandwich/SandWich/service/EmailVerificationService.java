@@ -46,7 +46,16 @@ public class EmailVerificationService {
     public boolean verifyCode(String email, String inputCode) {
         String key = "email:verify:" + email;
         String savedCode = redisTemplate.opsForValue().get(key);
-        log.info("[이메일 인증] 검증 요청: {} → 입력 {}, 저장 {}", email, inputCode, savedCode);
-        return inputCode.equals(savedCode);
+        log.info("[이메일 인증] 검증 요청: {} → 사용자 입력 {}, Redis 저장 {}", email, inputCode, savedCode);
+
+        boolean isMatched = inputCode.equals(savedCode);
+        if (isMatched) {
+            log.info("[이메일 인증] 인증 성공");
+            redisTemplate.opsForValue().set("email:verified:" + email, "true", Duration.ofMinutes(10));
+            redisTemplate.delete(key);
+        } else {
+            log.warn("[이메일 인증] 인증 실패: 입력값 불일치");
+        }
+        return isMatched;
     }
 }

@@ -28,6 +28,9 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private String provider;
 
+    @Column(nullable = false)
+    private Boolean isVerified = false;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Profile profile;
 
