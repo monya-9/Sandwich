@@ -24,7 +24,18 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest req) {
-        // Optional: 이메일 중복 체크는 생략 가능
+        String redisKey = "email:verify:" + req.getEmail();
+        String savedCode = redisTemplate.opsForValue().get(redisKey);
+
+        if (savedCode == null) {
+            throw new RuntimeException("이메일 인증이 완료되지 않았습니다.");
+        }
+
+        // 이메일 중복 검사 (선택)
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new RuntimeException("이미 가입된 이메일입니다.");
+        }
+
         User user = User.builder()
                 .email(req.getEmail())
                 .username(req.getUsername())
@@ -32,6 +43,9 @@ public class AuthController {
                 .provider("local")
                 .build();
         userRepository.save(user);
+
+        // 인증번호는 1회성 → 삭제
+        redisTemplate.delete(redisKey);
 
         return ResponseEntity.ok("가입 완료");
     }
