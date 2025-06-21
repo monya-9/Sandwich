@@ -24,28 +24,32 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest req) {
-        String redisKey = "email:verify:" + req.getEmail();
-        String savedCode = redisTemplate.opsForValue().get(redisKey);
+        // 이메일 인증 여부 확인 (코드가 아니라 플래그 기반)
+        String verifiedKey = "email:verified:" + req.getEmail();
+        String verified = redisTemplate.opsForValue().get(verifiedKey);
 
-        if (savedCode == null) {
-            throw new RuntimeException("이메일 인증이 완료되지 않았습니다.");
+        if (!"true".equals(verified)) {
+            return ResponseEntity.status(403).body("이메일 인증이 필요합니다.");
         }
 
-        // 이메일 중복 검사 (선택)
+        // 이메일 중복 검사
         if (userRepository.existsByEmail(req.getEmail())) {
-            throw new RuntimeException("이미 가입된 이메일입니다.");
+            return ResponseEntity.badRequest().body("이미 가입된 이메일입니다.");
         }
 
+        // 사용자 저장 (isVerified 컬럼도 true로)
         User user = User.builder()
                 .email(req.getEmail())
                 .username(req.getUsername())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .provider("local")
+                .isVerified(true) // 이메일 인증 여부를 DB에도 저장
                 .build();
+
         userRepository.save(user);
 
-        // 인증번호는 1회성 → 삭제
-        redisTemplate.delete(redisKey);
+        // 인증 상태 Redis에서 제거
+        redisTemplate.delete(verifiedKey);
 
         return ResponseEntity.ok("가입 완료");
     }
