@@ -78,4 +78,24 @@ public class AuthController {
 
         return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken));
     }
+
+    @PostMapping("/social/profile")
+    public ResponseEntity<?> saveSocialProfile(@RequestBody SignupRequest req,
+                                               @RequestHeader("Authorization") String token) {
+        String username = jwtUtil.validateToken(token.replace("Bearer ", ""));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+        if (user.getIsVerified() != null && user.getIsVerified()) {
+            return ResponseEntity.badRequest().body("이미 프로필이 설정된 유저입니다.");
+        }
+
+        user.setUsername(req.username());
+        user.setIsVerified(true);  // 프로필 입력 완료 처리
+        authService.saveProfile(user, req);
+        userRepository.save(user);
+
+        return ResponseEntity.ok("소셜 유저 프로필 저장 완료");
+    }
+
 }
