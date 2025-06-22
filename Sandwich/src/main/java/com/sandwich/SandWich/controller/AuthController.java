@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
+import com.sandwich.SandWich.service.AuthService;
 import java.time.Duration;
 
 @RestController
@@ -21,37 +21,16 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RedisTemplate<String, String> redisTemplate;
+    private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<String> signup(@RequestBody SignupRequest req) {
-        // 이메일 인증 여부 확인 (코드가 아니라 플래그 기반)
-        String verifiedKey = "email:verified:" + req.getEmail();
-        String verified = redisTemplate.opsForValue().get(verifiedKey);
-
-        if (!"true".equals(verified)) {
-            return ResponseEntity.status(403).body("이메일 인증이 필요합니다.");
+    public ResponseEntity<?> signup(@RequestBody SignupRequest req) {
+        try {
+            authService.signup(req);
+            return ResponseEntity.ok("가입 완료");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        // 이메일 중복 검사
-        if (userRepository.existsByEmail(req.getEmail())) {
-            return ResponseEntity.badRequest().body("이미 가입된 이메일입니다.");
-        }
-
-        // 사용자 저장 (isVerified 컬럼도 true로)
-        User user = User.builder()
-                .email(req.getEmail())
-                .username(req.getUsername())
-                .password(passwordEncoder.encode(req.getPassword()))
-                .provider("local")
-                .isVerified(true) // 이메일 인증 여부를 DB에도 저장
-                .build();
-
-        userRepository.save(user);
-
-        // 인증 상태 Redis에서 제거
-        redisTemplate.delete(verifiedKey);
-
-        return ResponseEntity.ok("가입 완료");
     }
 
     @PostMapping("/login")

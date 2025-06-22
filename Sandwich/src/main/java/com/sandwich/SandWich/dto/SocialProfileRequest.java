@@ -1,10 +1,9 @@
 package com.sandwich.SandWich.dto;
 
+
 import java.util.List;
 
-public record SignupRequest(
-        String email,
-        String password,
+public record SocialProfileRequest(
         String username,
         Long positionId,
         List<Long> interestIds
