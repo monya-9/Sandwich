@@ -20,9 +20,10 @@ public class User extends BaseEntity {
 
     private String username;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
     private String password;
 
     @Column(nullable = false)
@@ -57,4 +58,12 @@ public class User extends BaseEntity {
     @Builder.Default
     @OneToMany(mappedBy = "user")
     private List<Notification> notifications = new ArrayList<>();
+
+    // 1:1 포지션
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private UserPosition userPosition;
+
+    // N:3 관심 분야
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<UserInterest> interests = new ArrayList<>();
 }
