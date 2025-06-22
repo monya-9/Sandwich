@@ -65,4 +65,17 @@ public class AuthService {
 
         redisTemplate.delete(verifiedKey);
     }
+
+    public void saveProfile(User user, SignupRequest req) {
+        if (req.positionId() == null) throw new IllegalArgumentException("포지션은 필수입니다.");
+        if (req.interestIds() == null || req.interestIds().isEmpty()) throw new IllegalArgumentException("관심 분야 최소 1개");
+
+        Position position = positionRepository.findById(req.positionId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 포지션"));
+
+        userPositionRepository.save(new UserPosition(user, position));
+
+        List<Interest> interests = interestRepository.findAllById(req.interestIds());
+        interests.forEach(i -> userInterestRepository.save(new UserInterest(user, i)));
+    }
 }
