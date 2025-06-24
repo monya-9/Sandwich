@@ -7,6 +7,7 @@ import com.sandwich.SandWich.auth.dto.TokenResponse;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupRequest req) {
+    public ResponseEntity<?> signup(@RequestBody @Valid SignupRequest req) {
         try {
             authService.signup(req);
             return ResponseEntity.ok("가입 완료");
