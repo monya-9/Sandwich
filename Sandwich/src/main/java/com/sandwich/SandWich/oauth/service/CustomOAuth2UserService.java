@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.oauth.service;
 
+import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -74,10 +75,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // 5. nameAttributeKey 처리
         String nameAttributeKey = user.getAttribute("email") != null ? "email" : "login";
 
-        return new DefaultOAuth2User(
-                Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
-                user.getAttributes(),
-                nameAttributeKey
+        return new CustomOAuth2User(
+                provider,
+                new DefaultOAuth2User(
+                        Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
+                        user.getAttributes(),
+                        nameAttributeKey
+                )
         );
     }
 }
