@@ -11,15 +11,16 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "your-very-secret-key-string-should-be-long-enough";
+    private static final String SECRET_KEY = "this-is-a-very-very-super-secret-key-that-is-at-least-64-characters!";
     private static final long ACCESS_TOKEN_EXP = 1000 * 60 * 15; // 15분
     private static final long REFRESH_TOKEN_EXP = 1000L * 60 * 60 * 24 * 7; // 7일
 
     private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
 
-    public String createAccessToken(String username) {
+    public String createAccessToken(String username, String role) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role)
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXP))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
@@ -42,7 +43,15 @@ public class JwtUtil {
                 .getSubject();
     }
 
-    public String createToken(String username) {
-        return createAccessToken(username);
+    public String createToken(String username, String role) {
+        return createAccessToken(username, role);
+    }
+
+    public Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }
