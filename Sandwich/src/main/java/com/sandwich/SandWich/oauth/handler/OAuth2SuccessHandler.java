@@ -39,7 +39,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 .orElseThrow(() -> new RuntimeException("OAuth 로그인 유저 DB 없음"));
 
         // JWT 생성
-        String accessToken = jwtUtil.createToken(user.getUsername());
+        String accessToken = jwtUtil.createToken(user.getUsername(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
 
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);

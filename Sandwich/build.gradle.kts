@@ -35,7 +35,6 @@ dependencies {
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	implementation ("org.hibernate.validator:hibernate-validator")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
-
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 

@@ -45,7 +45,7 @@ public class AuthController {
             return ResponseEntity.status(401).body("비밀번호가 일치하지 않습니다.");
         }
 
-        String accessToken = jwtUtil.createAccessToken(user.getUsername());
+        String accessToken = jwtUtil.createAccessToken(user.getUsername(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
 
         String redisKey = "refresh:userId:" + user.getId();
@@ -75,7 +75,7 @@ public class AuthController {
             return ResponseEntity.status(401).body("Refresh Token이 서버에 존재하지 않거나 일치하지 않습니다.");
         }
 
-        String newAccessToken = jwtUtil.createAccessToken(username);
+        String newAccessToken = jwtUtil.createAccessToken(user.getUsername(), user.getRole().name());
         String newRefreshToken = jwtUtil.createRefreshToken(username);
 
         redisTemplate.opsForValue().set(redisKey, newRefreshToken, Duration.ofDays(7));
