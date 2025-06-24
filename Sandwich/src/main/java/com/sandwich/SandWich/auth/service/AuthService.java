@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.auth.service;
 
 import com.sandwich.SandWich.auth.dto.SignupRequest;
+import com.sandwich.SandWich.user.domain.Role;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.user.service.UserService;
@@ -49,6 +50,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(req.password()))
                 .provider("local")
                 .isVerified(true)
+                .role(Role.ROLE_USER)
                 .build();
 
         userRepository.save(user); // 1. 유저 저장만 하고
