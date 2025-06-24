@@ -20,18 +20,18 @@ public class UserService {
     private final UserInterestRepository userInterestRepository;
 
     public void saveProfile(User user, SignupRequest req) {
-        user.setUsername(req.username());
+        user.setUsername(req.getUsername());
         user.setIsVerified(true);
 
-        Position position = positionRepository.findById(req.positionId())
+        Position position = positionRepository.findById(req.getPositionId())
                 .orElseThrow(() -> new IllegalArgumentException("포지션 없음"));
         userPositionRepository.save(new UserPosition(user, position));
 
-        if (req.interestIds().size() > 3) {
+        if (req.getInterestIds().size() > 3) {
             throw new IllegalArgumentException("관심사는 최대 3개까지 가능합니다.");
         }
 
-        for (Long interestId : req.interestIds()) {
+        for (Long interestId : req.getInterestIds()) {
             Interest interest = interestRepository.findById(interestId)
                     .orElseThrow(() -> new IllegalArgumentException("관심사 없음"));
             userInterestRepository.save(new UserInterest(user, interest));
