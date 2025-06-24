@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.oauth.handler;
 
+import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -26,7 +27,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+        CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        String provider = oAuth2User.getProvider();
         String email = oAuth2User.getAttribute("email");
         String username = oAuth2User.getAttribute("login");
 
@@ -44,8 +46,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
-        // 프론트엔드 리다이렉트 URI (필요 시 수정 가능)
-        String redirectUri = "http://localhost:3000/oauth2/success?token=" + accessToken;
+        // 프론트엔드 리다이렉트 URI
+        String redirectUri = "http://localhost:3000/oauth2/success?token=" + accessToken
+                + "&provider=" + user.getProvider();
         response.sendRedirect(redirectUri);
     }
 }
