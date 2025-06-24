@@ -34,6 +34,7 @@ dependencies {
 	implementation("com.google.firebase:firebase-admin:9.2.0")
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	implementation ("org.hibernate.validator:hibernate-validator")
+	implementation("org.springframework.boot:spring-boot-starter-mail")
 
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
