@@ -25,8 +25,8 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<?> getMyProfile(Authentication authentication) {
         System.out.println("컨트롤러 도달함");
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자 없음"));
 
         return ResponseEntity.ok(new UserDto(user));
@@ -36,7 +36,7 @@ public class UserController {
     public ResponseEntity<?> saveSocialProfile(@RequestBody SocialProfileRequest req,
                                                @RequestHeader("Authorization") String token) {
         String username = jwtUtil.validateToken(token.replace("Bearer ", ""));
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
         if (user.getUserPosition() != null || (user.getInterests() != null && !user.getInterests().isEmpty())) {
