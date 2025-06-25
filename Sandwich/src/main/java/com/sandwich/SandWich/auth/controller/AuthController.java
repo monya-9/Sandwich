@@ -77,5 +77,13 @@ public class AuthController {
         return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, "local"));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        authService.logout(token);
+        return ResponseEntity.ok("로그아웃 완료");
+    }
+
+
 
 }

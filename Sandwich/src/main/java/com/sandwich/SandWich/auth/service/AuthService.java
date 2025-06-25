@@ -11,6 +11,7 @@ import com.sandwich.SandWich.user.service.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -72,13 +73,21 @@ public class AuthService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        String accessToken = jwtUtil.createAccessToken(user.getUsername(), user.getRole().name());
-        String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
+        String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
+        String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
 
         String redisKey = "refresh:userId:" + user.getId();
         redisTemplate.opsForValue().set(redisKey, refreshToken, Duration.ofDays(7));
 
         return new TokenResponse(accessToken, refreshToken, "local");
+    }
+
+    public void logout(String accessToken) {
+        String username = jwtUtil.extractUsername(accessToken);
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("유저를 찾을 수 없습니다."));
+        String redisKey = "refresh:userId:" + user.getId();
+        redisTemplate.delete(redisKey);
     }
 
 }
