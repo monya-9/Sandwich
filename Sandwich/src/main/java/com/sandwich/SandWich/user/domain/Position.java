@@ -1,7 +1,9 @@
 package com.sandwich.SandWich.user.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
+@Getter
 @Entity
 public class Position {
     @Id

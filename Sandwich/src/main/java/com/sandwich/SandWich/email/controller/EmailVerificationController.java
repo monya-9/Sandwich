@@ -23,9 +23,10 @@ public class EmailVerificationController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<Boolean> verifyCode(@RequestBody EmailVerifyRequest request) {
-        boolean isValid = emailService.verifyCode(request.getEmail(), request.getCode());
-        return ResponseEntity.ok(isValid);
+    public ResponseEntity<Void> verifyCode(@RequestBody EmailVerifyRequest request) {
+        emailService.verifyCode(request.getEmail(), request.getCode()); // 실패 시 예외 발생
+        return ResponseEntity.ok().build(); // 성공만 OK 처리
     }
+
 
 }
