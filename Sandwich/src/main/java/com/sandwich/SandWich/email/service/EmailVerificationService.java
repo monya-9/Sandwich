@@ -1,5 +1,7 @@
 package com.sandwich.SandWich.email.service;
 
+import com.sandwich.SandWich.global.exception.exceptiontype.EmailVerificationExpiredException;
+import com.sandwich.SandWich.global.exception.exceptiontype.InvalidVerificationCodeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -43,19 +45,22 @@ public class EmailVerificationService {
             throw new RuntimeException("메일 전송 중 오류가 발생했습니다.");
         }
 }
-    public boolean verifyCode(String email, String inputCode) {
+    public void verifyCode(String email, String inputCode) {
         String key = "email:verify:" + email;
         String savedCode = redisTemplate.opsForValue().get(key);
+
         log.info("[이메일 인증] 검증 요청: {} → 사용자 입력 {}, Redis 저장 {}", email, inputCode, savedCode);
 
-        boolean isMatched = inputCode.equals(savedCode);
-        if (isMatched) {
-            log.info("[이메일 인증] 인증 성공");
-            redisTemplate.opsForValue().set("email:verified:" + email, "true", Duration.ofMinutes(10));
-            redisTemplate.delete(key);
-        } else {
-            log.warn("[이메일 인증] 인증 실패: 입력값 불일치");
+        if (savedCode == null) {
+            throw new EmailVerificationExpiredException(); // Redis TTL 만료
         }
-        return isMatched;
+
+        if (!inputCode.equals(savedCode)) {
+            throw new InvalidVerificationCodeException(); // 잘못된 코드 입력
+        }
+
+        log.info("[이메일 인증] 인증 성공");
+        redisTemplate.opsForValue().set("email:verified:" + email, "true", Duration.ofMinutes(10));
+        redisTemplate.delete(key);
     }
 }

@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.oauth.service;
 
+import com.sandwich.SandWich.global.exception.exceptiontype.EmailAlreadyExistsException;
 import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -9,7 +10,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest request) throws OAuth2AuthenticationException {
         OAuth2User user = super.loadUser(request);
 
-        String provider = request.getClientRegistration().getRegistrationId(); // "google" or "github"
+        String provider = request.getClientRegistration().getRegistrationId();
         String email = user.getAttribute("email");
         String username;
 
@@ -39,7 +39,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 username = user.getAttribute("given_name");
             }
             if (username == null || username.isBlank()) {
-                username = email != null ? email.split("@")[0] : "googleuser";
+                username = email != null ? email.split("@")[0] : "googleUser";
             }
         } else {
             username = user.getAttribute("login");
@@ -54,8 +54,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         Optional<User> byEmail = userRepository.findByEmail(email);
         if (byEmail.isPresent() && !byEmail.get().getProvider().equals(provider)) {
             log.warn("중복된 이메일 사용 시도: email={}, 기존 provider={}, 시도된 provider={}", email, byEmail.get().getProvider(), provider);
-            OAuth2Error error = new OAuth2Error("email_conflict", "해당 이메일로 이미 가입된 계정이 있습니다. 이메일로 로그인해주세요.", null);
-            throw new OAuth2AuthenticationException(error);
+            throw new EmailAlreadyExistsException();
         }
 
         // 4. provider + email 기준으로 조회
