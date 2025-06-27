@@ -4,6 +4,7 @@ package com.sandwich.SandWich.user.service;
 import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.global.exception.exceptiontype.InterestNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.PositionNotFoundException;
+import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.*;
 import com.sandwich.SandWich.user.dto.InterestDto;
 import com.sandwich.SandWich.user.dto.PositionDto;
@@ -80,6 +81,17 @@ public class UserService {
                 .collect(Collectors.toList());
 
         return new UserDto(user, position != null ? new PositionDto(position) : null, interestDtos);
+    }
+
+    public User findByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
+
+        if (user.isDeleted()) {
+            throw new UserNotFoundException();
+        }
+
+        return user;
     }
 
 }
