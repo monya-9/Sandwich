@@ -89,4 +89,7 @@ public class User extends BaseEntity {
     private Boolean isProfileSet = false;
 
 
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
 }
