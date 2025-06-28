@@ -8,7 +8,6 @@ import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
@@ -38,7 +37,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         }
 
         // DB에서 유저 정보 조회
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new UserNotFoundException());
 
         // JWT 생성

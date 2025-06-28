@@ -39,7 +39,7 @@ class UserServiceTest {
                 .isDeleted(false)
                 .build();
 
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailAndIsDeletedFalse(email)).thenReturn(Optional.of(user));
 
         // when
         User result = userService.findByEmail(email);
@@ -53,7 +53,7 @@ class UserServiceTest {
     void 이메일로_회원조회_실패시_예외발생() {
         // given
         String email = "notfound@example.com";
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(userRepository.findByEmailAndIsDeletedFalse(email)).thenReturn(Optional.empty());
 
         // expect
         assertThrows(UserNotFoundException.class, () -> {
@@ -71,7 +71,7 @@ class UserServiceTest {
                 .isDeleted(true)
                 .build();
 
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(withdrawn));
+        when(userRepository.findByEmailAndIsDeletedFalse(email)).thenReturn(Optional.of(withdrawn));
 
         // expect
         assertThrows(UserNotFoundException.class, () -> {

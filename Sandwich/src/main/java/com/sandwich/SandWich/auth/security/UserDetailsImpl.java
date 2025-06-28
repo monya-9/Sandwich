@@ -19,10 +19,9 @@ public class UserDetailsImpl implements UserDetails {
         this.user = user;
     }
 
-    // 권한 없음으로 단순 처리 (지금은 ROLE 처리 안 하니까 비워둠)
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        return Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()));
     }
 
     @Override
