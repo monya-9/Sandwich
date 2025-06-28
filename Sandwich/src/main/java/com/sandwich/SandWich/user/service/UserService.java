@@ -8,6 +8,7 @@ import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundExceptio
 import com.sandwich.SandWich.user.domain.*;
 import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.*;
+import com.sandwich.SandWich.user.domain.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -84,8 +85,13 @@ public class UserService {
                 .map(ui -> new InterestDto(ui.getInterest()))
                 .collect(Collectors.toList());
 
-        int followerCount = user.getFollowers().size();
-        int followingCount = user.getFollowings().size();
+        int followerCount = user.getFollowers().stream()
+                .filter(f -> !f.getFollower().isDeleted())
+                .toList().size();
+
+        int followingCount = user.getFollowings().stream()
+                .filter(f -> !f.getFollowed().isDeleted())
+                .toList().size();
 
         return new UserProfileResponse(
                 user.getUsername(),
@@ -136,6 +142,23 @@ public class UserService {
         }
 
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteMe(User user) {
+        user.setIsDeleted(true);
+
+        // 프로필 민감 정보 제거
+        Profile profile = user.getProfile();
+        if (profile != null) {
+            profile.setBio(null);
+            profile.setSkills(null);
+            profile.setGithub(null);
+            profile.setLinkedin(null);
+            profile.setProfileImage(null);
+        }
+
+        userRepository.save(user); // Profile도 Cascade로 저장됨
     }
 
 }

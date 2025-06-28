@@ -1,0 +1,12 @@
+package com.sandwich.SandWich.project.repository;
+
+import com.sandwich.SandWich.project.domain.Project;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
+public interface ProjectRepository extends JpaRepository<Project, Long> {
+    @Query("SELECT pr FROM Project pr WHERE pr.user.isDeleted = false")
+    List<Project> findAllByUserIsNotDeleted();
+}

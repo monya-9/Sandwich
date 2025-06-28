@@ -40,14 +40,9 @@ public class UserController {
 
     // 회원 탈퇴
     @DeleteMapping("/me")
-    public ResponseEntity<?> deleteMyAccount(Authentication authentication) {
-        String email = authentication.getName();
-        User user = userRepository.findByEmailAndIsDeletedFalse(email)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
-
-        user.setDeleted(true);
-        userRepository.save(user);
-        redisTemplate.delete("refresh:userId:" + user.getId());
+    public ResponseEntity<?> deleteMyAccount(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        userService.deleteMe(userDetails.getUser());  // ✅ 서비스로 위임
+        redisTemplate.delete("refresh:userId:" + userDetails.getUser().getId());
 
         return ResponseEntity.ok("회원 탈퇴 완료");
     }
