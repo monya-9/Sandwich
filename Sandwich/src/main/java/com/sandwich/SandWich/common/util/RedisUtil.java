@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.common.util;
 
+import com.sandwich.SandWich.global.exception.exceptiontype.RefreshTokenNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,11 @@ public class RedisUtil {
 
     public String getRefreshToken(String userId) {
         String key = "refresh:userId:" + userId;
-        return redisTemplate.opsForValue().get(key);
+        String token = redisTemplate.opsForValue().get(key);
+        if (token == null) {
+            throw new RefreshTokenNotFoundException();
+        }
+        return token;
     }
 
     public void deleteRefreshToken(String userId) {
