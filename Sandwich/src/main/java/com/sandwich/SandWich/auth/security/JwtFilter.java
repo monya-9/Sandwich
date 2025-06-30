@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.auth.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
@@ -61,6 +62,12 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 System.out.println(">> 현재 인증 객체: " + auth);
                 System.out.println(">> 권한들: " + auth.getAuthorities());
+            }catch (ExpiredJwtException e) {
+                log.warn("Access Token 만료: {}", e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"message\": \"Access Token이 만료되었습니다.\"}");
+                return;
             } catch (Exception e) {
                 log.warn("JWT 필터 실패: {}", e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
