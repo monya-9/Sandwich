@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.auth.service;
 
+import com.sandwich.SandWich.global.exception.exceptiontype.UserDeletedException;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
@@ -17,9 +18,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자 없음"));
-
+        if (user.isDeleted()) {
+            throw new UserDeletedException();
+        }
         return new UserDetailsImpl(user);
     }
 }
