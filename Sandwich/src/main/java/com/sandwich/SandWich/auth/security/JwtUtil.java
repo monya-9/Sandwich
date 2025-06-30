@@ -54,4 +54,9 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    public String extractUsername(String token) {
+        return parseClaims(token).getSubject(); // 이메일이 subject로 들어가 있어야 함
+    }
+
 }
