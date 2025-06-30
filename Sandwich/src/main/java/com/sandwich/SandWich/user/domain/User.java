@@ -7,8 +7,11 @@ import com.sandwich.SandWich.common.domain.BaseEntity;
 import com.sandwich.SandWich.project.domain.Project;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Where;
+
 import java.util.*;
 
+@Where(clause = "is_deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,6 +39,9 @@ public class User extends BaseEntity {
     @Builder.Default
     @Column(nullable = false)
     private Boolean isVerified = false;
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Profile profile;
