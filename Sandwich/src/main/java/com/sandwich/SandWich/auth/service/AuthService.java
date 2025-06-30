@@ -28,22 +28,22 @@ public class AuthService {
     private final JwtUtil jwtUtil;
 
     private void validateSignup(SignupRequest req) {
-        String verifiedKey = "email:verified:" + req.email();
+        String verifiedKey = "email:verified:" + req.getEmail();
         String verified = redisTemplate.opsForValue().get(verifiedKey);
 
         if (!"true".equals(verified)) {
             throw new IllegalArgumentException("이메일 인증이 필요합니다.");
         }
 
-        if (userRepository.existsByEmail(req.email())) {
+        if (userRepository.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
 
-        if (req.positionId() == null) {
+        if (req.getPositionId() == null) {
             throw new IllegalArgumentException("포지션은 필수 항목입니다.");
         }
 
-        if (req.interestIds() == null || req.interestIds().isEmpty()) {
+        if (req.getInterestIds() == null || req.getInterestIds().isEmpty()) {
             throw new IllegalArgumentException("관심 분야는 최소 1개 이상 선택해주세요.");
         }
     }
@@ -51,9 +51,9 @@ public class AuthService {
     public void signup(SignupRequest req) {
         validateSignup(req);
         User user = User.builder()
-                .email(req.email())
-                .username(req.username())
-                .password(passwordEncoder.encode(req.password()))
+                .email(req.getEmail())
+                .username(req.getUsername())
+                .password(passwordEncoder.encode(req.getPassword()))
                 .provider("local")
                 .isVerified(true)
                 .role(Role.ROLE_USER)
@@ -61,7 +61,7 @@ public class AuthService {
 
         userRepository.save(user); // 1. 유저 저장만 하고
         userService.saveProfile(user, req); // 2. 프로필 처리 위임
-        redisTemplate.delete("email:verified:" + req.email());  // 3. 인증 완료 처리
+        redisTemplate.delete("email:verified:" + req.getEmail());  // 3. 인증 완료 처리
     }
 
     public TokenResponse login(LoginRequest req) {
