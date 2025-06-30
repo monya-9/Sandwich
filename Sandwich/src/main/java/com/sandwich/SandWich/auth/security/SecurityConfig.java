@@ -15,6 +15,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -28,7 +32,7 @@ public class SecurityConfig {
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -59,6 +63,11 @@ public class SecurityConfig {
                         })
                 )
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestResolver(
+                                        new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
+                                )
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )

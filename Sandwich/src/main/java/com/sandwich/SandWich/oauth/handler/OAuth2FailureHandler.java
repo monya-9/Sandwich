@@ -29,9 +29,14 @@ public class OAuth2FailureHandler implements AuthenticationFailureHandler {
         }
 
         String errorMessage = URLEncoder.encode(rawMessage, StandardCharsets.UTF_8);
-        String redirectUrl = "http://localhost:3000/oauth2/error?message=" + errorMessage;
+        String provider = request.getParameter("state");
 
-        log.warn("[소셜 로그인 실패] {}", rawMessage);
+        // 기본 fallback redirect URI
+        String redirectUrl = "http://localhost:3000/oauth2/error"
+                + "?provider=" + URLEncoder.encode(provider != null ? provider : "unknown", StandardCharsets.UTF_8)
+                + "&message=" + errorMessage;
+
+        log.warn("[소셜 로그인 실패] provider={}, message={}", provider, rawMessage);
         response.sendRedirect(redirectUrl);
     }
 }

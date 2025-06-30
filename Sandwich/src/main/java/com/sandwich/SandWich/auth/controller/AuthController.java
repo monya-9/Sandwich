@@ -38,21 +38,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        User user = userRepository.findByEmail(req.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이메일입니다."));
-
-        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(401).body("비밀번호가 일치하지 않습니다.");
+        try {
+            TokenResponse tokenResponse = authService.login(req);
+            return ResponseEntity.ok(tokenResponse);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
         }
-
-        String accessToken = jwtUtil.createAccessToken(user.getUsername(), user.getRole().name());
-        String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
-
-        String redisKey = "refresh:userId:" + user.getId();
-        redisTemplate.opsForValue().set(redisKey, refreshToken, Duration.ofDays(7));
-
-        return ResponseEntity.ok(new TokenResponse(accessToken, refreshToken));
     }
+
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@RequestBody RefreshRequest request) {
@@ -80,7 +73,7 @@ public class AuthController {
 
         redisTemplate.opsForValue().set(redisKey, newRefreshToken, Duration.ofDays(7));
 
-        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken));
+        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, "local"));
     }
 
 
