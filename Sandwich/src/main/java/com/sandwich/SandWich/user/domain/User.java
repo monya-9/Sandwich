@@ -11,7 +11,6 @@ import org.hibernate.annotations.Where;
 
 import java.util.*;
 
-@Where(clause = "is_deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,6 +39,7 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private Boolean isVerified = false;
 
+    @Builder.Default
     @Column(name = "is_deleted")
     private boolean isDeleted = false;
 
@@ -55,11 +55,11 @@ public class User extends BaseEntity {
     private List<Comment> comments = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(mappedBy = "follower")
-    private List<Follow> following = new ArrayList<>();
+    @OneToMany(mappedBy = "follower", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Follow> followings = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(mappedBy = "followed")
+    @OneToMany(mappedBy = "followed", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Follow> followers = new ArrayList<>();
 
     @Builder.Default
@@ -80,6 +80,16 @@ public class User extends BaseEntity {
     private List<UserInterest> interests = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     @Column(nullable = false)
     private Role role = Role.ROLE_USER;
+
+    @Builder.Default
+    @Column(name = "is_profile_set")
+    private Boolean isProfileSet = false;
+
+
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
 }

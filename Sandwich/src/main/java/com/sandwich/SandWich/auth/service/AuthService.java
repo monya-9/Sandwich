@@ -17,8 +17,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -63,12 +61,12 @@ public class AuthService {
                 .build();
 
         userRepository.save(user); // 1. 유저 저장만 하고
-        userService.saveProfile(user, req); // 2. 프로필 처리 위임
+        userService.saveBasicProfile(user, req); // 2. 프로필 처리 위임
         redisUtil.deleteValue("email:verified:" + req.getEmail());  // 3. 인증 완료 처리
     }
 
     public TokenResponse login(LoginRequest req) {
-        User user = userRepository.findByEmail(req.getEmail())
+        User user = userRepository.findByEmailAndIsDeletedFalse(req.getEmail())
                 .orElseThrow(UserNotFoundException::new); // 존재하지 않는 이메일
 
         if (!user.getProvider().equals("local")) {
@@ -96,7 +94,7 @@ public class AuthService {
 
     public void logout(String accessToken) {
         String username = jwtUtil.extractUsername(accessToken);
-        User user = userRepository.findByEmail(username)
+        User user = userRepository.findByEmailAndIsDeletedFalse(username)
                 .orElseThrow(() -> new UsernameNotFoundException("유저를 찾을 수 없습니다."));
         String redisKey = "refresh:userId:" + user.getId();
         redisUtil.deleteRefreshToken(String.valueOf(user.getId()));

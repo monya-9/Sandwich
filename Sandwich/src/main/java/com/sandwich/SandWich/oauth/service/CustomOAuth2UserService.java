@@ -51,14 +51,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         // 3. 이메일 중복 + provider 불일치 확인
-        Optional<User> byEmail = userRepository.findByEmail(email);
+        Optional<User> byEmail = userRepository.findByEmailAndIsDeletedFalse(email);
         if (byEmail.isPresent() && !byEmail.get().getProvider().equals(provider)) {
             log.warn("중복된 이메일 사용 시도: email={}, 기존 provider={}, 시도된 provider={}", email, byEmail.get().getProvider(), provider);
             throw new EmailAlreadyExistsException();
         }
 
         // 4. provider + email 기준으로 조회
-        Optional<User> existingUser = userRepository.findByEmailAndProvider(email, provider);
+        Optional<User> existingUser = userRepository.findByEmailAndProviderAndIsDeletedFalse(email, provider);
         if (existingUser.isEmpty()) {
             log.info("소셜 회원가입됨: {} ({})", email, provider);
             User newUser = User.builder()
