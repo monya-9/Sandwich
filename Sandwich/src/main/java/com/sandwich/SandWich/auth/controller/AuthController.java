@@ -12,12 +12,10 @@ import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import com.sandwich.SandWich.auth.service.AuthService;
-import java.time.Duration;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
@@ -45,7 +43,7 @@ public class AuthController {
         String refreshToken = request.getRefreshToken();
         String email = jwtUtil.validateToken(refreshToken);
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(UserNotFoundException::new);
 
         String storedToken = redisUtil.getRefreshToken(String.valueOf(user.getId()));

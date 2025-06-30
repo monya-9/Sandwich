@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface UserInterestRepository extends JpaRepository<UserInterest, Long> {
     List<UserInterest> findByUser(User user);  // 유저 기준 관심분야 목록 조회
+    void deleteByUser(User user);
 }
