@@ -26,4 +26,13 @@ public class RedisUtil {
         String key = "refresh:userId:" + userId;
         redisTemplate.delete(key);
     }
+
+    public String getValue(String key) {
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    public void deleteValue(String key) {
+        redisTemplate.delete(key);
+    }
+
 }

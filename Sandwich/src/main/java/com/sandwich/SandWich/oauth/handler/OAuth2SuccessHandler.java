@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.oauth.handler;
 
+import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.common.util.RedisUtil;
@@ -38,12 +39,11 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         // DB에서 유저 정보 조회
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("OAuth 로그인 유저 DB 없음"));
+                .orElseThrow(() -> new UserNotFoundException());
 
         // JWT 생성
-        String accessToken = jwtUtil.createToken(user.getUsername(), user.getRole().name());
-        String refreshToken = jwtUtil.createRefreshToken(user.getUsername());
-
+        String accessToken = jwtUtil.createToken(user.getEmail(), user.getRole().name());
+        String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
         // 프론트엔드 리다이렉트 URI
