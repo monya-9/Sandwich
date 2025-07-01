@@ -2,6 +2,7 @@ package com.sandwich.SandWich.project.controller;
 
 import com.sandwich.SandWich.project.dto.ProjectContentRequest;
 import com.sandwich.SandWich.project.dto.ProjectContentUpdateRequest;
+import com.sandwich.SandWich.project.dto.ReorderRequest;
 import com.sandwich.SandWich.project.service.ProjectContentService;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,17 @@ import java.util.List;
 public class ProjectContentController {
 
     private final ProjectContentService contentService;
+
+    @PatchMapping("/reorder")
+    public ResponseEntity<Void> reorderContents(
+            @PathVariable Long projectId,
+            @RequestBody List<ReorderRequest> reorderList,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        contentService.reorderContents(projectId, reorderList, userDetails.getUser());
+        return ResponseEntity.ok().build();
+    }
+
 
     @PostMapping
     public ResponseEntity<Void> saveContents(
@@ -41,6 +53,8 @@ public class ProjectContentController {
         contentService.deleteContent(projectId, contentId, user);
         return ResponseEntity.noContent().build();
     }
+
+
 
     @PatchMapping("/{contentId}")
     public ResponseEntity<Void> updateContent(
