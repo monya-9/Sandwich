@@ -28,4 +28,16 @@ public class ProjectContentController {
         contentService.saveContents(projectId, requestList, user);
         return ResponseEntity.ok().build();
     }
+
+
+    @DeleteMapping("/{contentId}")
+    public ResponseEntity<Void> deleteContent(
+            @PathVariable Long projectId,
+            @PathVariable Long contentId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        User user = userDetails.getUser();
+        contentService.deleteContent(projectId, contentId, user);
+        return ResponseEntity.noContent().build();
+    }
 }
