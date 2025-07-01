@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.project.controller;
 
 import com.sandwich.SandWich.project.dto.ProjectContentRequest;
+import com.sandwich.SandWich.project.dto.ProjectContentUpdateRequest;
 import com.sandwich.SandWich.project.service.ProjectContentService;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -39,5 +40,16 @@ public class ProjectContentController {
         User user = userDetails.getUser();
         contentService.deleteContent(projectId, contentId, user);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{contentId}")
+    public ResponseEntity<Void> updateContent(
+            @PathVariable Long projectId,
+            @PathVariable Long contentId,
+            @RequestBody ProjectContentUpdateRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        contentService.updateContent(projectId, contentId, request.getData(), userDetails.getUser());
+        return ResponseEntity.ok().build();
     }
 }
