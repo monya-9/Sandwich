@@ -11,6 +11,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - sandwich-net
 
   redis:
     image: redis:7
@@ -18,6 +20,12 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    networks:
+      - sandwich-net
 
 volumes:
   pgdata:
+
+networks:
+  sandwich-net:
+    external: true
