@@ -4,6 +4,7 @@ import com.sandwich.SandWich.project.domain.ContentType;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.domain.ProjectContent;
 import com.sandwich.SandWich.project.dto.ProjectContentRequest;
+import com.sandwich.SandWich.project.dto.ReorderRequest;
 import com.sandwich.SandWich.project.repository.ProjectContentRepository;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
@@ -77,5 +78,22 @@ public class ProjectContentService {
         }
 
         content.setData(newData);
+    }
+
+    @Transactional
+    public void reorderContents(Long projectId, List<ReorderRequest> reorderList, User user) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트가 존재하지 않습니다."));
+
+        if (!project.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("본인의 프로젝트만 수정 가능합니다.");
+        }
+
+        for (ReorderRequest reorder : reorderList) {
+            ProjectContent content = contentRepository.findById(reorder.getContentId())
+                    .orElseThrow(() -> new IllegalArgumentException("해당 콘텐츠가 존재하지 않습니다."));
+            content.setContentOrder(reorder.getOrder());
+        }
+        // flush를 통한 Dirty Checking으로 저장
     }
 }
