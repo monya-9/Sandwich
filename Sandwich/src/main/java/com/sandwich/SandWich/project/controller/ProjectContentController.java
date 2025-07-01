@@ -1,0 +1,31 @@
+package com.sandwich.SandWich.project.controller;
+
+import com.sandwich.SandWich.project.dto.ProjectContentRequest;
+import com.sandwich.SandWich.project.service.ProjectContentService;
+import com.sandwich.SandWich.user.domain.User;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import com.sandwich.SandWich.auth.security.UserDetailsImpl;
+
+import java.util.List;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/projects/{projectId}/contents")
+public class ProjectContentController {
+
+    private final ProjectContentService contentService;
+
+    @PostMapping
+    public ResponseEntity<Void> saveContents(
+            @PathVariable Long projectId,
+            @RequestBody List<ProjectContentRequest> requestList,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        User user = userDetails.getUser();
+        contentService.saveContents(projectId, requestList, user);
+        return ResponseEntity.ok().build();
+    }
+}
