@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.project.service;
 
+import com.sandwich.SandWich.project.domain.ContentType;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.domain.ProjectContent;
 import com.sandwich.SandWich.project.dto.ProjectContentRequest;
@@ -56,5 +57,25 @@ public class ProjectContentService {
         }
 
         contentRepository.delete(content);
+    }
+
+    @Transactional
+    public void updateContent(Long projectId, Long contentId, String newData, User user) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("프로젝트가 존재하지 않습니다."));
+
+        if (!project.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("본인의 프로젝트만 수정할 수 있습니다.");
+        }
+
+        ProjectContent content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new IllegalArgumentException("콘텐츠가 존재하지 않습니다."));
+
+        // TEXT 콘텐츠만 수정 허용
+        if (!content.getType().equals(ContentType.TEXT)) {
+            throw new IllegalArgumentException("TEXT 타입 콘텐츠만 수정할 수 있습니다.");
+        }
+
+        content.setData(newData);
     }
 }
