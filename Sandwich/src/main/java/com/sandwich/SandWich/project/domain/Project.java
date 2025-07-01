@@ -20,7 +20,6 @@ public class Project extends BaseEntity {
     private String image;
     private String description;
     private String tools;
-    private boolean pickone;
     private String repositoryUrl;
     private String demoUrl;
 
