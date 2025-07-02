@@ -1,15 +1,7 @@
-//각각의 프로젝트 카드 (작성자, 좋아요, 조회수 등 포함)
 import React from 'react';
+import { Project } from '../../types/Project';
 
-type ProjectCardProps = {
-  id: number;
-  title: string;
-  author: string;
-  likes: number;
-  views: number;
-  comments: number;
-  // 필요에 따라 다른 필드 추가 가능
-};
+type ProjectCardProps = Project;
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
   title,
