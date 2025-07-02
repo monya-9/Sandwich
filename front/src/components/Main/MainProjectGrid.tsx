@@ -1,15 +1,6 @@
 import React from 'react';
 import ProjectCard from './ProjectCard';
-
-type Project = {
-  id: number;
-  title: string;
-  author: string;
-  likes: number;
-  views: number;
-  comments: number;
-  // 필요 시 여기에 다른 필드 추가 가능
-};
+import { Project } from '../../types/Project';
 
 type MainProjectGridProps = {
   title: string;

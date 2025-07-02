@@ -1,13 +1,5 @@
 import React, { useRef } from 'react';
-
-type Project = {
-  id: number;
-  title: string;
-  author: string;
-  likes: number;
-  views: number;
-  comments: number;
-};
+import { Project } from '../../types/Project';
 
 const MainHeroSection = ({ projects }: { projects: Project[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -24,7 +16,6 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     <section className="w-full relative mb-8">
       <h1 className="text-3xl font-bold text-green-700 mb-4">이번 주 인기 프로젝트</h1>
 
-      {/* 왼쪽 화살표 */}
       <button
         onClick={scrollLeft}
         className="absolute left-0 top-1/2 transform -translate-y-1/2 w-[50px] h-[50px] bg-white rounded-full shadow-md flex items-center justify-center z-10 mt-[30px]"
@@ -32,7 +23,6 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         <span className="text-black text-xl rotate-180">{'>'}</span>
       </button>
 
-      {/* 오른쪽 화살표 */}
       <button
         onClick={scrollRight}
         className="absolute right-0 top-1/2 transform -translate-y-1/2 w-[50px] h-[50px] bg-white rounded-full shadow-md flex items-center justify-center z-10 mt-[30px]"
@@ -40,13 +30,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         <span className="text-black text-xl">{'>'}</span>
       </button>
 
-      {/* 스크롤 영역 */}
       <div
         ref={scrollRef}
         className="flex overflow-x-auto no-scrollbar gap-4 px-4 py-2 mt-[8px]"
         style={{ scrollSnapType: 'x mandatory' }}
       >
-
         {projects.map((project) => (
           <div
             key={project.id}
