@@ -1,10 +1,14 @@
 package com.sandwich.SandWich.project.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
-
-@Getter @Setter
-public class ProjectRequest {
+@Getter
+@Builder
+@AllArgsConstructor
+public class ProjectDetailResponse {
+    private Long projectId;
     private String title;
     private String description;
     private String image;

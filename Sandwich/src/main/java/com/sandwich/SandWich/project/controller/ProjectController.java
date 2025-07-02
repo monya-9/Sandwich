@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.project.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
+import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
 import com.sandwich.SandWich.project.dto.ProjectRequest;
 import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.service.ProjectService;
@@ -24,6 +25,12 @@ public class ProjectController {
     ) {
         User user = userDetails.getUser();
         ProjectResponse response = projectService.createProject(request, user);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProjectDetailResponse> getProject(@PathVariable Long id) {
+        ProjectDetailResponse response = projectService.getProjectById(id);
         return ResponseEntity.ok(response);
     }
 }
