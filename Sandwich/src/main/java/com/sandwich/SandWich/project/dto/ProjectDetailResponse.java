@@ -3,9 +3,11 @@ package com.sandwich.SandWich.project.dto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Builder
+@NoArgsConstructor
 @AllArgsConstructor
 public class ProjectDetailResponse {
     private Long projectId;
@@ -23,4 +25,8 @@ public class ProjectDetailResponse {
     private String snsUrl;
     private Boolean qrCodeEnabled;
     private String qrImageUrl;
+    private String frontendBuildCommand;
+    private String backendBuildCommand;
+    private Integer portNumber;
+    private String extraRepoUrl;
 }

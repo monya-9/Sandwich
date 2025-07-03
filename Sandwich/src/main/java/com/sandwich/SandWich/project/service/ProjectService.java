@@ -39,6 +39,10 @@ public class ProjectService {
         project.setCoverUrl(request.getCoverUrl());
         project.setSnsUrl(request.getSnsUrl());
         project.setQrCodeEnabled(request.getQrCodeEnabled());
+        project.setFrontendBuildCommand(request.getFrontendBuildCommand());
+        project.setBackendBuildCommand(request.getBackendBuildCommand());
+        project.setPortNumber(request.getPortNumber());
+        project.setExtraRepoUrl(request.getExtraRepoUrl());
 
         // 1차 저장
         Project saved = projectRepository.save(project);
@@ -82,6 +86,10 @@ public class ProjectService {
                 .snsUrl(project.getSnsUrl())
                 .qrCodeEnabled(project.getQrCodeEnabled())
                 .qrImageUrl(project.getQrImageUrl())
+                .frontendBuildCommand(project.getFrontendBuildCommand())
+                .backendBuildCommand(project.getBackendBuildCommand())
+                .portNumber(project.getPortNumber())
+                .extraRepoUrl(project.getExtraRepoUrl())
                 .build();
     }
 }
