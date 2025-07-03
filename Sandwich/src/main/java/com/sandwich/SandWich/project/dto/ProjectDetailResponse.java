@@ -22,4 +22,5 @@ public class ProjectDetailResponse {
     private String coverUrl;
     private String snsUrl;
     private Boolean qrCodeEnabled;
+    private String qrImageUrl;
 }
