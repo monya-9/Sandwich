@@ -57,6 +57,10 @@ public class Project extends BaseEntity {
     private Boolean qrCodeEnabled;
 
     private String qrImageUrl;
+    private String frontendBuildCommand;
+    private String backendBuildCommand;
+    private Integer portNumber;
+    private String extraRepoUrl;
 
     // 좋아요 기능 연동
     @OneToMany(mappedBy = "project")

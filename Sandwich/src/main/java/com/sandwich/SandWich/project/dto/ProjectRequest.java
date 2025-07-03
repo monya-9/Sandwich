@@ -1,9 +1,11 @@
 package com.sandwich.SandWich.project.dto;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 
 @Getter @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProjectRequest {
     private String title;
     private String description;
@@ -18,4 +20,8 @@ public class ProjectRequest {
     private String coverUrl;
     private String snsUrl;
     private Boolean qrCodeEnabled;
+    private String frontendBuildCommand;
+    private String backendBuildCommand;
+    private Integer portNumber;
+    private String extraRepoUrl;
 }
