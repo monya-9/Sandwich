@@ -1,12 +1,16 @@
 package com.sandwich.SandWich.project.service;
 
+import com.sandwich.SandWich.common.util.QRCodeGenerator;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
 import com.sandwich.SandWich.project.dto.ProjectRequest;
 import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
+import com.sandwich.SandWich.upload.util.S3Uploader;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final S3Uploader s3Uploader;
+    private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request, User user) {
@@ -34,10 +40,24 @@ public class ProjectService {
         project.setSnsUrl(request.getSnsUrl());
         project.setQrCodeEnabled(request.getQrCodeEnabled());
 
+        // 1차 저장
         Project saved = projectRepository.save(project);
 
-        // username 기반 preview URL 구성
-        String previewUrl = user.getUsername() + ".sandwich.com";
+        // preview URL 구성
+        // preview URL에 프로젝트 ID 포함
+        String previewUrl = user.getUsername() + ".sandwich.com/projects/" + saved.getId();
+
+        // QR 코드 생성 및 업로드 조건 체크
+        if (request.getQrCodeEnabled() != null && request.getQrCodeEnabled()) {
+            String qrTargetUrl = "https://" + previewUrl;
+            log.info("[QR 생성] 시작 - previewUrl: {}", qrTargetUrl);
+            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(qrTargetUrl, 300, 300);
+            log.info("[QR 생성] 완료 - {} 바이트", qrImage.length);
+            String qrImageUrl = s3Uploader.uploadQrImage(qrImage);  // ⚠️ S3Uploader 주입 필요
+            log.info("[QR 업로드] 완료 - S3 URL: {}", qrImageUrl);
+            saved.setQrImageUrl(qrImageUrl);
+        }
+
         return new ProjectResponse(saved.getId(), previewUrl);
     }
 
@@ -61,6 +81,7 @@ public class ProjectService {
                 .coverUrl(project.getCoverUrl())
                 .snsUrl(project.getSnsUrl())
                 .qrCodeEnabled(project.getQrCodeEnabled())
+                .qrImageUrl(project.getQrImageUrl())
                 .build();
     }
 }
