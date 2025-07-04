@@ -20,7 +20,6 @@ public class Project extends BaseEntity {
     private String image;
     private String description;
     private String tools;
-    private boolean pickone;
     private String repositoryUrl;
     private String demoUrl;
 
@@ -35,4 +34,7 @@ public class Project extends BaseEntity {
 
     @OneToMany(mappedBy = "project")
     private List<ChallengeOption> challengeOptions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectContent> contents = new ArrayList<>();
 }
