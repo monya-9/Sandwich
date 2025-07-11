@@ -5,6 +5,8 @@ import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.global.exception.exceptiontype.InterestNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.PositionNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.project.domain.Project;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.user.domain.*;
 import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.*;
@@ -12,7 +14,8 @@ import com.sandwich.SandWich.user.domain.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,7 +30,9 @@ public class UserService {
     private final InterestRepository interestRepository;
     private final UserPositionRepository userPositionRepository;
     private final UserInterestRepository userInterestRepository;
-    private final ProfileRepository profileRepository;
+    private final ProjectRepository projectRepository;
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
+
 
     @Transactional
     public void upsertUserProfile(User user, UserProfileRequest req) {
@@ -140,15 +145,19 @@ public class UserService {
                     .orElseThrow(InterestNotFoundException::new);
             userInterestRepository.save(new UserInterest(user, interest));
         }
-
+        user.setIsProfileSet(true);
         userRepository.save(user);
     }
 
     @Transactional
     public void deleteMe(User user) {
-        user.setIsDeleted(true);
+        log.info("회원 탈퇴 요청 실행됨 - 이메일: {}", user.getEmail());
 
-        // 프로필 민감 정보 제거
+        // 1. 유저 정보 soft delete
+        user.setIsDeleted(true);
+        user.setUsername("탈퇴한 사용자");
+
+        // 2. 프로필 민감 정보 제거
         Profile profile = user.getProfile();
         if (profile != null) {
             profile.setBio(null);
@@ -158,7 +167,30 @@ public class UserService {
             profile.setProfileImage(null);
         }
 
-        userRepository.save(user); // Profile도 Cascade로 저장됨
+        // 3. 익명 사용자 계정 없으면 자동 생성
+        User anonymous = userRepository.findByEmail("deleted@sandwich.com")
+                .orElseGet(() -> {
+                    User anon = new User();
+                    anon.setEmail("deleted@sandwich.com");
+                    anon.setUsername("탈퇴한 사용자");
+                    anon.setPassword(null);
+                    anon.setProvider("local");
+                    anon.setIsDeleted(true);         // 익명 계정도 삭제 상태로 표시
+                    anon.setIsVerified(true);
+                    anon.setIsProfileSet(false);
+                    anon.setRole(Role.ROLE_USER);
+                    return userRepository.save(anon);
+                });
+
+        // 4. 이 유저가 만든 프로젝트들을 모두 익명 사용자로 교체
+        List<Project> myProjects = projectRepository.findByUser(user);
+        for (Project project : myProjects) {
+            project.setUser(anonymous);
+        }
+
+        // 5. 마지막 저장
+        userRepository.save(user);
     }
+
 
 }
