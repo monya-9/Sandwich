@@ -27,6 +27,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
+        System.out.println("OAuth2SuccessHandler 실행됨");
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         String provider = oAuth2User.getProvider();
         String email = oAuth2User.getAttribute("email");
