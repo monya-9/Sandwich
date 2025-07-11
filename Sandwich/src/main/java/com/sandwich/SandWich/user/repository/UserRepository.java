@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
     // 일반 유저 조회 (자동으로 is_deleted = false 조건 적용됨)
     Optional<User> findByEmailAndIsDeletedFalse(String email);
     Optional<User> findByEmailAndProviderAndIsDeletedFalse(String email, String provider);
