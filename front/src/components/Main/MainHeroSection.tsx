@@ -1,3 +1,4 @@
+// 캐러셀 슬라이드 가장 상단 영역 (이번 주 인기 프로젝트와 좌우 화살표 포함)
 import React, { useRef } from 'react';
 import { Project } from '../../types/Project';
 
@@ -13,8 +14,8 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
   };
 
   return (
-    <section className="w-full relative mb-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-4">이번 주 인기 프로젝트</h1>
+    <section className="w-full relative mb-10 py-[20px]">
+    <h1 className="text-xl font-bold mb-4 text-left">이번 주 인기 프로젝트</h1>
 
       <button
         onClick={scrollLeft}

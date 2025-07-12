@@ -20,28 +20,31 @@ const categories: (Category | '전체')[] = [
 
 const MainCategoryFilter: React.FC<Props> = ({ selectedCategory, onSelectCategory, onOpenSortModal }) => {
   return (
-    <div className="flex items-center gap-4 px-4 py-2">
-      {categories.map((category) => (
+    <div className="flex justify-center items-center gap-4 px-4 py-2">
+      <div className="flex items-center gap-4">
+        {categories.map((category) => (
+          <button
+            key={category}
+            onClick={() => onSelectCategory(category)}
+            className={`text-base font-semibold px-10 ${
+              selectedCategory === category ? 'text-green-600 underline' : 'text-black'
+            }`}
+          >
+            {category}
+          </button>
+        ))}
+        <div className="border-l h-4 mx-2" />
         <button
-          key={category}
-          onClick={() => onSelectCategory(category)}
-          className={`text-sm font-semibold ${
-            selectedCategory === category ? 'text-green-600 underline' : 'text-black'
-          }`}
+          onClick={onOpenSortModal}
+          className="flex items-center gap-1 text-base text-black font-semibold"
         >
-          {category}
+          <span>↕</span> 정렬
         </button>
-      ))}
-      <div className="border-l h-4 mx-2" />
-      <button
-        onClick={onOpenSortModal}
-        className="flex items-center gap-1 text-sm text-black font-semibold"
-      >
-        <span>↕</span> 정렬
-      </button>
+      </div>
     </div>
   );
 };
+
 
 export default MainCategoryFilter;
 
