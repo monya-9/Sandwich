@@ -10,4 +10,5 @@ export type Project = {
   views: number;
   comments: number;
   categories: Category[];
+  uploadDate: string;
 };

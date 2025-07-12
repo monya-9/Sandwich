@@ -1,3 +1,5 @@
+// Header.tsx
+// 로고, 메뉴, 검색, 로그인, 회원가입 포함
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.png';
