@@ -18,32 +18,43 @@ const categories: (Category | '전체')[] = [
   'AI/ML',
 ];
 
-const MainCategoryFilter: React.FC<Props> = ({ selectedCategory, onSelectCategory, onOpenSortModal }) => {
+const MainCategoryFilter: React.FC<Props> = ({
+  selectedCategory,
+  onSelectCategory,
+  onOpenSortModal,
+}) => {
   return (
     <div className="flex justify-center items-center gap-4 px-4 py-2">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-12">
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => onSelectCategory(category)}
-            className={`text-base font-semibold px-10 ${
-              selectedCategory === category ? 'text-green-600 underline' : 'text-black'
+            className={`text-base font-semibold px-4 pb-1 transition-all duration-200 ${
+              selectedCategory === category
+                ? 'text-green-600 border-b-2 border-green-600 font-bold'
+                : 'text-black border-b-2 border-transparent'
             }`}
           >
             {category}
           </button>
         ))}
-        <div className="border-l h-4 mx-2" />
+
+        {/* 구분선 */}
+        <div className="w-px h-5 bg-gray-300 mx-4" />
+
+        {/* 정렬 버튼도 동일한 스타일 적용 */}
         <button
           onClick={onOpenSortModal}
-          className="flex items-center gap-1 text-base text-black font-semibold"
+          className="text-base font-semibold px-4 pb-1 transition-all duration-200 text-black hover:text-green-600"
         >
-          <span>↕</span> 정렬
+          ↕ 정렬
         </button>
       </div>
     </div>
   );
 };
+
 
 
 export default MainCategoryFilter;
