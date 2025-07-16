@@ -99,7 +99,7 @@ const MainPage = () => {
             />
         )}
 
-        <MainDeveloperHighlight />
+        <MainDeveloperHighlight projects={sortedProjects} />
         {isSortModalOpen && (
           <SortModal
             isOpen={isSortModalOpen}

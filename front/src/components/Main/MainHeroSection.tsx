@@ -15,7 +15,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
   return (
     <section className="w-full relative mb-10 py-[20px]">
-    <h1 className="text-xl font-bold mb-4 text-left">이번 주 인기 프로젝트</h1>
+    <h1 className="text-2xl font-bold mb-4 text-left ml-[15px]">이번 주 인기 프로젝트</h1>
 
       <button
         onClick={scrollLeft}
