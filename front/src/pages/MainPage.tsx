@@ -14,7 +14,6 @@ const MainPage = () => {
   const [selectedSort, setSelectedSort] = useState('샌드위치 픽');
   const [selectedUploadTime, setSelectedUploadTime] = useState('전체기간');
 
-  // 임시 상태 (모달 내부용)
   const [tempSelectedSort, setTempSelectedSort] = useState(selectedSort);
   const [tempSelectedUploadTime, setTempSelectedUploadTime] = useState(selectedUploadTime);
 
@@ -81,6 +80,7 @@ const MainPage = () => {
       <Header />
       <main className="px-8 py-6">
         <MainHeroSection projects={dummyProjects.slice(0, 5)} />
+
         <MainCategoryFilter
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
@@ -88,18 +88,28 @@ const MainPage = () => {
         />
 
         {sortedProjects.length === 0 ? (
-            <div className="text-center text-gray-500 py-[50px] text-lg">
-                해당 조건에 맞는 프로젝트가 없어요 😥<br />
-                필터를 변경해 다시 시도해보세요!
-            </div>
+          <div className="text-center text-gray-500 py-[50px] text-lg">
+            해당 조건에 맞는 프로젝트가 없어요 😥<br />
+            필터를 변경해 다시 시도해보세요!
+          </div>
         ) : (
+          <>
             <MainProjectGrid
-                title={`"${selectedCategory}" 카테고리 인기 프로젝트`}
-                projects={sortedProjects.slice(0, 10)}
+              title={`"${selectedCategory}" 카테고리 인기 프로젝트`}
+              projects={sortedProjects.slice(0, 10)}
             />
+
+            <MainDeveloperHighlight projects={sortedProjects} />
+
+            {sortedProjects.length > 10 && (
+              <MainProjectGrid
+                title="계속해서 인기 프로젝트를 살펴보세요!"
+                projects={sortedProjects.slice(10)}
+              />
+            )}
+          </>
         )}
 
-        <MainDeveloperHighlight projects={sortedProjects} />
         {isSortModalOpen && (
           <SortModal
             isOpen={isSortModalOpen}
