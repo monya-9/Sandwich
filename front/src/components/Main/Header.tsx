@@ -42,7 +42,7 @@ const Header = () => {
           <div className="w-[240px] h-[36px] flex items-center px-3 border border-black/10 rounded-full text-[14px] text-black/50">
             <input
               type="text"
-              placeholder="Search in site"
+              placeholder="검색어를 입력하세요"
               className="w-full bg-transparent outline-none"
             />
             <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
