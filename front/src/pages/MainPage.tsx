@@ -1,3 +1,4 @@
+//MainPage.tsx
 import React, { useState } from 'react';
 import Header from '../components/Main/Header';
 import MainHeroSection from '../components/Main/MainHeroSection';
@@ -79,7 +80,7 @@ const MainPage = () => {
     <div className="min-h-screen">
       <Header />
       <main className="px-8 py-6">
-        <MainHeroSection projects={dummyProjects.slice(0, 5)} />
+        <MainHeroSection projects={dummyProjects.slice(0, 7)} />
 
         <MainCategoryFilter
           selectedCategory={selectedCategory}
@@ -95,7 +96,7 @@ const MainPage = () => {
         ) : (
           <>
             <MainProjectGrid
-              title={`"${selectedCategory}" 카테고리 인기 프로젝트`}
+              title={`"${selectedCategory}" 카테고리 프로젝트`}
               projects={sortedProjects.slice(0, 10)}
             />
 
@@ -103,7 +104,7 @@ const MainPage = () => {
 
             {sortedProjects.length > 10 && (
               <MainProjectGrid
-                title="계속해서 인기 프로젝트를 살펴보세요!"
+                title="계속해서 프로젝트를 살펴보세요!"
                 projects={sortedProjects.slice(10)}
               />
             )}
@@ -127,3 +128,4 @@ const MainPage = () => {
 };
 
 export default MainPage;
+
