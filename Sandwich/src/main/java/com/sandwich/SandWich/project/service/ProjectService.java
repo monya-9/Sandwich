@@ -2,8 +2,6 @@ package com.sandwich.SandWich.project.service;
 
 import com.sandwich.SandWich.common.dto.PageResponse;
 import com.sandwich.SandWich.common.util.QRCodeGenerator;
-import com.sandwich.SandWich.global.exception.exceptiontype.ForbiddenException;
-import com.sandwich.SandWich.global.exception.exceptiontype.ProjectNotFoundException;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
 import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
@@ -103,18 +101,5 @@ public class ProjectService {
     public PageResponse<ProjectListItemResponse> findAllProjects(Pageable pageable) {
         Page<Project> page = projectRepository.findAllByOrderByCreatedAtDesc(pageable);
         return PageResponse.of(page.map(ProjectListItemResponse::new));
-    }
-
-    @Transactional
-    public void deleteProject(Long id, User currentUser) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ProjectNotFoundException("존재하지 않는 프로젝트입니다."));
-
-        if (!project.getUser().getId().equals(currentUser.getId())) {
-            throw new ForbiddenException("본인의 프로젝트만 삭제할 수 있습니다.");
-        }
-
-        project.setDeleted(true);
-        projectRepository.save(project);  // 소프트 삭제 처리
     }
 }

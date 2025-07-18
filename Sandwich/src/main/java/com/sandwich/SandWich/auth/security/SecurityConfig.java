@@ -37,15 +37,6 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 인증 없이 허용할 GET 요청 (조회용)
-                        .requestMatchers(
-                                "/api/projects",                // GET 전체 조회
-                                "/api/projects/{id:[0-9]+}"     // GET 상세 조회
-                        ).permitAll()
-
-                        // 그 외 모든 프로젝트 API (등록, 수정, 삭제 등)는 인증 필요
-                        .requestMatchers("/api/projects/**").authenticated()
-                        // 나머지 인증 예외 경로
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/email/**",
@@ -54,7 +45,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/swagger-ui.html",
                                 "/webjars/**",
-                                "/api/upload/image"
+                                "/api/upload/image",
+                                "/api/projects/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

@@ -38,13 +38,6 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProject(@PathVariable Long id,
-                                              @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        projectService.deleteProject(id, userDetails.getUser());
-        return ResponseEntity.noContent().build();
-    }
-
     @GetMapping
     public PageResponse<ProjectListItemResponse> getAllProjects(
             @RequestParam(defaultValue = "0") int page,
