@@ -34,7 +34,7 @@ public class ProjectContentService {
             ProjectContent content = new ProjectContent();
             content.setProject(project);
             content.setType(req.getType());
-            content.setValue(req.getValue());
+            content.setData(req.getData());
             content.setContentOrder(req.getOrder());
 
             contentRepository.save(content);
@@ -77,7 +77,7 @@ public class ProjectContentService {
             throw new IllegalArgumentException("TEXT 타입 콘텐츠만 수정할 수 있습니다.");
         }
 
-        content.setValue(newData);
+        content.setData(newData);
     }
 
     @Transactional
