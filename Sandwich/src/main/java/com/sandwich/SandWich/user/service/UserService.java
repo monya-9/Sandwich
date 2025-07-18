@@ -2,6 +2,10 @@ package com.sandwich.SandWich.user.service;
 
 
 import com.sandwich.SandWich.auth.dto.SignupRequest;
+import com.sandwich.SandWich.community.domain.Comment;
+import com.sandwich.SandWich.community.domain.Post;
+import com.sandwich.SandWich.community.repository.CommentRepository;
+import com.sandwich.SandWich.community.repository.PostRepository;
 import com.sandwich.SandWich.global.exception.exceptiontype.InterestNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.PositionNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
@@ -25,6 +29,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
 
+    private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PositionRepository positionRepository;
     private final InterestRepository interestRepository;
@@ -186,6 +192,18 @@ public class UserService {
         List<Project> myProjects = projectRepository.findByUser(user);
         for (Project project : myProjects) {
             project.setUser(anonymous);
+        }
+
+// 4-1. 이 유저가 작성한 게시글(Post)도 익명 사용자로 교체
+        List<Post> myPosts = postRepository.findAllByUser(user);
+        for (Post post : myPosts) {
+            post.setUser(anonymous);
+        }
+
+// 4-2. 이 유저가 작성한 댓글(Comment)도 익명 사용자로 교체
+        List<Comment> myComments = commentRepository.findAllByUser(user);
+        for (Comment comment : myComments) {
+            comment.setUser(anonymous);
         }
 
         // 5. 마지막 저장
