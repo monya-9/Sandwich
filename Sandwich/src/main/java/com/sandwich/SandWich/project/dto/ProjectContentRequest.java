@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ProjectContentRequest {
-    private ContentType type;
-    private String data;        // 텍스트 or 이미지/영상 URL
-    private int order;          // 콘텐츠 순서
+    private ContentType type;    // TEXT, IMAGE, VIDEO 등 enum
+    private String value;        // 텍스트 or 이미지/영상 URL
+    private int order;           // 콘텐츠 순서
 }

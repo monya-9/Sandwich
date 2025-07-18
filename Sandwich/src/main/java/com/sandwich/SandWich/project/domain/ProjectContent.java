@@ -18,12 +18,13 @@ public class ProjectContent {
     private ContentType type; // IMAGE, TEXT, VIDEO
 
     @Column(columnDefinition = "TEXT")
-    private String data; // 텍스트 내용 or S3 URL
+    private String value; // 텍스트 내용 or S3 URL
 
     private int contentOrder; // 콘텐츠 순서
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
     private Project project;
+
 
 }
