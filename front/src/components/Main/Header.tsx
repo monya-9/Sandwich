@@ -1,8 +1,8 @@
-// Header.tsx
-// 로고, 메뉴, 검색, 로그인, 회원가입 포함
+//반응형 x 맘에 드는 헤더
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.png';
+import menuIcon from '../../assets/icons/menu.png';
 
 const Header = () => {
   const location = useLocation();
@@ -13,11 +13,15 @@ const Header = () => {
 
         {/* 왼쪽: 로고 + 메뉴 */}
         <div className="flex items-center gap-6 mt-[10px]">
+          <button className="md:hidden block">
+            <img src={menuIcon} alt="menu" className="w-[28px] h-[28px]" />
+          </button>
+
           <Link to="/">
             <img src={logo} alt="Sandwich" className="w-[130px] h-auto" />
           </Link>
 
-          <nav className="flex gap-4 text-[18px] items-center mt-[6px]">
+          <nav className="hidden md:flex gap-4 text-[18px] items-center mt-[6px]">
             <Link
               to="/"
               className={`text-black ${

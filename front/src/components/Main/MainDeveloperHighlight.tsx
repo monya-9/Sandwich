@@ -1,3 +1,5 @@
+//인기 개발자 추천 부분
+//MainDeveloperHighlight.tsx
 import React, { useState } from 'react';
 import { dummyUsers } from '../../data/dummyUsers';
 import { Project } from '../../types/Project';

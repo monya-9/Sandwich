@@ -1,3 +1,4 @@
+//헤더 바로 아래 인기 프로젝트
 //MainHeroSection.tsx
 import React, { useRef, useState, useEffect } from 'react';
 import { Project } from '../../types/Project';
