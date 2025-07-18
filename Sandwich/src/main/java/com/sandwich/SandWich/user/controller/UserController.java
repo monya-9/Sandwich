@@ -41,7 +41,7 @@ public class UserController {
     // 회원 탈퇴
     @DeleteMapping("/me")
     public ResponseEntity<?> deleteMyAccount(@AuthenticationPrincipal UserDetailsImpl userDetails) {
-        userService.deleteMe(userDetails.getUser());  // ✅ 서비스로 위임
+        userService.deleteMe(userDetails.getUser());
         redisTemplate.delete("refresh:userId:" + userDetails.getUser().getId());
 
         return ResponseEntity.ok("회원 탈퇴 완료");

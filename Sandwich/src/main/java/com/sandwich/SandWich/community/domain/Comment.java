@@ -5,8 +5,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Comment extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,6 +27,7 @@ public class Comment extends BaseEntity {
     private Comment parentComment;
 
     @OneToMany(mappedBy = "parentComment")
+    @Builder.Default
     private List<Comment> subComments = new ArrayList<>();
 
     private String comment;
