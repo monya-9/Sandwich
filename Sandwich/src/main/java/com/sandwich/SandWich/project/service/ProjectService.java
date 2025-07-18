@@ -1,8 +1,10 @@
 package com.sandwich.SandWich.project.service;
 
+import com.sandwich.SandWich.common.dto.PageResponse;
 import com.sandwich.SandWich.common.util.QRCodeGenerator;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
+import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
 import com.sandwich.SandWich.project.dto.ProjectRequest;
 import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
@@ -13,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -91,5 +95,11 @@ public class ProjectService {
                 .portNumber(project.getPortNumber())
                 .extraRepoUrl(project.getExtraRepoUrl())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectListItemResponse> findAllProjects(Pageable pageable) {
+        Page<Project> page = projectRepository.findAllByOrderByCreatedAtDesc(pageable);
+        return PageResponse.of(page.map(ProjectListItemResponse::new));
     }
 }
