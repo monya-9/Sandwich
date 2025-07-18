@@ -1,6 +1,5 @@
 // MainProjectGrid.tsx
 // 카드 형태로 프로젝트 리스트 보여주는 영역 (재사용 가능하게 title props로 제목 받기)
-
 import React from 'react';
 import ProjectCard from './ProjectCard';
 import { Project } from '../../types/Project';
