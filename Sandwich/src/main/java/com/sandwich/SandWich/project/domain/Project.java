@@ -5,10 +5,13 @@ import com.sandwich.SandWich.challenge.domain.ChallengeOption;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Where;
+
 import java.util.*;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Where(clause = "is_deleted = false")  // 소프트 삭제 필터링
 public class Project extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -81,4 +84,8 @@ public class Project extends BaseEntity {
     // [에디터 콘텐츠] - 이미지/텍스트/영상 순서 저장
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectContent> contents = new ArrayList<>();
+
+    // [소프트 삭제 여부] - 기본 false
+    @Column(nullable = false)
+    private boolean isDeleted = false;
 }
