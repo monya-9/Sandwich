@@ -2,10 +2,7 @@ package com.sandwich.SandWich.project.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.common.dto.PageResponse;
-import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
-import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
-import com.sandwich.SandWich.project.dto.ProjectRequest;
-import com.sandwich.SandWich.project.dto.ProjectResponse;
+import com.sandwich.SandWich.project.dto.*;
 import com.sandwich.SandWich.project.service.ProjectService;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +40,14 @@ public class ProjectController {
                                               @AuthenticationPrincipal UserDetailsImpl userDetails) {
         projectService.deleteProject(id, userDetails.getUser());
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Void> updateProject(@PathVariable Long id,
+                                              @RequestBody ProjectPatchRequest request,
+                                              @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        projectService.updateProject(id, request, userDetails.getUser());
+        return ResponseEntity.noContent().build(); // 204
     }
 
     @GetMapping
