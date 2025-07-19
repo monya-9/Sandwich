@@ -34,15 +34,22 @@ dependencies {
 	implementation("com.google.firebase:firebase-admin:9.2.0")
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	implementation ("org.hibernate.validator:hibernate-validator")
-
+	implementation("org.springframework.boot:spring-boot-starter-mail")
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
+	implementation ("org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE")
+	implementation ("me.paulschwarz:spring-dotenv:2.5.4")
+	implementation("com.google.zxing:core:3.5.1")
+	implementation("com.google.zxing:javase:3.5.1")
+
 
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	runtimeOnly("org.postgresql:postgresql")
 
 	annotationProcessor("org.projectlombok:lombok")
+
+	testImplementation("com.h2database:h2")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
