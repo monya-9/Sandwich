@@ -21,7 +21,7 @@ public class SignupRequest {
     private String password;
 
     @NotBlank
-    private String username;
+    private String nickname;
 
     @NotNull
     private Long positionId;

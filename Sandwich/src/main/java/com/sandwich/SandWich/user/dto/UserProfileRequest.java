@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 public class UserProfileRequest {
     @NotBlank
-    private String username;
+    private String nickname;
     @NotNull
     private Long positionId;
     @Size(max = 3) private List<Long> interestIds;

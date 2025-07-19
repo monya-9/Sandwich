@@ -1,16 +1,14 @@
-package com.sandwich.SandWich.community.domain;
+package com.sandwich.SandWich.social.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
+import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Getter
-@Setter
-@NoArgsConstructor
 @Entity
-@Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class Post extends BaseEntity {
+@Table(name = "likes")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+public class Like extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -18,7 +16,7 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private String title;
-    private String content;
-    private String category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
 }
