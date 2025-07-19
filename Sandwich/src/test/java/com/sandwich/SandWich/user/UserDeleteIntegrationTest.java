@@ -1,10 +1,10 @@
 package com.sandwich.SandWich.user;
 
 
-import com.sandwich.SandWich.community.domain.Comment;
-import com.sandwich.SandWich.community.domain.Post;
-import com.sandwich.SandWich.community.repository.CommentRepository;
-import com.sandwich.SandWich.community.repository.PostRepository;
+import com.sandwich.SandWich.comment.domain.Comment;
+import com.sandwich.SandWich.post.domain.Post;
+import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.post.repository.PostRepository;
 import com.sandwich.SandWich.user.domain.Role;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;

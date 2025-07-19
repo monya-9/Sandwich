@@ -42,4 +42,10 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", "유저를 찾을 수 없습니다."));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        ErrorResponse error = new ErrorResponse(400, e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
 }

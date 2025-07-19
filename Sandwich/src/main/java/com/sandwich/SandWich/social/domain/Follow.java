@@ -1,5 +1,6 @@
-package com.sandwich.SandWich.user.domain;
+package com.sandwich.SandWich.social.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
+import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
