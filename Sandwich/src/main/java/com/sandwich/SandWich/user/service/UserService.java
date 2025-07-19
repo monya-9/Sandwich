@@ -1,0 +1,214 @@
+package com.sandwich.SandWich.user.service;
+
+
+import com.sandwich.SandWich.auth.dto.SignupRequest;
+import com.sandwich.SandWich.community.domain.Comment;
+import com.sandwich.SandWich.community.domain.Post;
+import com.sandwich.SandWich.community.repository.CommentRepository;
+import com.sandwich.SandWich.community.repository.PostRepository;
+import com.sandwich.SandWich.global.exception.exceptiontype.InterestNotFoundException;
+import com.sandwich.SandWich.global.exception.exceptiontype.PositionNotFoundException;
+import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.project.domain.Project;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
+import com.sandwich.SandWich.user.domain.*;
+import com.sandwich.SandWich.user.dto.*;
+import com.sandwich.SandWich.user.repository.*;
+import com.sandwich.SandWich.user.domain.User;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+    private final PositionRepository positionRepository;
+    private final InterestRepository interestRepository;
+    private final UserPositionRepository userPositionRepository;
+    private final UserInterestRepository userInterestRepository;
+    private final ProjectRepository projectRepository;
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
+
+
+    @Transactional
+    public void upsertUserProfile(User user, UserProfileRequest req) {
+        // 기본 설정
+        user.setUsername(req.getUsername());
+        user.setIsVerified(true);  // 프로필 작성 여부
+        user.setIsProfileSet(true);
+
+
+        // 포지션
+        Position position = positionRepository.findById(req.getPositionId())
+                .orElseThrow(PositionNotFoundException::new);
+        Optional<UserPosition> existing = userPositionRepository.findByUser(user);
+        if (existing.isPresent()) {
+            UserPosition userPosition = existing.get();
+            userPosition.setPosition(position);
+            userPositionRepository.save(userPosition);
+        } else {
+            userPositionRepository.save(new UserPosition(user, position));
+        }
+
+        // 관심사
+        if (req.getInterestIds().size() > 3) {
+            throw new IllegalArgumentException("관심사는 최대 3개까지 가능합니다.");
+        }
+        userInterestRepository.deleteByUser(user); // 기존 삭제 후
+        for (Long id : req.getInterestIds()) {
+            Interest interest = interestRepository.findById(id)
+                    .orElseThrow(InterestNotFoundException::new);
+            userInterestRepository.save(new UserInterest(user, interest));
+        }
+
+        // 프로필 (bio, github, etc)
+        Profile profile = user.getProfile(); // 기존 있는지 확인
+        if (profile == null) {
+            profile = new Profile();
+            profile.setUser(user);
+            user.setProfile(profile);
+        }
+        profile.updateFrom(req);
+
+        // 저장
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public UserProfileResponse getMe(User user) {
+        Profile profile = user.getProfile();
+
+        Position position = user.getUserPosition() != null
+                ? user.getUserPosition().getPosition()
+                : null;
+
+        List<InterestDto> interests = user.getInterests().stream()
+                .map(ui -> new InterestDto(ui.getInterest()))
+                .collect(Collectors.toList());
+
+        int followerCount = user.getFollowers().stream()
+                .filter(f -> !f.getFollower().isDeleted())
+                .toList().size();
+
+        int followingCount = user.getFollowings().stream()
+                .filter(f -> !f.getFollowed().isDeleted())
+                .toList().size();
+
+        return new UserProfileResponse(
+                user.getUsername(),
+                user.getEmail(),
+                profile != null ? profile.getBio() : null,
+                profile != null ? profile.getSkills() : null,
+                profile != null ? profile.getGithub() : null,
+                profile != null ? profile.getLinkedin() : null,
+                profile != null ? profile.getProfileImage() : null,
+                position != null ? new PositionDto(position) : null,
+                interests,
+                followerCount,
+                followingCount
+        );
+    }
+    public User findByEmail(String email) {
+        User user = userRepository.findByEmailAndIsDeletedFalse(email)
+                .orElseThrow(UserNotFoundException::new);
+
+        if (user.isDeleted()) {
+            throw new UserNotFoundException();
+        }
+
+        return user;
+    }
+
+    public void saveBasicProfile(User user, SignupRequest req) {
+        user.setUsername(req.getUsername());
+
+        Position position = positionRepository.findById(req.getPositionId())
+                .orElseThrow(PositionNotFoundException::new);
+        Optional<UserPosition> existing = userPositionRepository.findByUser(user);
+        if (existing.isPresent()) {
+            UserPosition userPosition = existing.get();
+            userPosition.setPosition(position); // 업데이트
+            userPositionRepository.save(userPosition);
+        } else {
+            userPositionRepository.save(new UserPosition(user, position)); // 신규 저장
+        }
+        if (req.getInterestIds().size() > 3) {
+            throw new IllegalArgumentException("관심사는 최대 3개까지 가능합니다.");
+        }
+
+        for (Long interestId : req.getInterestIds()) {
+            Interest interest = interestRepository.findById(interestId)
+                    .orElseThrow(InterestNotFoundException::new);
+            userInterestRepository.save(new UserInterest(user, interest));
+        }
+        user.setIsProfileSet(true);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteMe(User user) {
+        log.info("회원 탈퇴 요청 실행됨 - 이메일: {}", user.getEmail());
+
+        // 1. 유저 정보 soft delete
+        user.setIsDeleted(true);
+        user.setUsername("탈퇴한 사용자");
+
+        // 2. 프로필 민감 정보 제거
+        Profile profile = user.getProfile();
+        if (profile != null) {
+            profile.setBio(null);
+            profile.setSkills(null);
+            profile.setGithub(null);
+            profile.setLinkedin(null);
+            profile.setProfileImage(null);
+        }
+
+        // 3. 익명 사용자 계정 없으면 자동 생성
+        User anonymous = userRepository.findByEmail("deleted@sandwich.com")
+                .orElseGet(() -> {
+                    User anon = new User();
+                    anon.setEmail("deleted@sandwich.com");
+                    anon.setUsername("탈퇴한 사용자");
+                    anon.setPassword(null);
+                    anon.setProvider("local");
+                    anon.setIsDeleted(true);         // 익명 계정도 삭제 상태로 표시
+                    anon.setIsVerified(true);
+                    anon.setIsProfileSet(false);
+                    anon.setRole(Role.ROLE_USER);
+                    return userRepository.save(anon);
+                });
+
+        // 4. 이 유저가 만든 프로젝트들을 모두 익명 사용자로 교체
+        List<Project> myProjects = projectRepository.findByUser(user);
+        for (Project project : myProjects) {
+            project.setUser(anonymous);
+        }
+
+// 4-1. 이 유저가 작성한 게시글(Post)도 익명 사용자로 교체
+        List<Post> myPosts = postRepository.findAllByUser(user);
+        for (Post post : myPosts) {
+            post.setUser(anonymous);
+        }
+
+// 4-2. 이 유저가 작성한 댓글(Comment)도 익명 사용자로 교체
+        List<Comment> myComments = commentRepository.findAllByUser(user);
+        for (Comment comment : myComments) {
+            comment.setUser(anonymous);
+        }
+
+        // 5. 마지막 저장
+        userRepository.save(user);
+    }
+
+
+}
