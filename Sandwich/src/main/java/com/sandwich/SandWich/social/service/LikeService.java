@@ -1,5 +1,8 @@
 package com.sandwich.SandWich.social.service;
 
+import com.sandwich.SandWich.social.dto.LikedUserResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.lang.Nullable;
 import com.sandwich.SandWich.social.domain.Like;
 import com.sandwich.SandWich.social.domain.LikeTargetType;
@@ -35,5 +38,13 @@ public class LikeService {
         long count = likeRepository.countByTargetTypeAndTargetId(targetType, targetId);
         boolean liked = (user != null) && likeRepository.existsByUserAndTargetTypeAndTargetId(user, targetType, targetId);
         return new LikeResponse(count, liked);
+    }
+
+    public Page<LikedUserResponse> getLikedUsers(LikeTargetType targetType, Long targetId, Pageable pageable) {
+        return likeRepository.findAllByTargetTypeAndTargetId(targetType, targetId, pageable)
+                .map(like -> {
+                    User user = like.getUser();
+                    return new LikedUserResponse(user.getId(), user.getUsername(), user.getProfileImageUrl());
+                });
     }
 }
