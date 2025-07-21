@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 좋아요 기능
                         .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
                         // 프로젝트 조회만 비회원 허용
