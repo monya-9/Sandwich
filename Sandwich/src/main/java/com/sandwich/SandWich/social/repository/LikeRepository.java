@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
 
 public interface LikeRepository extends JpaRepository<Like, Long> {
 
@@ -19,5 +22,4 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
     @EntityGraph(attributePaths = "user")
     Page<Like> findAllByTargetTypeAndTargetId(LikeTargetType targetType, Long targetId, Pageable pageable);
-
 }
