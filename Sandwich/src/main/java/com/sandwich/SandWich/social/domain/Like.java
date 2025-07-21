@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.social.domain;
 
 import com.sandwich.SandWich.common.domain.BaseEntity;
+import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,7 +11,7 @@ import lombok.*;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 public class Like extends BaseEntity {
-
+  
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -31,4 +32,5 @@ public class Like extends BaseEntity {
         this.targetType = targetType;
         this.targetId = targetId;
     }
+
 }
