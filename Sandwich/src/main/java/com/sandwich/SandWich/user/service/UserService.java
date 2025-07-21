@@ -2,10 +2,10 @@ package com.sandwich.SandWich.user.service;
 
 
 import com.sandwich.SandWich.auth.dto.SignupRequest;
-import com.sandwich.SandWich.community.domain.Comment;
-import com.sandwich.SandWich.community.domain.Post;
-import com.sandwich.SandWich.community.repository.CommentRepository;
-import com.sandwich.SandWich.community.repository.PostRepository;
+import com.sandwich.SandWich.comment.domain.Comment;
+import com.sandwich.SandWich.post.domain.Post;
+import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.post.repository.PostRepository;
 import com.sandwich.SandWich.global.exception.exceptiontype.InterestNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.PositionNotFoundException;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final CommentRepository commentRepository;
+    private final ProfileRepository profileRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PositionRepository positionRepository;
@@ -42,12 +43,6 @@ public class UserService {
 
     @Transactional
     public void upsertUserProfile(User user, UserProfileRequest req) {
-        // 기본 설정
-        user.setUsername(req.getUsername());
-        user.setIsVerified(true);  // 프로필 작성 여부
-        user.setIsProfileSet(true);
-
-
         // 포지션
         Position position = positionRepository.findById(req.getPositionId())
                 .orElseThrow(PositionNotFoundException::new);
@@ -71,13 +66,21 @@ public class UserService {
             userInterestRepository.save(new UserInterest(user, interest));
         }
 
-        // 프로필 (bio, github, etc)
-        Profile profile = user.getProfile(); // 기존 있는지 확인
+        //  프로필 설정 or 수정 (닉네임 등 포함)
+        Profile profile = user.getProfile();
         if (profile == null) {
             profile = new Profile();
             profile.setUser(user);
             user.setProfile(profile);
         }
+
+        //  닉네임 중복 검사 (기존 닉네임과 다를 때만)
+        if (profileRepository.existsByNickname(req.getNickname()) &&
+                (profile.getNickname() == null || !profile.getNickname().equals(req.getNickname()))) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        // 닉네임, skills, bio, github 등 전부 여기에 포함
         profile.updateFrom(req);
 
         // 저장
@@ -130,18 +133,24 @@ public class UserService {
     }
 
     public void saveBasicProfile(User user, SignupRequest req) {
-        user.setUsername(req.getUsername());
+        // nickname 중복 검사
+        if (profileRepository.existsByNickname(req.getNickname())) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
 
+        // 프로필 생성
+        Profile profile = new Profile();
+        profile.setUser(user);
+        profile.setNickname(req.getNickname()); // nickname 설정
+        user.setProfile(profile);
+        profileRepository.save(profile); // 명시적 저장
+
+        //포지션 설정
         Position position = positionRepository.findById(req.getPositionId())
                 .orElseThrow(PositionNotFoundException::new);
-        Optional<UserPosition> existing = userPositionRepository.findByUser(user);
-        if (existing.isPresent()) {
-            UserPosition userPosition = existing.get();
-            userPosition.setPosition(position); // 업데이트
-            userPositionRepository.save(userPosition);
-        } else {
-            userPositionRepository.save(new UserPosition(user, position)); // 신규 저장
-        }
+        userPositionRepository.save(new UserPosition(user, position));
+
+        //관심사 설정
         if (req.getInterestIds().size() > 3) {
             throw new IllegalArgumentException("관심사는 최대 3개까지 가능합니다.");
         }
@@ -208,6 +217,16 @@ public class UserService {
 
         // 5. 마지막 저장
         userRepository.save(user);
+    }
+
+    public void updateNickname(Long userId, String nickname) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+        Profile profile = user.getProfile();
+        if (profile == null) {
+            throw new IllegalStateException("프로필이 존재하지 않습니다.");
+        }
+        profile.setNickname(nickname);
     }
 
 

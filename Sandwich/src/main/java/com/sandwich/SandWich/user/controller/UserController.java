@@ -4,6 +4,7 @@ import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.UserProfileRequest;
+import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.user.service.UserService;
 import com.sandwich.SandWich.auth.security.JwtUtil;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
     private final JwtUtil jwtUtil;
     private final UserService userService;
     private final RedisTemplate<String, String> redisTemplate;
@@ -58,5 +60,20 @@ public class UserController {
 
         userService.upsertUserProfile(user, req);
         return ResponseEntity.ok("프로필 설정 완료");
+    }
+
+    @PatchMapping("/nickname")
+    public ResponseEntity<?> updateNickname(@AuthenticationPrincipal UserDetailsImpl userDetails,
+                                            @RequestBody UserProfileRequest request) {
+        userService.updateNickname(userDetails.getId(), request.getNickname());
+        return ResponseEntity.ok("닉네임 수정 완료");
+    }
+
+    // 이미 사용 중 : true
+    // 사용 가능 : false
+    @GetMapping("/check-nickname")
+    public ResponseEntity<?> checkNicknameDuplicate(@RequestParam("value") String nickname) {
+        boolean isDuplicate = profileRepository.existsByNickname(nickname);
+        return ResponseEntity.ok(isDuplicate);
     }
 }
