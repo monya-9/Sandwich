@@ -2,11 +2,11 @@ package com.sandwich.SandWich.project.service;
 
 import com.sandwich.SandWich.common.dto.PageResponse;
 import com.sandwich.SandWich.common.util.QRCodeGenerator;
-import com.sandwich.SandWich.global.exception.exceptiontype.ForbiddenException;
-import com.sandwich.SandWich.global.exception.exceptiontype.ProjectNotFoundException;
 import com.sandwich.SandWich.project.domain.Project;
-import com.sandwich.SandWich.project.domain.ProjectContent;
-import com.sandwich.SandWich.project.dto.*;
+import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
+import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
+import com.sandwich.SandWich.project.dto.ProjectRequest;
+import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.upload.util.S3Uploader;
 import com.sandwich.SandWich.user.domain.User;
@@ -101,57 +101,5 @@ public class ProjectService {
     public PageResponse<ProjectListItemResponse> findAllProjects(Pageable pageable) {
         Page<Project> page = projectRepository.findAllByOrderByCreatedAtDesc(pageable);
         return PageResponse.of(page.map(ProjectListItemResponse::new));
-    }
-
-    @Transactional
-    public void deleteProject(Long id, User currentUser) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ProjectNotFoundException("존재하지 않는 프로젝트입니다."));
-
-        if (!project.getUser().getId().equals(currentUser.getId())) {
-            throw new ForbiddenException("본인의 프로젝트만 삭제할 수 있습니다.");
-        }
-
-        project.setDeleted(true);
-        projectRepository.save(project);  // 소프트 삭제 처리
-    }
-
-    @Transactional
-    public void updateProject(Long id, ProjectPatchRequest request, User user) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> {
-                    System.out.println("[LOG] 프로젝트가 존재하지 않음");
-                    return new ProjectNotFoundException("프로젝트가 존재하지 않습니다.");
-                });
-
-        System.out.println("[LOG] 로그인 유저: " + user.getId());
-        System.out.println("[LOG] 작성자 유저: " + project.getUser().getId());
-
-        if (!project.getUser().getId().equals(user.getId())) {
-            System.out.println("[LOG] 권한 없음!");
-            throw new ForbiddenException("수정 권한이 없습니다.");
-        }
-
-        // Partial Update 처리 (null 아닌 필드만 반영)
-        if (request.getTitle() != null) project.setTitle(request.getTitle());
-        if (request.getDescription() != null) project.setDescription(request.getDescription());
-        if (request.getTools() != null) project.setTools(request.getTools());
-        if (request.getFrontendBuildCommand() != null) project.setFrontendBuildCommand(request.getFrontendBuildCommand());
-        if (request.getBackendBuildCommand() != null) project.setBackendBuildCommand(request.getBackendBuildCommand());
-        if (request.getPortNumber() != null) project.setPortNumber(request.getPortNumber());
-        if (request.getSnsUrl() != null) project.setSnsUrl(request.getSnsUrl());
-
-        // 콘텐츠 수정 처리: 전체 교체 방식 (or 다른 방식도 가능)
-        if (request.getContents() != null) {
-            project.getContents().clear();
-            for (ProjectContentRequest contentReq : request.getContents()) {
-                ProjectContent content = new ProjectContent();
-                content.setType(contentReq.getType());
-                content.setValue(contentReq.getValue());
-                content.setContentOrder(contentReq.getOrder());
-                content.setProject(project);
-                project.getContents().add(content);
-            }
-        }
     }
 }
