@@ -63,10 +63,6 @@ public class Project extends BaseEntity {
     private Integer portNumber;
     private String extraRepoUrl;
 
-    // 좋아요 기능 연동
-    @OneToMany(mappedBy = "project")
-    private List<Like> likes = new ArrayList<>();
-
     // 해시태그 기능 연동
     @OneToMany(mappedBy = "project")
     private List<Hashtag> hashtags = new ArrayList<>();
