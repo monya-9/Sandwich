@@ -17,6 +17,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -28,6 +30,14 @@ public class AuthService {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
+
+    private String generateUniqueUsername() {
+        String base;
+        do {
+            base = "user_" + UUID.randomUUID().toString().substring(0, 8);
+        } while (userRepository.existsByUsername(base));
+        return base;
+    }
 
     private void validateSignup(SignupRequest req) {
         String verified = redisUtil.getValue("email:verified:" + req.getEmail());
@@ -51,17 +61,19 @@ public class AuthService {
 
     public void signup(SignupRequest req) {
         validateSignup(req);
+        // username 자동 생성
+        String username = generateUniqueUsername();
         User user = User.builder()
                 .email(req.getEmail())
-                .username(req.getUsername())
+                .username(username)
                 .password(passwordEncoder.encode(req.getPassword()))
                 .provider("local")
                 .isVerified(true)
                 .role(Role.ROLE_USER)
                 .build();
 
-        userRepository.save(user); // 1. 유저 저장만 하고
-        userService.saveBasicProfile(user, req); // 2. 프로필 처리 위임
+        userRepository.save(user); // 1. 유저 저장
+        userService.saveBasicProfile(user, req); // 2. nickname 포함한 profile 생성
         redisUtil.deleteValue("email:verified:" + req.getEmail());  // 3. 인증 완료 처리
     }
 

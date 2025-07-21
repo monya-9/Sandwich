@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Profile findByUser(User user);
+    boolean existsByNickname(String nickname);
 }

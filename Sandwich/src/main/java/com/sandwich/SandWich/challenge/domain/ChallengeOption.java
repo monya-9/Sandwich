@@ -1,6 +1,6 @@
 package com.sandwich.SandWich.challenge.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
-import com.sandwich.SandWich.community.domain.Post;
+import com.sandwich.SandWich.post.domain.Post;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
