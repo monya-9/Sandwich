@@ -16,7 +16,6 @@ const Header = () => {
           <button className="md:hidden block">
             <img src={menuIcon} alt="menu" className="w-[28px] h-[28px]" />
           </button>
-
           <Link to="/">
             <img src={logo} alt="Sandwich" className="w-[130px] h-auto" />
           </Link>
