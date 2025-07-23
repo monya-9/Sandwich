@@ -19,6 +19,9 @@ public class Profile extends BaseEntity {
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 
+    @Column(nullable = false, unique = true)
+    private String nickname; // 화면 노출용 이름 (수정 가능)
+
     private String bio;
     private String skills;
     private String github;
@@ -31,5 +34,6 @@ public class Profile extends BaseEntity {
         this.github = dto.getGithub();
         this.linkedin = dto.getLinkedin();
         this.profileImage = dto.getProfileImageUrl();
+        this.nickname = dto.getNickname();
     }
 }

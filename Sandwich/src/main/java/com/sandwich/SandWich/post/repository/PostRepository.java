@@ -1,7 +1,7 @@
-package com.sandwich.SandWich.community.repository;
+package com.sandwich.SandWich.post.repository;
 
 
-import com.sandwich.SandWich.community.domain.Post;
+import com.sandwich.SandWich.post.domain.Post;
 import com.sandwich.SandWich.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

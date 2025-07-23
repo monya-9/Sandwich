@@ -8,6 +8,7 @@ import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.global.exception.exceptiontype.InvalidRefreshTokenException;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
+import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.JwtUtil;
 import jakarta.validation.Valid;
@@ -16,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.sandwich.SandWich.auth.service.AuthService;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
@@ -23,6 +26,7 @@ public class AuthController {
 
     private final RedisUtil redisUtil;
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
     private final JwtUtil jwtUtil;
     private final AuthService authService;
 
@@ -63,5 +67,14 @@ public class AuthController {
         String token = authHeader.replace("Bearer ", "");
         authService.logout(token);
         return ResponseEntity.ok("로그아웃 완료");
+    }
+
+    @GetMapping("/nickname/check")
+    public ResponseEntity<?> checkNickname(@RequestParam String nickname) {
+        boolean exists = profileRepository.existsByNickname(nickname);
+        return ResponseEntity.ok(Map.of(
+                "exists", exists,
+                "message", exists ? "이미 사용 중인 닉네임입니다." : "사용 가능한 닉네임입니다."
+        ));
     }
 }

@@ -2,6 +2,7 @@ package com.sandwich.SandWich.project.domain;
 
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import com.sandwich.SandWich.challenge.domain.ChallengeOption;
+import com.sandwich.SandWich.social.domain.Like;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -61,10 +62,6 @@ public class Project extends BaseEntity {
     private String backendBuildCommand;
     private Integer portNumber;
     private String extraRepoUrl;
-
-    // 좋아요 기능 연동
-    @OneToMany(mappedBy = "project")
-    private List<Like> likes = new ArrayList<>();
 
     // 해시태그 기능 연동
     @OneToMany(mappedBy = "project")
