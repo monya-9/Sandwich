@@ -16,7 +16,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+      - docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./Sandwich
       - docker tag $ECR_REPOSITORY:$IMAGE_TAG 398808282696.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
   post_build:
     commands:
