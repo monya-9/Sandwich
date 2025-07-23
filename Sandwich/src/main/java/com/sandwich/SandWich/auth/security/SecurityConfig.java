@@ -2,6 +2,7 @@ package com.sandwich.SandWich.auth.security;
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
+import org.springframework.http.HttpMethod;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,7 @@ import org.springframework.security.oauth2.client.web.DefaultOAuth2Authorization
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
@@ -37,16 +39,21 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 좋아요 기능
+                        .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
+
+                        // 프로젝트 조회만 비회원 허용
+                        .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{id:[0-9]+}").permitAll()
+                        .requestMatchers("/api/projects/**").authenticated()
+
+                        // 기타 인증 예외 경로
                         .requestMatchers(
-                                "/api/auth/**",
-                                "/api/email/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/swagger-ui.html",
-                                "/webjars/**",
-                                "/api/upload/image",
-                                "/api/projects/**"
+                                "/api/auth/**", "/api/email/**",
+                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
+                                "/swagger-ui.html", "/webjars/**", "/api/upload/image"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
@@ -54,10 +61,7 @@ public class SecurityConfig {
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            log.warn("인증 실패: {}", authException.getMessage());
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                        })
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             var auth = SecurityContextHolder.getContext().getAuthentication();
                             log.warn("403 접근 거부됨: 인증 객체 = {}", auth);
