@@ -1,5 +1,6 @@
 // DeveloperCard.tsx
 // 개발자 추천 카드 (사진 + 직무 + 간단한 작업물)
+
 import React from 'react';
 
 const DeveloperCard = () => {
