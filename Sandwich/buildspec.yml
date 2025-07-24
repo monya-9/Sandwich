@@ -5,6 +5,7 @@ env:
     AWS_REGION: "ap-northeast-2"
     ECR_REPOSITORY: "sd-repo"
     IMAGE_TAG: "latest"
+    IMAGE_URI: "398808282696.dkr.ecr.ap-northeast-2.amazonaws.com/sd-repo:latest"
 
 phases:
   pre_build:
