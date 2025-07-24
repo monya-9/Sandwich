@@ -23,8 +23,10 @@ phases:
       - echo Build completed on `date`
       - echo Pushing the Docker image...
       - docker push 398808282696.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"sd-task1","imageUri":"%s"}]' $IMAGE_URI > imagedefinitions.json
 
 artifacts:
   files:
-    - '**/*'
+    - imagedefinitions.json
   discard-paths: yes
