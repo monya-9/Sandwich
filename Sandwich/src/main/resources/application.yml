@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://sandwich_postgres:5432/sandwich}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sandwich}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
