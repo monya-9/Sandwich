@@ -19,8 +19,12 @@ const ACTIONBAR_WIDTH = 80;
 
 export default function OtherProjectPage() {
   const [commentOpen, setCommentOpen] = useState(false);
-
   const projectWidth = commentOpen ? PROJECT_NARROW : PROJECT_WIDE;
+
+  // ✅ 실제 프로젝트 API 응답이라고 가정
+  const project = {
+    qrImageUrl: "https://your-bucket.s3.amazonaws.com/qr/sample.png", // 실제 QR 이미지로 교체
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#6c7178] font-gmarketsans">
@@ -85,15 +89,18 @@ export default function OtherProjectPage() {
                   minWidth: ACTIONBAR_WIDTH,
                   marginLeft: GAP,
                   height: "100%",
-                  position: "relative", // 절대 고정X, 프로젝트에 붙여서!
+                  position: "relative",
                 }}
               >
-                <ActionBar onCommentClick={() => setCommentOpen(true)} />
+                <ActionBar
+                  onCommentClick={() => setCommentOpen(true)}
+                  project={project} // ✅ QR 코드 URL 전달
+                />
               </div>
             )}
           </div>
 
-          {/* 댓글 패널: 프로젝트 옆에 딱 붙게 */}
+          {/* 댓글 패널 */}
           {commentOpen && (
             <div
               style={{
@@ -115,9 +122,11 @@ export default function OtherProjectPage() {
             >
               <CommentPanel
                 onClose={() => setCommentOpen(false)}
+                projectId={123}
                 projectName="사용자 이름"
                 category="UI·UX"
                 width={PANEL_WIDTH}
+                isLoggedIn={false}
               />
             </div>
           )}
