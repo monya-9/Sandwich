@@ -32,9 +32,9 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ProjectDetailResponse> getProject(@PathVariable Long id) {
-        ProjectDetailResponse response = projectService.getProjectById(id);
+    @GetMapping("/{username}/{id}")
+    public ResponseEntity<ProjectDetailResponse> getProject(@PathVariable String username, @PathVariable Long id) {
+        ProjectDetailResponse response = projectService.getProjectByUsernameAndProjectId(username, id);
         return ResponseEntity.ok(response);
     }
 
