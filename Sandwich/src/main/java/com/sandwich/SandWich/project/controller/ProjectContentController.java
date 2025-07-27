@@ -15,55 +15,53 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/projects/{projectId}/contents")
+@RequestMapping("/api/projects/{username}/{projectId}/contents")
 public class ProjectContentController {
 
     private final ProjectContentService contentService;
 
     @PatchMapping("/reorder")
     public ResponseEntity<Void> reorderContents(
+            @PathVariable String username,
             @PathVariable Long projectId,
             @RequestBody List<ReorderRequest> reorderList,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
-        contentService.reorderContents(projectId, reorderList, userDetails.getUser());
+        contentService.reorderContents(username, projectId, reorderList, userDetails.getUser());
         return ResponseEntity.ok().build();
     }
 
-
     @PostMapping
     public ResponseEntity<Void> saveContents(
+            @PathVariable String username,
             @PathVariable Long projectId,
             @RequestBody List<ProjectContentRequest> requestList,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
-        User user = userDetails.getUser();
-        contentService.saveContents(projectId, requestList, user);
+        contentService.saveContents(username, projectId, requestList, userDetails.getUser());
         return ResponseEntity.ok().build();
     }
 
-
     @DeleteMapping("/{contentId}")
     public ResponseEntity<Void> deleteContent(
+            @PathVariable String username,
             @PathVariable Long projectId,
             @PathVariable Long contentId,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
-        User user = userDetails.getUser();
-        contentService.deleteContent(projectId, contentId, user);
+        contentService.deleteContent(username, projectId, contentId, userDetails.getUser());
         return ResponseEntity.noContent().build();
     }
 
-
-
     @PatchMapping("/{contentId}")
     public ResponseEntity<Void> updateContent(
+            @PathVariable String username,
             @PathVariable Long projectId,
             @PathVariable Long contentId,
             @RequestBody ProjectContentUpdateRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
-        contentService.updateContent(projectId, contentId, request.getData(), userDetails.getUser());
+        contentService.updateContent(username, projectId, contentId, request.getData(), userDetails.getUser());
         return ResponseEntity.ok().build();
     }
 }

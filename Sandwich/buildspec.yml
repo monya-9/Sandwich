@@ -5,6 +5,7 @@ env:
     AWS_REGION: "ap-northeast-2"
     ECR_REPOSITORY: "sd-repo"
     IMAGE_TAG: "latest"
+    IMAGE_URI: "398808282696.dkr.ecr.ap-northeast-2.amazonaws.com/sd-repo:latest"
 
 phases:
   pre_build:
@@ -23,8 +24,10 @@ phases:
       - echo Build completed on `date`
       - echo Pushing the Docker image...
       - docker push 398808282696.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"sd-task1","imageUri":"%s"}]' $IMAGE_URI > imagedefinitions.json
 
 artifacts:
   files:
-    - '**/*'
+    - imagedefinitions.json
   discard-paths: yes

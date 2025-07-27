@@ -53,7 +53,7 @@ public class ProjectService {
 
         // preview URL 구성
         // preview URL에 프로젝트 ID 포함
-        String previewUrl = user.getUsername() + ".sandwich.com/projects/" + saved.getId();
+        String previewUrl = "sandwich.com/" + user.getUsername() + "/" + saved.getId();
 
         // QR 코드 생성 및 업로드 조건 체크
         if (request.getQrCodeEnabled() != null && request.getQrCodeEnabled()) {
@@ -70,8 +70,8 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public ProjectDetailResponse getProjectById(Long id) {
-        Project project = projectRepository.findById(id)
+    public ProjectDetailResponse getProjectByUsernameAndProjectId(String username, Long id) {
+        Project project = projectRepository.findByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 프로젝트입니다."));
 
         return ProjectDetailResponse.builder()
