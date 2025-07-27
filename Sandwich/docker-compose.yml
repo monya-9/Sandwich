@@ -63,6 +63,8 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+      - ../front/build:/app
+      - ./public:/app/public   # 사용자 프로젝트 정적파일 저장소 들어갈 곳
     depends_on:
       - app
     networks:
