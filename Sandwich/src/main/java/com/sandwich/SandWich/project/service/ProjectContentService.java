@@ -22,8 +22,8 @@ public class ProjectContentService {
     private final ProjectContentRepository contentRepository;
 
     @Transactional
-    public void saveContents(String username, Long projectId, List<ProjectContentRequest> requestList, User user) {
-        Project project = projectRepository.findByIdAndUsername(projectId, username)
+    public void saveContents(Long userId, Long projectId, List<ProjectContentRequest> requestList, User user) {
+        Project project = projectRepository.findByIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트가 존재하지 않습니다."));
 
         if (!project.getUser().getId().equals(user.getId())) {
@@ -42,8 +42,8 @@ public class ProjectContentService {
     }
 
     @Transactional
-    public void deleteContent(String username, Long projectId, Long contentId, User user) {
-        Project project = projectRepository.findByIdAndUsername(projectId, username)
+    public void deleteContent(Long userId, Long projectId, Long contentId, User user) {
+        Project project = projectRepository.findByIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트가 존재하지 않습니다."));
 
         if (!project.getUser().getId().equals(user.getId())) {
@@ -61,8 +61,8 @@ public class ProjectContentService {
     }
 
     @Transactional
-    public void updateContent(String username, Long projectId, Long contentId, String newData, User user) {
-        Project project = projectRepository.findByIdAndUsername(projectId, username)
+    public void updateContent(Long userId, Long projectId, Long contentId, String newData, User user) {
+        Project project = projectRepository.findByIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("프로젝트가 존재하지 않습니다."));
 
         if (!project.getUser().getId().equals(user.getId())) {
@@ -81,8 +81,8 @@ public class ProjectContentService {
     }
 
     @Transactional
-    public void reorderContents(String username, Long projectId, List<ReorderRequest> reorderList, User user) {
-        Project project = projectRepository.findByIdAndUsername(projectId, username)
+    public void reorderContents(Long userId, Long projectId, List<ReorderRequest> reorderList, User user) {
+        Project project = projectRepository.findByIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트가 존재하지 않습니다."));
 
         if (!project.getUser().getId().equals(user.getId())) {
