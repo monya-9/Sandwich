@@ -14,4 +14,5 @@ WORKDIR /app
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# graceful shutdown 및 안정 실행 옵션 추가
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
