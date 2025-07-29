@@ -44,6 +44,11 @@ const ProfileStep = ({ onPrev }: Props) => {
             const positionId = positionMap[position];
             const interestIds = interests.map((item) => interestMap[item]);
 
+            // ✅ 디버깅용 콘솔 추가
+            console.log("선택한 position:", position);
+            console.log("매핑된 positionId:", positionId);
+            console.log("선택한 interests:", interests);
+            console.log("매핑된 interestIds:", interestIds);
 
             await axios.post("/api/auth/signup", {
                 email,
@@ -61,6 +66,7 @@ const ProfileStep = ({ onPrev }: Props) => {
             alert("회원가입 실패: " + (err?.response?.data?.message || err.message));
         }
     };
+
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">

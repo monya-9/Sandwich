@@ -1,4 +1,3 @@
-// ✅ EmailStep.tsx
 import React, { useEffect, useState } from "react";
 import EmailInput from "./EmailInput";
 import CodeVerification from "./CodeVerification";
@@ -99,6 +98,12 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = String(timeLeft % 60).padStart(2, "0");
 
+    const derivedStatus = isVerified
+        ? "success"
+        : timeLeft <= 0
+            ? "timeout"
+            : verifyStatus;
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
             <Link to="/">
@@ -121,9 +126,9 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
                         code={code}
                         setCode={setCode}
                         onVerify={handleVerifyCode}
-                        disabled={isVerified || timeLeft <= 0}
+                        disabled={isVerified || derivedStatus === "timeout"}
                         readOnly={isVerified}
-                        status={verifyStatus === "success" ? "success" : timeLeft <= 0 ? "timeout" : verifyStatus}
+                        status={derivedStatus}
                         timeDisplay={`${minutes}:${seconds}`}
                         showSuccessMessage={showVerifyMessage}
                     />
