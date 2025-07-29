@@ -6,6 +6,7 @@ services:
     container_name: sandwich_app
     ports:
       - "8080:8080"
+    restart: always         #재시작 정책 설정
     depends_on:
       - postgres
       - redis
