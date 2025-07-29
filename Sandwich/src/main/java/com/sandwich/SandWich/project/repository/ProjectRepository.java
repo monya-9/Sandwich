@@ -17,7 +17,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByUser(User user);
     Page<Project> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-    @Query("SELECT p FROM Project p WHERE p.id = :projectId AND p.user.username = :username AND p.user.isDeleted = false")
-    Optional<Project> findByIdAndUsername(Long projectId, String username);
+    @Query("SELECT p FROM Project p WHERE p.id = :projectId AND p.user.id = :userId AND p.user.isDeleted = false")
+    Optional<Project> findByIdAndUserId(Long projectId, Long userId);
 
 }
