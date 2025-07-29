@@ -94,7 +94,7 @@ public class User extends BaseEntity {
     }
 
     public void setUsername(String username) {
-        if (this.username != null) {
+        if (this.username != null && !this.username.equals(username)) {
             throw new IllegalStateException("username은 수정할 수 없습니다.");
         }
         this.username = username;
