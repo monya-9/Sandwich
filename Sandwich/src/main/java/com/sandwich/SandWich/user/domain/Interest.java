@@ -11,7 +11,7 @@ public class Interest {
     @Column(nullable = false, unique = true)
     private String name;
 
-//    @Enumerated(EnumType.STRING)
-//    @Column(nullable = false)
-//    private InterestType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private InterestType type;
 }
