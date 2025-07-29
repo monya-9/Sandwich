@@ -70,8 +70,8 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public ProjectDetailResponse getProjectByUsernameAndProjectId(String username, Long id) {
-        Project project = projectRepository.findByIdAndUsername(id, username)
+    public ProjectDetailResponse getProjectByUserIdAndProjectId(Long userId, Long id) {
+        Project project = projectRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 프로젝트입니다."));
 
         return ProjectDetailResponse.builder()
