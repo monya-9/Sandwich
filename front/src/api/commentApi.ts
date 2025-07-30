@@ -1,7 +1,7 @@
 // src/api/commentApi.ts
 import axios from "axios";
 
-// 타입 정의 (실제 backend와 동일하게 맞추세요)
+// 타입 정의 (동일)
 export interface CommentResponse {
   id: number;
   comment: string;
@@ -11,27 +11,31 @@ export interface CommentResponse {
   subComments: CommentResponse[];
 }
 export interface CommentPostPayload {
+  username: string; // 추가됨!
   projectId: number;
   comment: string;
   parentCommentId?: number;
 }
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8080", // 환경변수 혹은 기본값
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8080",
   withCredentials: true,
 });
 
 // 댓글 목록 조회
-export async function fetchComments(projectId: number) {
+export async function fetchComments(username: string, projectId: number) {
   return api.get<CommentResponse[]>("/api/comments", {
-    params: { type: "Project", id: projectId }
+    params: { type: "Project", username, id: projectId }
   });
 }
 
-// 댓글 작성 (대댓글/일반댓글 통합)
-export async function postComment({ projectId, comment, parentCommentId }: CommentPostPayload) {
+// 댓글 작성
+export async function postComment({
+  username, projectId, comment, parentCommentId
+}: CommentPostPayload) {
   return api.post("/api/comments", {
     commentableType: "Project",
+    commentableUsername: username,
     commentableId: projectId,
     parentCommentId: parentCommentId ?? null,
     comment,

@@ -6,6 +6,7 @@ import {
 
 interface CommentPanelProps {
   onClose: () => void;
+  username: string; // 추가!
   projectId: number;
   projectName: string;
   category: string;
@@ -17,7 +18,7 @@ type EditState = { id: number; value: string } | null;
 type ReplyState = { parentId: number; value: string } | null;
 
 export default function CommentPanel({
-  onClose, projectId, projectName, category, width = 440, isLoggedIn
+  onClose, username, projectId, projectName, category, width = 440, isLoggedIn
 }: CommentPanelProps) {
   const [comments, setComments] = useState<CommentResponse[]>([]);
   const [input, setInput] = useState("");
@@ -25,32 +26,32 @@ export default function CommentPanel({
   const [edit, setEdit] = useState<EditState>(null);
   const [reply, setReply] = useState<ReplyState>(null);
 
-  // useCallback으로 감싸고 useEffect에 의존성 넣기!
+  // username, projectId 의존성 추가!
   const loadComments = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchComments(projectId);
+      const res = await fetchComments(username, projectId);
       setComments(res.data);
     } catch {
       alert("댓글을 불러올 수 없습니다");
     }
     setLoading(false);
-  }, [projectId]);
+  }, [username, projectId]);
 
   useEffect(() => {
     loadComments();
-  }, [loadComments]); // 권장: useCallback 사용 + 의존성 배열에 포함
+  }, [loadComments]);
 
   // 댓글 작성/대댓글/수정/삭제 (로그인 상태에서만 동작)
   const handlePost = async () => {
     if (!input.trim() || !isLoggedIn) return;
-    await postComment({ projectId, comment: input });
+    await postComment({ username, projectId, comment: input });
     setInput("");
     loadComments();
   };
   const handleReply = async (parentId: number, value: string) => {
     if (!value.trim() || !isLoggedIn) return;
-    await postComment({ projectId, comment: value, parentCommentId: parentId });
+    await postComment({ username, projectId, comment: value, parentCommentId: parentId });
     setReply(null);
     loadComments();
   };
