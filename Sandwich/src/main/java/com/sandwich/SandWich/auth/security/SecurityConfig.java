@@ -53,10 +53,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
-                        // 프로젝트 조회만 비회원 허용
+                        // 프로젝트 전체 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{id:[0-9]+}").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{username}/{id}").permitAll()
+                        // 프로젝트 단일 조회
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
                         .requestMatchers("/api/projects/**").authenticated()
 
                         // 기타 인증 예외 경로
