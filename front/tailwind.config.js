@@ -1,10 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/**/*.{js,ts,jsx,tsx}", // src 내부의 모든 JS/TS/React 파일에서 Tailwind 클래스를 사용할 수 있게
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      animation: {
+        'fade-out': 'fadeOut 10s ease-in-out forwards',
+      },
+      keyframes: {
+        fadeOut: {
+          '0%': { opacity: 1 },
+          '100%': { opacity: 0 },
+        },
+      },
+    },
   },
   plugins: [],
 }
