@@ -12,6 +12,8 @@ public class ProjectListItemResponse {
     private final String coverUrl;
     private final Boolean isTeam;
     private final String username;
+    private String shareUrl;       // 예: https://sandwich.com/테스트유저1/1
+    private String qrImageUrl;     // S3에 업로드된 QR 이미지 주소
 
 
     public ProjectListItemResponse(Project project) {
@@ -24,5 +26,8 @@ public class ProjectListItemResponse {
         this.username = project.getUser().isDeleted()
                 ? "탈퇴한 사용자"
                 : project.getUser().getUsername();
+
+        this.shareUrl = project.getShareUrl();
+        this.qrImageUrl = project.getQrImageUrl();
     }
 }

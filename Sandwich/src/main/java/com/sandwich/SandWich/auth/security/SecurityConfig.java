@@ -11,6 +11,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,6 +35,13 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
         http
@@ -44,9 +53,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
-                        // 프로젝트 조회만 비회원 허용
+                        // 프로젝트 전체 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{id:[0-9]+}").permitAll()
+                        // 프로젝트 단일 조회
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
                         .requestMatchers("/api/projects/**").authenticated()
 
                         // 기타 인증 예외 경로

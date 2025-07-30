@@ -16,6 +16,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -30,6 +32,8 @@ public class AuthService {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
 
     private String generateUniqueUsername() {
         String base;
@@ -81,7 +85,7 @@ public class AuthService {
         User user = userRepository.findByEmailAndIsDeletedFalse(req.getEmail())
                 .orElseThrow(UserNotFoundException::new); // 존재하지 않는 이메일
 
-        if (!user.getProvider().equals("local")) {
+        if (user.getProvider() == null || !"local".equalsIgnoreCase(user.getProvider())) {
             throw new IllegalArgumentException("소셜 로그인으로 가입된 계정입니다. 소셜 로그인을 이용해주세요.");
         }
 
@@ -89,6 +93,13 @@ public class AuthService {
         if (user.isDeleted()) {
             throw new UserDeletedException();
         }
+
+
+        log.debug("새로 인코딩한 값: {}", passwordEncoder.encode("1234"));
+        log.debug("입력 비번: {}", req.getPassword());
+        log.debug("저장된 해시: {}", user.getPassword());
+        log.debug("matches 결과: {}", passwordEncoder.matches(req.getPassword(), user.getPassword()));
+
 
         // 비밀번호 불일치
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
