@@ -85,6 +85,7 @@ const MainDeveloperHighlight: React.FC<Props> = ({ projects }) => {
       )}
     </div>
   </section>
+
   );
 };
 
