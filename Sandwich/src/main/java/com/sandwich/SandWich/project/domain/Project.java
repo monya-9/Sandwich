@@ -52,7 +52,8 @@ public class Project extends BaseEntity {
     private String coverUrl;
 
     // SNS 공유 링크
-    private String snsUrl;
+    @Column(nullable = true)
+    private String shareUrl;
 
     // QR 코드 생성 여부
     private Boolean qrCodeEnabled;
