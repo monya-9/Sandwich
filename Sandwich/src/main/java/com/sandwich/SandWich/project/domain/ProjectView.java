@@ -26,9 +26,11 @@ public class ProjectView extends BaseEntity {
     @JoinColumn(name = "viewer_id")
     private User viewer;
 
+    @Builder.Default
     @Column(nullable = false)
     private Integer count = 1;
 
+    @Builder.Default
     @Column(name = "viewed_at", nullable = false)
     private java.time.LocalDateTime viewedAt = java.time.LocalDateTime.now();
 
