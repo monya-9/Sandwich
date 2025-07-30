@@ -48,6 +48,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/projects/{id:[0-9]+}").permitAll()
                         .requestMatchers("/api/projects/**").authenticated()
+                        
+                        // ======= 아래 줄을 추가하세요 =======
+                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
+                        // ===================================
 
                         // 기타 인증 예외 경로
                         .requestMatchers(

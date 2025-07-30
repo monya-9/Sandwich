@@ -10,6 +10,10 @@ import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
 
+// 실 서비스라면 아래처럼 username을 동적으로 받아오세요
+// import { useParams } from "react-router-dom";
+// const { username } = useParams<{ username: string }>();
+
 const MAX_WIDTH = 1440;
 const PANEL_WIDTH = 440;
 const GAP = 25;
@@ -24,6 +28,11 @@ export default function OtherProjectPage() {
   // ✅ 실제 프로젝트 API 응답이라고 가정
   const project = {
     qrImageUrl: "https://your-bucket.s3.amazonaws.com/qr/sample.png", // 실제 QR 이미지로 교체
+    username: "sampleuser", // 실제 서비스에서는 동적으로!
+    id: 123, // 실제 서비스에서는 동적으로!
+    name: "프로젝트 이름",
+    owner: "사용자 이름",
+    category: "UI·UX",
   };
 
   return (
@@ -50,8 +59,8 @@ export default function OtherProjectPage() {
               }}
             >
               <ProjectTopInfo
-                projectName="프로젝트 이름"
-                userName="사용자 이름"
+                projectName={project.name}
+                userName={project.owner}
                 intro="프로젝트 한줄 소개"
               />
               <div className="mb-6">
@@ -64,12 +73,12 @@ export default function OtherProjectPage() {
                   collections={5}
                   views={286}
                   comments={12}
-                  projectName="프로젝트 이름"
+                  projectName={project.name}
                   date="2025.5.11"
-                  category="UI/UX"
+                  category={project.category}
                 />
               </div>
-              <UserProfileBox userName="사용자 이름" />
+              <UserProfileBox userName={project.owner} />
               <ProjectGrid
                 works={[
                   { id: 1, title: "작업 1", thumbUrl: "/work-thumb1.jpg" },
@@ -122,11 +131,12 @@ export default function OtherProjectPage() {
             >
               <CommentPanel
                 onClose={() => setCommentOpen(false)}
-                projectId={123}
-                projectName="사용자 이름"
-                category="UI·UX"
+                username={project.username}   // ⭐️ username 반드시 전달!
+                projectId={project.id}
+                projectName={project.name}
+                category={project.category}
                 width={PANEL_WIDTH}
-                isLoggedIn={false}
+                isLoggedIn={false} // 로그인 로직 연동 시 동적으로 변경
               />
             </div>
           )}

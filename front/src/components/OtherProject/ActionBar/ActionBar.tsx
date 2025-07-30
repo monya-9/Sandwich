@@ -8,11 +8,15 @@ import ShareAction from "./ShareAction";
 import QrCodeAction from "./QrCodeAction";
 import LiveDemoAction from "./LiveDemoAction";
 
-// ✅ props 타입에 project 추가
 interface ActionBarProps {
   onCommentClick: () => void;
   project: {
+    id: number;
     qrImageUrl: string;
+    username: string;
+    name: string;
+    owner: string;
+    category: string;
   };
 }
 
@@ -21,7 +25,7 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
     <aside className="flex flex-col items-center gap-4">
       <ProfileAction />
       <SuggestAction />
-      <LikeAction />
+      <LikeAction targetType="PROJECT" targetId={project.id} />
       <CollectionAction />
       <CommentAction onClick={onCommentClick} />
       <ShareAction />
