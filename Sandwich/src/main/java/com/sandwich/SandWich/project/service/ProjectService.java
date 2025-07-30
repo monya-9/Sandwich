@@ -41,7 +41,6 @@ public class ProjectService {
         project.setIsTeam(request.getIsTeam());
         project.setTeamSize(request.getTeamSize());
         project.setCoverUrl(request.getCoverUrl());
-        project.setSnsUrl(request.getSnsUrl());
         project.setQrCodeEnabled(request.getQrCodeEnabled());
         project.setFrontendBuildCommand(request.getFrontendBuildCommand());
         project.setBackendBuildCommand(request.getBackendBuildCommand());
@@ -51,20 +50,22 @@ public class ProjectService {
         // 1차 저장
         Project saved = projectRepository.save(project);
 
-        // preview URL 구성
-        // preview URL에 프로젝트 ID 포함
-        String previewUrl = "sandwich.com/" + user.getUsername() + "/" + saved.getId();
+        // 서버에서 공유 URL 생성 및 저장
+        String previewUrl = "https://sandwich.com/" + user.getUsername() + "/" + saved.getId();
+        saved.setShareUrl(previewUrl);
 
         // QR 코드 생성 및 업로드 조건 체크
         if (request.getQrCodeEnabled() != null && request.getQrCodeEnabled()) {
-            String qrTargetUrl = "https://" + previewUrl;
-            log.info("[QR 생성] 시작 - previewUrl: {}", qrTargetUrl);
-            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(qrTargetUrl, 300, 300);
+            log.info("[QR 생성] 시작 - previewUrl: {}", previewUrl);
+            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(previewUrl, 300, 300);
             log.info("[QR 생성] 완료 - {} 바이트", qrImage.length);
             String qrImageUrl = s3Uploader.uploadQrImage(qrImage);  // ⚠️ S3Uploader 주입 필요
-            log.info("[QR 업로드] 완료 - S3 URL: {}", qrImageUrl);
             saved.setQrImageUrl(qrImageUrl);
+            log.info("[QR 업로드] 완료 - S3 URL: {}", qrImageUrl);
         }
+
+        // 다시 저장 (공유 URL + QR 이미지 포함)
+        projectRepository.save(saved);
 
         return new ProjectResponse(saved.getId(), previewUrl);
     }
@@ -87,7 +88,7 @@ public class ProjectService {
                 .isTeam(project.getIsTeam())
                 .teamSize(project.getTeamSize())
                 .coverUrl(project.getCoverUrl())
-                .snsUrl(project.getSnsUrl())
+                .shareUrl(project.getShareUrl())
                 .qrCodeEnabled(project.getQrCodeEnabled())
                 .qrImageUrl(project.getQrImageUrl())
                 .frontendBuildCommand(project.getFrontendBuildCommand())
