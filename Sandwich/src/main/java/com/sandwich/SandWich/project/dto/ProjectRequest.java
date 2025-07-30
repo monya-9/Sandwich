@@ -18,10 +18,12 @@ public class ProjectRequest {
     private Boolean isTeam;
     private Integer teamSize;
     private String coverUrl;
-    private String snsUrl;
+    private String shareUrl;
     private Boolean qrCodeEnabled;
     private String frontendBuildCommand;
     private String backendBuildCommand;
     private Integer portNumber;
     private String extraRepoUrl;
+
+
 }
