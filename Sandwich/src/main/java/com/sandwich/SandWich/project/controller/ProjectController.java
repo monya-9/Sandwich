@@ -2,11 +2,15 @@ package com.sandwich.SandWich.project.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.common.dto.PageResponse;
+import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
 import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
 import com.sandwich.SandWich.project.dto.ProjectRequest;
 import com.sandwich.SandWich.project.dto.ProjectResponse;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
+import com.sandwich.SandWich.project.repository.ProjectViewRepository;
 import com.sandwich.SandWich.project.service.ProjectService;
+import com.sandwich.SandWich.project.service.ProjectViewQueryService;
 import com.sandwich.SandWich.project.service.ProjectViewService;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +28,7 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final ProjectViewService projectViewService;
+    private final ProjectViewQueryService projectViewQueryService;
 
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(
@@ -59,5 +64,11 @@ public class ProjectController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return projectService.findAllProjects(pageable);
+    }
+
+    @GetMapping("/{id}/views")
+    public ResponseEntity<Long> getTotalViewCount(@PathVariable Long id) {
+        Long total = projectViewQueryService.getTotalViewCount(id);
+        return ResponseEntity.ok(total);
     }
 }
