@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ProjectViewRepository extends JpaRepository<ProjectView, Long> {
@@ -14,4 +15,6 @@ public interface ProjectViewRepository extends JpaRepository<ProjectView, Long> 
 
     @Query("SELECT COALESCE(SUM(pv.count), 0) FROM ProjectView pv WHERE pv.project.id = :projectId")
     Long sumViewCountByProjectId(@Param("projectId") Long projectId);
+
+    List<ProjectView> findByViewerIdOrderByViewedAtDesc(Long viewerId);
 }
