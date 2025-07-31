@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,10 @@ public class ProjectViewService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 프로젝트"));
 
+        log.info("[조회 진입] viewerId={}, projectOwnerId={}",
+                viewer != null ? viewer.getId() : null,
+                project.getUser().getId());
+
         if (viewer != null && project.getUser().getId().equals(viewer.getId())) {
             return; // 자기 프로젝트는 조회수 제외
         }
@@ -39,10 +44,12 @@ public class ProjectViewService {
         String redisKey = generateRedisKey(projectId, viewer, request);
         boolean isDuplicate = redisUtil.hasKey(redisKey);
 
+        log.info("[Redis 중복 키 체크] redisKey={}, isDuplicate={}", redisKey, isDuplicate);
+
         if (!isDuplicate) {
             try {
-                redisUtil.incrementViewCount("viewcount:project:" + projectId);
-                redisUtil.setKeyWithTTL(redisKey, TTL_HOURS, TimeUnit.HOURS);
+                redisUtil.incrementViewCount("viewcount:project:" + projectId); // TTL 없이 증가만
+                redisUtil.setDuplicateTTLKey(redisKey, TTL_HOURS, TimeUnit.HOURS); // TTL 있는 키 저장
             } catch (Exception e) {
                 log.warn("Redis 장애 발생 → DB 직접 증가 fallback", e);
 
@@ -58,13 +65,14 @@ public class ProjectViewService {
                 ? projectViewRepository.findByProjectAndViewer(project, viewer)
                 : Optional.empty(); // 비회원은 매번 새로 insert
 
-        if (optionalView.isPresent()) {
+        if (optionalView.isPresent() && !isDuplicate) {
             optionalView.get().increaseCount();
-        } else {
+        } else if (!isDuplicate) {  // 중복인 경우 insert 안 함
             projectViewRepository.save(ProjectView.builder()
                     .project(project)
                     .viewer(viewer) // 회원이면 user 객체, 비회원이면 null
                     .count(1)
+                    .viewedAt(LocalDateTime.now())
                     .build());
         }
     }
