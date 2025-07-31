@@ -7,7 +7,9 @@ import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
 import com.sandwich.SandWich.project.dto.ProjectRequest;
 import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.service.ProjectService;
+import com.sandwich.SandWich.project.service.ProjectViewService;
 import com.sandwich.SandWich.user.domain.User;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final ProjectViewService projectViewService;
 
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(
@@ -33,8 +36,19 @@ public class ProjectController {
     }
 
     @GetMapping("/{userId}/{id}")
-    public ResponseEntity<ProjectDetailResponse> getProject(@PathVariable Long userId, @PathVariable Long id) {
-        ProjectDetailResponse response = projectService.getProjectByUserIdAndProjectId(userId, id);  // ✅ 메서드명 변경
+    public ResponseEntity<ProjectDetailResponse> getProject(
+            @PathVariable Long userId,
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            HttpServletRequest request
+    ) {
+        User user = userDetails != null ? userDetails.getUser() : null;
+
+        // 조회수 처리 (view_count 증가 + project_views 기록)
+        projectViewService.handleProjectView(id, user, request);
+
+        // 기존 상세 조회 로직
+        ProjectDetailResponse response = projectService.getProjectByUserIdAndProjectId(userId, id);
         return ResponseEntity.ok(response);
     }
 
