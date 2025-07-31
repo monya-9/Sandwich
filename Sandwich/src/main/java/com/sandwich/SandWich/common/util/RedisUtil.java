@@ -49,7 +49,8 @@ public class RedisUtil {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
-    public void setKeyWithTTL(String key, long duration, TimeUnit unit) {
+    // TTL 키 전용 → 중복방지 전용 키일 때만 사용!
+    public void setDuplicateTTLKey(String key, long duration, TimeUnit unit) {
         redisTemplate.opsForValue().set(key, "1");
         redisTemplate.expire(key, duration, unit);
     }
