@@ -3,6 +3,7 @@ package com.sandwich.SandWich.project.service;
 import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.domain.ProjectView;
+import com.sandwich.SandWich.project.dto.ProjectViewDto;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.project.repository.ProjectViewRepository;
 import com.sandwich.SandWich.user.domain.User;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -97,5 +99,17 @@ public class ProjectViewService {
         } catch (Exception e) {
             throw new RuntimeException("해시 실패", e);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectViewDto> getUserProjectViews(Long userId) {
+        return projectViewRepository.findByViewerIdOrderByViewedAtDesc(userId).stream()
+                .map(view -> new ProjectViewDto(
+                        view.getProject().getId(),
+                        view.getProject().getTitle(),
+                        view.getCount(),
+                        view.getViewedAt()
+                ))
+                .toList();
     }
 }
