@@ -4,6 +4,7 @@ import com.sandwich.SandWich.social.domain.Follow;
 import com.sandwich.SandWich.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,4 +30,9 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     // 팔로잉 수
     @Query("SELECT COUNT(f) FROM Follow f WHERE f.follower = :user")
     long countByFollower(User user);
+
+    @Query("SELECT f.follower FROM Follow f " +
+            "WHERE f.following.id = :userId AND f.follower.isDeleted = false")
+    List<User> findFollowersByUserId(@Param("userId") Long userId);
+
 }
