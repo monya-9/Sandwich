@@ -60,7 +60,7 @@ public class User extends BaseEntity {
     private List<Follow> followings = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(mappedBy = "followed", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Follow> followers = new ArrayList<>();
 
     @Builder.Default
