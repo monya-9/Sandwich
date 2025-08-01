@@ -1,7 +1,7 @@
-package com.sandwich.SandWich.GitHubTokenRequest.service;
+package com.sandwich.SandWich.GitHubRequest.service;
 
-import com.sandwich.SandWich.GitHubTokenRequest.domain.UserGitHubToken;
-import com.sandwich.SandWich.GitHubTokenRequest.repository.GitHubTokenRepository;
+import com.sandwich.SandWich.GitHubRequest.domain.UserGitHubToken;
+import com.sandwich.SandWich.GitHubRequest.repository.GitHubTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.jasypt.util.text.AES256TextEncryptor;
 import org.springframework.stereotype.Service;
@@ -19,6 +19,7 @@ public class GitHubTokenService {
     private final GitHubTokenRepository gitHubTokenRepository;
     private final AES256TextEncryptor textEncryptor;
     private final RestTemplate restTemplate;
+    private final GitHubApiService gitHubApiService;
 
     public void saveToken(Long userId, Long projectId, String plainToken) {
         String encryptedToken = textEncryptor.encrypt(plainToken);
@@ -54,5 +55,14 @@ public class GitHubTokenService {
             return false;
         }
     }
+
+    public String getLatestCommitSha(Long userId, Long projectId, String owner, String repo, String branch) {
+        String token = getDecryptedToken(userId, projectId);
+        if (token == null) {
+            throw new IllegalStateException("토큰이 존재하지 않습니다.");
+        }
+        return gitHubApiService.getLatestCommitSha(token, owner, repo, branch);
+    }
+
 }
 

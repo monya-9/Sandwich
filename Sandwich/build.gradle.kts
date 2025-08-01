@@ -42,6 +42,7 @@ dependencies {
 	implementation("com.google.zxing:core:3.5.1")
 	implementation("com.google.zxing:javase:3.5.1")
 	implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.4")
+	implementation("org.json:json:20230227")
 
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
