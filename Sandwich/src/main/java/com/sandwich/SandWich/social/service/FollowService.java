@@ -5,13 +5,16 @@ import com.sandwich.SandWich.notification.service.FollowNotificationService;
 import com.sandwich.SandWich.social.domain.Follow;
 import com.sandwich.SandWich.social.repository.FollowRepository;
 import com.sandwich.SandWich.user.domain.User;
+import com.sandwich.SandWich.user.dto.FollowingUserResponse;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -73,5 +76,22 @@ public class FollowService {
                 .build();
 
         followNotificationService.send(payload); // 알림 전송은 나중에 구현
+    }
+
+    @Transactional
+    public List<FollowingUserResponse> getFollowingList(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("팔로잉 목록 대상 유저가 존재하지 않습니다."));
+
+        return followRepository.findByFollower(user).stream()
+                .map(follow -> {
+                    User target = follow.getFollowing();
+                    return new FollowingUserResponse(
+                            target.getId(),
+                            target.getNickname(),
+                            target.getProfileImageUrl()
+                    );
+                })
+                .collect(Collectors.toList());
     }
 }
