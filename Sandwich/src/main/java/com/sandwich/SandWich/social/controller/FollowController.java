@@ -7,10 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,6 +21,14 @@ public class FollowController {
                                          @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User currentUser = userDetails.getUser();
         followService.follow(currentUser, id);
-        return ResponseEntity.status(HttpStatus.OK).body("팔로우 성공");
+        return ResponseEntity.ok("팔로우 성공");
+    }
+
+    @DeleteMapping("/{id}/unfollow")
+    public ResponseEntity<String> unfollow(@PathVariable Long id,
+                                           @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        User currentUser = userDetails.getUser();
+        followService.unfollow(currentUser, id);
+        return ResponseEntity.ok("언팔로우 성공");
     }
 }
