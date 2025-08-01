@@ -58,7 +58,7 @@ public class SecurityConfig {
                         // 프로젝트 단일 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/users/**/project-views").hasAnyRole("USER", "ADMIN", "AI")
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER", "ADMIN", "AI")
                         // 그 외 프로젝트 관련
                         .requestMatchers("/api/projects/**").authenticated()
 
