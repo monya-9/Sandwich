@@ -59,7 +59,7 @@ public class FollowService {
     @Transactional
     public boolean isFollowing(User currentUser, Long targetUserId) {
         User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new UserNotFoundException("대상 유저가 존재하지 않습니다."));
+                .orElseThrow(() -> new UserNotFoundException("팔로우 상태 확인 대상 유저가 존재하지 않습니다."));
 
         return followRepository.existsByFollowerAndFollowing(currentUser, targetUser);
     }
