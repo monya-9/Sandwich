@@ -5,10 +5,10 @@ import com.sandwich.SandWich.notification.service.FollowNotificationService;
 import com.sandwich.SandWich.social.domain.Follow;
 import com.sandwich.SandWich.social.repository.FollowRepository;
 import com.sandwich.SandWich.user.domain.User;
-import com.sandwich.SandWich.user.dto.FollowingUserResponse;
+import com.sandwich.SandWich.user.dto.SimpleUserResponse;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -79,19 +79,30 @@ public class FollowService {
     }
 
     @Transactional
-    public List<FollowingUserResponse> getFollowingList(Long userId) {
+    public List<SimpleUserResponse> getFollowingList(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("팔로잉 목록 대상 유저가 존재하지 않습니다."));
 
         return followRepository.findByFollower(user).stream()
                 .map(follow -> {
                     User target = follow.getFollowing();
-                    return new FollowingUserResponse(
+                    return new SimpleUserResponse(
                             target.getId(),
                             target.getNickname(),
                             target.getProfileImageUrl()
                     );
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<SimpleUserResponse> getFollowerList(Long userId) {
+        List<User> followers = followRepository.findFollowersByUserId(userId);
+        return followers.stream()
+                .map(user -> new SimpleUserResponse(
+                        user.getId(),
+                        user.getNickname(),
+                        user.getProfileImageUrl()))
+                .toList();
     }
 }

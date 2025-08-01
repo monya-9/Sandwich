@@ -4,7 +4,7 @@ import lombok.*;
 
 @Getter
 @AllArgsConstructor
-public class FollowingUserResponse {
+public class SimpleUserResponse {
     private Long id;
     private String nickname;
     private String profileImageUrl;
