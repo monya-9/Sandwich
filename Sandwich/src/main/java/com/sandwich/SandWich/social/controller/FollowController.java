@@ -3,9 +3,8 @@ package com.sandwich.SandWich.social.controller;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.social.service.FollowService;
 import com.sandwich.SandWich.user.domain.User;
-import com.sandwich.SandWich.user.dto.FollowingUserResponse;
+import com.sandwich.SandWich.user.dto.SimpleUserResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -45,8 +44,12 @@ public class FollowController {
     }
 
     @GetMapping("/{id}/following")
-    public ResponseEntity<List<FollowingUserResponse>> getFollowingList(@PathVariable Long id) {
-        List<FollowingUserResponse> response = followService.getFollowingList(id);
+    public ResponseEntity<List<SimpleUserResponse>> getFollowingList(@PathVariable Long id) {
+        List<SimpleUserResponse> response = followService.getFollowingList(id);
         return ResponseEntity.ok(response);
+    }
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<List<SimpleUserResponse>> getFollowers(@PathVariable Long id) {
+        return ResponseEntity.ok(followService.getFollowerList(id));
     }
 }
