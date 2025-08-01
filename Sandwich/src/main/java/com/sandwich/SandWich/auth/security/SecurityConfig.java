@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/*/following").permitAll()
                         // 팔로워 목록 조회
                         .requestMatchers("/api/users/*/followers").permitAll()
+
                         // 수 조회 추가
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
 

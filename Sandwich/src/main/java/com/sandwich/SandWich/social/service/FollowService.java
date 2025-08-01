@@ -117,4 +117,5 @@ public class FollowService {
 
         return new FollowCountResponse(followerCount, followingCount);
     }
+
 }
