@@ -3,6 +3,7 @@ package com.sandwich.SandWich.social.service;
 import com.sandwich.SandWich.notification.dto.FollowNotificationPayload;
 import com.sandwich.SandWich.notification.service.FollowNotificationService;
 import com.sandwich.SandWich.social.domain.Follow;
+import com.sandwich.SandWich.social.dto.FollowCountResponse;
 import com.sandwich.SandWich.social.repository.FollowRepository;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.SimpleUserResponse;
@@ -105,4 +106,16 @@ public class FollowService {
                         user.getProfileImageUrl()))
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public FollowCountResponse getFollowCounts(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("팔로우 수 조회 대상 유저가 존재하지 않습니다."));
+
+        long followerCount = followRepository.countByFollowing(user);
+        long followingCount = followRepository.countByFollower(user);
+
+        return new FollowCountResponse(followerCount, followingCount);
+    }
+
 }

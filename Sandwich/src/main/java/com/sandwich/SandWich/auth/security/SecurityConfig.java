@@ -67,6 +67,9 @@ public class SecurityConfig {
                         // 팔로워 목록 조회
                         .requestMatchers("/api/users/*/followers").permitAll()
 
+                        // 수 조회 추가
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+
                         // gitUrl
                         .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated() // gitUrl 저장 (인증 필요)
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()      // gitUrl 조회 (누구나 접근 허용)
