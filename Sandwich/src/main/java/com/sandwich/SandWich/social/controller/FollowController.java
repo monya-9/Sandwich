@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.social.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
+import com.sandwich.SandWich.social.dto.FollowCountResponse;
 import com.sandwich.SandWich.social.service.FollowService;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.SimpleUserResponse;
@@ -51,5 +52,11 @@ public class FollowController {
     @GetMapping("/{id}/followers")
     public ResponseEntity<List<SimpleUserResponse>> getFollowers(@PathVariable Long id) {
         return ResponseEntity.ok(followService.getFollowerList(id));
+    }
+
+    @GetMapping("/{id}/follow-counts")
+    public ResponseEntity<FollowCountResponse> getFollowCounts(@PathVariable Long id) {
+        FollowCountResponse response = followService.getFollowCounts(id);
+        return ResponseEntity.ok(response);
     }
 }
