@@ -1,4 +1,4 @@
-package com.sandwich.SandWich.GitHubTokenRequest.dto;
+package com.sandwich.SandWich.GitHubRequest.dto;
 
 import lombok.Getter;
 import lombok.Setter;

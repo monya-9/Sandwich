@@ -1,4 +1,4 @@
-package com.sandwich.SandWich.GitHubTokenRequest.domain;
+package com.sandwich.SandWich.GitHubRequest.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
