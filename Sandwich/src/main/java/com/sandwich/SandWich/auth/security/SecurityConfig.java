@@ -62,6 +62,9 @@ public class SecurityConfig {
                         // 그 외 프로젝트 관련
                         .requestMatchers("/api/projects/**").authenticated()
 
+                        // 팔로잉 목록 조회
+                        .requestMatchers("/api/users/*/following").permitAll()
+
                         // gitUrl
                         .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated() // gitUrl 저장 (인증 필요)
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()      // gitUrl 조회 (누구나 접근 허용)
