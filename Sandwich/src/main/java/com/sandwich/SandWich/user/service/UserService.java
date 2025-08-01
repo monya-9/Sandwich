@@ -104,7 +104,7 @@ public class UserService {
                 .toList().size();
 
         int followingCount = user.getFollowings().stream()
-                .filter(f -> !f.getFollowed().isDeleted())
+                .filter(f -> !f.getFollowing().isDeleted())
                 .toList().size();
 
         return new UserProfileResponse(
