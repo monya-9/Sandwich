@@ -47,6 +47,7 @@ public class FollowController {
     @GetMapping("/{id}/following")
     public ResponseEntity<List<SimpleUserResponse>> getFollowingList(@PathVariable Long id) {
         List<SimpleUserResponse> response = followService.getFollowingList(id);
+
         return ResponseEntity.ok(response);
     }
     @GetMapping("/{id}/followers")
@@ -58,5 +59,9 @@ public class FollowController {
     public ResponseEntity<FollowCountResponse> getFollowCounts(@PathVariable Long id) {
         FollowCountResponse response = followService.getFollowCounts(id);
         return ResponseEntity.ok(response);
+    }
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<List<SimpleUserResponse>> getFollowers(@PathVariable Long id) {
+        return ResponseEntity.ok(followService.getFollowerList(id));
     }
 }
