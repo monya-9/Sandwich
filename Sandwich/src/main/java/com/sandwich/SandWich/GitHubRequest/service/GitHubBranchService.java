@@ -17,20 +17,21 @@ import org.springframework.web.client.RestTemplate;
 public class GitHubBranchService {
     private final GitHubTokenService gitHubTokenService;
     private final GitHubApiService gitHubApiService;
+    private final GitHubSecretsService gitHubSecretsService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public void createBranchWithFileAndPR(Long userId, Long projectId, String owner, String repo, String baseBranch, String newBranchName) throws Exception {
-        String token = gitHubTokenService.getDecryptedToken(userId, projectId);
-        if (token == null) {
-            throw new IllegalStateException("토큰이 존재하지 않습니다.");
+    public void createBranchWithFileAndPR(Long userId, Long projectId, String owner, String repo, String baseBranch, String newBranchName, String gitHubToken) throws Exception {
+        if (gitHubToken == null || gitHubToken.isEmpty()) {
+            throw new IllegalArgumentException("GitHub 토큰이 전달되지 않았습니다.");
         }
 
+
         // 1. 기준 브랜치 최신 SHA 가져오기
-        String baseSha = gitHubApiService.getLatestCommitSha(token, owner, repo, baseBranch);
+        String baseSha = gitHubApiService.getLatestCommitSha(gitHubToken, owner, repo, baseBranch);
 
         // 2. 새 브랜치 생성
-        gitHubApiService.createBranch(token, owner, repo, newBranchName, baseSha);
+        gitHubApiService.createBranch(gitHubToken, owner, repo, newBranchName, baseSha);
 
         // 3. .sandwich.json 생성 및 커밋
         Map<String, Object> jsonMap = new HashMap<>();
@@ -44,7 +45,7 @@ public class GitHubBranchService {
         String url = String.format("https://api.github.com/repos/%s/%s/contents/.sandwich.json", owner, repo);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
+        headers.setBearerAuth(gitHubToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> body = new HashMap<>();
@@ -56,6 +57,13 @@ public class GitHubBranchService {
         restTemplate.exchange(url, HttpMethod.PUT, request, String.class);
 
         // 4. PR 생성
-        gitHubApiService.createPullRequest(token, owner, repo, newBranchName, baseBranch);
+        gitHubApiService.createPullRequest(gitHubToken, owner, repo, newBranchName, baseBranch);
+
+        // 5. GitHub Secrets 자동 등록
+        String awsAccessKey = System.getenv("SANDWICH_USER_AWS_ACCESS_KEY_ID");
+        String awsSecretKey = System.getenv("SANDWICH_USER_AWS_SECRET_ACCESS_KEY");
+
+        gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "SANDWICH_USER_AWS_ACCESS_KEY_ID", awsAccessKey);
+        gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "SANDWICH_USER_AWS_SECRET_ACCESS_KEY", awsSecretKey);
     }
 }
