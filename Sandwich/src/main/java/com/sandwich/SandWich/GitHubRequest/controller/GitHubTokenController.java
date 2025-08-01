@@ -1,7 +1,7 @@
-package com.sandwich.SandWich.GitHubTokenRequest.controller;
+package com.sandwich.SandWich.GitHubRequest.controller;
 
-import com.sandwich.SandWich.GitHubTokenRequest.dto.GitHubTokenRequest;
-import com.sandwich.SandWich.GitHubTokenRequest.service.GitHubTokenService;
+import com.sandwich.SandWich.GitHubRequest.dto.GitHubTokenRequest;
+import com.sandwich.SandWich.GitHubRequest.service.GitHubTokenService;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +34,19 @@ public class GitHubTokenController {
         gitHubTokenService.saveToken(userId, projectId, request.getToken());
 
         return ResponseEntity.ok("GitHub 토큰이 성공적으로 저장되었습니다.");
+    }
+
+    @GetMapping("/{projectId}/latest-sha")
+    public ResponseEntity<String> getLatestSha(
+            @PathVariable Long projectId,
+            @RequestParam String owner,
+            @RequestParam String repo,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        Long userId = userDetails.getUser().getId();
+        String branch = "main";
+        String sha = gitHubTokenService.getLatestCommitSha(userId, projectId, owner, repo, branch);
+        return ResponseEntity.ok(sha);
     }
 
 }
