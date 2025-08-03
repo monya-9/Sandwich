@@ -4,7 +4,6 @@ import logo from "../../../../assets/logo.png";
 import SNSButtonGroup from "./SNSButtonGroup";
 import RecentLogin from "../../RecentLogin";
 
-
 interface JoinIntroProps {
     onNext: () => void;
 }
@@ -21,8 +20,13 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
 
             <div className="w-full max-w-xs">
                 <p className="text-sm text-gray-500 mb-6">SNS로 간편하게 시작하기</p>
-                <SNSButtonGroup />
-                <RecentLogin />
+
+                <div className="flex flex-col items-center mb-4">
+                    <SNSButtonGroup />
+                    <div className="mt-1">
+                        <RecentLogin />
+                    </div>
+                </div>
 
 
                 {/* 👉 이메일로 가입 */}
@@ -39,6 +43,7 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
                     이메일로 가입하기
                 </button>
             </div>
+
             <p className="text-sm text-gray-500 mt-4">
                 이미 샌드위치 계정이 있으신가요?{" "}
                 <Link to="/login" className="text-green-700 hover:underline font-medium">

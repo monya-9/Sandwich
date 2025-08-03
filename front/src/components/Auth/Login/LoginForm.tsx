@@ -12,14 +12,14 @@ import RecentLogin from "../RecentLogin";
 import api from "../../../api/axiosInstance";
 import { setToken } from "../../../utils/tokenStorage";
 
-const LoginForm = () => {
+const LoginForm: React.FC = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const { login } = useContext(AuthContext);
     const [loginFailed, setLoginFailed] = useState(false);
-
     const [keepLogin, setKeepLogin] = useState(false);
+
     const isActive = email.trim() !== "" && password.trim() !== "";
 
     const handleLogin = async () => {
@@ -27,8 +27,11 @@ const LoginForm = () => {
             const res = await api.post("/auth/login", { email, password });
             const { accessToken } = res.data;
 
-            // ✅ 토큰 저장 (localStorage or sessionStorage)
+            // ✅ AccessToken 저장
             setToken(accessToken, keepLogin);
+            // 이메일도 저장
+            const storage = keepLogin ? localStorage : sessionStorage;
+            storage.setItem("userEmail", email);
 
             login();
             navigate("/");

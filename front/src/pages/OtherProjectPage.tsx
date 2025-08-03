@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Header from "../components/Main/Header";
+import Header from '../components/common/Header/Header';
 import ActionBar from "../components/OtherProject/ActionBar/ActionBar";
 import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
 import ProjectThumbnail from "../components/OtherProject/ProjectThumbnail";

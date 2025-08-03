@@ -78,6 +78,16 @@ public class SecurityConfig {
                 // JWT 필터
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
+                .logout(logout -> logout
+                        .logoutUrl("/api/auth/logout")              // 로그아웃 URL
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            log.info("✅ 로그아웃 완료: {}", authentication != null ? authentication.getName() : "익명");
+                            response.setStatus(HttpServletResponse.SC_OK);
+                        })
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                )
+
                 // 예외 처리
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(customAuthenticationEntryPoint)

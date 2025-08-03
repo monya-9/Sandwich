@@ -16,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.sandwich.SandWich.auth.service.AuthService;
+import java.util.concurrent.TimeUnit;
+import org.springframework.data.redis.core.RedisTemplate;
+
 
 import java.util.Map;
 
@@ -29,6 +32,7 @@ public class AuthController {
     private final ProfileRepository profileRepository;
     private final JwtUtil jwtUtil;
     private final AuthService authService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody @Valid SignupRequest req) {
@@ -55,13 +59,20 @@ public class AuthController {
             throw new InvalidRefreshTokenException();
         }
 
-        // ✅ AccessToken은 email 기준
         String newAccessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
         String newRefreshToken = jwtUtil.createRefreshToken(user.getEmail());
-        redisUtil.saveRefreshToken(String.valueOf(user.getId()), newRefreshToken);
+
+        // ✅ 7일 TTL 적용
+        redisTemplate.opsForValue().set(
+                "refresh:userId:" + user.getId(),
+                newRefreshToken,
+                7,
+                TimeUnit.DAYS
+        );
 
         return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, user.getProvider()));
     }
+
 
 
     @PostMapping("/logout")

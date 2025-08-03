@@ -32,8 +32,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         String provider = oAuth2User.getProvider();
         String email = oAuth2User.getAttribute("email");
-        String username = oAuth2User.getAttribute("login");
+        String username = oAuth2User.getAttribute("login"); // GitHub 전용
 
+        // GitHub 같은 경우 이메일이 없으면 대체 이메일 생성
         if (email == null || email.isBlank()) {
             email = username + "@github.local";
         }
@@ -41,7 +42,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         final String socialEmail = email;
         final String socialProvider = provider;
 
-        // 유저 조회 or 신규 생성
+        // DB에 유저 존재 여부 확인, 없으면 신규 생성
         User user = userRepository.findByEmailAndIsDeletedFalse(socialEmail)
                 .orElseGet(() -> {
                     User newUser = User.builder()
@@ -53,17 +54,21 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     return userRepository.saveAndFlush(newUser);
                 });
 
-        // JWT 생성
+        // JWT 발급
         String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+
+        // RefreshToken을 Redis에 저장
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
+        // 프로필 세팅 여부
         boolean profileComplete = user.getProfile() != null;
 
-        // 프론트로 리다이렉트
+        // ✅ 프론트로 redirect 시 email까지 포함
         String redirectUri = "http://localhost:3000/oauth2/success"
                 + "?token=" + accessToken
                 + "&refreshToken=" + refreshToken
+                + "&email=" + user.getEmail()
                 + "&provider=" + user.getProvider()
                 + "&isProfileSet=" + profileComplete;
 
