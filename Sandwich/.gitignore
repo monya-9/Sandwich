@@ -4,11 +4,20 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-.env
+
+# 🔹 민감 파일 무시
+**/.env*
+**/application.properties
+**/application.yml
+
+# 🔹 노드
 **/node_modules/
+
+# 🔹 명시적으로 resources 파일 무시
 **/src/main/resources/application.yml
 **/src/main/resources/application.properties
 
+run-local.sh
 
 ### STS ###
 .apt_generated
