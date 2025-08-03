@@ -1,27 +1,24 @@
 package com.sandwich.SandWich.auth.security;
+
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
-import org.springframework.http.HttpMethod;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -41,50 +38,47 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 좋아요 기능
+                        // 좋아요
                         .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
-                        // 프로젝트 전체 조회
+                        // 프로젝트 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
-                        // 프로젝트 단일 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER", "ADMIN", "AI")
-                        // 그 외 프로젝트 관련
-                        .requestMatchers("/api/projects/**").authenticated()
-
-                        // 팔로잉 목록 조회
+                        // 팔로우/팔로잉 조회
                         .requestMatchers("/api/users/*/following").permitAll()
-                        // 팔로워 목록 조회
                         .requestMatchers("/api/users/*/followers").permitAll()
-
-                        // 수 조회 추가
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER","ADMIN","AI")
 
                         // gitUrl
-                        .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated() // gitUrl 저장 (인증 필요)
-                        .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()      // gitUrl 조회 (누구나 접근 허용)
+                        .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
 
-                        // 기타 인증 예외 경로
+                        // 인증 예외 경로
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
-                                "/swagger-ui.html", "/webjars/**", "/api/upload/image"
+                                "/swagger-ui.html", "/webjars/**", "/api/upload/image",
+                                "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
+
+                // JWT 필터
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
+                // 예외 처리
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -93,12 +87,9 @@ public class SecurityConfig {
                             response.sendError(HttpServletResponse.SC_FORBIDDEN);
                         })
                 )
+
+                // 표준 OAuth2 로그인
                 .oauth2Login(oauth -> oauth
-                        .authorizationEndpoint(endpoint -> endpoint
-                                .authorizationRequestResolver(
-                                        new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
-                                )
-                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
