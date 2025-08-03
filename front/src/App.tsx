@@ -7,6 +7,7 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
 import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
 import { AuthProvider } from './context/AuthContext';
+import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 function App() {
     return (
@@ -18,8 +19,11 @@ function App() {
                             <Route path="/" element={<MainPage />} />
                             <Route path="/join" element={<JoinPage />} />
                             <Route path="/login" element={<LoginPage />} />
+                            {/* ✅ 소셜 로그인 성공/실패 처리 */}
                             <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
                             <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
+                            {/* ✅ 추가 정보 입력 */}
+                            <Route path="/oauth/profile-step" element={<ProfileStep />} />
                         </Routes>
                     </div>
                 </BrowserRouter>

@@ -55,12 +55,14 @@ public class AuthController {
             throw new InvalidRefreshTokenException();
         }
 
-        String newAccessToken = jwtUtil.createAccessToken(user.getUsername(), user.getRole().name());
-        String newRefreshToken = jwtUtil.createRefreshToken(email);
+        // ✅ AccessToken은 email 기준
+        String newAccessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
+        String newRefreshToken = jwtUtil.createRefreshToken(user.getEmail());
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), newRefreshToken);
 
-        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, "local"));
+        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, user.getProvider()));
     }
+
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {

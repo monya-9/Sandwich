@@ -1,6 +1,6 @@
+// src/components/Auth/Login/LoginForm.tsx
 import React, { useState, useContext } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import logo from "../../../assets/logo.png";
 import LoginInput from "./LoginInput";
@@ -8,6 +8,9 @@ import LoginButton from "./LoginButton";
 import KeepLoginCheck from "./KeepLoginCheck";
 import SNSLogin from "./SNSLogin";
 import LoginActions from "./LoginActions";
+import RecentLogin from "../RecentLogin";
+import api from "../../../api/axiosInstance";
+import { setToken } from "../../../utils/tokenStorage";
 
 const LoginForm = () => {
     const navigate = useNavigate();
@@ -16,26 +19,19 @@ const LoginForm = () => {
     const { login } = useContext(AuthContext);
     const [loginFailed, setLoginFailed] = useState(false);
 
+    const [keepLogin, setKeepLogin] = useState(false);
     const isActive = email.trim() !== "" && password.trim() !== "";
 
     const handleLogin = async () => {
         try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+            const res = await api.post("/auth/login", { email, password });
+            const { accessToken } = res.data;
 
-            if (res.ok) {
-                const data = await res.json();
-                localStorage.setItem("accessToken", data.accessToken);
-                login();
-                setLoginFailed(false); // 성공 시 초기화
-                alert("로그인 성공");
-                navigate("/");
-            } else {
-                setLoginFailed(true); // 로그인 실패 시
-            }
+            // ✅ 토큰 저장 (localStorage or sessionStorage)
+            setToken(accessToken, keepLogin);
+
+            login();
+            navigate("/");
         } catch (err) {
             console.error("로그인 오류", err);
             setLoginFailed(true);
@@ -59,11 +55,13 @@ const LoginForm = () => {
 
                 <LoginButton onClick={handleLogin} isActive={isActive} />
 
-                <KeepLoginCheck />
+                <KeepLoginCheck checked={keepLogin} onChange={setKeepLogin} />
             </div>
+
             <div className="space-y-6">
                 <LoginActions isError={loginFailed} />
                 <SNSLogin />
+                <RecentLogin />
             </div>
         </div>
     );

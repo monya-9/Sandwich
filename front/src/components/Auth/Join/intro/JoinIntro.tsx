@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import logo from "../../../../assets/logo.png";
 import SNSButtonGroup from "./SNSButtonGroup";
+import RecentLogin from "../../RecentLogin";
 
 
 interface JoinIntroProps {
@@ -20,7 +21,9 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
 
             <div className="w-full max-w-xs">
                 <p className="text-sm text-gray-500 mb-6">SNS로 간편하게 시작하기</p>
-                <SNSButtonGroup /> {/* 여기만 넣으면 됨 */}
+                <SNSButtonGroup />
+                <RecentLogin />
+
 
                 {/* 👉 이메일로 가입 */}
                 <div className="flex items-center justify-center mb-6">
