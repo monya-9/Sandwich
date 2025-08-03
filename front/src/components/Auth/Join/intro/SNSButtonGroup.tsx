@@ -7,7 +7,7 @@ import SNSButton from "./SNSButton";
 const SNSButtonGroup = () => {
     const handleSocialLogin = (provider: "google" | "github") => {
         // ✅ React 내부 경로로 먼저 이동 → 흰 화면 유지
-        window.location.assign(`/oauth2/loading?provider=${provider}`);
+        window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
     };
 
     return (
