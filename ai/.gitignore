@@ -1,0 +1,4 @@
+# JetBrains IDE 설정 제외
+.idea/
+
+.venv
