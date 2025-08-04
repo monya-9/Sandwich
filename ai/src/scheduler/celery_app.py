@@ -1,13 +1,10 @@
 from celery import Celery
 
-app = Celery(
-    "scheduler",
-    broker="redis://localhost:6379/1",
-    backend="redis://localhost:6379/2"
-)
+app = Celery("scheduler", broker="redis://redis:4242/1", backend="redis://redis:4242/2")
+
 app.conf.beat_schedule = {
     "hourly-recs": {
-        "task": "scheduler.tasks.run_all",
-        "schedule": 3600.0,
+        "task": "scheduler.tasks.refresh_recommendations",
+        "schedule": 3600.0,   # 1시간마다
     },
 }
