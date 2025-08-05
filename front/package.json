@@ -12,11 +12,8 @@
     "@types/node": "^16.18.126",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
-<<<<<<< HEAD
     "axios": "^1.11.0",
-=======
     "lucide-react": "^0.525.0",
->>>>>>> origin/develop
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.10.1",
@@ -51,6 +48,7 @@
   },
   "devDependencies": {
     "@types/react-router-dom": "^5.3.3",
+    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.1"

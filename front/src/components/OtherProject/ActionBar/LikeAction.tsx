@@ -2,19 +2,19 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { FaHeart } from "react-icons/fa";
 import axios from "axios";
+import LikedUsersModal from "./LikedUsersModal";
 
 interface LikeActionProps {
   targetType: "PROJECT" | "BOARD" | "COMMENT";
   targetId: number;
 }
 
-
-
 export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(0);
   const [toast, setToast] = useState<null | "like" | "unlike">(null);
   const [loading, setLoading] = useState(false);
+  const [showLikedUsers, setShowLikedUsers] = useState(false);
 
   // ✅ 로그인 상태 판단 (localStorage에 토큰 존재 여부)
   const isLoggedIn = !!localStorage.getItem("accessToken");
@@ -23,16 +23,19 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   useEffect(() => {
     const fetchLike = async () => {
       try {
+        const token = localStorage.getItem("accessToken");
+        
         const res = await axios.get(`/api/likes`, {
           params: { targetType, targetId },
           withCredentials: true,
-          headers: {
-            Authorization: localStorage.getItem("accessToken") || "",
-          },
+          headers: token ? {
+            Authorization: `Bearer ${token}`,
+          } : {},
         });
-        setLiked(res.data.likedByMe);
-        setCount(res.data.likeCount);
+        setLiked(res.data.likedByMe || false);
+        setCount(res.data.likeCount || 0);
       } catch (e) {
+        console.error("좋아요 상태 조회 실패:", e);
         setLiked(false);
         setCount(0);
       }
@@ -54,14 +57,21 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     }
     if (loading) return;
     setLoading(true);
+    
     try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+
       const res = await axios.post(
         "/api/likes",
         { targetType, targetId },
         {
           withCredentials: true,
           headers: {
-            Authorization: localStorage.getItem("accessToken") || "",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -69,8 +79,11 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
       setCount(res.data.likeCount);
       setToast(res.data.likedByMe ? "like" : "unlike");
     } catch (e: any) {
+      console.error("좋아요 처리 실패:", e);
       if (e.response?.status === 401) {
         alert("로그인이 필요합니다.");
+      } else {
+        alert("좋아요 처리 중 오류가 발생했습니다.");
       }
     } finally {
       setLoading(false);
@@ -131,6 +144,12 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   return (
     <>
       {renderToast}
+      <LikedUsersModal
+        isOpen={showLikedUsers}
+        onClose={() => setShowLikedUsers(false)}
+        targetType={targetType}
+        targetId={targetId}
+      />
       <div className="relative">
         <button
           aria-label="좋아요"
@@ -140,29 +159,32 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
         >
           <div
             className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 transition-all duration-150
-              ${liked ? "bg-[#222]" : "bg-[#FF6688]"}`}
+              ${liked ? "bg-[#FF6688]" : "bg-white"}`}
             style={{ position: "relative" }}
           >
             <FaHeart
               className={`w-6 h-6 transition-colors duration-150
-                  ${liked ? "mb-1 translate-y-[-6px] text-[#FF6688]" : "text-white"}`}
+                  ${liked ? "text-white" : "text-gray-800"}`}
+                  style={{ transform: "translateY(-8px)" }}
             />
-            {liked && (
-              <span
-                className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-100%] text-white text-lg font-bold pointer-events-none select-none"
-                style={{
-                  lineHeight: 1,
-                  marginTop: 26,
-                  textShadow: "0 1px 2px #0004",
-                }}
-              >
-                {count}
-              </span>
-            )}
+            <span
+              className={`absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-100%] text-lg font-bold cursor-pointer select-none ${liked ? "text-white" : "text-gray-800"}`}
+              style={{
+                lineHeight: 1,
+                marginTop: 25,
+                textShadow: liked ? "0 1px 2px #0004" : "none",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLikedUsers(true);
+              }}
+            >
+              {count}
+            </span>
           </div>
           <span className="text-xs text-gray-800 font-semibold text-center">좋아요</span>
         </button>
       </div>
     </>
   );
-}
+} 
