@@ -52,12 +52,17 @@ public class Project extends BaseEntity {
     private String coverUrl;
 
     // SNS 공유 링크
-    private String snsUrl;
+    @Column(nullable = true)
+    private String shareUrl;
 
     // QR 코드 생성 여부
     private Boolean qrCodeEnabled;
 
     private String qrImageUrl;
+
+    @Column(name = "view_count", nullable = false)
+    private Long viewCount = 0L;
+
     private String frontendBuildCommand;
     private String backendBuildCommand;
     private Integer portNumber;
@@ -78,4 +83,7 @@ public class Project extends BaseEntity {
     // [에디터 콘텐츠] - 이미지/텍스트/영상 순서 저장
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectContent> contents = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectView> views = new ArrayList<>();
 }
