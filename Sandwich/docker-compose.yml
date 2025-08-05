@@ -6,7 +6,7 @@ services:
     container_name: sandwich_app
     ports:
       - "8080:8080"
-    restart: always         #재시작 정책 설정
+    restart: always         # 재시작 정책 설정
     depends_on:
       - postgres
       - redis
@@ -28,7 +28,7 @@ services:
       - "5432:5432"
     env_file: .env
     environment:
-      POSTGRES_DB: sandwich
+      POSTGRES_DB: sandwich_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:

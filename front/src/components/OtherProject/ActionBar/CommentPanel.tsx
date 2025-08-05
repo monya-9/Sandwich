@@ -3,6 +3,7 @@ import {
   fetchComments, postComment, updateComment, deleteComment,
   CommentResponse
 } from "../../../api/commentApi";
+import CommentLikeAction from "./CommentLikeAction";
 
 interface CommentPanelProps {
   onClose: () => void;
@@ -94,6 +95,7 @@ export default function CommentPanel({
       )}
 
       <div className="flex gap-2 mt-1 text-xs text-gray-500">
+        <CommentLikeAction commentId={c.id} />
         <button
           onClick={() => isLoggedIn ? setReply({ parentId: c.id, value: "" }) : undefined}
           disabled={!isLoggedIn}

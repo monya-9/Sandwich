@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Header from "../components/Main/Header";
 import ActionBar from "../components/OtherProject/ActionBar/ActionBar";
 import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
@@ -9,6 +9,7 @@ import UserProfileBox from "../components/OtherProject/UserProfileBox";
 import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
+import { AuthContext } from "../context/AuthContext";
 
 // 실 서비스라면 아래처럼 username을 동적으로 받아오세요
 // import { useParams } from "react-router-dom";
@@ -24,6 +25,7 @@ const ACTIONBAR_WIDTH = 80;
 export default function OtherProjectPage() {
   const [commentOpen, setCommentOpen] = useState(false);
   const projectWidth = commentOpen ? PROJECT_NARROW : PROJECT_WIDE;
+  const { isLoggedIn } = useContext(AuthContext);
 
   // ✅ 실제 프로젝트 API 응답이라고 가정
   const project = {
@@ -136,7 +138,7 @@ export default function OtherProjectPage() {
                 projectName={project.name}
                 category={project.category}
                 width={PANEL_WIDTH}
-                isLoggedIn={false} // 로그인 로직 연동 시 동적으로 변경
+                isLoggedIn={isLoggedIn} // AuthContext에서 로그인 상태 가져오기
               />
             </div>
           )}
