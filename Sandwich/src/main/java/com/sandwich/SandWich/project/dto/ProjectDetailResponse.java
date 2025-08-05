@@ -22,7 +22,7 @@ public class ProjectDetailResponse {
     private Boolean isTeam;
     private Integer teamSize;
     private String coverUrl;
-    private String snsUrl;
+    private String shareUrl;
     private Boolean qrCodeEnabled;
     private String qrImageUrl;
     private String frontendBuildCommand;

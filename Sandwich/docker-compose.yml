@@ -6,6 +6,7 @@ services:
     container_name: sandwich_app
     ports:
       - "8080:8080"
+    restart: always         #재시작 정책 설정
     depends_on:
       - postgres
       - redis
@@ -16,6 +17,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      SANDWICH_USER_AWS_ACCESS_KEY_ID: ${SANDWICH_USER_AWS_ACCESS_KEY_ID}
+      SANDWICH_USER_AWS_SECRET_ACCESS_KEY: ${SANDWICH_USER_AWS_SECRET_ACCESS_KEY}
     networks:
       - sandwich-net
 
@@ -63,6 +66,8 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+      - ../front/build:/app
+      - ./public:/app/public   # 사용자 프로젝트 정적파일 저장소 들어갈 곳
     depends_on:
       - app
     networks:

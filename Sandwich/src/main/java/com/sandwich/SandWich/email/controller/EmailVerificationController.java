@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/email")
@@ -23,10 +26,15 @@ public class EmailVerificationController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<Void> verifyCode(@RequestBody EmailVerifyRequest request) {
-        emailService.verifyCode(request.getEmail(), request.getCode()); // 실패 시 예외 발생
-        return ResponseEntity.ok().build(); // 성공만 OK 처리
+    public ResponseEntity<Map<String, Boolean>> verifyCode(@RequestBody EmailVerifyRequest request) {
+        emailService.verifyCode(request.getEmail(), request.getCode());
+
+        Map<String, Boolean> result = new HashMap<>();
+        result.put("success", true); // 프론트에서 인식 가능하게
+
+        return ResponseEntity.ok(result);
     }
+
 
 
 }
