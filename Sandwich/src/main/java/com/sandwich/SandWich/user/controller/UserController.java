@@ -3,6 +3,8 @@ package com.sandwich.SandWich.user.controller;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
+import com.sandwich.SandWich.user.dto.PositionResponse;
+import com.sandwich.SandWich.user.dto.PositionUpdateRequest;
 import com.sandwich.SandWich.user.dto.UserProfileRequest;
 import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -75,5 +77,19 @@ public class UserController {
     public ResponseEntity<?> checkNicknameDuplicate(@RequestParam("value") String nickname) {
         boolean isDuplicate = profileRepository.existsByNickname(nickname);
         return ResponseEntity.ok(isDuplicate);
+    }
+
+    @GetMapping("/position")
+    public ResponseEntity<PositionResponse> getUserPosition(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        User user = userDetails.getUser();
+        return ResponseEntity.ok(userService.getUserPosition(user));
+    }
+
+    @PutMapping("/position")
+    public ResponseEntity<?> updateUserPosition(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid PositionUpdateRequest request) {
+        userService.updateUserPosition(userDetails.getUser(), request.positionId());
+        return ResponseEntity.ok("작업 분야 설정 완료");
     }
 }
