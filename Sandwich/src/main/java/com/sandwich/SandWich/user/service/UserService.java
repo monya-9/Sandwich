@@ -287,5 +287,37 @@ public class UserService {
         return new InterestResponse(names);
     }
 
+    @Transactional(readOnly = true)
+    public InterestResponse getTechInterests(User user) {
+        List<String> names = userInterestRepository.findByUser(user).stream()
+                .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
+                .map(ui -> ui.getInterest().getName())
+                .toList();
+
+        return new InterestResponse(names);
+    }
+
+    @Transactional
+    public void updateTechInterests(User user, List<Long> interestIds) {
+        if (interestIds.size() > 10) {
+            throw new IllegalArgumentException("기술 스택은 최대 10개까지 선택 가능합니다.");
+        }
+
+        List<UserInterest> current = userInterestRepository.findByUser(user);
+        current.stream()
+                .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
+                .forEach(userInterestRepository::delete);
+
+        for (Long id : interestIds) {
+            Interest interest = interestRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("해당 관심사가 존재하지 않습니다: " + id));
+
+            if (interest.getType() == InterestType.TECH) {
+                userInterestRepository.save(new UserInterest(user, interest));
+            }
+        }
+    }
+
+
 
 }
