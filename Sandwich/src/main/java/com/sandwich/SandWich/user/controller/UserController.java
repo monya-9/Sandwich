@@ -104,4 +104,19 @@ public class UserController {
         userService.updateGeneralInterests(userDetails.getUser(), request.interestIds());
         return ResponseEntity.ok("관심 분야(GENERAL) 설정 완료");
     }
+
+    @GetMapping("/interests/tech")
+    public ResponseEntity<InterestResponse> getTechInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(userService.getTechInterests(userDetails.getUser()));
+    }
+
+    @PutMapping("/interests/tech")
+    public ResponseEntity<?> updateTechInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid InterestUpdateRequest request) {
+        userService.updateTechInterests(userDetails.getUser(), request.interestIds());
+        return ResponseEntity.ok("기술 스택 설정 완료");
+    }
+
 }
