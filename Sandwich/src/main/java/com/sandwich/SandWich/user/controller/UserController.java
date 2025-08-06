@@ -3,9 +3,7 @@ package com.sandwich.SandWich.user.controller;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
-import com.sandwich.SandWich.user.dto.PositionResponse;
-import com.sandwich.SandWich.user.dto.PositionUpdateRequest;
-import com.sandwich.SandWich.user.dto.UserProfileRequest;
+import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.user.service.UserService;
@@ -91,5 +89,19 @@ public class UserController {
             @RequestBody @Valid PositionUpdateRequest request) {
         userService.updateUserPosition(userDetails.getUser(), request.positionId());
         return ResponseEntity.ok("작업 분야 설정 완료");
+    }
+
+    @GetMapping("/interests/general")
+    public ResponseEntity<InterestResponse> getGeneralInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(userService.getGeneralInterests(userDetails.getUser()));
+    }
+
+    @PutMapping("/interests/general")
+    public ResponseEntity<?> updateGeneralInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid InterestUpdateRequest request) {
+        userService.updateGeneralInterests(userDetails.getUser(), request.interestIds());
+        return ResponseEntity.ok("관심 분야(GENERAL) 설정 완료");
     }
 }
