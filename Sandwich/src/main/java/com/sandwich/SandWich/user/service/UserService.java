@@ -229,5 +229,29 @@ public class UserService {
         profile.setNickname(nickname);
     }
 
+    @Transactional
+    public PositionResponse getUserPosition(User user) {
+        UserPosition userPosition = userPositionRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("작업 분야가 설정되지 않았습니다."));
+
+        String positionName = userPosition.getPosition().getName();
+        return new PositionResponse(positionName);
+    }
+
+    @Transactional
+    public void updateUserPosition(User user, Long positionId) {
+        Position position = positionRepository.findById(positionId)
+                .orElseThrow(PositionNotFoundException::new);
+
+        Optional<UserPosition> existing = userPositionRepository.findByUser(user);
+        if (existing.isPresent()) {
+            UserPosition userPosition = existing.get();
+            userPosition.setPosition(position); // 변경
+            userPositionRepository.save(userPosition);
+        } else {
+            userPositionRepository.save(new UserPosition(user, position));
+        }
+    }
+
 
 }
