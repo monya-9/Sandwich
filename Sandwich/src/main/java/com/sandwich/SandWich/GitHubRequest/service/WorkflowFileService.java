@@ -64,7 +64,8 @@ public class WorkflowFileService {
     public void commitSandwichJson(String token, String owner, String repo, String branch) throws Exception {
         String jsonContent = """
         {
-          "buildCommand": "mkdir -p build && echo 'dummy content' > build/index.html"
+          "buildCommand": "mkdir -p build && echo 'dummy content' > build/index.html",
+          "outputDirectory": "build"
         }
         """;
 
