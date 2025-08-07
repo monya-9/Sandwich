@@ -26,11 +26,9 @@ public class GitHubBranchService {
         // 3. workflows 커밋
         // 3. .github/workflows 폴더 없으면 생성 (빈 .gitkeep 커밋)
         workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
-        // 0.5~1초 대기
-        Thread.sleep(3000);
         workflowFileService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId);
         // .sandwich.json 생성 및 커밋
-        workflowFileService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId);
+        workflowFileService.commitSandwichJson(gitHubToken, owner, repo, newBranchName);
 
         // 4. PR 생성
         gitHubApiService.createPullRequest(gitHubToken, owner, repo, newBranchName, baseBranch);
