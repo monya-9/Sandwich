@@ -9,9 +9,6 @@
 
 <table>
   <tr>
-    
-<td align="center"><a href="https://github.com/bys096"><img src="https://avatars.githubusercontent.com/u/82657858?v=4"
- width="100px;" alt=""/><br /><sub><b>조현주 🥪 Sandwich
 
 **Sandwich**는 개발자들의 포트폴리오를 손쉽게 전시하고, 프로젝트를 배포 및 추천받을 수 있는 통합 플랫폼입니다.
 
