@@ -5,6 +5,43 @@
 > “개발자들의 실력을 작품처럼 쌓고, 전시하고, 공유할 수 있도록!”
 
 ---
+## 팀원 소개
+
+<table>
+  <tr>
+    
+<td align="center"><a href="https://github.com/bys096"><img src="https://avatars.githubusercontent.com/u/82657858?v=4"
+ width="100px;" alt=""/><br /><sub><b>조현주 🥪 Sandwich
+
+**Sandwich**는 개발자들의 포트폴리오를 손쉽게 전시하고, 프로젝트를 배포 및 추천받을 수 있는 통합 플랫폼입니다.
+
+> “개발자들의 실력을 작품처럼 쌓고, 전시하고, 공유할 수 있도록!”
+
+---
+## 팀원 소개
+
+<table>
+  <tr>
+    
+<td align="center"><a href="https://github.com/monya-9"><img src="https://avatars.githubusercontent.com/u/64175828?v=4"
+ width="100px;" alt=""/><br /><sub><b>조현주</b></sub></a><br /><a href="https://github.com/monya-9" title="Code">🏠</a></td>
+    
+ <td align="center"><a href="https://github.com/ghdtldus"><img src="https://avatars.githubusercontent.com/u/122412999?v=4"
+ width="100px;" alt=""/><br /><sub><b>홍시연</b></sub></a><br /><a href="https://github.com/ghdtldus" title="Code">🏠</a></td>
+
+ <td align="center"><a href="https://github.com/Dnut0121"><img src="https://avatars.githubusercontent.com/u/127921103?v=4"
+ width="100px;" alt=""/><br /><sub><b>송원석</b></sub></a><br /><a href="https://github.com/Dnut0121" title="Code">🏠</a></td>
+
+ <td align="center"><a href="https://github.com/Heoeunjin"><img src="https://avatars.githubusercontent.com/u/127829501?v=4"
+ width="100px;" alt="https://github.com/nettiger0"/><br /><sub><b>허은진</b></sub></a><br /><a href="https://github.com/Heoeunjin" title="Code">🏠</a></td>
+
+ <td align="center"><a href="https://github.com/ljjljj11"><img src="https://avatars.githubusercontent.com/u/202410083?v=4"
+ width="100px;" alt=""/><br /><sub><b>이정주</b></sub></a><br /><a href="https://github.com/ljjljj11" title="Code">🏠</a></td>
+
+</tr>
+    
+</table>
+---
 
 ## 🧩 주요 기능
 
