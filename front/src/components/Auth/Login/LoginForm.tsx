@@ -29,17 +29,21 @@ const LoginForm: React.FC = () => {
 
             // ✅ AccessToken 저장
             setToken(accessToken, keepLogin);
-            // 이메일도 저장
+
+            // ✅ 이메일 저장
             const storage = keepLogin ? localStorage : sessionStorage;
             storage.setItem("userEmail", email);
 
-            login();
+            // ✅ Context 상태 업데이트 (email 전달)
+            login(email);
+
             navigate("/");
         } catch (err) {
             console.error("로그인 오류", err);
             setLoginFailed(true);
         }
     };
+
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
