@@ -75,11 +75,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()      // gitUrl 조회 (누구나 접근 허용)
 
                         // 공개 메시지 선호도 조회
-                        .requestMatchers(HttpMethod.GET, "/api/users/*/message-preferences").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/users/*/message-preferences").permitAll()
 
                         // 내 메시지 선호도 조회/수정 (JWT 필요)
                         .requestMatchers(HttpMethod.GET,   "/api/users/me/message-preferences").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/message-preferences/me").authenticated()
 
                         // 기타 인증 예외 경로
