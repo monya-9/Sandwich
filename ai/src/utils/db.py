@@ -1,13 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from src.config import DATABASE_URL
 
-DATABASE_URL = "postgresql://user:password@localhost:5432/recsys"
-engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=20)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)

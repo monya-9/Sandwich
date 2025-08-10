@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: ai_postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${AI_DB_HOST_PORT:-5252}:5432"
+    volumes:
+      - ai_pgdata:/var/lib/postgresql/data
+    networks:
+      - sandwich-net
+
+  redis:
+    image: redis:6-alpine
+    container_name: ai_redis
+    command: ["redis-server","--appendonly","yes"]
+    ports:
+      - "${AI_REDIS_HOST_PORT:-4242}:6379"
+    volumes:
+      - ai_redisdata:/data
+    networks:
+      - sandwich-net
+
+  tools:
+    build: .
+    container_name: ai_tools
+    volumes:
+      - .:/app
+    env_file: .env
+    networks:
+      - sandwich-net
+    profiles: ["dev"]
+
+networks:
+  sandwich-net:
+    external: true
+    name: sandwich_sandwich-net
+
+volumes:
+  ai_pgdata:
+  ai_redisdata:
