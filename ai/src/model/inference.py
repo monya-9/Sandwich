@@ -1,51 +1,63 @@
 from pathlib import Path
-import numpy as np
-import torch
-from ai.src.model.model import FeatureDeepRec
-from ai.src.utils.redis import redis_client
+import numpy as np, torch
+from src.model.model import FeatureDeepRec
+from src.utils.redis import redis_client
+from src.utils.io import load_json
+from config import INFER_CHUNK_ITEMS
 
-BASE_DIR   = Path(__file__).resolve().parents[2]
-MODEL_PATH = BASE_DIR / "models" / "best_feature_deeprec.pth"
-DATA_CSV   = BASE_DIR / "data" / "interactions.csv"
-USER_FEAT  = BASE_DIR / "data" / "user_skills.npy"
-ITEM_FEAT  = BASE_DIR / "data" / "project_tools.npy"
+BASE = Path(__file__).resolve().parents[2]
+DATA = BASE / "data"
+UFNP = DATA / "user_skills.npy"
+IFNP = DATA / "project_tools.npy"
+MODEL= BASE / "models" / "best_feature_deeprec.pth"
+MAPD = DATA / "mappings"
+
+def to_dev(x, dev):
+    t = torch.as_tensor(x, device=dev) if not torch.is_tensor(x) else x.to(dev)
+    return t
 
 def main():
-    # (파일 존재 체크 생략)
+    if not MODEL.exists(): raise FileNotFoundError(MODEL)
+    U = np.load(UFNP); I = np.load(IFNP)
+    num_users, num_items = U.shape[0], I.shape[0]
 
-    # 1) 데이터 로드
-    arr = np.loadtxt(DATA_CSV, delimiter=",", skiprows=1, usecols=(0,1))
-    user_feats = np.load(USER_FEAT)
-    item_feats = np.load(ITEM_FEAT)
+    # index → 원래 id
+    p_rev = load_json(MAPD / "projects_rev.json", {})
+    if len(p_rev) != num_items:
+        print("⚠ project mapping size mismatch. continue anyway.")
 
-    num_users = int(arr[:,0].max() + 1)
-    num_items = int(arr[:,1].max() + 1)
-
-    # 2) 모델 로드
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = FeatureDeepRec(
-        num_users, num_items,
-        user_feat_dim=user_feats.shape[1],
-        item_feat_dim=item_feats.shape[1]
-    ).to(device)
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = FeatureDeepRec(num_users, num_items, U.shape[1], I.shape[1]).to(dev)
+    model.load_state_dict(torch.load(MODEL, map_location=dev))
     model.eval()
 
-    # 3) 모든 유저에 대해 ZSET 업데이트
+    It = to_dev(I, dev)
     pipe = redis_client.pipeline()
+
     for u in range(num_users):
-        users = torch.full((num_items,), u, dtype=torch.long, device=device)
-        items = torch.arange(num_items, dtype=torch.long, device=device)
-        uf = torch.tensor(user_feats[u], device=device).unsqueeze(0).repeat(num_items,1)
-        itf = torch.tensor(item_feats, device=device)
-        with torch.no_grad():
-            scores = model(users, items, uf, itf).cpu().numpy()
+        Uf = to_dev(U[u], dev).unsqueeze(0)
+        scores_all = []
 
+        for s in range(0, num_items, INFER_CHUNK_ITEMS):
+            e = min(s + INFER_CHUNK_ITEMS, num_items)
+            items = torch.arange(s, e, device=dev, dtype=torch.long)
+            uf_rep = Uf.repeat(e - s, 1)
+            users  = torch.full((e - s,), u, dtype=torch.long, device=dev)
+            with torch.no_grad():
+                sc = model(users, items, uf_rep, It[s:e])
+            scores_all.append(sc.detach().cpu())
+
+        scores = torch.cat(scores_all, dim=0).numpy()
         key = f"recs:{u}"
-        pipe.delete(key)  # 이전 추천 삭제
-        # ZADD expects {member:score,...}
-        mapping = {str(i): float(scores[i]) for i in range(num_items)}
-        pipe.zadd(key, mapping)
-    pipe.execute()
+        tmp = f"{key}:tmp"
+        pipe.delete(tmp)
+        # member는 원래 project_id (문자열)
+        mapping = {str(p_rev.get(str(i), i)): float(scores[i]) for i in range(num_items)}
+        pipe.zadd(tmp, mapping)
+        pipe.rename(tmp, key)
 
-    print(f"✅ Redis ZSET으로 추천 캐시 업데이트 완료 for {num_users} users.")
+    pipe.execute()
+    print(f"Redis ZSET updated: users={num_users}, items={num_items}")
+
+if __name__=="__main__":
+    main()

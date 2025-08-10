@@ -1,135 +1,104 @@
-import math
 from pathlib import Path
-
 import numpy as np
-import torch
-import torch.nn as nn
+import torch, torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
+from src.model.model import FeatureDeepRec
+from src.utils.io import load_json
 
-from ai.src.model.model import FeatureDeepRec
+BASE = Path(__file__).resolve().parents[2]
+DATA = BASE / "data"
+CSV  = DATA / "interactions.csv"
+UFNP = DATA / "user_skills.npy"
+IFNP = DATA / "project_tools.npy"
+MODEL= BASE / "models" / "best_feature_deeprec.pth"
 
-# ─── 프로젝트 루트 & 데이터 경로 ─────────────────────────────────────────────
-BASE_DIR          = Path(__file__).resolve().parents[2]
-DATA_DIR          = BASE_DIR / "data"
-INTERACTIONS_CSV  = DATA_DIR / "interactions.csv"
-USER_FEAT_NPY     = DATA_DIR / "user_skills.npy"
-ITEM_FEAT_NPY     = DATA_DIR / "project_tools.npy"
-BEST_MODEL_PATH   = BASE_DIR / "models" / "best_feature_deeprec.pth"
+class InterDs(Dataset):
+    def __init__(self, arr, U, I):
+        self.u = torch.LongTensor(arr[:,0])
+        self.i = torch.LongTensor(arr[:,1])
+        self.y = torch.FloatTensor(arr[:,2])
+        self.U = torch.FloatTensor(U)
+        self.I = torch.FloatTensor(I)
+    def __len__(self): return len(self.u)
+    def __getitem__(self, k):
+        u,i,y = self.u[k], self.i[k], self.y[k]
+        return u, i, self.U[u], self.I[i], y
 
-# ─── 디바이스 감지 & 배치사이즈 추정 ────────────────────────────────────────────
 def get_device():
     if torch.cuda.is_available():
-        device = torch.device("cuda")
-        torch.backends.cudnn.benchmark = True
-        print(f"✔ Using GPU ({torch.cuda.get_device_name(0)})")
-    else:
-        device = torch.device("cpu")
-        print("✔ Using CPU")
-    return device
+        torch.backends.cudnn.benchmark=True
+        print("✔ GPU:", torch.cuda.get_device_name(0))
+        return torch.device("cuda")
+    print("✔ CPU"); return torch.device("cpu")
 
-def estimate_batch_size(device, default_bs=1024, min_bs=32):
-    if device.type == "cuda":
-        total_gb = torch.cuda.get_device_properties(device).total_memory / (1024**3)
-        factor = min(max(total_gb / 8, 0.125), 1.0)
-        return max(int(default_bs * factor), min_bs)
-    return default_bs
-
-# ─── Dataset 정의 ───────────────────────────────────────────────────────────────
-class InteractionDataset(Dataset):
-    def __init__(self, interactions: np.ndarray, user_feats: np.ndarray, item_feats: np.ndarray):
-        self.users      = torch.LongTensor(interactions[:, 0])
-        self.items      = torch.LongTensor(interactions[:, 1])
-        # labels는 0~1로 정규화된 실수
-        self.labels     = torch.FloatTensor(interactions[:, 2])
-        # 특성 벡터 텐서화
-        self.u_feats    = torch.FloatTensor(user_feats)
-        self.i_feats    = torch.FloatTensor(item_feats)
-
-    def __len__(self):
-        return len(self.users)
-
-    def __getitem__(self, idx):
-        u = self.users[idx]
-        i = self.items[idx]
-        return (
-            u,
-            i,
-            self.u_feats[u],       # 해당 유저의 스킬 벡터
-            self.i_feats[i],       # 해당 아이템의 툴 벡터
-            self.labels[idx]
-        )
-
-# ─── 학습 & 검증 루프 ─────────────────────────────────────────────────────────
 def main():
-    raw = np.loadtxt(INTERACTIONS_CSV, delimiter=",", skiprows=1, usecols=(0,1,2))
-    raw[:, 2] = raw[:, 2] / raw[:, 2].max()
-    user_feats = np.load(USER_FEAT_NPY)
-    item_feats = np.load(ITEM_FEAT_NPY)
+    arr = np.loadtxt(CSV, delimiter=",", skiprows=1)  # u_idx,p_idx,label
+    U = np.load(UFNP); I = np.load(IFNP)
+    num_users, num_items = U.shape[0], I.shape[0]
 
-    num_users = int(raw[:, 0].max() + 1)
-    num_items = int(raw[:, 1].max() + 1)
+    ds = InterDs(arr, U, I)
+    val = int(len(ds)*0.2)
+    tr, va = random_split(ds, [len(ds)-val, val])
 
-    full_ds = InteractionDataset(raw, user_feats, item_feats)
-    val_size = int(len(full_ds) * 0.2)
-    train_ds, val_ds = random_split(full_ds, [len(full_ds) - val_size, val_size])
+    dev = get_device()
+    bs  = 1024 if dev.type=="cpu" else max(64, int(1024 * min(1.0, torch.cuda.get_device_properties(dev).total_memory/(8*(1024**3)))))
+    tl  = DataLoader(tr, batch_size=bs, shuffle=True, pin_memory=(dev.type=="cuda"))
+    vl  = DataLoader(va, batch_size=bs, shuffle=False, pin_memory=(dev.type=="cuda"))
 
-    device     = get_device()
-    batch_size = estimate_batch_size(device)
-    print(f"✔ Batch size: {batch_size}")
+    model = FeatureDeepRec(num_users, num_items, U.shape[1], I.shape[1]).to(dev)
+    opt = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, pin_memory=(device.type=="cuda"))
-    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, pin_memory=(device.type=="cuda"))
+    def make_plateau(optimizer):
+        try:
+            return torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode='min', factor=0.5, patience=3, verbose=True
+            )
+        except TypeError:
+            # verbose 미지원 버전 호환
+            return torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode='min', factor=0.5, patience=3
+            )
 
-    u_feat_dim = user_feats.shape[1]
-    i_feat_dim = item_feats.shape[1]
-    model = FeatureDeepRec(num_users, num_items, u_feat_dim, i_feat_dim).to(device)
+    sch = make_plateau(opt)
+    crit = nn.BCELoss()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=3, verbose=True
-    )
-    criterion = nn.BCELoss()
+    best=float("inf"); patience=0
+    MODEL.parent.mkdir(parents=True, exist_ok=True)
 
-    best_val_loss = float('inf')
-    patience_cnt  = 0
-    max_epochs    = 30
-
-    for epoch in range(1, max_epochs + 1):
-        model.train()
-        train_loss = 0.0
-        for u, i, uf, itf, l in train_loader:
-            u, i, uf, itf, l = u.to(device), i.to(device), uf.to(device), itf.to(device), l.to(device)
-            pred = model(u, i, uf, itf)
-            loss = criterion(pred, l)
-            optimizer.zero_grad()
+    for ep in range(1, 31):
+        model.train(); tr_loss=0
+        for u,i,uf,if_,y in tl:
+            u,i,uf,if_,y = u.to(dev),i.to(dev),uf.to(dev),if_.to(dev),y.to(dev)
+            opt.zero_grad()
+            pred = model(u,i,uf,if_)
+            loss = crit(pred,y)
             loss.backward()
-            optimizer.step()
-            train_loss += loss.item()
-        train_loss /= len(train_loader)
+            try: opt.step()
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower(): torch.cuda.empty_cache(); continue
+                else: raise
+            tr_loss += loss.item()
+        tr_loss /= max(len(tl),1)
 
-        model.eval()
-        val_loss = 0.0
+        model.eval(); va_loss=0
         with torch.no_grad():
-            for u, i, uf, itf, l in val_loader:
-                u, i, uf, itf, l = u.to(device), i.to(device), uf.to(device), itf.to(device), l.to(device)
-                val_loss += criterion(model(u, i, uf, itf), l).item()
-        val_loss /= len(val_loader)
+            for u,i,uf,if_,y in vl:
+                u,i,uf,if_,y = u.to(dev),i.to(dev),uf.to(dev),if_.to(dev),y.to(dev)
+                va_loss += crit(model(u,i,uf,if_), y).item()
+        va_loss /= max(len(vl),1)
+        print(f"[{ep}] train {tr_loss:.4f} | val {va_loss:.4f}")
 
-        print(f"[Epoch {epoch}] Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
-
-        scheduler.step(val_loss)
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save(model.state_dict(), BEST_MODEL_PATH)
-            patience_cnt = 0
-            print(f"✔ New best model saved (Val Loss: {best_val_loss:.4f})")
+        sch.step(va_loss)
+        if va_loss < best:
+            best=va_loss; patience=0
+            torch.save(model.state_dict(), MODEL)
+            print("✔ saved:", MODEL)
         else:
-            patience_cnt += 1
-            if patience_cnt >= 5:
-                print("⚠ Early stopping triggered")
-                break
+            patience+=1
+            if patience>=5:
+                print("⚠ early stop"); break
 
-    print("학습완료 :", BEST_MODEL_PATH)
+    print("done. best:", best)
 
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
