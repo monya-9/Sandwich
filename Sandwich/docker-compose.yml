@@ -35,6 +35,10 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c log_min_duration_statement=500
+      -c log_statement=none
     networks:
       - sandwich-net
 
