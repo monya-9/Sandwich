@@ -12,4 +12,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findAllByUserIsNotDeleted();
     List<Comment> findAllByUser(User user);
     List<Comment> findByCommentableTypeAndCommentableIdAndParentCommentIsNullOrderByCreatedAtDesc(String commentableType, Long commentableId);
+    long countByCommentableTypeAndCommentableId(String commentableType, Long commentableId);
+
 }
