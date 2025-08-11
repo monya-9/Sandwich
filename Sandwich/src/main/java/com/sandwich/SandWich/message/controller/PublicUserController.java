@@ -1,7 +1,7 @@
-package com.sandwich.SandWich.chat.controller;
+package com.sandwich.SandWich.message.controller;
 
-import com.sandwich.SandWich.chat.dto.MessagePreferenceResponse;
-import com.sandwich.SandWich.chat.service.MessagePreferenceService;
+import com.sandwich.SandWich.message.dto.MessagePreferenceResponse;
+import com.sandwich.SandWich.message.service.MessagePreferenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

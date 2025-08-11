@@ -1,9 +1,9 @@
-package com.sandwich.SandWich.chat.controller;
+package com.sandwich.SandWich.message.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
-import com.sandwich.SandWich.chat.dto.MessagePreferenceResponse;
-import com.sandwich.SandWich.chat.dto.UpdateMessagePreferenceRequest;
-import com.sandwich.SandWich.chat.service.MessagePreferenceService;
+import com.sandwich.SandWich.message.dto.MessagePreferenceResponse;
+import com.sandwich.SandWich.message.dto.UpdateMessagePreferenceRequest;
+import com.sandwich.SandWich.message.service.MessagePreferenceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

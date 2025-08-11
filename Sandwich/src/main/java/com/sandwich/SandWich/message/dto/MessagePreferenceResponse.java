@@ -1,4 +1,4 @@
-package com.sandwich.SandWich.chat.dto;
+package com.sandwich.SandWich.message.dto;
 
 import lombok.Data;
 
