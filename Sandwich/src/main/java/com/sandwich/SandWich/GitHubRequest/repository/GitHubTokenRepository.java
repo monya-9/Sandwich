@@ -1,6 +1,6 @@
-package com.sandwich.SandWich.GitHubTokenRequest.repository;
+package com.sandwich.SandWich.GitHubRequest.repository;
 
-import com.sandwich.SandWich.GitHubTokenRequest.domain.UserGitHubToken;
+import com.sandwich.SandWich.GitHubRequest.domain.UserGitHubToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 

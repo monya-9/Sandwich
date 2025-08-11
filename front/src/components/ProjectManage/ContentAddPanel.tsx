@@ -8,12 +8,14 @@ interface ContentAddPanelProps {
   onImageAddClick: () => void;
   onTextAddClick: () => void;
   onVideoAddClick: () => void;
+  onReorderClick?: () => void;
 }
 
 const ContentAddPanel: React.FC<ContentAddPanelProps> = ({ 
   onImageAddClick, 
   onTextAddClick, 
-  onVideoAddClick 
+  onVideoAddClick,
+  onReorderClick
 }) => {
   return (
     <div className="border border-[#ADADAD] rounded-[10px] relative overflow-hidden mb-[10px]" style={{height: 260}}>
@@ -34,7 +36,7 @@ const ContentAddPanel: React.FC<ContentAddPanelProps> = ({
         <IoMdVideocam className="w-[40px] h-[40px] text-black" />
         <span className="text-[18px] text-center">동영상 추가</span>
       </button>
-      <button className="absolute bottom-0 right-0 w-1/2 h-1/2 flex flex-col items-center justify-center gap-[6px] hover:bg-gray-50 transition-colors duration-200">
+      <button className="absolute bottom-0 right-0 w-1/2 h-1/2 flex flex-col items-center justify-center gap-[6px] hover:bg-gray-50 transition-colors duration-200" onClick={onReorderClick}>
         <HiMiniArrowsUpDown className="w-[40px] h-[40px] text-black" />
         <span className="text-[18px] text-center leading-6">
           컨텐츠 재정렬<br />및 삭제

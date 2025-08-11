@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { FaShareAlt, FaTwitter, FaFacebook, FaPinterest, FaBlogger } from "react-icons/fa";
 
-const SHARE_URL = "https://notefolio.net/maygirl_gh5591/429754";
+type ShareActionProps = {
+  shareUrl?: string;
+  thumbnailUrl?: string;
+  title?: string;
+};
 
 const KakaoIcon = () => (
   <svg
@@ -21,11 +25,16 @@ const KakaoIcon = () => (
   </svg>
 );
 
-export default function ShareAction() {
+export default function ShareAction({ shareUrl, thumbnailUrl, title }: ShareActionProps) {
   const [open, setOpen] = useState(false);
 
+  const finalShareUrl = shareUrl || (typeof window !== "undefined" ? window.location.href : "");
+  const finalTitle = title || "프로젝트 이름";
+  const finalThumb = thumbnailUrl || "https://via.placeholder.com/56x56.png?text=Thumb";
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(SHARE_URL);
+    if (!finalShareUrl) return;
+    navigator.clipboard.writeText(finalShareUrl);
     alert("URL이 복사되었습니다!");
   };
 
@@ -76,15 +85,14 @@ export default function ShareAction() {
               {/* 썸네일+제목/설명 왼쪽 정렬, 높이/글자 맞춤 */}
               <div className="flex items-center w-full mb-7 pl-1">
                 <img
-                  src="https://notefolio-cdn.s3.ap-northeast-2.amazonaws.com/public/accounts/profile/2024/02/27/clog_service_24_1.jpg"
+                  src={finalThumb}
                   alt="썸네일"
                   className="w-14 h-14 rounded-lg bg-gray-100 object-cover flex-shrink-0"
                 />
                 <div className="ml-4 flex flex-col justify-center">
                   <div className="font-bold text-[15px] text-black leading-snug whitespace-pre-line">
-                    프로젝트 이름
+                    {finalTitle}
                   </div>
-                  {/* 설명 한 줄 더 필요하면 여기에 */}
                 </div>
               </div>
               {/* divider */}
@@ -93,7 +101,7 @@ export default function ShareAction() {
               {/* SNS 리스트 - 중앙정렬, gap, 클릭 전체, 크기 맞춤 */}
               <div className="flex flex-row gap-9 w-full justify-center mb-8">
                 <a
-                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(SHARE_URL)}`}
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(finalShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="트위터"
@@ -103,7 +111,7 @@ export default function ShareAction() {
                   <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">트위터</span>
                 </a>
                 <a
-                  href={`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}`}
+                  href={`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(finalShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="페이스북"
@@ -113,7 +121,7 @@ export default function ShareAction() {
                   <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">페이스북</span>
                 </a>
                 <a
-                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(SHARE_URL)}`}
+                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(finalShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="핀터레스트"
@@ -123,7 +131,7 @@ export default function ShareAction() {
                   <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">핀터레스트</span>
                 </a>
                 <a
-                  href={`https://blog.naver.com/openapi/share?url=${encodeURIComponent(SHARE_URL)}`}
+                  href={`https://blog.naver.com/openapi/share?url=${encodeURIComponent(finalShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="블로그"
@@ -133,7 +141,7 @@ export default function ShareAction() {
                   <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">블로그</span>
                 </a>
                 <a
-                  href={`https://sharer.kakao.com/talk?url=${encodeURIComponent(SHARE_URL)}`}
+                  href={`https://sharer.kakao.com/talk?url=${encodeURIComponent(finalShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="카카오톡"
@@ -150,7 +158,7 @@ export default function ShareAction() {
                 <input
                   type="text"
                   className="flex-1 border border-gray-200 rounded-l-lg px-5 py-4 bg-gray-50 font-medium text-gray-900 min-w-0 text-xs overflow-x-auto"
-                  value={SHARE_URL}
+                  value={finalShareUrl}
                   readOnly
                   style={{
                     fontFamily: "GmarketSans, sans-serif",
