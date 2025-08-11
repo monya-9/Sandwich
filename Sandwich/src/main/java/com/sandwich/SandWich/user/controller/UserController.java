@@ -3,7 +3,7 @@ package com.sandwich.SandWich.user.controller;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
-import com.sandwich.SandWich.user.dto.UserProfileRequest;
+import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.user.service.UserService;
@@ -76,4 +76,47 @@ public class UserController {
         boolean isDuplicate = profileRepository.existsByNickname(nickname);
         return ResponseEntity.ok(isDuplicate);
     }
+
+    @GetMapping("/position")
+    public ResponseEntity<PositionResponse> getUserPosition(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        User user = userDetails.getUser();
+        return ResponseEntity.ok(userService.getUserPosition(user));
+    }
+
+    @PutMapping("/position")
+    public ResponseEntity<?> updateUserPosition(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid PositionUpdateRequest request) {
+        userService.updateUserPosition(userDetails.getUser(), request.positionId());
+        return ResponseEntity.ok("작업 분야 설정 완료");
+    }
+
+    @GetMapping("/interests/general")
+    public ResponseEntity<InterestResponse> getGeneralInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(userService.getGeneralInterests(userDetails.getUser()));
+    }
+
+    @PutMapping("/interests/general")
+    public ResponseEntity<?> updateGeneralInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid InterestUpdateRequest request) {
+        userService.updateGeneralInterests(userDetails.getUser(), request.interestIds());
+        return ResponseEntity.ok("관심 분야(GENERAL) 설정 완료");
+    }
+
+    @GetMapping("/interests/tech")
+    public ResponseEntity<InterestResponse> getTechInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(userService.getTechInterests(userDetails.getUser()));
+    }
+
+    @PutMapping("/interests/tech")
+    public ResponseEntity<?> updateTechInterests(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid InterestUpdateRequest request) {
+        userService.updateTechInterests(userDetails.getUser(), request.interestIds());
+        return ResponseEntity.ok("기술 스택 설정 완료");
+    }
+
 }
