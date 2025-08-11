@@ -13,8 +13,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
        SET m.isRead = true
      WHERE m.room.id = :roomId
        AND m.receiver.id = :meId
-       AND m.isRead = false
-""")
+       AND m.isRead = false""")
     int markAsRead(@Param("roomId") Long roomId, @Param("meId") Long meId);
+
+    @Query("""
+    SELECT m FROM Message m
+     JOIN FETCH m.sender s
+    WHERE m.room.id = :roomId
+    ORDER BY m.createdAt ASC""")
+    java.util.List<Message> findAllByRoomIdOrderByCreatedAtAsc(@Param("roomId") Long roomId);
 
 }
