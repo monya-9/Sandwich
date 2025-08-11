@@ -27,11 +27,5 @@ public class MessagePreferenceController {
         return service.updateMy(me.getUser(), req);
     }
 
-    @GetMapping("/{userId}/message-preferences")
-    public MessagePreferenceResponse getPublic(@PathVariable Long userId) {
-        return service.getPublicFor(userId);
-    }
-
-
 }
 
