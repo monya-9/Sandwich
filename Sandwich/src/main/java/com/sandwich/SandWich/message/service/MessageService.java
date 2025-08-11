@@ -7,9 +7,10 @@ import com.sandwich.SandWich.message.dto.MessageResponse;
 import com.sandwich.SandWich.message.dto.SendMessageRequest;
 import com.sandwich.SandWich.message.repository.MessageRepository;
 import com.sandwich.SandWich.message.repository.MessageRoomRepository;
+import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -205,5 +206,24 @@ public class MessageService {
         }
 
         return toDto(m); // 이미 서비스에 있는 변환 메서드 재사용
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateRoomScreenshot(User me, Long roomId) {
+        var room = roomRepo.findById(roomId)
+                .orElseThrow(MessageRoomNotFoundException::new);
+
+        Long u1 = room.getUser1().getId();
+        Long u2 = room.getUser2().getId();
+        if (!me.getId().equals(u1) && !me.getId().equals(u2)) {
+            throw new MessageRoomForbiddenException();
+        }
+
+        var list = messageRepo.findAllByRoomIdOrderByCreatedAtAsc(roomId);
+        try {
+            return ChatScreenshotRenderer.renderPng(list, me.getId());
+        } catch (Exception e) {
+            throw new RuntimeException("스크린샷 생성 중 오류", e);
+        }
     }
 }
