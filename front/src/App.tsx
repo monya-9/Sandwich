@@ -24,6 +24,8 @@ function App() {
                             <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
                             <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
                             <Route path="/other-project" element={<OtherProjectPage />} />
+                            {/* 사용자/프로젝트 ID를 경로에서 받아서 실제 대상 유저 ID를 전달 */}
+                            <Route path="/other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
                             <Route path="/project/new" element={<ProjectForm />} />
                         </Routes>
                     </div>

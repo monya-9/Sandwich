@@ -16,7 +16,7 @@ const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
 }) => {
   return (
     <>
-      <div className="text-[#ADADAD] text-[24px] mb-[40px]">
+      <div className="text-[#ADADAD] text-[24px] mb-[40px] text-center">
         컨텐츠를 선택하여 업로드를 시작하세요.
       </div>
       <div className="flex justify-center gap-[56px]">

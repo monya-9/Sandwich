@@ -60,6 +60,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
                         // 프로젝트 단일 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER", "ADMIN", "AI")
+                        // 그 외 프로젝트 관련
                         .requestMatchers("/api/projects/**").authenticated()
                         
                         // 댓글 기능
@@ -68,6 +71,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/comments").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/comments/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
+
+                        // 팔로잉 목록 조회
+                        .requestMatchers("/api/users/*/following").permitAll()
+                        // 팔로워 목록 조회
+                        .requestMatchers("/api/users/*/followers").permitAll()
+
+                        // 수 조회 추가
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
 
                         // gitUrl
                         .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated() // gitUrl 저장 (인증 필요)

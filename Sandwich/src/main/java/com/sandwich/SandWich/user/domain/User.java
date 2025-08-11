@@ -60,7 +60,7 @@ public class User extends BaseEntity {
     private List<Follow> followings = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(mappedBy = "followed", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Follow> followers = new ArrayList<>();
 
     @Builder.Default
@@ -106,5 +106,18 @@ public class User extends BaseEntity {
 
     public String getProfileImageUrl() {
         return profile != null ? profile.getProfileImage() : null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return Objects.equals(id, user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

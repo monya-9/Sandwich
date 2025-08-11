@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import Header from "../components/Main/Header";
 import ActionBar from "../components/OtherProject/ActionBar/ActionBar";
 import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
@@ -10,6 +10,8 @@ import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
 import { AuthContext } from "../context/AuthContext";
+import { useParams } from "react-router-dom";
+import { fetchProjectDetail, type ProjectDetailResponse } from "../api/projectApi";
 
 // 실 서비스라면 아래처럼 username을 동적으로 받아오세요
 // import { useParams } from "react-router-dom";
@@ -27,14 +29,32 @@ export default function OtherProjectPage() {
   const projectWidth = commentOpen ? PROJECT_NARROW : PROJECT_WIDE;
   const { isLoggedIn } = useContext(AuthContext);
 
-  // ✅ 실제 프로젝트 API 응답이라고 가정
+  // 경로 파라미터에서 실제 ownerId / projectId 수신
+  const { ownerId: ownerIdParam, projectId: projectIdParam } = useParams<{ ownerId?: string; projectId?: string }>();
+  const ownerId = ownerIdParam ? Number(ownerIdParam) : undefined;
+  const projectId = projectIdParam ? Number(projectIdParam) : undefined;
+
+  const [projectDetail, setProjectDetail] = useState<ProjectDetailResponse | null>(null);
+
+  useEffect(() => {
+    if (ownerId && projectId) {
+      fetchProjectDetail(ownerId, projectId).then(setProjectDetail).catch(() => {
+        // 실패 시에도 페이지는 동작하도록 무시
+      });
+    }
+  }, [ownerId, projectId]);
+
+  // ✅ 실제 프로젝트 API 응답이라고 가정 (데모 기본값 + 파라미터 우선 적용)
   const project = {
-    qrImageUrl: "https://your-bucket.s3.amazonaws.com/qr/sample.png", // 실제 QR 이미지로 교체
+    qrImageUrl: projectDetail?.qrImageUrl ?? "https://your-bucket.s3.amazonaws.com/qr/sample.png",
     username: "sampleuser", // 실제 서비스에서는 동적으로!
-    id: 123, // 실제 서비스에서는 동적으로!
-    name: "프로젝트 이름",
+    id: projectId ?? 123, // 파라미터 없으면 데모 값
+    name: projectDetail?.title ?? "프로젝트 이름",
     owner: "사용자 이름",
     category: "UI·UX",
+    ownerId: ownerId ?? 0, // 파라미터 없으면 0 (팔로우 대상 없음)
+    shareUrl: projectDetail?.shareUrl,
+    coverUrl: projectDetail?.coverUrl,
   };
 
   return (
@@ -64,9 +84,10 @@ export default function OtherProjectPage() {
                 projectName={project.name}
                 userName={project.owner}
                 intro="프로젝트 한줄 소개"
+                ownerId={project.ownerId}
               />
               <div className="mb-6">
-                <ProjectThumbnail imgUrl={QueenImg} />
+                <ProjectThumbnail imgUrl={project.coverUrl || QueenImg} />
               </div>
               <TagList tags={["포트폴리오", "프론트엔드", "백엔드", "알고리즘", "디자인"]} />
               <div className="mb-8">
@@ -80,7 +101,7 @@ export default function OtherProjectPage() {
                   category={project.category}
                 />
               </div>
-              <UserProfileBox userName={project.owner} />
+              <UserProfileBox userName={project.owner} ownerId={project.ownerId} />
               <ProjectGrid
                 works={[
                   { id: 1, title: "작업 1", thumbUrl: "/work-thumb1.jpg" },
@@ -105,7 +126,7 @@ export default function OtherProjectPage() {
               >
                 <ActionBar
                   onCommentClick={() => setCommentOpen(true)}
-                  project={project} // ✅ QR 코드 URL 전달
+                  project={project} // ✅ QR 코드 URL 전달 + ownerId 전달
                 />
               </div>
             )}

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { FaImage } from "react-icons/fa6";
 
 interface ImageUploadSectionProps {
@@ -11,6 +11,13 @@ interface ImageUploadSectionProps {
   onComplete?: (images: string[]) => void;
   setImgSize: (size: {width: number, height: number}) => void;
   imgSize: {width: number, height: number};
+  // lifted states
+  removePadding: boolean;
+  setRemovePadding: (updater: (prev: boolean) => boolean) => void;
+  fileSelectMode: "add" | "replace";
+  replaceIndex: number | null;
+  setFileSelectMode: (mode: "add" | "replace") => void;
+  setReplaceIndex: (index: number | null) => void;
 }
 
 const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
@@ -23,14 +30,42 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   onComplete,
   setImgSize,
   imgSize,
+  removePadding,
+  setRemovePadding,
+  fileSelectMode,
+  replaceIndex,
+  setFileSelectMode,
+  setReplaceIndex,
 }) => {
   // 파일 변경 핸들러 (ProjectForm에서 분리)
   const handleFileInputClick = () => {
+    setFileSelectMode("add");
+    setReplaceIndex(null);
     fileInputRef.current?.click();
   };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+
+    // 교체 모드: 단일 파일만 받아 해당 인덱스의 이미지를 교체
+    if (fileSelectMode === "replace" && replaceIndex !== null && files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (typeof ev.target?.result === "string") {
+          const next = [...imagePreviews];
+          next[replaceIndex] = ev.target.result;
+          setImagePreviews(next);
+          // 교체 후 모드 초기화
+          setFileSelectMode("add");
+          setReplaceIndex(null);
+        }
+      };
+      reader.readAsDataURL(files[0]);
+      return;
+    }
+
+    // 추가 모드: 다중 파일을 모두 미리보기로 생성
     const previews: string[] = [];
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
@@ -102,23 +137,30 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
             style={{ display: 'none' }}
             onChange={handleFileChange}
           />
-          {/* 이미지 미리보기: 있을 때만 표시, 흰색 페이지 안에서 자연스럽게 */}
+          {/* 이미지 미리보기 */}
           {imagePreviews.length > 0 && (
             <div
               ref={previewRef}
               className="relative flex flex-col items-center justify-center text-center overflow-hidden mx-auto"
-              style={{ width: `${imgSize.width}px`, minWidth: '400px', maxWidth: '600px', height: `${imgSize.height}px`, minHeight: '400px', maxHeight: '800px' }}
+              style={{ width: `${imgSize.width}px`, maxWidth: '600px', height: `${imgSize.height}px`, maxHeight: '800px' }}
             >
               {imagePreviews.map((src, idx) => (
                 <img
                   key={idx}
                   src={src}
                   alt={`preview-${idx}`}
-                  className="w-full h-full object-contain block mx-auto hover:border-2 hover:border-black"
+                  className={`w-full h-full block mx-auto ${removePadding ? 'object-cover' : 'object-contain'}`}
                   style={{ objectPosition:'top' }}
                   onLoad={e => {
                     const target = e.target as HTMLImageElement;
-                    setImgSize({ width: target.naturalWidth > 600 ? 600 : target.naturalWidth, height: target.naturalHeight > 800 ? 800 : target.naturalHeight });
+                    const naturalW = target.naturalWidth;
+                    const naturalH = target.naturalHeight;
+                    const maxW = 600;
+                    const maxH = 800;
+                    const scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
+                    const width = Math.floor(naturalW * scale);
+                    const height = Math.floor(naturalH * scale);
+                    setImgSize({ width, height });
                   }}
                 />
               ))}
