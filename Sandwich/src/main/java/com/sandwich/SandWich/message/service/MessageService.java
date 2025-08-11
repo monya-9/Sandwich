@@ -191,4 +191,19 @@ public class MessageService {
         // 읽음 처리
         return messageRepo.markAsRead(roomId, me.getId());
     }
+
+    @Transactional
+    public MessageResponse getMessage(User me, Long messageId) {
+        var m = messageRepo.findById(messageId)
+                .orElseThrow(MessageNotFoundException::new);
+
+        // 권한 체크: 채팅방 참여자(둘 중 하나)만 조회 가능
+        Long u1 = m.getRoom().getUser1().getId();
+        Long u2 = m.getRoom().getUser2().getId();
+        if (!me.getId().equals(u1) && !me.getId().equals(u2)) {
+            throw new MessageRoomForbiddenException();
+        }
+
+        return toDto(m); // 이미 서비스에 있는 변환 메서드 재사용
+    }
 }
