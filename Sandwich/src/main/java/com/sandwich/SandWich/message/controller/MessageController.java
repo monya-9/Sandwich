@@ -30,4 +30,11 @@ public class MessageController {
         int updated = messageService.markRoomAsRead(me.getUser(), roomId);
         return Map.of("roomId", roomId, "updatedCount", updated);
     }
+
+    @GetMapping("/{messageId}")
+    public MessageResponse getOne(@AuthenticationPrincipal UserDetailsImpl me,
+                                  @PathVariable Long messageId) {
+        return messageService.getMessage(me.getUser(), messageId);
+    }
+
 }
