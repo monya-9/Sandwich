@@ -1,6 +1,6 @@
-package com.sandwich.SandWich.chat.repository;
+package com.sandwich.SandWich.message.repository;
 
-import com.sandwich.SandWich.chat.domain.UserMessagePreference;
+import com.sandwich.SandWich.message.domain.UserMessagePreference;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
