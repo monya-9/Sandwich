@@ -1,4 +1,4 @@
-package com.sandwich.SandWich.chat.domain;
+package com.sandwich.SandWich.message.domain;
 
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
