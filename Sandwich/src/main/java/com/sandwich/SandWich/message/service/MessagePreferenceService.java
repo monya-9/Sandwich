@@ -1,13 +1,17 @@
-package com.sandwich.SandWich.chat.service;
+package com.sandwich.SandWich.message.service;
 
-import com.sandwich.SandWich.chat.domain.UserMessagePreference;
-import com.sandwich.SandWich.chat.dto.MessagePreferenceResponse;
-import com.sandwich.SandWich.chat.dto.UpdateMessagePreferenceRequest;
-import com.sandwich.SandWich.chat.repository.UserMessagePreferenceRepository;
+import com.sandwich.SandWich.message.domain.UserMessagePreference;
+import com.sandwich.SandWich.message.dto.MessagePreferenceResponse;
+import com.sandwich.SandWich.message.dto.MessageType;
+import com.sandwich.SandWich.message.dto.UpdateMessagePreferenceRequest;
+import com.sandwich.SandWich.message.repository.UserMessagePreferenceRepository;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.*;
 import org.springframework.transaction.annotation.Transactional;
+
+import static com.sandwich.SandWich.message.dto.MessageType.JOB_OFFER;
+import static com.sandwich.SandWich.message.dto.MessageType.PROJECT_OFFER;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +56,16 @@ public class MessagePreferenceService {
         res.setAllowProjectOffer(p.isAllowProjectOffer());
         res.setAllowJobOffer(p.isAllowJobOffer());
         return res;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isAllowedToReceive(Long targetUserId, MessageType type) {
+        var pref = repo.findByUserId(targetUserId).orElse(null);
+        if (pref == null) return true;
+
+        if (type == MessageType.PROJECT_OFFER) return pref.isAllowProjectOffer();
+        if (type == MessageType.JOB_OFFER)     return pref.isAllowJobOffer();
+        return true; // GENERAL, EMOJI
     }
 
 
