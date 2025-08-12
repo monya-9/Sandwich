@@ -1,8 +1,7 @@
 
 package com.sandwich.SandWich.message.service;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.MessageNotAllowedException;
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.global.exception.exceptiontype.*;
 import com.sandwich.SandWich.message.domain.*;
 import com.sandwich.SandWich.message.dto.MessageResponse;
 import com.sandwich.SandWich.message.dto.SendMessageRequest;
@@ -173,5 +172,23 @@ public class MessageService {
                 .budget(m.getBudget())
                 .description(m.getCardDescription())
                 .build();
+    }
+
+
+    @Transactional
+    public int markRoomAsRead(User me, Long roomId) {
+        var room = roomRepo.findById(roomId)
+                .orElseThrow(MessageRoomNotFoundException::new);
+
+        // 방 참여자 권한 체크
+        Long u1 = room.getUser1().getId();
+        Long u2 = room.getUser2().getId();
+        if (!me.getId().equals(u1) && !me.getId().equals(u2)) {
+            throw new MessageRoomForbiddenException();
+
+        }
+
+        // 읽음 처리
+        return messageRepo.markAsRead(roomId, me.getId());
     }
 }
