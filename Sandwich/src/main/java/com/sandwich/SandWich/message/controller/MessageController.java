@@ -56,6 +56,15 @@ public class MessageController {
                 .body(png);
     }
 
+    @DeleteMapping("/{messageId}")
+    public Map<String, Object> delete(
+            @AuthenticationPrincipal UserDetailsImpl me,
+            @PathVariable Long messageId,
+            @RequestParam(required = false, defaultValue = "mask") String mode
+    ) {
+        return messageService.deleteMessage(me.getUser(), messageId, mode);
+    }
+
 
 
 }

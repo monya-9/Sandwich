@@ -8,6 +8,8 @@ import lombok.*;
 import org.hibernate.annotations.Type;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Message extends BaseEntity {
@@ -52,4 +54,11 @@ public class Message extends BaseEntity {
     private String contact;   // PROJECT_OFFER
     private String budget;    // PROJECT_OFFER
     private String cardDescription; // JOB_OFFER, PROJECT_OFFER 공통
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted;           // 마스킹 여부
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;     // 삭제(마스킹) 시각
+    @Column(name = "deleted_by_user_id")
+    private Long deletedByUserId;        // 누가 삭제했는지
 }
