@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/messages")
@@ -20,5 +22,12 @@ public class MessageController {
     public MessageResponse send(@AuthenticationPrincipal UserDetailsImpl me,
                                 @RequestBody @Valid SendMessageRequest req) {
         return messageService.send(me.getUser(), req);
+    }
+
+    @PatchMapping("/{roomId}/read")
+    public Map<String, Object> markRead(@AuthenticationPrincipal UserDetailsImpl me,
+                                        @PathVariable Long roomId) {
+        int updated = messageService.markRoomAsRead(me.getUser(), roomId);
+        return Map.of("roomId", roomId, "updatedCount", updated);
     }
 }
