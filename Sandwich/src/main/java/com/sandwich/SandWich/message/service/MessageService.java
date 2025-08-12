@@ -10,6 +10,7 @@ import com.sandwich.SandWich.message.repository.MessageRoomRepository;
 import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -235,4 +236,77 @@ public class MessageService {
             throw new RuntimeException("스크린샷 생성 중 오류", e);
         }
     }
+
+    @Transactional
+    public Map<String, Object> deleteMessage(User me, Long messageId, String mode) {
+        var message = messageRepo.findWithRoomById(messageId)
+                .orElseThrow(MessageNotFoundException::new);
+
+        // 보낸 사람 본인만 삭제 가능
+        if (!message.getSender().getId().equals(me.getId())) {
+            throw new ForbiddenException("본인이 보낸 메시지만 삭제할 수 있습니다.");
+        }
+
+        if (mode == null || mode.isBlank()) mode = "mask";
+        Long roomId = message.getRoom().getId();
+
+        switch (mode.toLowerCase()) {
+            case "mask" -> {
+                if (message.isDeleted()) {
+                    throw new ConflictException("이미 마스킹된 메시지입니다.");
+                }
+                message.setDeleted(true);
+                message.setDeletedAt(java.time.LocalDateTime.now());
+                message.setDeletedByUserId(me.getId());
+                message.setContent("삭제된 메시지입니다");
+                // 카드형 필드는 그대로 두되, 프리뷰는 "삭제된 메시지입니다"로 보이게 됨
+            }
+            case "hard" -> {
+                // 하드 삭제는 실데이터 제거 (첨부/리액션 FK가 있으면 ON DELETE CASCADE 권장)
+                messageRepo.delete(message);
+            }
+            default -> throw new BadRequestException("mode는 mask|hard 중 하나여야 합니다.");
+        }
+
+        // 마지막 메시지 프리뷰/타입 재계산 (하드/마스킹 모두 영향)
+        refreshRoomLastMessage(roomId);
+
+        return Map.of(
+                "message", "삭제 처리 완료",
+                "mode", mode,
+                "roomId", roomId,
+                "messageId", messageId
+        );
+    }
+
+    private void refreshRoomLastMessage(Long roomId) {
+        var top1 = messageRepo.findLatestNotDeletedByRoomId(roomId, PageRequest.of(0, 1));
+        var room = roomRepo.findById(roomId).orElseThrow(MessageRoomNotFoundException::new);
+
+        if (top1.isEmpty()) {
+            // 방에 남은(마스킹 제외) 메시지가 없으면 비우기
+            room.setLastMessageType(null);
+            room.setLastMessagePreview(null);
+            // room.setLastMessageAt(null);  // 만약 필드가 있다면 같이 null 처리
+        } else {
+            var last = top1.get(0);
+            room.setLastMessageType(last.getType());
+            room.setLastMessagePreview(extractPreview(last));
+            // room.setLastMessageAt(last.getCreatedAt()); // 필드 있으면 갱신
+        }
+        // JPA 변경감지로 flush
+    }
+
+    private String extractPreview(Message m) {
+        return switch (m.getType()) {
+            case GENERAL -> {
+                var s = m.getContent();
+                yield (s == null || s.length() <= 80) ? s : s.substring(0, 80) + "...";
+            }
+            case EMOJI -> m.getContent();
+            case JOB_OFFER -> "[채용 제안] " + (m.getPosition() != null ? m.getPosition() : "");
+            case PROJECT_OFFER -> "[프로젝트 제안] " + (m.getTitle() != null ? m.getTitle() : "");
+        };
+    }
+
 }
