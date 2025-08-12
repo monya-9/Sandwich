@@ -2,7 +2,11 @@ package com.sandwich.SandWich.message.dto;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Data @Builder
 public class MessageResponse {
     private Long messageId;
@@ -24,4 +28,6 @@ public class MessageResponse {
     private String contact;
     private String budget;
     private String description;
+
+    private String payload;
 }
