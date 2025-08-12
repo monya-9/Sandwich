@@ -55,74 +55,9 @@ public class MessageService {
                 ));
 
         // 4) 메시지 생성 및 타입별 매핑 + payload 저장
-        Message msg = new Message();
-        msg.setRoom(room);
-        msg.setSender(me);
-        msg.setReceiver(target);
-        msg.setType(req.getType());
-        msg.setRead(false);
+        Message msg = toEntity(room, me, target, req);
 
-        switch (req.getType()) {
-            case GENERAL -> {
-                msg.setContent(req.getContent());
-            }
-            case EMOJI -> {
-                // 유니코드 이모지만 포함된 일반 텍스트
-                msg.setContent(req.getContent());
-            }
-            case JOB_OFFER -> {
-                msg.setCompanyName(req.getCompanyName());
-                msg.setPosition(req.getPosition());
-                msg.setLocation(req.getLocation());
-                msg.setIsNegotiable(req.getIsNegotiable());
-                // 협의면 salary 무시
-                msg.setSalary(Boolean.TRUE.equals(req.getIsNegotiable()) ? null : req.getSalary());
-                msg.setCardDescription(req.getDescription());
-            }
-            case PROJECT_OFFER -> {
-                msg.setTitle(req.getTitle());
-                msg.setContact(req.getContact());
-                msg.setBudget(req.getBudget()); // 반드시 validateByType에서 not null 체크
-                msg.setIsNegotiable(req.getIsNegotiable());
-                msg.setCardDescription(req.getDescription());
-            }
-        }
-
-        try {
-            ObjectMapper om = new ObjectMapper();
-            Map<String, Object> payloadMap = new LinkedHashMap<>();
-
-            switch (req.getType()) {
-                case PROJECT_OFFER -> {
-                    payloadMap.put("title",        req.getTitle());
-                    payloadMap.put("contact",      req.getContact());
-                    payloadMap.put("budget",       req.getBudget());
-                    payloadMap.put("isNegotiable", req.getIsNegotiable());
-                    payloadMap.put("description",  req.getDescription());
-                }
-                case JOB_OFFER -> {
-                    payloadMap.put("companyName",  req.getCompanyName());
-                    payloadMap.put("position",     req.getPosition());
-                    payloadMap.put("location",     req.getLocation());
-                    payloadMap.put("isNegotiable", req.getIsNegotiable());
-                    // 협의면 salary 무시
-                    payloadMap.put("salary", Boolean.TRUE.equals(req.getIsNegotiable()) ? null : req.getSalary());
-                    payloadMap.put("description",  req.getDescription());
-                }
-                default -> { /* GENERAL / EMOJI → payload 없음 */ }
-            }
-
-            if (!payloadMap.isEmpty()) {
-                msg.setPayload(om.writeValueAsString(payloadMap));
-            } else if (req.getPayload() != null && !req.getPayload().isBlank()) {
-                // (선택) 클라이언트가 직접 보낸 payload가 있으면 그걸 사용
-                msg.setPayload(req.getPayload());
-            }
-        } catch (Exception e) {
-            // 필요하면 로깅만
-        }
-
-        // 신규: payload(JSON 문자열) 그대로 저장 (옵션)
+        // 프론트가 보낸 payload만 저장(없으면 null)
         if (req.getPayload() != null && !req.getPayload().isBlank()) {
             msg.setPayload(req.getPayload());
         }
@@ -138,8 +73,6 @@ public class MessageService {
 
         // 7) 응답 DTO
         MessageResponse res = toDto(msg);
-        // 응답에 payload 포함 (MessageResponse에 필드/세터 추가되어 있어야 함)
-        res.setPayload(msg.getPayload());
         return res;
     }
 
