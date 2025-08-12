@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -39,33 +42,105 @@ public class MessageService {
             throw new MessageNotAllowedException("상대방이 이 유형의 메시지 수신을 허용하지 않습니다.");
         }
 
-        // 2) 타입별 유효성 검증
+        // 2) 타입별 유효성 검증(예: PROJECT_OFFER면 budget 필수, JOB_OFFER는 협의면 salary 무시 등)
         validateByType(req);
 
         // 3) 방 찾거나 생성
         MessageRoom room = roomRepo.findBetween(me.getId(), target.getId())
-                .orElseGet(() -> {
-                    MessageRoom r = MessageRoom.builder()
-                            .user1(me.getId() < target.getId() ? me : target)
-                            .user2(me.getId() < target.getId() ? target : me)
-                            .build();
-                    return roomRepo.save(r);
-                });
+                .orElseGet(() -> roomRepo.save(
+                        MessageRoom.builder()
+                                .user1(me.getId() < target.getId() ? me : target)
+                                .user2(me.getId() < target.getId() ? target : me)
+                                .build()
+                ));
 
-        // 4) 메시지 생성
-        Message msg = toEntity(room, me, target, req);
+        // 4) 메시지 생성 및 타입별 매핑 + payload 저장
+        Message msg = new Message();
+        msg.setRoom(room);
+        msg.setSender(me);
+        msg.setReceiver(target);
+        msg.setType(req.getType());
+        msg.setRead(false);
+
+        switch (req.getType()) {
+            case GENERAL -> {
+                msg.setContent(req.getContent());
+            }
+            case EMOJI -> {
+                // 유니코드 이모지만 포함된 일반 텍스트
+                msg.setContent(req.getContent());
+            }
+            case JOB_OFFER -> {
+                msg.setCompanyName(req.getCompanyName());
+                msg.setPosition(req.getPosition());
+                msg.setLocation(req.getLocation());
+                msg.setIsNegotiable(req.getIsNegotiable());
+                // 협의면 salary 무시
+                msg.setSalary(Boolean.TRUE.equals(req.getIsNegotiable()) ? null : req.getSalary());
+                msg.setCardDescription(req.getDescription());
+            }
+            case PROJECT_OFFER -> {
+                msg.setTitle(req.getTitle());
+                msg.setContact(req.getContact());
+                msg.setBudget(req.getBudget()); // 반드시 validateByType에서 not null 체크
+                msg.setIsNegotiable(req.getIsNegotiable());
+                msg.setCardDescription(req.getDescription());
+            }
+        }
+
+        try {
+            ObjectMapper om = new ObjectMapper();
+            Map<String, Object> payloadMap = new LinkedHashMap<>();
+
+            switch (req.getType()) {
+                case PROJECT_OFFER -> {
+                    payloadMap.put("title",        req.getTitle());
+                    payloadMap.put("contact",      req.getContact());
+                    payloadMap.put("budget",       req.getBudget());
+                    payloadMap.put("isNegotiable", req.getIsNegotiable());
+                    payloadMap.put("description",  req.getDescription());
+                }
+                case JOB_OFFER -> {
+                    payloadMap.put("companyName",  req.getCompanyName());
+                    payloadMap.put("position",     req.getPosition());
+                    payloadMap.put("location",     req.getLocation());
+                    payloadMap.put("isNegotiable", req.getIsNegotiable());
+                    // 협의면 salary 무시
+                    payloadMap.put("salary", Boolean.TRUE.equals(req.getIsNegotiable()) ? null : req.getSalary());
+                    payloadMap.put("description",  req.getDescription());
+                }
+                default -> { /* GENERAL / EMOJI → payload 없음 */ }
+            }
+
+            if (!payloadMap.isEmpty()) {
+                msg.setPayload(om.writeValueAsString(payloadMap));
+            } else if (req.getPayload() != null && !req.getPayload().isBlank()) {
+                // (선택) 클라이언트가 직접 보낸 payload가 있으면 그걸 사용
+                msg.setPayload(req.getPayload());
+            }
+        } catch (Exception e) {
+            // 필요하면 로깅만
+        }
+
+        // 신규: payload(JSON 문자열) 그대로 저장 (옵션)
+        if (req.getPayload() != null && !req.getPayload().isBlank()) {
+            msg.setPayload(req.getPayload());
+        }
+
         msg = messageRepo.save(msg);
 
-        // 5) 마지막 메시지 정보 갱신(미리보기)
+        // 5) 마지막 메시지 미리보기 갱신
         room.setLastMessageType(msg.getType());
         room.setLastMessagePreview(buildPreview(msg));
-        // BaseEntity의 updatedAt 갱신됨
-        // flush는 트랜잭션 종료 시점에
 
-        // 6) 웹소켓 브로드캐스트 (지금은 빈 구현)
+        // 6) (나중에 구현) 웹소켓 브로드캐스트
         broadcastToWebSocketClients(msg);
 
-        return toDto(msg);
+        // 7) 응답 DTO
+        MessageResponse res = toDto(msg);
+        // 응답에 payload 포함 (MessageResponse에 필드/세터 추가되어 있어야 함)
+        res.setPayload(msg.getPayload());
+        return res;
     }
 
     private void validateByType(SendMessageRequest req) {
@@ -172,6 +247,7 @@ public class MessageService {
                 .contact(m.getContact())
                 .budget(m.getBudget())
                 .description(m.getCardDescription())
+                .payload(m.getPayload())
                 .build();
     }
 
