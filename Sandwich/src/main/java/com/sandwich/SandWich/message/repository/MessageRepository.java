@@ -1,10 +1,14 @@
 package com.sandwich.SandWich.message.repository;
 
 import com.sandwich.SandWich.message.domain.Message;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -22,5 +26,16 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     WHERE m.room.id = :roomId
     ORDER BY m.createdAt ASC""")
     java.util.List<Message> findAllByRoomIdOrderByCreatedAtAsc(@Param("roomId") Long roomId);
+
+
+    // MessageRepository.java
+    @Query("select m from Message m join fetch m.room where m.id = :id")
+    Optional<Message> findWithRoomById(@Param("id") Long id);
+
+    @Query("""
+  select m from Message m
+  where m.room.id = :roomId and m.isDeleted = false
+  order by m.createdAt desc""")
+    List<Message> findLatestNotDeletedByRoomId(@Param("roomId") Long roomId, Pageable pageable);
 
 }
