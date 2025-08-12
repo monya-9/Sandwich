@@ -45,6 +45,7 @@ dependencies {
 	implementation("org.json:json:20230227")
 	implementation("com.goterl:lazysodium-java:5.1.4")
 	implementation("com.vladmihalcea:hibernate-types-60:2.21.1")
+	implementation ("com.microsoft.playwright:playwright:1.46.0")
 
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
