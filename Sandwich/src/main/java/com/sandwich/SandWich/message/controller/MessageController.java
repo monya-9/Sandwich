@@ -6,6 +6,7 @@ import com.sandwich.SandWich.message.dto.SendMessageRequest;
 import com.sandwich.SandWich.message.service.MessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,5 +37,17 @@ public class MessageController {
                                   @PathVariable Long messageId) {
         return messageService.getMessage(me.getUser(), messageId);
     }
+
+    @GetMapping("/{roomId}/screenshot")
+    public ResponseEntity<byte[]> screenshot(@AuthenticationPrincipal UserDetailsImpl me,
+                                             @PathVariable Long roomId) {
+        byte[] png = messageService.generateRoomScreenshot(me.getUser(), roomId);
+        String filename = "room-" + roomId + "-chat.png";
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                .header("Content-Type", "image/png")
+                .body(png);
+    }
+
 
 }
