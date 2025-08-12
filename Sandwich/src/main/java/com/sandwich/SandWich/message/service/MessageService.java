@@ -1,6 +1,7 @@
 
 package com.sandwich.SandWich.message.service;
 
+import com.sandwich.SandWich.global.exception.exceptiontype.MessageNotAllowedException;
 import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.message.domain.*;
 import com.sandwich.SandWich.message.dto.MessageResponse;
@@ -35,7 +36,7 @@ public class MessageService {
 
         // 1) 수신 토글 검사
         if (!prefService.isAllowedToReceive(target.getId(), req.getType())) {
-            throw new IllegalStateException("상대방이 이 유형의 메시지 수신을 허용하지 않습니다.");
+            throw new MessageNotAllowedException("상대방이 이 유형의 메시지 수신을 허용하지 않습니다.");
         }
 
         // 2) 타입별 유효성 검증
