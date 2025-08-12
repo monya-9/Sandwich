@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { FaQrcode } from "react-icons/fa";
 
-export default function QrCodeAction() {
+interface QrCodeActionProps {
+  qrImageUrl: string;
+}
+
+export default function QrCodeAction({ qrImageUrl }: QrCodeActionProps) {
   const [hover, setHover] = useState(false);
 
   return (
@@ -10,6 +14,7 @@ export default function QrCodeAction() {
         className="flex flex-col items-center gap-1 group"
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
+        onClick={() => window.open(qrImageUrl, "_blank")}
       >
         <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
           <FaQrcode className="w-6 h-6" />
