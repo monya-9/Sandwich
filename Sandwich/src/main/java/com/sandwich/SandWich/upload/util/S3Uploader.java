@@ -2,6 +2,7 @@ package com.sandwich.SandWich.upload.util;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.sandwich.SandWich.project.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -47,7 +48,11 @@ public class S3Uploader {
         metadata.setContentType("image/png");
 
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(imageBytes)) {
-            amazonS3.putObject(bucket, fileName, inputStream, metadata);
+            // 공개 읽기 권한으로 업로드
+            PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, fileName, inputStream, metadata);
+            putObjectRequest.withCannedAcl(com.amazonaws.services.s3.model.CannedAccessControlList.PublicRead);
+            
+            amazonS3.putObject(putObjectRequest);
             return amazonS3.getUrl(bucket, fileName).toString();
         } catch (IOException e) {
             throw new RuntimeException("S3 QR 업로드 실패", e);
