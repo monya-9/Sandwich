@@ -1,18 +1,23 @@
 
 package com.sandwich.SandWich.message.service;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.global.exception.exceptiontype.*;
 import com.sandwich.SandWich.message.domain.*;
 import com.sandwich.SandWich.message.dto.MessageResponse;
 import com.sandwich.SandWich.message.dto.SendMessageRequest;
 import com.sandwich.SandWich.message.repository.MessageRepository;
 import com.sandwich.SandWich.message.repository.MessageRoomRepository;
+import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,36 +40,41 @@ public class MessageService {
 
         // 1) 수신 토글 검사
         if (!prefService.isAllowedToReceive(target.getId(), req.getType())) {
-            throw new IllegalStateException("상대방이 이 유형의 메시지 수신을 허용하지 않습니다.");
+            throw new MessageNotAllowedException("상대방이 이 유형의 메시지 수신을 허용하지 않습니다.");
         }
 
-        // 2) 타입별 유효성 검증
+        // 2) 타입별 유효성 검증(예: PROJECT_OFFER면 budget 필수, JOB_OFFER는 협의면 salary 무시 등)
         validateByType(req);
 
         // 3) 방 찾거나 생성
         MessageRoom room = roomRepo.findBetween(me.getId(), target.getId())
-                .orElseGet(() -> {
-                    MessageRoom r = MessageRoom.builder()
-                            .user1(me.getId() < target.getId() ? me : target)
-                            .user2(me.getId() < target.getId() ? target : me)
-                            .build();
-                    return roomRepo.save(r);
-                });
+                .orElseGet(() -> roomRepo.save(
+                        MessageRoom.builder()
+                                .user1(me.getId() < target.getId() ? me : target)
+                                .user2(me.getId() < target.getId() ? target : me)
+                                .build()
+                ));
 
-        // 4) 메시지 생성
+        // 4) 메시지 생성 및 타입별 매핑 + payload 저장
         Message msg = toEntity(room, me, target, req);
+
+        // 프론트가 보낸 payload만 저장(없으면 null)
+        if (req.getPayload() != null && !req.getPayload().isBlank()) {
+            msg.setPayload(req.getPayload());
+        }
+
         msg = messageRepo.save(msg);
 
-        // 5) 마지막 메시지 정보 갱신(미리보기)
+        // 5) 마지막 메시지 미리보기 갱신
         room.setLastMessageType(msg.getType());
         room.setLastMessagePreview(buildPreview(msg));
-        // BaseEntity의 updatedAt 갱신됨
-        // flush는 트랜잭션 종료 시점에
 
-        // 6) 웹소켓 브로드캐스트 (지금은 빈 구현)
+        // 6) (나중에 구현) 웹소켓 브로드캐스트
         broadcastToWebSocketClients(msg);
 
-        return toDto(msg);
+        // 7) 응답 DTO
+        MessageResponse res = toDto(msg);
+        return res;
     }
 
     private void validateByType(SendMessageRequest req) {
@@ -171,6 +181,132 @@ public class MessageService {
                 .contact(m.getContact())
                 .budget(m.getBudget())
                 .description(m.getCardDescription())
+                .payload(m.getPayload())
                 .build();
     }
+
+
+    @Transactional
+    public int markRoomAsRead(User me, Long roomId) {
+        var room = roomRepo.findById(roomId)
+                .orElseThrow(MessageRoomNotFoundException::new);
+
+        // 방 참여자 권한 체크
+        Long u1 = room.getUser1().getId();
+        Long u2 = room.getUser2().getId();
+        if (!me.getId().equals(u1) && !me.getId().equals(u2)) {
+            throw new MessageRoomForbiddenException();
+
+        }
+
+        // 읽음 처리
+        return messageRepo.markAsRead(roomId, me.getId());
+    }
+
+    @Transactional
+    public MessageResponse getMessage(User me, Long messageId) {
+        var m = messageRepo.findById(messageId)
+                .orElseThrow(MessageNotFoundException::new);
+
+        // 권한 체크: 채팅방 참여자(둘 중 하나)만 조회 가능
+        Long u1 = m.getRoom().getUser1().getId();
+        Long u2 = m.getRoom().getUser2().getId();
+        if (!me.getId().equals(u1) && !me.getId().equals(u2)) {
+            throw new MessageRoomForbiddenException();
+        }
+
+        return toDto(m); // 이미 서비스에 있는 변환 메서드 재사용
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateRoomScreenshot(User me, Long roomId) {
+        var room = roomRepo.findById(roomId)
+                .orElseThrow(MessageRoomNotFoundException::new);
+
+        Long u1 = room.getUser1().getId();
+        Long u2 = room.getUser2().getId();
+        if (!me.getId().equals(u1) && !me.getId().equals(u2)) {
+            throw new MessageRoomForbiddenException();
+        }
+
+        var list = messageRepo.findAllByRoomIdOrderByCreatedAtAsc(roomId);
+        try {
+            return ChatScreenshotRenderer.renderPng(list, me.getId());
+        } catch (Exception e) {
+            throw new RuntimeException("스크린샷 생성 중 오류", e);
+        }
+    }
+
+    @Transactional
+    public Map<String, Object> deleteMessage(User me, Long messageId, String mode) {
+        var message = messageRepo.findWithRoomById(messageId)
+                .orElseThrow(MessageNotFoundException::new);
+
+        // 보낸 사람 본인만 삭제 가능
+        if (!message.getSender().getId().equals(me.getId())) {
+            throw new ForbiddenException("본인이 보낸 메시지만 삭제할 수 있습니다.");
+        }
+
+        if (mode == null || mode.isBlank()) mode = "mask";
+        Long roomId = message.getRoom().getId();
+
+        switch (mode.toLowerCase()) {
+            case "mask" -> {
+                if (message.isDeleted()) {
+                    throw new ConflictException("이미 마스킹된 메시지입니다.");
+                }
+                message.setDeleted(true);
+                message.setDeletedAt(java.time.LocalDateTime.now());
+                message.setDeletedByUserId(me.getId());
+                message.setContent("삭제된 메시지입니다");
+                // 카드형 필드는 그대로 두되, 프리뷰는 "삭제된 메시지입니다"로 보이게 됨
+            }
+            case "hard" -> {
+                // 하드 삭제는 실데이터 제거 (첨부/리액션 FK가 있으면 ON DELETE CASCADE 권장)
+                messageRepo.delete(message);
+            }
+            default -> throw new BadRequestException("mode는 mask|hard 중 하나여야 합니다.");
+        }
+
+        // 마지막 메시지 프리뷰/타입 재계산 (하드/마스킹 모두 영향)
+        refreshRoomLastMessage(roomId);
+
+        return Map.of(
+                "message", "삭제 처리 완료",
+                "mode", mode,
+                "roomId", roomId,
+                "messageId", messageId
+        );
+    }
+
+    private void refreshRoomLastMessage(Long roomId) {
+        var top1 = messageRepo.findLatestNotDeletedByRoomId(roomId, PageRequest.of(0, 1));
+        var room = roomRepo.findById(roomId).orElseThrow(MessageRoomNotFoundException::new);
+
+        if (top1.isEmpty()) {
+            // 방에 남은(마스킹 제외) 메시지가 없으면 비우기
+            room.setLastMessageType(null);
+            room.setLastMessagePreview(null);
+            // room.setLastMessageAt(null);  // 만약 필드가 있다면 같이 null 처리
+        } else {
+            var last = top1.get(0);
+            room.setLastMessageType(last.getType());
+            room.setLastMessagePreview(extractPreview(last));
+            // room.setLastMessageAt(last.getCreatedAt()); // 필드 있으면 갱신
+        }
+        // JPA 변경감지로 flush
+    }
+
+    private String extractPreview(Message m) {
+        return switch (m.getType()) {
+            case GENERAL -> {
+                var s = m.getContent();
+                yield (s == null || s.length() <= 80) ? s : s.substring(0, 80) + "...";
+            }
+            case EMOJI -> m.getContent();
+            case JOB_OFFER -> "[채용 제안] " + (m.getPosition() != null ? m.getPosition() : "");
+            case PROJECT_OFFER -> "[프로젝트 제안] " + (m.getTitle() != null ? m.getTitle() : "");
+        };
+    }
+
 }
