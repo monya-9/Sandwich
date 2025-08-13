@@ -91,6 +91,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,   "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/message-preferences/me").authenticated()
 
+                        // 이모지
+                        .requestMatchers("/api/emojis/**").permitAll()
                         // 기타 인증 예외 경로
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",
