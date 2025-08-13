@@ -1,8 +1,22 @@
 import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { FaUser } from "react-icons/fa";
+import axios from "axios";
+import { useNavigate, useParams } from "react-router-dom";
 
-export default function ProfileAction() {
+interface ProfileActionProps {
+  targetUserId?: number;
+  userName?: string;
+  role?: string;
+  profileImageUrl?: string;
+}
+
+export default function ProfileAction({
+  targetUserId: targetUserIdProp,
+  userName = "사용자 이름",
+  role = "프론트엔드",
+  profileImageUrl,
+}: ProfileActionProps = {}) {
   const [hover, setHover] = useState(false);
   const [tooltipHover, setTooltipHover] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -11,6 +25,11 @@ export default function ProfileAction() {
 
   const btnRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const isLoggedIn = !!localStorage.getItem("accessToken");
+  const navigate = useNavigate();
+  const { ownerId: ownerIdParam } = useParams<{ ownerId?: string }>();
+  const targetUserId = targetUserIdProp ?? (ownerIdParam ? Number(ownerIdParam) : undefined);
 
   useEffect(() => {
     if (!document.getElementById("toast-style")) {
@@ -41,6 +60,29 @@ export default function ProfileAction() {
     }
   }, []);
 
+  // 초기 팔로우 상태 조회
+  useEffect(() => {
+    const fetchFollowStatus = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token || !targetUserId || targetUserId <= 0) {
+          setIsFollowing(false);
+          return;
+        }
+        const res = await axios.get(`/api/users/${targetUserId}/follow-status`, {
+          withCredentials: true,
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsFollowing(!!res.data?.isFollowing);
+      } catch (e: any) {
+        if (e.response?.status === 401) {
+          setIsFollowing(false);
+        }
+      }
+    };
+    fetchFollowStatus();
+  }, [targetUserId]);
+
   useEffect(() => {
     if (!hover && !tooltipHover) return;
     const handler = (e: MouseEvent) => {
@@ -66,17 +108,77 @@ export default function ProfileAction() {
     }
   }, [toast]);
 
-  const handleFollow = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsFollowing(true);
-    setToast("follow");
-    setFollowBtnHover(false);
+  // 전역 팔로우 상태 변경 이벤트 수신
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { userId?: number; isFollowing?: boolean };
+      if (detail?.userId && targetUserId && detail.userId === targetUserId && typeof detail.isFollowing === "boolean") {
+        setIsFollowing(detail.isFollowing);
+        setFollowBtnHover(false);
+      }
+    };
+    window.addEventListener("followChanged", handler as EventListener);
+    return () => window.removeEventListener("followChanged", handler as EventListener);
+  }, [targetUserId]);
+
+  const requireLogin = () => {
+    alert("로그인이 필요합니다.");
+    navigate("/login");
   };
-  const handleUnfollow = (e: React.MouseEvent) => {
+
+  const requireTarget = () => {
+    alert("대상 사용자를 확인할 수 없습니다.");
+  };
+
+  const handleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFollowing(false);
-    setToast("unfollow");
-    setFollowBtnHover(false);
+    if (!isLoggedIn) return requireLogin();
+    if (!targetUserId || targetUserId <= 0) return requireTarget();
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return requireLogin();
+
+      await axios.post(
+        `/api/users/${targetUserId}/follow`,
+        null,
+        {
+          withCredentials: true,
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setIsFollowing(true);
+      setToast("follow");
+      setFollowBtnHover(false);
+      window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: targetUserId, isFollowing: true } }));
+      window.dispatchEvent(new CustomEvent("followChanged:global", { detail: { userId: targetUserId, isFollowing: true } }));
+    } catch (e: any) {
+      if (e.response?.status === 401) return requireLogin();
+      alert("팔로우 처리 중 오류가 발생했습니다.");
+    }
+  };
+  const handleUnfollow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isLoggedIn) return requireLogin();
+    if (!targetUserId || targetUserId <= 0) return requireTarget();
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return requireLogin();
+
+      await axios.delete(`/api/users/${targetUserId}/unfollow`, {
+        withCredentials: true,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsFollowing(false);
+      setToast("unfollow");
+      setFollowBtnHover(false);
+      window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: targetUserId, isFollowing: false } }));
+      window.dispatchEvent(new CustomEvent("followChanged:global", { detail: { userId: targetUserId, isFollowing: false } }));
+    } catch (e: any) {
+      if (e.response?.status === 401) return requireLogin();
+      alert("팔로우 취소 처리 중 오류가 발생했습니다.");
+    }
   };
 
   // 토스트 메시지 Portal 렌더링
@@ -147,9 +249,16 @@ export default function ProfileAction() {
             onMouseLeave={() => { setTooltipHover(false); setFollowBtnHover(false); }}
             onMouseDown={e => e.stopPropagation()}
           >
-            <div className="w-[100px] h-[100px] rounded-full bg-[#16c064] mb-4 border-2 border-gray-100 shadow flex items-center justify-center"></div>
-            <div className="text-2xl font-bold mb-1">사용자 이름</div>
-            <div className="text-base text-gray-600 mb-6">프론트엔드</div>
+            <div
+              className="w-[100px] h-[100px] rounded-full mb-4 border-2 border-gray-100 shadow flex items-center justify-center"
+              style={profileImageUrl ? {
+                backgroundImage: `url(${profileImageUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              } : { background: "#16c064" }}
+            ></div>
+            <div className="text-2xl font-bold mb-1">{userName}</div>
+            <div className="text-base text-gray-600 mb-6">{role}</div>
             {!isFollowing ? (
               <button
                 className="bg-white border-2 border-black text-black rounded-full font-bold text-lg shadow hover:bg-gray-100 transition w-[320px] h-[68px] flex items-center justify-center"
