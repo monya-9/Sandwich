@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 
 export const AuthContext = createContext({
     isLoggedIn: false,
-    login: (token?: string) => {},
+    login: () => {},
     logout: () => {},
 });
 
@@ -18,26 +18,10 @@ export const AuthProvider = ({ children }: Props) => {
         setIsLoggedIn(!!token);
     }, []);
 
-    // 토큰 변경 감지를 위한 이벤트 리스너 추가
-    useEffect(() => {
-        const handleStorageChange = () => {
-            const token = localStorage.getItem('accessToken');
-            setIsLoggedIn(!!token);
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
-
-    const login = (token?: string) => {
-        if (token) {
-            localStorage.setItem('accessToken', token);
-        }
-        setIsLoggedIn(true);
-    };
+    const login = () => setIsLoggedIn(true);
     const logout = () => {
         setIsLoggedIn(false);
-        localStorage.removeItem('accessToken');
+        localStorage.removeItem('accessToken'); // optional
     };
 
     return (

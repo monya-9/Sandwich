@@ -28,7 +28,8 @@ const LoginForm = () => {
 
             if (res.ok) {
                 const data = await res.json();
-                login(data.accessToken);
+                localStorage.setItem("accessToken", data.accessToken);
+                login();
                 setLoginFailed(false); // 성공 시 초기화
                 alert("로그인 성공");
                 navigate("/");
