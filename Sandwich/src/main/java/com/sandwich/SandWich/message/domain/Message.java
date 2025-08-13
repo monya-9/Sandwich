@@ -33,10 +33,6 @@ public class Message extends BaseEntity {
     @Column(columnDefinition = "text")
     private String content;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "message_type")
-    private MessageType messageType;
-
     @Type(JsonType.class)
     @Column(name = "payload", columnDefinition = "jsonb")
     private String payload;
