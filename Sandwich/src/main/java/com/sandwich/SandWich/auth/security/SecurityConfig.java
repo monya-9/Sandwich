@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 
 @EnableMethodSecurity(prePostEnabled = true)
@@ -35,7 +34,6 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
-    private final CorsConfigurationSource corsConfigurationSource;
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
@@ -47,7 +45,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -64,13 +61,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER", "ADMIN", "AI")
                         // 그 외 프로젝트 관련
                         .requestMatchers("/api/projects/**").authenticated()
-                        
-                        // 댓글 기능
-                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/comments").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/comments/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
 
                         // 팔로잉 목록 조회
                         .requestMatchers("/api/users/*/following").permitAll()
@@ -91,6 +81,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,   "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/message-preferences/me").authenticated()
 
+                        // 이모지
+                        .requestMatchers("/api/emojis/**").permitAll()
                         // 기타 인증 예외 경로
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",
