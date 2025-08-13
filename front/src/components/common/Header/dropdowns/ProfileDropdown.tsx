@@ -12,9 +12,9 @@ interface Props {
 const ProfileDropdown = ({ email, username, onLogout }: Props) => {
     return (
         <DropdownWrapper width="w-[280px]">
-            <div className="flex flex-col items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center mb-4">
                 <ProfileCircle email={email} size={60} />
-                <div className="font-semibold mt-1 text-center">{username}</div>
+                <div className="font-semibold mt-2 mb-1 text-center">{username}</div>
                 <div className="text-gray-500 text-sm text-center">{email}</div>
             </div>
 
