@@ -1,47 +1,11 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { FaHeart } from "react-icons/fa";
-import axios from "axios";
-import LikedUsersModal from "./LikedUsersModal";
 
-interface LikeActionProps {
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
-  targetId: number;
-}
-
-export default function LikeAction({ targetType, targetId }: LikeActionProps) {
+export default function LikeAction() {
   const [liked, setLiked] = useState(false);
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(2); // 기본 2
   const [toast, setToast] = useState<null | "like" | "unlike">(null);
-  const [loading, setLoading] = useState(false);
-  const [showLikedUsers, setShowLikedUsers] = useState(false);
-
-  // ✅ 로그인 상태 판단 (localStorage에 토큰 존재 여부)
-  const isLoggedIn = !!localStorage.getItem("accessToken");
-
-  // 좋아요 상태 불러오기
-  useEffect(() => {
-    const fetchLike = async () => {
-      try {
-        const token = localStorage.getItem("accessToken");
-        
-        const res = await axios.get(`/api/likes`, {
-          params: { targetType, targetId },
-          withCredentials: true,
-          headers: token ? {
-            Authorization: `Bearer ${token}`,
-          } : {},
-        });
-        setLiked(res.data.likedByMe || false);
-        setCount(res.data.likeCount || 0);
-      } catch (e) {
-        console.error("좋아요 상태 조회 실패:", e);
-        setLiked(false);
-        setCount(0);
-      }
-    };
-    fetchLike();
-  }, [targetType, targetId]);
 
   useEffect(() => {
     if (toast) {
@@ -50,46 +14,19 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     }
   }, [toast]);
 
-  const handleLike = async () => {
-    if (!isLoggedIn) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-    if (loading) return;
-    setLoading(true);
-    
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        alert("로그인이 필요합니다.");
-        return;
-      }
-
-      const res = await axios.post(
-        "/api/likes",
-        { targetType, targetId },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setLiked(res.data.likedByMe);
-      setCount(res.data.likeCount);
-      setToast(res.data.likedByMe ? "like" : "unlike");
-    } catch (e: any) {
-      console.error("좋아요 처리 실패:", e);
-      if (e.response?.status === 401) {
-        alert("로그인이 필요합니다.");
-      } else {
-        alert("좋아요 처리 중 오류가 발생했습니다.");
-      }
-    } finally {
-      setLoading(false);
+  const handleLike = () => {
+    if (liked) {
+      setLiked(false);
+      setCount(c => c - 1);
+      setToast("unlike");
+    } else {
+      setLiked(true);
+      setCount(c => c + 1);
+      setToast("like");
     }
   };
 
+  // 초록색 체크 아이콘
   const CheckIcon = (
     <span
       className="flex items-center justify-center w-8 h-8 rounded-full mr-3"
@@ -107,84 +44,77 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     </span>
   );
 
-  const renderToast =
-    toast &&
-    ReactDOM.createPortal(
-      <div
-        style={{
-          position: "fixed",
-          top: "60px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 9999,
-          background: "#222",
-          color: "#fff",
-          fontFamily: "'Gmarket Sans', sans-serif",
-          fontWeight: 700,
-          borderRadius: 18,
-          boxShadow: "0 2px 18px #0002",
-          padding: "18px 38px",
-          display: "flex",
-          alignItems: "center",
-          gap: 24,
-          fontSize: 20,
-          letterSpacing: "0.02em",
-          minWidth: 340,
-          minHeight: 46,
-        }}
-      >
-        {CheckIcon}
-        {toast === "like"
-          ? "사용자의 작업에 좋아요를 눌렀습니다."
-          : "좋아요를 취소하였습니다."}
-      </div>,
-      document.body
-    );
+  // 중앙에 고정된 토스트 메시지 (포탈 사용)
+  const renderToast = toast && ReactDOM.createPortal(
+    <div
+      style={{
+        position: "fixed",
+        top: "60px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        background: "#222",
+        color: "#fff",
+        fontFamily: "'Gmarket Sans', sans-serif",
+        fontWeight: 700,
+        borderRadius: 18,
+        boxShadow: "0 2px 18px #0002",
+        padding: "18px 38px",
+        display: "flex",
+        alignItems: "center",
+        gap: 24,
+        fontSize: 20,
+        letterSpacing: "0.02em",
+        minWidth: 340,
+        minHeight: 46
+      }}
+    >
+      {CheckIcon}
+      {toast === "like"
+        ? "사용자의 작업에 좋아요를 눌렀습니다."
+        : "좋아요를 취소하였습니다."
+      }
+    </div>,
+    document.body
+  );
 
   return (
     <>
       {renderToast}
-      <LikedUsersModal
-        isOpen={showLikedUsers}
-        onClose={() => setShowLikedUsers(false)}
-        targetType={targetType}
-        targetId={targetId}
-      />
+
       <div className="relative">
         <button
           aria-label="좋아요"
           className="flex flex-col items-center group focus:outline-none"
           onClick={handleLike}
-          disabled={loading}
         >
           <div
             className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 transition-all duration-150
-              ${liked ? "bg-[#FF6688]" : "bg-white"}`}
+              ${liked ? "bg-[#222]" : "bg-[#FF6688]"}`}
             style={{ position: "relative" }}
           >
+            {/* 하트 아이콘 */}
             <FaHeart
               className={`w-6 h-6 transition-colors duration-150
-                  ${liked ? "text-white" : "text-gray-800"}`}
-                  style={{ transform: "translateY(-8px)" }}
+                  ${liked ? "mb-1 translate-y-[-6px] text-[#FF6688]" : "text-white"}`}
             />
-            <span
-              className={`absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-100%] text-lg font-bold cursor-pointer select-none ${liked ? "text-white" : "text-gray-800"}`}
-              style={{
-                lineHeight: 1,
-                marginTop: 25,
-                textShadow: liked ? "0 1px 2px #0004" : "none",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowLikedUsers(true);
-              }}
-            >
-              {count}
-            </span>
+            {/* 숫자 (좋아요 눌렀을 때만) */}
+            {liked && (
+              <span
+                className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-100%] text-white text-lg font-bold pointer-events-none select-none"
+                style={{
+                  lineHeight: 1,
+                  marginTop: 26,
+                  textShadow: "0 1px 2px #0004"
+                }}
+              >
+                {count}
+              </span>
+            )}
           </div>
           <span className="text-xs text-gray-800 font-semibold text-center">좋아요</span>
         </button>
       </div>
     </>
   );
-} 
+}
