@@ -19,7 +19,7 @@ public class ProjectProxyController {
     @Value("${cloudfront.domain}")
     private String cloudFrontDomain;
 
-    @GetMapping("/{userId:\\d+}/{projectId:\\d+}/**")
+    @GetMapping("/{userId}/{projectId}/**")
     public ResponseEntity<Void> redirectToCloudFront(
             @PathVariable Long userId,
             @PathVariable Long projectId,

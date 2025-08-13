@@ -2,7 +2,11 @@
 package com.sandwich.SandWich.message.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 @Data
 public class SendMessageRequest {
 
@@ -15,6 +19,7 @@ public class SendMessageRequest {
     // 공통
     private String content;        // GENERAL/EMOJI 본문 (EMOJI는 😊 같은 유니코드)
 
+    private String payload;
     // JOB_OFFER
     private String companyName;
     private String position;

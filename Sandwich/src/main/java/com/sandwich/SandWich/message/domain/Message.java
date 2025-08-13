@@ -5,6 +5,10 @@ import com.sandwich.SandWich.message.dto.MessageType;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Type;
+import com.vladmihalcea.hibernate.type.json.JsonType;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -29,6 +33,10 @@ public class Message extends BaseEntity {
     @Column(columnDefinition = "text")
     private String content;
 
+    @Type(JsonType.class)
+    @Column(name = "payload", columnDefinition = "jsonb")
+    private String payload;
+
     private boolean isRead = false;
 
     // --- 카드형(채용/프로젝트) 전용 필드 (NULL 허용) ---
@@ -41,5 +49,12 @@ public class Message extends BaseEntity {
     private String title;     // PROJECT_OFFER
     private String contact;   // PROJECT_OFFER
     private String budget;    // PROJECT_OFFER
-    private String cardDescription; // 두 카드에서 공통 설명
+    private String cardDescription; // JOB_OFFER, PROJECT_OFFER 공통
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted;           // 마스킹 여부
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;     // 삭제(마스킹) 시각
+    @Column(name = "deleted_by_user_id")
+    private Long deletedByUserId;        // 누가 삭제했는지
 }
