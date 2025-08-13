@@ -1,49 +1,57 @@
+// src/components/common/Header/DesktopNav.tsx
 import React, { useContext, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+
 import logo from '../../../assets/logo.png';
 import { AuthContext } from '../../../context/AuthContext';
+
 import SearchBar from './SearchBar';
 import ProfileCircle from './ProfileCircle';
 import ProfileDropdown from './dropdowns/ProfileDropdown';
-import MessageIcon from '../Header/icons/MessageIcon';
-import NotificationIcon from '../Header/icons/NotificationIcon';
 import MessageDropdown from './dropdowns/MessageDropdown';
 import NotificationDropdown from './dropdowns/NotificationDropdown';
-import { dummyNotifications } from '../../../data/dummyNotifications';
-import { dummyMessages } from '../../../data/dummyMessages';
-import type { Notification } from '../../../types/Notification';
+import MessageIcon from './icons/MessageIcon';
+import NotificationIcon from './icons/NotificationIcon';
+
 import type { Message } from '../../../types/Message';
+import type { Notification } from '../../../types/Notification';
+
+// 더미 데이터 (한 곳에서만 관리)
+import { dummyMessages } from '../../../data/dummyMessages';
+import { dummyNotifications } from '../../../data/dummyNotifications';
 
 interface Props {
     onLogout: () => void;
 }
 
-const DesktopNav = ({ onLogout }: Props) => {
+const DesktopNav: React.FC<Props> = ({ onLogout }) => {
     const location = useLocation();
     const { isLoggedIn } = useContext(AuthContext);
 
     const email = localStorage.getItem('userEmail') || '';
 
+    // 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
     const [showMessage, setShowMessage] = useState(false);
 
+    // 상태: 더미로 초기화 (전체 데이터 노출)
     const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
-    const [messages] = useState<Message[]>(dummyMessages); // 메시지는 읽음 처리 안 하는 경우
+    const [messages] = useState<Message[]>(dummyMessages);
 
-    const unreadNotiCount = notifications.filter(n => !n.isRead).length;
-    const unreadMessageCount = messages.filter(m => !m.isRead).length;
+    // 읽지 않은 개수
+    const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
+    const unreadMessagesCount = messages.filter(m => !m.isRead).length;
 
-    const handleMarkAllNotificationsAsRead = () => {
-        const updated = notifications.map(n => ({ ...n, isRead: true }));
-        setNotifications(updated);
-    };
+    // 모두 읽음
+    const handleMarkAllNotiAsRead = () =>
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
 
     return (
         <div className="flex items-center justify-between w-full relative">
-            {/* 왼쪽: 로고 + 네비 */}
-            <div className="flex items-center gap-3">
-                <Link to="/">
+            {/* 왼쪽: 로고 + 네비게이션 */}
+            <div className="flex items-center gap-3 min-w-0">
+                <Link to="/" className="shrink-0">
                     <img src={logo} alt="Sandwich" className="w-[120px] h-auto" />
                 </Link>
 
@@ -63,61 +71,71 @@ const DesktopNav = ({ onLogout }: Props) => {
                 </nav>
             </div>
 
-            {/* 오른쪽 */}
+            {/* 오른쪽: 검색 + 아이콘들 */}
             <div className="flex items-center gap-5 ml-auto relative">
                 <SearchBar />
 
                 {isLoggedIn ? (
                     <div className="flex items-center gap-5 relative">
-                        {/* 메시지 아이콘 */}
+                        {/* 메시지 */}
                         <div className="relative">
                             <button
-                                className="relative"
                                 onClick={() => {
-                                    setShowMessage((prev) => !prev);
+                                    setShowMessage(prev => !prev);
                                     setShowNotification(false);
                                     setShowProfile(false);
                                 }}
+                                aria-haspopup="menu"
+                                aria-expanded={showMessage}
+                                aria-label="메시지 열기"
                             >
-                                <MessageIcon hasNew={unreadMessageCount > 0} />
+                                <MessageIcon hasNew={unreadMessagesCount > 0} />
                             </button>
+
                             {showMessage && (
                                 <div className="absolute right-0 z-50">
+                                    {/* Dropdown 내부에서 max-h + overflow로 5개 이상일 때 스크롤 */}
                                     <MessageDropdown messages={messages} />
                                 </div>
                             )}
                         </div>
 
-                        {/* 알림 아이콘 */}
+                        {/* 알림 */}
                         <div className="relative">
                             <button
-                                className="relative"
                                 onClick={() => {
-                                    setShowNotification((prev) => !prev);
+                                    setShowNotification(prev => !prev);
                                     setShowMessage(false);
                                     setShowProfile(false);
                                 }}
+                                aria-haspopup="menu"
+                                aria-expanded={showNotification}
+                                aria-label="알림 열기"
                             >
-                                <NotificationIcon hasNew={unreadNotiCount > 0} />
+                                <NotificationIcon hasNew={unreadNotificationsCount > 0} />
                             </button>
+
                             {showNotification && (
                                 <div className="absolute right-0 z-50">
                                     <NotificationDropdown
                                         notifications={notifications}
-                                        onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+                                        onMarkAllAsRead={handleMarkAllNotiAsRead}
                                     />
                                 </div>
                             )}
                         </div>
 
-                        {/* 프로필 아이콘 */}
+                        {/* 프로필 */}
                         <div className="relative mb-1">
                             <button
                                 onClick={() => {
-                                    setShowProfile((prev) => !prev);
+                                    setShowProfile(prev => !prev);
                                     setShowNotification(false);
                                     setShowMessage(false);
                                 }}
+                                aria-haspopup="menu"
+                                aria-expanded={showProfile}
+                                aria-label="프로필 열기"
                             >
                                 <ProfileCircle email={email} size={32} />
                             </button>
@@ -133,8 +151,8 @@ const DesktopNav = ({ onLogout }: Props) => {
                     </div>
                 ) : (
                     <div className="flex gap-3 text-[14px] text-black">
-                        <Link to="/login">로그인</Link>
-                        <Link to="/join">회원가입</Link>
+                        <Link to="/login" className="hover:underline">로그인</Link>
+                        <Link to="/join" className="hover:underline">회원가입</Link>
                     </div>
                 )}
             </div>
