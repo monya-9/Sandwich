@@ -66,15 +66,16 @@ public class MessageService {
         msg = messageRepo.save(msg);
 
         // 5) 마지막 메시지 미리보기 갱신
+        room.setLastMessage(msg);
         room.setLastMessageType(msg.getType());
         room.setLastMessagePreview(buildPreview(msg));
+        room.setLastMessageAt(msg.getCreatedAt());
 
         // 6) (나중에 구현) 웹소켓 브로드캐스트
         broadcastToWebSocketClients(msg);
 
         // 7) 응답 DTO
-        MessageResponse res = toDto(msg);
-        return res;
+        return toDto(msg);
     }
 
     private void validateByType(SendMessageRequest req) {
@@ -146,6 +147,11 @@ public class MessageService {
     }
 
     private String buildPreview(Message m) {
+        // 삭제 여부 우선 체크
+        if (m.isDeleted()) {
+            return "삭제된 메시지입니다";
+        }
+
         return switch (m.getType()) {
             case GENERAL -> truncate(m.getContent(), 80);
             case EMOJI   -> m.getContent();
