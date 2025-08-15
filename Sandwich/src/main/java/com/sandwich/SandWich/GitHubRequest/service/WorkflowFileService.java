@@ -104,6 +104,8 @@ public class WorkflowFileService {
                 env:
                   AWS_REGION: ap-northeast-2
                   S3_BUCKET: sandwich-user-projects
+                  USER_ID: ${{ secrets.USER_ID }}
+                  PROJECT_ID: ${{ secrets.PROJECT_ID }}
 
                 jobs:
                   build-and-deploy:
@@ -137,14 +139,33 @@ public class WorkflowFileService {
                           aws-secret-access-key: ${{ secrets.SANDWICH_USER_AWS_SECRET_ACCESS_KEY }}
                           aws-region: ap-northeast-2
 
+                      - name: Login to Amazon ECR
+                        uses: aws-actions/amazon-ecr-login@v2
+          
+                      - name: Create ECR repository if not exists
+                        run: |
+                          aws ecr describe-repositories --repository-names "sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}" || \\
+                          aws ecr create-repository --repository-name "sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}"
+
+                      - name: Build and Push Docker image
+                        run: |
+                          if [ -f Dockerfile ]; then
+                            IMAGE_TAG=${GITHUB_SHA}
+                            ECR_URI=398808282696.dkr.ecr.ap-northeast-2.amazonaws.com/sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}
+                            docker build -t $ECR_URI:$IMAGE_TAG .
+                            docker push $ECR_URI:$IMAGE_TAG
+                          else
+                            echo "No Dockerfile, skipping Docker build"
+                          fi
+
                       - name: Deploy to S3
-                        run: aws s3 sync build/ s3://${{ env.S3_BUCKET }}/${{ secrets.USER_ID }}/${{ secrets.PROJECT_ID }} --acl public-read
+                        run: aws s3 sync build/ s3://${{ env.S3_BUCKET }}/${{ env.USER_ID }}/${{ env.PROJECT_ID }} --acl public-read
 
                       - name: Invalidate CloudFront cache
                         run: |
                           aws cloudfront create-invalidation \\
                           --distribution-id ${{ secrets.SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID }} \\
-                          --paths "/${{ secrets.USER_ID }}/${{ secrets.PROJECT_ID }}/*"
+                          --paths "/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/*"
 
 
 
