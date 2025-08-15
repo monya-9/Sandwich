@@ -19,13 +19,19 @@ REDIS_URL    = os.getenv("REDIS_URL", "redis://localhost:4242/0")
 INFER_CHUNK_ITEMS = int(os.getenv("INFER_CHUNK_ITEMS", "5000"))
 TRAIN_ON_RUN      = os.getenv("TRAIN_ON_RUN", "0") == "1"
 
-WEIGHT_CONTENT  = float(os.getenv("WEIGHT_CONTENT",  "0.6"))  # 유저 스킬(콘텐츠 유사도)
-WEIGHT_VIEW     = float(os.getenv("WEIGHT_VIEW",     "0.2"))  # 본(조회) 프로젝트
+# 기존 가중치(블렌딩)
+WEIGHT_CONTENT  = float(os.getenv("WEIGHT_CONTENT",  "0.6"))  # 콘텐츠 유사도(유저 스킬)
+WEIGHT_VIEW     = float(os.getenv("WEIGHT_VIEW",     "0.2"))  # 조회
 WEIGHT_LIKE     = float(os.getenv("WEIGHT_LIKE",     "0.1"))  # 좋아요
 WEIGHT_COMMENT  = float(os.getenv("WEIGHT_COMMENT",  "0.1"))  # 댓글
 
-# 이미 본 아이템을 제외할지(기본: 0=미제외 / 1=제외)
-EXCLUDE_SEEN    = os.getenv("EXCLUDE_SEEN", "0") == "1"
+# 콜드스타트 fallback (인기/신규)
+WEIGHT_POPULARITY = float(os.getenv("WEIGHT_POPULARITY", "0.7"))
+WEIGHT_RECENCY    = float(os.getenv("WEIGHT_RECENCY",    "0.3"))
+RECENCY_HALF_LIFE_DAYS = float(os.getenv("RECENCY_HALF_LIFE_DAYS", "14"))  # 절반감쇠일수
+
+# 이미 본 아이템 제외(1) / 포함(0)
+EXCLUDE_SEEN = os.getenv("EXCLUDE_SEEN", "0") == "1"
 
 def require_vars():
     missing = [k for k,v in {

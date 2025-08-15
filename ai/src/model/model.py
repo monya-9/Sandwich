@@ -14,11 +14,9 @@ class FeatureDeepRec(nn.Module):
         dropout=0.2,
     ):
         super().__init__()
-        # ID 임베딩
         self.user_id_emb = nn.Embedding(num_users, embed_dim)
         self.item_id_emb = nn.Embedding(num_items, embed_dim)
 
-        # 피처 인코딩(멀티핫 → 임베딩)
         self.user_feat_fc = nn.Sequential(
             nn.Linear(user_feat_dim, 256), nn.LeakyReLU(),
             nn.BatchNorm1d(256), nn.Dropout(dropout),
@@ -31,7 +29,7 @@ class FeatureDeepRec(nn.Module):
         )
 
         layers = []
-        in_dim = embed_dim * 4  # uid_emb, iid_emb, ufeat_emb, ifeat_emb concat
+        in_dim = embed_dim * 4
         for d in mlp_dims:
             layers += [nn.Linear(in_dim, d), nn.LeakyReLU(), nn.BatchNorm1d(d), nn.Dropout(dropout)]
             in_dim = d
@@ -39,14 +37,13 @@ class FeatureDeepRec(nn.Module):
         self.mlp = nn.Sequential(*layers)
 
     def encode_user_feats(self, u_feat: torch.Tensor) -> torch.Tensor:
-        """멀티핫 유저 피처 → 임베딩(정규화)"""
         z = self.user_feat_fc(u_feat)
-        return F.normalize(z, dim=1)
+        # eps 지정해 0벡터 정규화 시 NaN 방지
+        return F.normalize(z, dim=1, eps=1e-8)
 
     def encode_item_feats(self, i_feat: torch.Tensor) -> torch.Tensor:
-        """멀티핫 아이템 피처 → 임베딩(정규화)"""
         z = self.item_feat_fc(i_feat)
-        return F.normalize(z, dim=1)
+        return F.normalize(z, dim=1, eps=1e-8)
 
     def forward(self, u_ids: torch.Tensor, i_ids: torch.Tensor,
                 u_feat: torch.Tensor, i_feat: torch.Tensor) -> torch.Tensor:
