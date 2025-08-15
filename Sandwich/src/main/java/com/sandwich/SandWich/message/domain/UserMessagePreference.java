@@ -10,6 +10,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "uq_pref_user", columnNames = "user_id")
+})
 public class UserMessagePreference {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
