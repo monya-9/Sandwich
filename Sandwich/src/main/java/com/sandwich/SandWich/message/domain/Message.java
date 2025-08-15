@@ -12,6 +12,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Table(indexes = {
+        @Index(name = "idx_msg_room_created", columnList = "room_id, createdAt DESC"),
+        @Index(name = "idx_msg_unread", columnList = "room_id, receiver_id, is_read")
+})
 public class Message extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,7 +37,7 @@ public class Message extends BaseEntity {
     @Column(columnDefinition = "text")
     private String content;
 
-    @Type(JsonType.class)
+    @org.hibernate.annotations.Type(JsonType.class)
     @Column(name = "payload", columnDefinition = "jsonb")
     private String payload;
 
