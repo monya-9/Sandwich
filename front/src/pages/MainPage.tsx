@@ -1,6 +1,5 @@
 //MainPage.tsx
 import React, { useState } from 'react';
-import Header from '../components/common/Header/Header';
 import MainHeroSection from '../components/Main/MainHeroSection';
 import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
@@ -78,7 +77,6 @@ const MainPage = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
        <main className="px-8 py-6 pt-[80px]">
         <MainHeroSection projects={dummyProjects.slice(0, 7)} />
 
