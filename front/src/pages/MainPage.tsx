@@ -77,7 +77,7 @@ const MainPage = () => {
 
   return (
     <div className="min-h-screen">
-       <main className="px-8 py-6 pt-[80px]">
+       <main className="px-8 py-6">
         <MainHeroSection projects={dummyProjects.slice(0, 7)} />
 
          <div className="mb-10">
