@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+
 import AppLayout from "./layouts/AppLayout";
 import MainPage from './pages/MainPage';
 import JoinPage from './pages/Auth/JoinPage';
@@ -8,8 +9,12 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
 import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
 import { AuthProvider } from './context/AuthContext';
-import ProfileStep from "./components/Auth/OAuth/ProfileStep";
-import MessagesPage from './pages/Messages/MessagesPage';
+
+import ProfileStep from "./components/Auth/OAuth/ProfileStep";           // HEAD
+import MessagesPage from './pages/Messages/MessagesPage';                // HEAD
+
+import OtherProjectPage from "./pages/OtherProjectPage";                 // develop
+import ProjectForm from './components/ProjectManage/ProjectForm';        // develop
 
 function App() {
     return (
@@ -22,6 +27,10 @@ function App() {
                             <Route index element={<MainPage />} />
                             <Route path="/messages" element={<MessagesPage />} />
                             <Route path="/messages/:id" element={<MessagesPage />} />
+                            {/* develop 라우트도 레이아웃 안으로 편입 */}
+                            <Route path="/other-project" element={<OtherProjectPage />} />
+                            <Route path="/other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
+                            <Route path="/project/new" element={<ProjectForm />} />
                         </Route>
 
                         {/* ✅ 레이아웃 제외(헤더 없음) */}

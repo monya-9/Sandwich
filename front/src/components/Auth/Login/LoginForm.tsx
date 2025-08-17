@@ -1,5 +1,5 @@
 // src/components/Auth/Login/LoginForm.tsx
-import React, { useState, useContext } from "react";
+import 인React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import logo from "../../../assets/logo.png";
@@ -27,23 +27,23 @@ const LoginForm: React.FC = () => {
             const res = await api.post("/auth/login", { email, password });
             const { accessToken } = res.data;
 
-            // ✅ AccessToken 저장
+            // ✅ AccessToken 저장 (localStorage / sessionStorage)
             setToken(accessToken, keepLogin);
 
             // ✅ 이메일 저장
             const storage = keepLogin ? localStorage : sessionStorage;
             storage.setItem("userEmail", email);
 
-            // ✅ Context 상태 업데이트 (email 전달)
+            // ✅ Context 상태 업데이트
             login(email);
 
+            setLoginFailed(false);
             navigate("/");
         } catch (err) {
             console.error("로그인 오류", err);
             setLoginFailed(true);
         }
     };
-
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
@@ -59,9 +59,7 @@ const LoginForm: React.FC = () => {
                     setPassword={setPassword}
                     isError={loginFailed}
                 />
-
                 <LoginButton onClick={handleLogin} isActive={isActive} />
-
                 <KeepLoginCheck checked={keepLogin} onChange={setKeepLogin} />
             </div>
 

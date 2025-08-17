@@ -1,18 +1,28 @@
-# 1단계: Gradle 빌드
-FROM gradle:8.14.2-jdk17-alpine as builder
 
+# 1단계: Gradle 빌드 (테스트 제외)
+FROM gradle:8.14.2-jdk17 AS builder
 WORKDIR /app
-
 COPY --chown=gradle:gradle . .
-
 RUN gradle clean build --no-daemon -x test
 
-# 2단계: 실행용 경량 이미지
-FROM eclipse-temurin:17-jdk-alpine
 
+# 2단계: 실행 이미지 (Playwright 브라우저 포함)
+#  - 기존 ENTRYPOINT 옵션 그대로 유지
+#  - 브라우저/폰트 의존성까지 포함되어 캡처 안정성↑
+FROM mcr.microsoft.com/playwright/java:v1.46.0
 WORKDIR /app
 
-COPY --from=builder /app/build/libs/*.jar app.jar
+# libsodium (기존 Alpine에서 쓰던 라이브러리의 Debian/Ubuntu 대응 패키지)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsodium23 \
+ && rm -rf /var/lib/apt/lists/*
 
-# graceful shutdown 및 안정 실행 옵션 추가
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+# (선택) 한글/이모지 폰트 - 스크린샷 품질 향상
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     fonts-noto-cjk fonts-noto-color-emoji \
+#  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/build/libs/*.jar /app/app.jar
+
+# 기존 실행 옵션 유지 (graceful shutdown & 안정 실행)
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app/app.jar"]

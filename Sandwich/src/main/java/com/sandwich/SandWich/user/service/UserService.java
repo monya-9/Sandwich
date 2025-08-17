@@ -15,7 +15,7 @@ import com.sandwich.SandWich.user.domain.*;
 import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.*;
 import com.sandwich.SandWich.user.domain.User;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -228,6 +228,96 @@ public class UserService {
         }
         profile.setNickname(nickname);
     }
+
+    @Transactional
+    public PositionResponse getUserPosition(User user) {
+        UserPosition userPosition = userPositionRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("작업 분야가 설정되지 않았습니다."));
+
+        String positionName = userPosition.getPosition().getName();
+        return new PositionResponse(positionName);
+    }
+
+    @Transactional
+    public void updateUserPosition(User user, Long positionId) {
+        Position position = positionRepository.findById(positionId)
+                .orElseThrow(PositionNotFoundException::new);
+
+        Optional<UserPosition> existing = userPositionRepository.findByUser(user);
+        if (existing.isPresent()) {
+            UserPosition userPosition = existing.get();
+            userPosition.setPosition(position); // 변경
+            userPositionRepository.save(userPosition);
+        } else {
+            userPositionRepository.save(new UserPosition(user, position));
+        }
+    }
+
+    @Transactional
+    public void updateGeneralInterests(User user, List<Long> interestIds) {
+        // 관심사는 최대 3개
+        if (interestIds.size() > 3) {
+            throw new IllegalArgumentException("관심사는 최대 3개까지 선택 가능합니다.");
+        }
+
+        // 기존 GENERAL 관심사만 삭제
+        List<UserInterest> current = userInterestRepository.findByUser(user);
+        current.stream()
+                .filter(ui -> ui.getInterest().getType() == InterestType.GENERAL)
+                .forEach(userInterestRepository::delete);
+
+        // 새 관심사 추가
+        for (Long id : interestIds) {
+            Interest interest = interestRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("해당 관심사가 존재하지 않습니다: " + id));
+
+            if (interest.getType() == InterestType.GENERAL) {
+                userInterestRepository.save(new UserInterest(user, interest));
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public InterestResponse getGeneralInterests(User user) {
+        List<String> names = userInterestRepository.findByUser(user).stream()
+                .filter(ui -> ui.getInterest().getType() == InterestType.GENERAL)
+                .map(ui -> ui.getInterest().getName())
+                .toList();
+
+        return new InterestResponse(names);
+    }
+
+    @Transactional(readOnly = true)
+    public InterestResponse getTechInterests(User user) {
+        List<String> names = userInterestRepository.findByUser(user).stream()
+                .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
+                .map(ui -> ui.getInterest().getName())
+                .toList();
+
+        return new InterestResponse(names);
+    }
+
+    @Transactional
+    public void updateTechInterests(User user, List<Long> interestIds) {
+        if (interestIds.size() > 10) {
+            throw new IllegalArgumentException("기술 스택은 최대 10개까지 선택 가능합니다.");
+        }
+
+        List<UserInterest> current = userInterestRepository.findByUser(user);
+        current.stream()
+                .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
+                .forEach(userInterestRepository::delete);
+
+        for (Long id : interestIds) {
+            Interest interest = interestRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("해당 관심사가 존재하지 않습니다: " + id));
+
+            if (interest.getType() == InterestType.TECH) {
+                userInterestRepository.save(new UserInterest(user, interest));
+            }
+        }
+    }
+
 
 
 }

@@ -58,3 +58,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# deps
+node_modules/
+**/node_modules/
