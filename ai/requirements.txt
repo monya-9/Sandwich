@@ -7,3 +7,5 @@ pandas
 numpy
 torch
 celery
+APScheduler>=3.10
+tzdata>=2024.1
