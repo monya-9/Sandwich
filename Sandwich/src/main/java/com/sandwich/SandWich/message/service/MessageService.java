@@ -8,6 +8,7 @@ import com.sandwich.SandWich.message.dto.SendMessageRequest;
 import com.sandwich.SandWich.message.repository.MessageRepository;
 import com.sandwich.SandWich.message.repository.MessageRoomRepository;
 import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
+import com.sandwich.SandWich.message.util.MessagePreviewer;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -66,7 +67,7 @@ public class MessageService {
         // 5) 마지막 메시지 미리보기 갱신
         room.setLastMessage(msg);
         room.setLastMessageType(msg.getType());
-        room.setLastMessagePreview(buildPreview(msg));
+        room.setLastMessagePreview(MessagePreviewer.preview(msg));
         room.setLastMessageAt(msg.getCreatedAt());
 
         // 6) (나중에 구현) 웹소켓 브로드캐스트
@@ -142,20 +143,6 @@ public class MessageService {
             }
         }
         return b.build();
-    }
-
-    private String buildPreview(Message m) {
-        // 삭제 여부 우선 체크
-        if (m.isDeleted()) {
-            return "삭제된 메시지입니다";
-        }
-
-        return switch (m.getType()) {
-            case GENERAL -> truncate(m.getContent(), 80);
-            case EMOJI   -> m.getContent();
-            case JOB_OFFER -> "[채용 제안] " + (m.getPosition() != null ? m.getPosition() : "");
-            case PROJECT_OFFER -> "[프로젝트 제안] " + (m.getTitle() != null ? m.getTitle() : "");
-        };
     }
 
     private String truncate(String s, int max) {

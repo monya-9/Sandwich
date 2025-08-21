@@ -54,4 +54,23 @@ order by r.lastMessageAt desc
            OR (r.user1.id = :b AND r.user2.id = :a)
     """)
     Optional<MessageRoom> findBetween(@Param("a") Long a, @Param("b") Long b);
+
+    // 권한 체크: me가 해당 room의 참가자인가?
+    @Query("""
+        SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END
+        FROM MessageRoom r
+        WHERE r.id = :roomId
+          AND (r.user1.id = :userId OR r.user2.id = :userId)
+    """)
+    boolean isParticipant(@Param("roomId") Long roomId, @Param("userId") Long userId);
+
+    // (옵션) 파트너 ID만 바로 얻고 싶을 때
+    @Query("""
+        SELECT CASE WHEN r.user1.id = :meId THEN r.user2.id ELSE r.user1.id END
+        FROM MessageRoom r
+        WHERE r.id = :roomId
+          AND (r.user1.id = :meId OR r.user2.id = :meId)
+    """)
+    Optional<Long> findPartnerId(@Param("roomId") Long roomId, @Param("meId") Long meId);
+
 }

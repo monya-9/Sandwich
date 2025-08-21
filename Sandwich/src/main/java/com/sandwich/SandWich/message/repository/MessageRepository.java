@@ -28,14 +28,26 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     java.util.List<Message> findAllByRoomIdOrderByCreatedAtAsc(@Param("roomId") Long roomId);
 
 
-    // MessageRepository.java
     @Query("select m from Message m join fetch m.room where m.id = :id")
     Optional<Message> findWithRoomById(@Param("id") Long id);
 
     @Query("""
-  select m from Message m
-  where m.room.id = :roomId and m.isDeleted = false
-  order by m.createdAt desc""")
+     select m from Message m
+     where m.room.id = :roomId and m.isDeleted = false
+     order by m.createdAt desc""")
     List<Message> findLatestNotDeletedByRoomId(@Param("roomId") Long roomId, Pageable pageable);
 
+    @Query("""
+        SELECT m
+        FROM Message m
+        JOIN FETCH m.sender s
+        JOIN FETCH m.receiver r
+        WHERE m.room.id = :roomId
+          AND (:cursorId IS NULL OR m.id < :cursorId)
+        ORDER BY m.id DESC""")
+    List<Message> findSliceByRoomIdAndCursor(
+            @Param("roomId") Long roomId,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable
+    );
 }
