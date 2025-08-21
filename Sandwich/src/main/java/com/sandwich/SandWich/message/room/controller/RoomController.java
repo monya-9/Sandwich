@@ -4,7 +4,9 @@ import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.message.dto.MessagePageResponse;
 import com.sandwich.SandWich.message.room.dto.RoomListItemResponse;
 import com.sandwich.SandWich.message.room.dto.RoomMetaResponse;
+import com.sandwich.SandWich.message.room.dto.RoomParticipantResponse;
 import com.sandwich.SandWich.message.room.service.RoomHistoryService;
+import com.sandwich.SandWich.message.room.service.RoomParticipantsService;
 import com.sandwich.SandWich.message.room.service.RoomQueryService;
 import com.sandwich.SandWich.message.service.RoomMetaService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/rooms")
@@ -21,6 +25,7 @@ public class RoomController {
     private final RoomQueryService roomQueryService;
     private final RoomHistoryService roomHistoryService;
     private final RoomMetaService roomMetaService;
+    private final RoomParticipantsService participantsService;
 
     @GetMapping
     public Page<RoomListItemResponse> getMyRooms(
@@ -49,5 +54,14 @@ public class RoomController {
             @PathVariable Long roomId
     ) {
         return roomMetaService.getMeta(me.getUser(), roomId);
+    }
+
+
+    @GetMapping("/{roomId}/participants")
+    public List<RoomParticipantResponse> getParticipants(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @PathVariable Long roomId
+    ) {
+        return participantsService.getParticipants(principal.getUser(), roomId);
     }
 }
