@@ -6,7 +6,7 @@ import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -37,13 +37,12 @@ public class MessageRoom extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "last_message_id")
     private Message lastMessage;
 
-    private LocalDateTime lastMessageAt;
+    @Column(name = "last_message_at")
+    private OffsetDateTime lastMessageAt;
 
     @PrePersist
     public void onCreate() {
-        if (lastMessageAt == null) {
-            lastMessageAt = LocalDateTime.now();
-        }
+        if (lastMessageAt == null) lastMessageAt = OffsetDateTime.now();
     }
 
     // 편의 메서드: 상대 찾기

@@ -4,5 +4,5 @@ public record ProjectViewDto(
         Long projectId,
         String title,
         Integer count,
-        java.time.LocalDateTime lastViewedAt
+        java.time.OffsetDateTime lastViewedAt
 ) {}
