@@ -74,8 +74,7 @@ public class ChatScreenshotHtmlRenderer {
             String content = escape(normalizeSpaces(getDisplayText(m)));
 
             String ts = m.getCreatedAt()
-                    .atZone(ZoneId.of("UTC"))      // 저장이 UTC라면 유지
-                    .withZoneSameInstant(zone)     // 표시 타임존 변환
+                    .atZoneSameInstant(zone)
                     .format(DTF);
 
             sb.append("<div class='msg ").append(mine ? "me" : "other").append("'>")
