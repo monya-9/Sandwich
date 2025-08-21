@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
+                        // meta
+                        .requestMatchers("/api/meta/**").permitAll()
                         // 디버그 타임 엔드포인트 허용
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
                         // 좋아요 기능

@@ -92,7 +92,7 @@ public class UserController {
     }
 
     @GetMapping("/interests/general")
-    public ResponseEntity<InterestResponse> getGeneralInterests(
+    public ResponseEntity<java.util.List<InterestResponse>> getGeneralInterests(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(userService.getGeneralInterests(userDetails.getUser()));
     }
@@ -106,7 +106,7 @@ public class UserController {
     }
 
     @GetMapping("/interests/tech")
-    public ResponseEntity<InterestResponse> getTechInterests(
+    public ResponseEntity<java.util.List<InterestResponse>> getTechInterests(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(userService.getTechInterests(userDetails.getUser()));
     }
