@@ -1,5 +1,5 @@
 package com.sandwich.SandWich.message.attach.service;
-import com.sandwich.SandWich.auth.security.UserDetailsImpl;
+import jakarta.annotation.PostConstruct;
 import com.sandwich.SandWich.message.attach.config.FileSecurityProperties;
 import com.sandwich.SandWich.message.attach.domain.AttachmentMetadata;
 import com.sandwich.SandWich.message.attach.repository.AttachmentMetadataRepository;
@@ -9,15 +9,17 @@ import com.sandwich.SandWich.message.repository.MessageRoomRepository;
 import com.sandwich.SandWich.message.service.MessageService;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URL;
 import java.time.Duration;
-import java.util.Map;
+
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AttachmentService {
@@ -25,10 +27,13 @@ public class AttachmentService {
     private final FileSecurityProperties props;
     private final StorageService storage;
     private final AttachmentMetadataRepository repo;
-
-    // 통합: 권한 체크/메시지 생성
     private final MessageRoomRepository roomRepo;
     private final MessageService messageService;
+
+    @PostConstruct
+    void logStorageImpl() {
+        log.info("[Storage] Using implementation: {}", storage.getClass().getSimpleName());
+    }
 
     private void assertMemberOrThrow(Long roomId, Long userId) {
         boolean ok = roomRepo.isParticipant(roomId, userId);
