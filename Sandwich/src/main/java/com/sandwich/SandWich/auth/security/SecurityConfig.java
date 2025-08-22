@@ -94,6 +94,10 @@ public class SecurityConfig {
 
                         // 이모지
                         .requestMatchers("/api/emojis/**").permitAll()
+
+                        // 다운로드 보호
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/messages/*/attachments").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,  "/api/files/**").authenticated()
                         // 기타 인증 예외 경로
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",

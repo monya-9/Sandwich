@@ -50,4 +50,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             @Param("cursorId") Long cursorId,
             Pageable pageable
     );
+
+    Message findTopByRoomIdOrderByIdDesc(Long roomId);
 }
