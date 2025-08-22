@@ -7,7 +7,7 @@ import org.springframework.security.access.AccessDeniedException; // ★ 403용
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -58,11 +58,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex) {
-        return ResponseEntity
-                .status(ex.getStatus())
-                .body(new ErrorResponse(ex.getStatus().value(), ex.getMessage()));
+        return ResponseEntity.status(ex.getStatus())
+                .body(new ErrorResponse(ex.getStatus().value(), ex.getCode(), ex.getMessage()));
     }
-
     /* =========================
        4) 바인딩/검증 예외 → 400
        ========================= */
@@ -77,10 +75,15 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), message));
     }
 
-    /* =========================
-       5) 그 외 전부 → 500
-       ========================= */
+    // 413
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException ex) {
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ErrorResponse(413, "업로드 가능한 최대 용량을 초과했습니다."));
+    }
 
+    // 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOther(Exception ex) {
         // TODO: 로그 남기기 (ex)
