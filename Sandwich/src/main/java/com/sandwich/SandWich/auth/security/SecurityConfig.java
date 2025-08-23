@@ -1,4 +1,5 @@
 package com.sandwich.SandWich.auth.security;
+import com.sandwich.SandWich.auth.web.RestAccessDeniedHandler;
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
@@ -39,6 +40,11 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public RestAccessDeniedHandler restAccessDeniedHandler() {
+        return new RestAccessDeniedHandler();
     }
 
 
@@ -97,13 +103,9 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(customAuthenticationEntryPoint)
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            var auth = SecurityContextHolder.getContext().getAuthentication();
-                            log.warn("403 접근 거부됨: 인증 객체 = {}", auth);
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN);
-                        })
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // 401: 토큰 없음/유효하지 않음
+                        .accessDeniedHandler(restAccessDeniedHandler())          // 403: 권한 부족 → JSON
                 )
                 .oauth2Login(oauth -> oauth
                         .authorizationEndpoint(endpoint -> endpoint
