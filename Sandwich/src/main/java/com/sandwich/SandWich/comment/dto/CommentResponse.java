@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.comment.dto;
 
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Getter
@@ -14,6 +14,6 @@ public class CommentResponse {
     private String comment;
     private String username;
     private String profileImageUrl;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
     private List<CommentResponse> subComments; // 대댓글
 }

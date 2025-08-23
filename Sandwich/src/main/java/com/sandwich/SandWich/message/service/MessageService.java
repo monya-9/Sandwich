@@ -15,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -262,7 +260,7 @@ public class MessageService {
                     throw new ConflictException("이미 마스킹된 메시지입니다.");
                 }
                 message.setDeleted(true);
-                message.setDeletedAt(java.time.LocalDateTime.now());
+                message.setDeletedAt(java.time.OffsetDateTime.now());
                 message.setDeletedByUserId(me.getId());
                 message.setContent("삭제된 메시지입니다");
                 // 카드형 필드는 그대로 두되, 프리뷰는 "삭제된 메시지입니다"로 보이게 됨
