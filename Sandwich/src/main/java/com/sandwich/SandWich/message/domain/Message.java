@@ -14,7 +14,8 @@ import java.time.OffsetDateTime;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @Table(indexes = {
         @Index(name = "idx_msg_room_created", columnList = "room_id, createdAt DESC"),
-        @Index(name = "idx_msg_unread", columnList = "room_id, receiver_id, is_read")
+        @Index(name = "idx_msg_unread", columnList = "room_id, receiver_id, is_read"),
+        @Index(name = "idx_msg_room_id_id_desc", columnList = "room_id,id DESC")
 })
 public class Message extends BaseEntity {
 
