@@ -10,6 +10,10 @@ public class GitHubBranchService {
     private final WorkflowFileService workflowFileService;
     private final GitHubApiService gitHubApiService;
     private final GitHubSecretsService gitHubSecretsService;
+    private final ProvisionEcsWorkflowService provisionEcsWorkflowService;
+    private final DeployWorkflowService deployWorkflowService;
+    private final CreateCodePipelineService createCodePipelineService;
+    private final AwsOidcWorkflowService awsOidcWorkflowService;
 
     public void createBranchWithFileAndPR(Long userId, Long projectId, String owner, String repo, String baseBranch, String newBranchName, String gitHubToken) throws Exception {
         if (gitHubToken == null || gitHubToken.isEmpty()) {
@@ -23,12 +27,19 @@ public class GitHubBranchService {
         // 2. 새 브랜치 생성
         gitHubApiService.createBranch(gitHubToken, owner, repo, newBranchName, baseSha);
 
-        // 3. workflows 커밋
-        // 3. .github/workflows 폴더 없으면 생성 (빈 .gitkeep 커밋)
-        workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
-        workflowFileService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId);
+        // 3. workflows 커밋 / .sandwich.json 생성 및 커밋
         // .sandwich.json 생성 및 커밋
         workflowFileService.commitSandwichJson(gitHubToken, owner, repo, newBranchName);
+        // .github/workflows 폴더 없으면 생성 (빈 .gitkeep 커밋)
+        workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
+        provisionEcsWorkflowService.commitProvisionWorkflow(gitHubToken, owner, repo, newBranchName);  // ECS 먼저
+        createCodePipelineService.commitPipelineWorkflow(gitHubToken, owner, repo, newBranchName);      // CodePipeline 다음
+        deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId); // 배포 마지막
+
+        String awsRoleArn = System.getenv("AWS_ROLE_ARN");
+        gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "AWS_ROLE_ARN", awsRoleArn);
+        awsOidcWorkflowService.commitOidcFullCdWorkflow(gitHubToken, owner, repo, newBranchName, awsRoleArn);
+
 
         // 4. PR 생성
         gitHubApiService.createPullRequest(gitHubToken, owner, repo, newBranchName, baseBranch);
