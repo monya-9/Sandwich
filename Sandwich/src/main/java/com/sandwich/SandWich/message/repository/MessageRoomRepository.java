@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.message.repository;
 
 import com.sandwich.SandWich.message.domain.MessageRoom;
+import com.sandwich.SandWich.message.room.dto.RoomParticipantResponse;
 import com.sandwich.SandWich.message.room.repository.RoomListRow;
 import com.sandwich.SandWich.message.room.repository.RoomMetaRow;
 import org.springframework.data.domain.Page;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MessageRoomRepository extends JpaRepository<MessageRoom, Long> {
@@ -110,5 +112,21 @@ order by r.lastMessageAt desc
     where r.id = :roomId
       and (:meId in (u1.id, u2.id))""")
     Optional<RoomMetaRow> findRoomMeta(@Param("meId") Long meId, @Param("roomId") Long roomId);
+
+    /**
+     * 참가자인 경우에만 방을 로딩 (권한 체크 + 유저/프로필 페치 한 번에)
+     */
+    @Query("""
+        SELECT r
+        FROM MessageRoom r
+          JOIN FETCH r.user1 u1
+          LEFT JOIN FETCH u1.profile p1
+          JOIN FETCH r.user2 u2
+          LEFT JOIN FETCH u2.profile p2
+        WHERE r.id = :roomId
+          AND (:meId IN (u1.id, u2.id))
+    """)
+    Optional<MessageRoom> findByIdWithUsersIfParticipant(@Param("roomId") Long roomId,
+                                                         @Param("meId") Long meId);
 }
 
