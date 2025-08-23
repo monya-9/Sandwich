@@ -1,6 +1,6 @@
 package com.sandwich.SandWich.message.room.repository;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public interface RoomListRow {
     Long getRoomId();
@@ -11,7 +11,7 @@ public interface RoomListRow {
     Long getLastMessageId();
     String getLastMessageType();
     String getLastMessagePreview();
-    LocalDateTime getLastMessageAt();
+    OffsetDateTime getLastMessageAt();
 
     Long getUnreadCount();
 }

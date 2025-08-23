@@ -3,7 +3,7 @@ package com.sandwich.SandWich.projectBuildInfo.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "project_build_info")
@@ -25,20 +25,20 @@ public class ProjectBuildInfo {
 
     private String lastBuildStatus;
 
-    private LocalDateTime lastBuildTime;
+    private OffsetDateTime lastBuildTime;
 
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     @PrePersist
     public void prePersist() {
-        createdAt = LocalDateTime.now();
+        createdAt = OffsetDateTime.now();
         updatedAt = createdAt;
     }
 
     @PreUpdate
     public void preUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = OffsetDateTime.now();
     }
 }
