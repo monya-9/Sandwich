@@ -3,7 +3,7 @@ package com.sandwich.SandWich.message.room.dto;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Getter
 @Builder
@@ -19,7 +19,7 @@ public class RoomListItemResponse {
     private Long lastMessageId;        // 서브쿼리로 구함(아래 JPQL 참고)
     private String lastMessageType;
     private String lastMessagePreview;
-    private LocalDateTime lastMessageAt;
+    private OffsetDateTime lastMessageAt;
 
     // 읽지 않음
     private long unreadCount;

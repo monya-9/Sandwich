@@ -2,7 +2,7 @@ package com.sandwich.SandWich.challenge.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.*;
 
 @Entity
@@ -12,8 +12,8 @@ public class ChallengeQuestion extends BaseEntity {
     private Long id;
 
     private String question;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private OffsetDateTime startDate;
+    private OffsetDateTime endDate;
     private Integer roundNumber;
     private String slug;
 
