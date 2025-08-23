@@ -58,19 +58,17 @@ public class CreateCodePipelineService {
                               "name": "Source",
                               "actions": [
                                 {
-                                  "name": "Source",
+                                  "name": "ECRSource",
                                   "actionTypeId": {
                                     "category": "Source",
-                                    "owner": "ThirdParty",
-                                    "provider": "GitHub",
+                                    "owner": "AWS",
+                                    "provider": "ECR",
                                     "version": "1"
                                   },
                                   "outputArtifacts": [{"name": "SourceOutput"}],
                                   "configuration": {
-                                    "Owner": "%s",
-                                    "Repo": "%s",
-                                    "Branch": "%s",
-                                    "OAuthToken": "${{ secrets.GITHUB_TOKEN }}"
+                                    "RepositoryName": "sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}",
+                                    "ImageTag": "latest"
                                   },
                                   "runOrder": 1
                                 }
@@ -80,17 +78,17 @@ public class CreateCodePipelineService {
                               "name": "Deploy",
                               "actions": [
                                 {
-                                  "name": "Deploy",
+                                  "name": "ECSDeploy",
                                   "actionTypeId": {
                                     "category": "Deploy",
                                     "owner": "AWS",
-                                    "provider": "S3",
+                                    "provider": "ECS",
                                     "version": "1"
                                   },
                                   "inputArtifacts": [{"name": "SourceOutput"}],
                                   "configuration": {
-                                    "BucketName": "sandwich-user-projects",
-                                    "Extract": "true"
+                                    "ClusterName": "sandwich-cluster",
+                                    "ServiceName": "sandwich-service-${{ env.USER_ID }}-${{ env.PROJECT_ID }}"
                                   },
                                   "runOrder": 1
                                 }
@@ -99,7 +97,7 @@ public class CreateCodePipelineService {
                           ]
                         }
                       }'
-        """.formatted(owner, repo, branch);
+        """;
 
         String base64 = Base64.getEncoder().encodeToString(workflowYaml.getBytes(StandardCharsets.UTF_8));
         String sha = workflowFileService.getFileSha(token, owner, repo, branch, ".github/workflows/create-codepipeline.yml");

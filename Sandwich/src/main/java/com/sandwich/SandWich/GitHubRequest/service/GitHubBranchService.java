@@ -13,7 +13,7 @@ public class GitHubBranchService {
     private final ProvisionEcsWorkflowService provisionEcsWorkflowService;
     private final DeployWorkflowService deployWorkflowService;
     private final CreateCodePipelineService createCodePipelineService;
-    private final AwsOidcWorkflowService awsOidcWorkflowService;
+    private final EcrCdWorkflowService awsOidcWorkflowService;
 
     public void createBranchWithFileAndPR(Long userId, Long projectId, String owner, String repo, String baseBranch, String newBranchName, String gitHubToken) throws Exception {
         if (gitHubToken == null || gitHubToken.isEmpty()) {
@@ -32,8 +32,8 @@ public class GitHubBranchService {
         workflowFileService.commitSandwichJson(gitHubToken, owner, repo, newBranchName);
         // .github/workflows 폴더 없으면 생성 (빈 .gitkeep 커밋)
         workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
-        provisionEcsWorkflowService.commitProvisionWorkflow(gitHubToken, owner, repo, newBranchName);  // ECS 먼저
-        createCodePipelineService.commitPipelineWorkflow(gitHubToken, owner, repo, newBranchName);      // CodePipeline 다음
+//        provisionEcsWorkflowService.commitProvisionWorkflow(gitHubToken, owner, repo, newBranchName);  // ECS 먼저
+//        createCodePipelineService.commitPipelineWorkflow(gitHubToken, owner, repo, newBranchName);      // CodePipeline 다음
         deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId); // 배포 마지막
 
         String awsRoleArn = System.getenv("AWS_ROLE_ARN");
