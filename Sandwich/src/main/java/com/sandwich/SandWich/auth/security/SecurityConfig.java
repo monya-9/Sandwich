@@ -1,4 +1,5 @@
 package com.sandwich.SandWich.auth.security;
+import com.sandwich.SandWich.auth.web.RestAccessDeniedHandler;
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
@@ -41,6 +42,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    @Bean
+    public RestAccessDeniedHandler restAccessDeniedHandler() {
+        return new RestAccessDeniedHandler();
+    }
+
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
@@ -48,6 +54,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
+                        // meta
+                        .requestMatchers("/api/meta/**").permitAll()
+                        // 디버그 타임 엔드포인트 허용
+                        .requestMatchers("/api/_debug/**").hasRole("ADMIN")
                         // 좋아요 기능
                         .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
@@ -83,6 +94,10 @@ public class SecurityConfig {
 
                         // 이모지
                         .requestMatchers("/api/emojis/**").permitAll()
+
+                        // 다운로드 보호
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/messages/*/attachments").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,  "/api/files/**").authenticated()
                         // 기타 인증 예외 경로
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",
@@ -94,13 +109,9 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(customAuthenticationEntryPoint)
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            var auth = SecurityContextHolder.getContext().getAuthentication();
-                            log.warn("403 접근 거부됨: 인증 객체 = {}", auth);
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN);
-                        })
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // 401: 토큰 없음/유효하지 않음
+                        .accessDeniedHandler(restAccessDeniedHandler())          // 403: 권한 부족 → JSON
                 )
                 .oauth2Login(oauth -> oauth
                         .authorizationEndpoint(endpoint -> endpoint

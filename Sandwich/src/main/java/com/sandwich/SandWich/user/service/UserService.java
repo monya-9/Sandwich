@@ -229,13 +229,13 @@ public class UserService {
         profile.setNickname(nickname);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public PositionResponse getUserPosition(User user) {
         UserPosition userPosition = userPositionRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("작업 분야가 설정되지 않았습니다."));
 
-        String positionName = userPosition.getPosition().getName();
-        return new PositionResponse(positionName);
+        Position p = userPosition.getPosition();
+        return new PositionResponse(p.getId(), p.getName());
     }
 
     @Transactional
@@ -278,23 +278,21 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public InterestResponse getGeneralInterests(User user) {
-        List<String> names = userInterestRepository.findByUser(user).stream()
-                .filter(ui -> ui.getInterest().getType() == InterestType.GENERAL)
-                .map(ui -> ui.getInterest().getName())
+    public List<InterestResponse> getGeneralInterests(User user) {
+        return userInterestRepository.findByUser(user).stream()
+                .map(UserInterest::getInterest)
+                .filter(i -> i.getType() == InterestType.GENERAL)
+                .map(i -> new InterestResponse(i.getId(), i.getName()))
                 .toList();
-
-        return new InterestResponse(names);
     }
 
     @Transactional(readOnly = true)
-    public InterestResponse getTechInterests(User user) {
-        List<String> names = userInterestRepository.findByUser(user).stream()
-                .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
-                .map(ui -> ui.getInterest().getName())
+    public List<InterestResponse> getTechInterests(User user) {
+        return userInterestRepository.findByUser(user).stream()
+                .map(UserInterest::getInterest)
+                .filter(i -> i.getType() == InterestType.TECH)
+                .map(i -> new InterestResponse(i.getId(), i.getName()))
                 .toList();
-
-        return new InterestResponse(names);
     }
 
     @Transactional

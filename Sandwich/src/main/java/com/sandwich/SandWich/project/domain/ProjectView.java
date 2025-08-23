@@ -32,10 +32,10 @@ public class ProjectView extends BaseEntity {
 
     @Builder.Default
     @Column(name = "viewed_at", nullable = false)
-    private java.time.LocalDateTime viewedAt = java.time.LocalDateTime.now();
+    private java.time.OffsetDateTime viewedAt = java.time.OffsetDateTime.now();
 
     public void increaseCount() {
         this.count++;
-        this.viewedAt = java.time.LocalDateTime.now();
+        this.viewedAt = java.time.OffsetDateTime.now();
     }
 }

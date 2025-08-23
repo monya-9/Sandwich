@@ -4,10 +4,12 @@ package com.sandwich.SandWich.message.service;
 import com.sandwich.SandWich.global.exception.exceptiontype.*;
 import com.sandwich.SandWich.message.domain.*;
 import com.sandwich.SandWich.message.dto.MessageResponse;
+import com.sandwich.SandWich.message.dto.MessageType;
 import com.sandwich.SandWich.message.dto.SendMessageRequest;
 import com.sandwich.SandWich.message.repository.MessageRepository;
 import com.sandwich.SandWich.message.repository.MessageRoomRepository;
 import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
+import com.sandwich.SandWich.message.util.MessagePreviewer;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -15,8 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.LinkedHashMap;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Service
@@ -27,6 +30,9 @@ public class MessageService {
     private final MessageRepository messageRepo;
     private final UserRepository userRepo;
     private final MessagePreferenceService prefService; // 수신 토글 확인
+
+    // 클래스 상단에 재사용용 ObjectMapper 하나 두기
+    private static final ObjectMapper OM = new ObjectMapper();
 
     @Transactional
     public MessageResponse send(User me, SendMessageRequest req) {
@@ -68,7 +74,7 @@ public class MessageService {
         // 5) 마지막 메시지 미리보기 갱신
         room.setLastMessage(msg);
         room.setLastMessageType(msg.getType());
-        room.setLastMessagePreview(buildPreview(msg));
+        room.setLastMessagePreview(MessagePreviewer.preview(msg));
         room.setLastMessageAt(msg.getCreatedAt());
 
         // 6) (나중에 구현) 웹소켓 브로드캐스트
@@ -144,20 +150,6 @@ public class MessageService {
             }
         }
         return b.build();
-    }
-
-    private String buildPreview(Message m) {
-        // 삭제 여부 우선 체크
-        if (m.isDeleted()) {
-            return "삭제된 메시지입니다";
-        }
-
-        return switch (m.getType()) {
-            case GENERAL -> truncate(m.getContent(), 80);
-            case EMOJI   -> m.getContent();
-            case JOB_OFFER -> "[채용 제안] " + (m.getPosition() != null ? m.getPosition() : "");
-            case PROJECT_OFFER -> "[프로젝트 제안] " + (m.getTitle() != null ? m.getTitle() : "");
-        };
     }
 
     private String truncate(String s, int max) {
@@ -262,7 +254,7 @@ public class MessageService {
                     throw new ConflictException("이미 마스킹된 메시지입니다.");
                 }
                 message.setDeleted(true);
-                message.setDeletedAt(java.time.LocalDateTime.now());
+                message.setDeletedAt(OffsetDateTime.now());
                 message.setDeletedByUserId(me.getId());
                 message.setContent("삭제된 메시지입니다");
                 // 카드형 필드는 그대로 두되, 프리뷰는 "삭제된 메시지입니다"로 보이게 됨
@@ -286,33 +278,73 @@ public class MessageService {
     }
 
     private void refreshRoomLastMessage(Long roomId) {
-        var top1 = messageRepo.findLatestNotDeletedByRoomId(roomId, PageRequest.of(0, 1));
         var room = roomRepo.findById(roomId).orElseThrow(MessageRoomNotFoundException::new);
+        var last = messageRepo.findTopByRoomIdOrderByIdDesc(roomId); // 삭제 포함 최신 1건
 
-        if (top1.isEmpty()) {
-            // 방에 남은(마스킹 제외) 메시지가 없으면 비우기
+        if (last == null) {
             room.setLastMessageType(null);
             room.setLastMessagePreview(null);
-            // room.setLastMessageAt(null);  // 만약 필드가 있다면 같이 null 처리
+            // room.setLastMessageAt(null);
         } else {
-            var last = top1.get(0);
             room.setLastMessageType(last.getType());
-            room.setLastMessagePreview(extractPreview(last));
-            // room.setLastMessageAt(last.getCreatedAt()); // 필드 있으면 갱신
+            room.setLastMessagePreview(MessagePreviewer.preview(last)); // 삭제면 "삭제된 메시지입니다"
+            room.setLastMessageAt(last.getCreatedAt()); // 주석 해제 추천
         }
-        // JPA 변경감지로 flush
     }
 
     private String extractPreview(Message m) {
-        return switch (m.getType()) {
-            case GENERAL -> {
-                var s = m.getContent();
-                yield (s == null || s.length() <= 80) ? s : s.substring(0, 80) + "...";
-            }
-            case EMOJI -> m.getContent();
-            case JOB_OFFER -> "[채용 제안] " + (m.getPosition() != null ? m.getPosition() : "");
-            case PROJECT_OFFER -> "[프로젝트 제안] " + (m.getTitle() != null ? m.getTitle() : "");
-        };
+        return MessagePreviewer.preview(m); // GENERAL/EMOJI/카드/ATTACHMENT 모두 일관 처리
+    }
+
+
+    @Transactional
+    public MessageResponse createAttachmentMessage(Long roomId, User sender,
+                                                   String fileUrl, String originalName,
+                                                   String mimeType, long size) {
+        var room = roomRepo.findById(roomId)
+                .orElseThrow(MessageRoomNotFoundException::new);
+
+        if (!roomRepo.isParticipant(roomId, sender.getId())) {
+            throw new MessageRoomForbiddenException();
+        }
+
+        User receiver = room.getUser1().getId().equals(sender.getId())
+                ? room.getUser2() : room.getUser1();
+
+        String payloadJson = buildAttachmentPayload(fileUrl, originalName, mimeType, size);
+
+        Message msg = Message.builder()
+                    .room(room)
+                    .sender(sender)
+                    .receiver(receiver)
+                    .type(MessageType.ATTACHMENT)
+                    .content(null)
+                    .payload(payloadJson)
+                    .isRead(false)
+                    .build();
+
+        msg = messageRepo.save(msg);
+
+        room.setLastMessage(msg);
+        room.setLastMessageType(msg.getType());
+        room.setLastMessagePreview("[첨부파일] " + (originalName == null ? "" : originalName));
+        room.setLastMessageAt(msg.getCreatedAt());
+
+        broadcastToWebSocketClients(msg);
+        return toDto(msg);
+    }
+
+    private String buildAttachmentPayload(String url, String name, String mime, long size) {
+        var map = new java.util.LinkedHashMap<String, Object>();
+        map.put("url", url);
+        map.put("name", name == null ? "" : name);
+        map.put("mime", mime == null ? "" : mime);
+        map.put("size", size);
+        try {
+            return OM.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("첨부 payload 직렬화 실패", e);
+        }
     }
 
 }

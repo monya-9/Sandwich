@@ -51,7 +51,8 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        // 삭제 계정/미인증 계정 로그인 차단
+        return !user.isDeleted() && Boolean.TRUE.equals(user.getIsVerified());
     }
 
     public Long getId() {

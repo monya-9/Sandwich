@@ -8,13 +8,14 @@ import lombok.*;
 import org.hibernate.annotations.Type;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @Table(indexes = {
         @Index(name = "idx_msg_room_created", columnList = "room_id, createdAt DESC"),
-        @Index(name = "idx_msg_unread", columnList = "room_id, receiver_id, is_read")
+        @Index(name = "idx_msg_unread", columnList = "room_id, receiver_id, is_read"),
+        @Index(name = "idx_msg_room_id_id_desc", columnList = "room_id,id DESC")
 })
 public class Message extends BaseEntity {
 
@@ -58,7 +59,7 @@ public class Message extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted;           // 마스킹 여부
     @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;     // 삭제(마스킹) 시각
+    private OffsetDateTime deletedAt;     // 삭제(마스킹) 시각
     @Column(name = "deleted_by_user_id")
     private Long deletedByUserId;        // 누가 삭제했는지
 }

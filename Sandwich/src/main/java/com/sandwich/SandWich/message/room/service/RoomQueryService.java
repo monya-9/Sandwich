@@ -29,19 +29,10 @@ public class RoomQueryService {
                 .partnerAvatarUrl(row.getPartnerAvatarUrl())
                 .lastMessageId(row.getLastMessageId())
                 .lastMessageType(row.getLastMessageType())
-                .lastMessagePreview(maskPreview(row.getLastMessageType(), row.getLastMessagePreview()))
+                .lastMessagePreview(row.getLastMessagePreview() == null ? "" : row.getLastMessagePreview())
                 .lastMessageAt(row.getLastMessageAt())
                 .unreadCount(row.getUnreadCount() == null ? 0 : row.getUnreadCount())
                 .build();
     }
 
-    private String maskPreview(String type, String raw) {
-        if (type == null) return raw == null ? "" : raw;
-        switch (type) {
-            case "EMOJI": return "이모지";
-            case "PROJECT_OFFER": return "[프로젝트 제안]";
-            case "JOB_OFFER": return "[채용 제안]";
-            default: return raw == null ? "" : raw;
-        }
-    }
 }
