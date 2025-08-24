@@ -15,8 +15,8 @@ const OAuthSuccessHandler: React.FC = () => {
         const isProfileSet = urlParams.get("isProfileSet") === "true";
 
         if (!token) {
-            alert("토큰이 없습니다. 다시 로그인해주세요.");
-            window.location.href = "/login";
+            // ✅ 토큰 없으면 로그인 페이지로 이동
+            window.location.replace("/login");
             return;
         }
 
@@ -25,11 +25,11 @@ const OAuthSuccessHandler: React.FC = () => {
         if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
         if (provider) localStorage.setItem("lastLoginMethod", provider);
 
-        // ✅ alert 후 완전 새로고침 (검은 화면 문제 방지)
-        alert("소셜 로그인 성공!");
-        window.location.href = isProfileSet ? "/" : "/oauth/profile-step";
+        // ✅ alert 없이 바로 리다이렉트
+        window.location.replace(isProfileSet ? "/" : "/oauth/profile-step");
     }, []);
 
+    // ✅ 혹시 아주 잠깐 보이는 로딩 화면
     return <div className="text-center mt-10 text-green-600">로그인 중입니다...</div>;
 };
 
