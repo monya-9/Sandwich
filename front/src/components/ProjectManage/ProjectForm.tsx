@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import Header from "../Main/Header";
 import SettingsPanel from "./SettingsPanel";
 import ContentAddPanel from "./ContentAddPanel";
 import ContentTypeSelector from "./ContentTypeSelector";
@@ -400,7 +399,6 @@ export default function ProjectForm() {
 
   return (
     <div className="min-h-screen font-gmarket relative">
-      <Header />
       {showEmptyToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000]" onClick={() => setShowEmptyToast(false)}>
           <div className="bg-[#111] text-white rounded-[10px] px-4 py-2 shadow-lg flex items-center gap-3">

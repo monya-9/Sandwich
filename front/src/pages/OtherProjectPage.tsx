@@ -1,5 +1,4 @@
 import React, { useState, useContext, useEffect } from "react";
-import Header from "../components/Main/Header";
 import ActionBar from "../components/OtherProject/ActionBar/ActionBar";
 import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
 import ProjectThumbnail from "../components/OtherProject/ProjectThumbnail";
@@ -59,7 +58,6 @@ export default function OtherProjectPage() {
 
     return (
         <div className="min-h-screen w-full bg-[#6c7178] font-gmarketsans">
-            <Header />
             <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-12">
                 {/* 중앙 컨테이너 */}
                 <div
