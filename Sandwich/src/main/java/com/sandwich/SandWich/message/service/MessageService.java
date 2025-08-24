@@ -16,7 +16,7 @@ import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
 import com.sandwich.SandWich.message.util.MessagePreviewer;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +36,7 @@ public class MessageService {
     private final MessagePreferenceService prefService; // 수신 토글 확인
     private final AttachmentMetadataRepository attachmentMetadataRepository;
     private final StorageService storageService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 클래스 상단에 재사용용 ObjectMapper 하나 두기
     private static final ObjectMapper OM = new ObjectMapper();
@@ -163,8 +164,88 @@ public class MessageService {
         return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 
-    private void broadcastToWebSocketClients(Message message) {
-        // TODO: 4단계에서 구현 (현재는 비워둠)
+    @Transactional
+    public Message sendFromWebSocket(User me, Long roomId, com.sandwich.SandWich.message.ws.dto.WsSendMessageRequest req) {
+        if (roomId == null || !roomRepo.isParticipant(roomId, me.getId())) {
+            throw new MessageRoomForbiddenException();
+        }
+
+        // 방 로딩(상대 결정)
+        var room = roomRepo.findByIdWithUsersIfParticipant(roomId, me.getId())
+                .orElseThrow(MessageRoomNotFoundException::new);
+
+        User receiver = room.getUser1().getId().equals(me.getId()) ? room.getUser2() : room.getUser1();
+
+        // 타입/필수값 검증: 기존 validateByType 재사용 위해 SendMessageRequest로 매핑해도 되고, 간단히 분기해도 됨
+        // 여기서는 최소 구현: GENERAL/EMOJI만 바로, 카드형은 필드 존재 시 반영
+        com.sandwich.SandWich.message.domain.Message.MessageBuilder b = Message.builder()
+                .room(room)
+                .sender(me)
+                .receiver(receiver)
+                .isRead(false);
+
+        String type = req.getType();
+        if (type == null) type = "GENERAL";
+        switch (type) {
+            case "GENERAL" -> {
+                if (req.getContent() == null || req.getContent().isBlank())
+                    throw new IllegalArgumentException("content 필요");
+                b.type(MessageType.GENERAL).content(req.getContent());
+            }
+            case "EMOJI" -> {
+                if (req.getContent() == null || req.getContent().isBlank())
+                    throw new IllegalArgumentException("이모지 content 필요");
+                b.type(MessageType.EMOJI).content(req.getContent());
+            }
+            case "JOB_OFFER" -> {
+                b.type(MessageType.JOB_OFFER)
+                        .companyName(req.getCompanyName())
+                        .position(req.getPosition())
+                        .salary(Boolean.TRUE.equals(req.getIsNegotiable()) ? null : req.getSalary())
+                        .location(req.getLocation())
+                        .isNegotiable(req.getIsNegotiable())
+                        .cardDescription(req.getDescription())
+                        .content(null);
+            }
+            case "PROJECT_OFFER" -> {
+                b.type(MessageType.PROJECT_OFFER)
+                        .title(req.getTitle())
+                        .contact(req.getContact())
+                        .budget(req.getBudget())
+                        .isNegotiable(req.getIsNegotiable())
+                        .cardDescription(req.getDescription())
+                        .content(null);
+            }
+            default -> throw new IllegalArgumentException("지원하지 않는 type: " + type);
+        }
+
+        Message saved = messageRepo.save(b.build());
+
+        room.setLastMessage(saved);
+        room.setLastMessageType(saved.getType());
+        room.setLastMessagePreview(MessagePreviewer.preview(saved));
+        room.setLastMessageAt(saved.getCreatedAt());
+
+        // WS 브로드캐스트 훅에서도 쏘도록(REST 경로 일원화)
+        broadcastToWebSocketClients(saved);
+
+        return saved;
+    }
+
+    private void broadcastToWebSocketClients(Message m) {
+        // REST로 보낸 메시지도 동일 경로로 브로드캐스트 (양방향 경로 통합)
+        var out = com.sandwich.SandWich.message.ws.dto.WsMessageBroadcast.builder()
+                .roomId(m.getRoom().getId())
+                .messageId(m.getId())
+                .senderId(m.getSender().getId())
+                .senderNickname(m.getSender().getNickname())
+                .content(m.getContent())
+                .type(m.getType().name())
+                .isRead(false)
+                .sentAt(m.getCreatedAt())
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/rooms/" + m.getRoom().getId(), out);
     }
 
     private MessageResponse toDto(Message m) {
