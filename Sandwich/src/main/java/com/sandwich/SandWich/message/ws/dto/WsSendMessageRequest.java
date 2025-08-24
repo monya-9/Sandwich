@@ -9,6 +9,9 @@ public class WsSendMessageRequest {
     private String content;    // GENERAL/EMOJI
     private Long attachmentId; // 첨부형이면 사용(옵션)
 
+    // 중복 방지용
+    private String clientNonce;
+
     // 카드형 필드(옵션) - send()와 동일 규격로 보냈다면 그대로 사용 가능
     private String companyName;
     private String position;
