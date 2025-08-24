@@ -27,27 +27,14 @@ public class MessageWsController {
     public void send(@DestinationVariable Long roomId,
                      @Payload WsSendMessageRequest req,
                      Principal principal) {
-
-        String username = principal.getName();
-        User me = userRepo.findByEmail(username)
+        String email = principal.getName();
+        User me = userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // WS용 전송 (DB 저장 + room 갱신 + 브로드캐스트)
-        Message saved = messageService.sendFromWebSocket(me, roomId, req);
-
-        WsMessageBroadcast out = WsMessageBroadcast.builder()
-                .roomId(saved.getRoom().getId())
-                .messageId(saved.getId())
-                .senderId(saved.getSender().getId())
-                .senderNickname(saved.getSender().getNickname())
-                .content(saved.getContent())
-                .type(saved.getType().name())
-                .isRead(false)
-                .sentAt(saved.getCreatedAt())
-                .build();
-
-        template.convertAndSend("/topic/rooms/" + roomId, out);
+        // 저장 + 마지막 메시지 갱신 + 브로드캐스트까지 서비스에서 처리
+        messageService.sendFromWebSocket(me, roomId, req);
     }
+
 
     @MessageMapping("messages.read.{roomId}")
     public void read(@DestinationVariable Long roomId, Principal principal) {
