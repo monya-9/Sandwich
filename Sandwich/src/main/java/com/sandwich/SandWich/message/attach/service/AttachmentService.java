@@ -10,10 +10,15 @@ import com.sandwich.SandWich.message.service.MessageService;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.time.Duration;
 
@@ -37,7 +42,7 @@ public class AttachmentService {
 
     private void assertMemberOrThrow(Long roomId, Long userId) {
         boolean ok = roomRepo.isParticipant(roomId, userId);
-        if (!ok) throw new org.springframework.security.access.AccessDeniedException("해당 채팅방에 접근 권한이 없습니다.");
+        if (!ok) throw new AccessDeniedException("해당 채팅방에 접근 권한이 없습니다.");
     }
 
     @Transactional
@@ -58,10 +63,53 @@ public class AttachmentService {
                 ? props.getS3().getKeyPrefix()
                 : "") + "messages/" + roomId + "/" + filename;
 
+        // 1) 업로드 직전에 파일 바이트 한 번만 확보
+        byte[] fileBytes;
         try {
-            storage.save(file.getBytes(), key, mime);
+            fileBytes = file.getBytes();
         } catch (Exception e) {
-            throw new RuntimeException("파일 저장 실패");
+            throw new RuntimeException("파일 읽기 실패", e);
+        }
+
+        // 2) 저장
+        try {
+            storage.save(fileBytes, key, mime);
+        } catch (Exception e) {
+            throw new RuntimeException("파일 저장 실패", e);
+        }
+
+        // 2) 썸네일 (이미지일 때)
+        String thumbKey = null;
+        if (mime.startsWith("image/")) {
+            try {
+                BufferedImage src = ImageIO.read(new ByteArrayInputStream(fileBytes));
+                if (src != null) {
+                    final int max = 256;
+                    int w = src.getWidth(), h = src.getHeight();
+                    float ratio = Math.min(1f, (float) max / Math.max(w, h));
+                    int tw = Math.max(1, Math.round(w * ratio));
+                    int th = Math.max(1, Math.round(h * ratio));
+
+                    Image scaled = src.getScaledInstance(tw, th, Image.SCALE_SMOOTH);
+                    BufferedImage thumb = new BufferedImage(tw, th, BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g = thumb.createGraphics();
+                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g.drawImage(scaled, 0, 0, null);
+                    g.dispose();
+
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    ImageIO.write(thumb, "jpg", bos);
+                    byte[] thumbBytes = bos.toByteArray();
+
+                    thumbKey = ("s3".equalsIgnoreCase(props.getStorage()) ? props.getS3().getKeyPrefix() : "")
+                            + "thumbnails/messages/" + roomId + "/" + uuid + ".jpg";
+
+                    storage.save(thumbBytes, thumbKey, "image/jpeg");
+                }
+            } catch (Exception ignore) {
+                // 썸네일 실패는 무시 (로그만)
+                // log.warn("썸네일 생성 실패: {}", ignore.getMessage());
+            }
         }
 
         AttachmentMetadata md = AttachmentMetadata.builder()
@@ -72,6 +120,7 @@ public class AttachmentService {
                 .roomId(roomId)
                 .uploader(me)
                 .storageKey(key)
+                .thumbnailKey(thumbKey)
                 .build();
         repo.save(md);
 

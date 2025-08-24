@@ -1,5 +1,7 @@
 package com.sandwich.SandWich.message.util;
 
+import com.sandwich.SandWich.message.attach.util.DefaultThumbnailResolver;
+import com.sandwich.SandWich.message.attach.util.ThumbnailResolver;
 import com.sandwich.SandWich.message.domain.Message;
 import com.sandwich.SandWich.message.dto.MessageType;
 import java.text.AttributedString;
@@ -12,8 +14,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 import javax.imageio.ImageIO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.awt.geom.RoundRectangle2D;
 
 public class ChatScreenshotRenderer {
+
+    private static final ObjectMapper M = new ObjectMapper();
 
     private static Font loadKoreanFont(float size) {
         try (var is = ChatScreenshotRenderer.class.getResourceAsStream("/fonts/NotoSansKR-Regular.ttf")) {
@@ -107,8 +114,14 @@ public class ChatScreenshotRenderer {
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
     }
 
-    // 간단한 말풍선 렌더링 (텍스트만, 첨부/이모지는 content로)
     public static byte[] renderPng(List<Message> messages, Long meId) throws Exception {
+        return renderPng(messages, meId, null);
+    }
+
+
+    // 간단한 말풍선 렌더링 (텍스트만, 첨부/이모지는 content로)
+    public static byte[] renderPng(List<Message> messages, Long meId,
+                                   ThumbnailResolver thumbResolver) throws Exception {
         final int width = 900;          // 전체 이미지 가로
         final int padding = 20;         // 바깥 여백
         final int bubblePadding = 12;   // 말풍선 내부 패딩
@@ -127,10 +140,16 @@ public class ChatScreenshotRenderer {
         Graphics2D tg = tmpImg.createGraphics();
         enableQuality(tg);
 
-        int totalHeight = padding;
-        List<Integer> precomputedHeights = new ArrayList<>(messages.size());
-        List<Integer> precomputedMaxLineWidths = new ArrayList<>(messages.size());
+        // 첨부 썸네일 가로/세로 (고정 프리뷰 영역)
+        final int thumbW = 160;
+        final int thumbH = 160;
 
+        // 메시지별 사전 계산 값
+        List<Integer> preHeights = new ArrayList<>(messages.size());
+        List<Integer> preWidths  = new ArrayList<>(messages.size());
+        List<Boolean> hasThumb   = new ArrayList<>(messages.size());
+
+        int totalHeight = padding;
         for (Message m : messages) {
             String text = getDisplayText(m);
             AttributedCharacterIterator it = buildAttrRuns(text, font, emoji);
@@ -139,9 +158,26 @@ public class ChatScreenshotRenderer {
             int textHeight = linesHeight(lines, 2);
             int maxLineW   = maxLineWidth(lines);
 
+            boolean isAttachment = m.getType() == MessageType.ATTACHMENT;
+            boolean showThumb = false;
+            if (isAttachment && thumbResolver != null) {
+                try {
+                    showThumb = (thumbResolver.resolveFor(m) != null);
+                } catch (Exception ignore) {}
+            }
+            hasThumb.add(showThumb);
+
             int bubbleH = textHeight + bubblePadding * 2 + timestampArea;
-            precomputedHeights.add(bubbleH);
-            precomputedMaxLineWidths.add(Math.min(contentWidth, maxLineW + bubblePadding * 2));
+            int bubbleW = Math.min(contentWidth, maxLineW + bubblePadding * 2);
+
+            if (showThumb) {
+                // 썸네일 공간만큼 세로/가로 보정
+                bubbleH = Math.max(bubbleH, thumbH + bubblePadding * 2 + timestampArea);
+                bubbleW = Math.max(bubbleW, thumbW + bubblePadding * 2);
+            }
+
+            preHeights.add(bubbleH);
+            preWidths.add(bubbleW);
 
             totalHeight += bubbleH + gap;
         }
@@ -166,8 +202,8 @@ public class ChatScreenshotRenderer {
             AttributedCharacterIterator it = buildAttrRuns(preview, font, emoji);
             List<TextLayout> lines = layoutLines(g, it, contentWidth - bubblePadding * 2);
 
-            int bubbleW = precomputedMaxLineWidths.get(i);
-            int bubbleH = precomputedHeights.get(i);
+            int bubbleW = preWidths.get(i);
+            int bubbleH = preHeights.get(i);
             int x = mine ? (width - padding - bubbleW) : padding;
 
             // 말풍선
@@ -176,9 +212,31 @@ public class ChatScreenshotRenderer {
             g.setColor(new Color(220, 226, 235));
             g.drawRoundRect(x, y, bubbleW, bubbleH, 16, 16);
 
+            int contentX = x + bubblePadding;
+            int contentY = y + bubblePadding;
+
+            // 첨부 썸네일
+            boolean showThumb = hasThumb.get(i);
+            if (m.getType() == MessageType.ATTACHMENT && showThumb) {
+                try {
+                    BufferedImage thumb = thumbResolver.resolveFor(m);
+                    if (thumb != null) {
+                        // 둥근 모서리 마스크(선택)
+                        Shape oldClip = g.getClip();
+                        RoundRectangle2D rr = new RoundRectangle2D.Float(contentX, contentY, thumbW, thumbH, 12, 12);
+                        g.setClip(rr);
+                        g.drawImage(thumb, contentX, contentY, thumbW, thumbH, null);
+                        g.setClip(oldClip);
+
+                        // 썸네일 오른쪽/아래 텍스트 여백
+                        contentX += thumbW + 12;
+                    }
+                } catch (Exception ignore) {}
+            }
+
             // 텍스트
             g.setColor(Color.DARK_GRAY);
-            drawLayouts(g, lines, x + bubblePadding, y + bubblePadding, 2);
+            drawLayouts(g, lines, contentX, contentY, 2);
 
             // 타임스탬프
             g.setFont(small);
@@ -257,9 +315,42 @@ public class ChatScreenshotRenderer {
                     (m.getContact() != null ? " / " + m.getContact() : "") +
                     (m.getCardDescription() != null ? " — " + m.getCardDescription() : "");
         }
+        if (t == MessageType.ATTACHMENT) {
+            String name = jval(m.getPayload(), "name");
+            String mime = jval(m.getPayload(), "mime");
+            String sizeStr = jval(m.getPayload(), "size");
+            long size = 0L;
+            try { if (sizeStr != null) size = Long.parseLong(sizeStr); } catch (Exception ignore) {}
+
+            StringBuilder sb = new StringBuilder("[첨부파일] ");
+            if (name != null) sb.append(name); else sb.append("");
+            List<String> meta = new ArrayList<>();
+            if (mime != null && !mime.isBlank()) meta.add(mime);
+            if (size > 0) meta.add(humanSize(size));
+            if (!meta.isEmpty()) sb.append(" — ").append(String.join(" · ", meta));
+            return sb.toString();
+        }
         return "";
     }
 
     private static String ns(String s) { return s == null ? "" : s; }
 
+    private static String jval(String json, String key) {
+        if (json == null) return null;
+        try {
+            JsonNode n = M.readTree(json);
+            JsonNode v = n.get(key);
+            return v == null ? null : v.asText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String humanSize(long bytes) {
+        if (bytes <= 0) return "0 B";
+        final String[] u = {"B","KB","MB","GB","TB"};
+        int i = (int) Math.floor(Math.log(bytes)/Math.log(1024));
+        double v = bytes / Math.pow(1024, i);
+        return String.format((v < 10 ? "%.1f %s" : "%.0f %s"), v, u[i]);
+    }
 }
