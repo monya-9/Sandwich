@@ -1,36 +1,43 @@
-// src/api/userPosition.ts
+import { getToken } from "../utils/tokenStorage";
+
 type ApiHeaders = Record<string, string>;
+type RawUserPos = Partial<{ positionId: number | null; positionName: string | null }>;
+export type UserPosition = { id: number | null; name: string | null };
 
 const BASE =
-    process.env.REACT_APP_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE_URL) ||
+    process.env.REACT_APP_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
     "http://localhost:8080";
 
 const authHeaders = (): ApiHeaders => {
-    const token = localStorage.getItem("accessToken");
+    const token = getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// JSON 헤더 합치기 도우미
 const withJson = (h: ApiHeaders = {}): ApiHeaders => ({
     "Content-Type": "application/json",
     ...h,
 });
 
-export async function getMyPosition(): Promise<{ positionName: string } | null> {
-    const r = await fetch(`${BASE}/api/users/position`, {
-        headers: authHeaders(), // ✅ 타입 맞음
-    });
-    if (r.status === 204) return null;
-    if (!r.ok) throw new Error("getMyPosition failed");
-    return r.json();
+const normalize = (raw: RawUserPos | null): UserPosition => ({
+    id: raw?.positionId ?? null,
+    name: raw?.positionName ?? null,
+});
+
+export async function getMyPosition(): Promise<UserPosition> {
+    const r = await fetch(`${BASE}/api/users/position`, { headers: authHeaders() });
+    if (r.status === 204) return { id: null, name: null };
+    if (!r.ok) throw new Error(`getMyPosition failed: ${r.status}`);
+    const data = (await r.json()) as RawUserPos;
+    return normalize(data ?? null);
 }
 
-export async function putMyPosition(positionId: number) {
+export async function putMyPosition(positionId: number): Promise<void> {
     const r = await fetch(`${BASE}/api/users/position`, {
         method: "PUT",
-        headers: withJson(authHeaders()), // ✅ 스프레드 가능
+        headers: withJson(authHeaders()),
         body: JSON.stringify({ positionId }),
     });
-    if (!r.ok) throw new Error("putMyPosition failed");
+    if (!r.ok) throw new Error(`putMyPosition failed: ${r.status}`);
 }

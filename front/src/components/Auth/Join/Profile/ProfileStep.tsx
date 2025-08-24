@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../../../api/axiosInstance";
 import NameInput from "./NameInput";
 import PositionSelect from "./PositionSelect";
 import InterestSelect from "./InterestSelect";
 import CompleteButton from "../CompleteButton";
 import logo from "../../../../assets/logo.png";
 import { useNavigate } from "react-router-dom";
-import { positionMap, interestMap } from "../../../../constants/position";
+import { FALLBACK_POSITIONS, FALLBACK_INTERESTS_GENERAL } from "../../../../constants/position";
 
-interface Props {
-    onPrev: () => void;
-}
+interface Props { onPrev: () => void; }
 
 const ProfileStep = ({ onPrev }: Props) => {
     const [nickname, setNickname] = useState("");
@@ -29,10 +27,7 @@ const ProfileStep = ({ onPrev }: Props) => {
     }, []);
 
     useEffect(() => {
-        localStorage.setItem(
-            "joinStep2",
-            JSON.stringify({ nickname, position, interests })
-        );
+        localStorage.setItem("joinStep2", JSON.stringify({ nickname, position, interests }));
     }, [nickname, position, interests]);
 
     const handleSubmit = async () => {
@@ -41,21 +36,25 @@ const ProfileStep = ({ onPrev }: Props) => {
             if (!step1) throw new Error("이메일 정보가 없습니다.");
             const { email, password } = JSON.parse(step1);
 
-            const positionId = positionMap[position];
-            const interestIds = interests.map((item) => interestMap[item]);
+            // 캐시된 메타 (없으면 폴백)
+            const posMeta =
+                (JSON.parse(localStorage.getItem("meta.positions.v1") || "null") as Array<{id:number; name:string}> | null)
+                ?? FALLBACK_POSITIONS;
 
-            // ✅ 디버깅용 콘솔 추가
-            console.log("선택한 position:", position);
-            console.log("매핑된 positionId:", positionId);
-            console.log("선택한 interests:", interests);
-            console.log("매핑된 interestIds:", interestIds);
+            const interestMetaGeneral =
+                (JSON.parse(localStorage.getItem("meta.interests.GENERAL.v1") || "null") as Array<{id:number; name:string}> | null)
+                ?? FALLBACK_INTERESTS_GENERAL;
 
-            await axios.post("/api/auth/signup", {
-                email,
-                password,
-                nickname,
-                positionId,
-                interestIds,
+            // 이름 → id
+            const positionId = posMeta.find(p => p.name === position)?.id;
+            const interestIds = interests
+                .map(n => interestMetaGeneral.find(i => i.name === n)?.id)
+                .filter((v): v is number => typeof v === "number");
+
+            console.log({ position, positionId, interests, interestIds });
+
+            await api.post("/auth/signup", {
+                email, password, nickname, positionId, interestIds,
             });
 
             alert("✅ 회원가입이 완료되었습니다.");
@@ -67,17 +66,14 @@ const ProfileStep = ({ onPrev }: Props) => {
         }
     };
 
-
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
             <img src={logo} alt="logo" className="w-36 mb-10" />
-
             <div className="w-full max-w-sm space-y-6">
                 <NameInput value={nickname} onChange={setNickname} />
                 <PositionSelect selected={position} onChange={setPosition} />
                 <InterestSelect selected={interests} onChange={setInterests} />
             </div>
-
             <CompleteButton
                 onPrev={onPrev}
                 onComplete={handleSubmit}

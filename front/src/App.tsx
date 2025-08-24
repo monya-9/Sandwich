@@ -1,45 +1,44 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
+// src/App.tsx
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
-import MainPage from './pages/MainPage';
-import JoinPage from './pages/Auth/JoinPage';
-import LoginPage from './pages/Auth/LoginPage';
+import { AuthProvider } from "./context/AuthContext";
+import AppLayout from "./layouts/AppLayout";
 
-import OAuthSuccessHandler from './components/Auth/OAuth/OAuthSuccessHandler';
-import OAuthErrorHandler from './components/Auth/OAuth/OAuthErrorHandler';
-import ProfileStep from './components/Auth/OAuth/ProfileStep';
+// 페이지
+import MainPage from "./pages/MainPage";
+import JoinPage from "./pages/Auth/JoinPage";
+import LoginPage from "./pages/Auth/LoginPage";
+import OtherProjectPage from "./pages/OtherProjectPage";
+import ProjectForm from "./components/ProjectManage/ProjectForm";
 
-import { AuthProvider } from './context/AuthContext';
-
-// 기존 페이지들 유지
-import OtherProjectPage from './pages/OtherProjectPage';
-import ProjectForm from './components/ProjectManage/ProjectForm';
+// OAuth 콜백/스텝(레이아웃 없이)
+import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
+import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
+import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 function App() {
     return (
         <GoogleOAuthProvider clientId="1009231740163-6ccfojs5atbc5g7dqjsevl1m5uolrhhb.apps.googleusercontent.com">
             <AuthProvider>
                 <BrowserRouter>
-                    <div className="App">
-                        <Routes>
-                            <Route path="/" element={<MainPage />} />
-                            <Route path="/join" element={<JoinPage />} />
-                            <Route path="/login" element={<LoginPage />} />
+                    <Routes>
+                        {/* ✅ 공통 레이아웃 (Header + spacer + <Outlet/>) */}
+                        <Route element={<AppLayout />}>
+                            <Route index element={<MainPage />} />
+                            <Route path="join" element={<JoinPage />} />
+                            <Route path="login" element={<LoginPage />} />
+                            <Route path="other-project" element={<OtherProjectPage />} />
+                            <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
+                            <Route path="project/new" element={<ProjectForm />} />
+                        </Route>
 
-                            {/* OAuth 결과 핸들러 */}
-                            <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
-                            <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
-
-                            {/* 추가정보 입력 스텝 */}
-                            <Route path="/oauth/profile-step" element={<ProfileStep />} />
-
-                            {/* 기존 라우트 유지 */}
-                            <Route path="/other-project" element={<OtherProjectPage />} />
-                            <Route path="/other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
-                            <Route path="/project/new" element={<ProjectForm />} />
-                        </Routes>
-                    </div>
+                        {/* ✅ 레이아웃 없이 단독 라우트 */}
+                        <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
+                        <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
+                        <Route path="/oauth/profile-step" element={<ProfileStep />} />
+                    </Routes>
                 </BrowserRouter>
             </AuthProvider>
         </GoogleOAuthProvider>

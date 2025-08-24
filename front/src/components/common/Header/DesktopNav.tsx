@@ -1,24 +1,21 @@
-// src/components/common/Header/DesktopNav.tsx
-import React, { useContext, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useContext, useState, useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
 
-import logo from '../../../assets/logo.png';
-import { AuthContext } from '../../../context/AuthContext';
+import logo from "../../../assets/logo.png";
+import { AuthContext } from "../../../context/AuthContext";
 
-import SearchBar from './SearchBar';
-import ProfileCircle from './ProfileCircle';
-import ProfileDropdown from './dropdowns/ProfileDropdown';
-import MessageDropdown from './dropdowns/MessageDropdown';
-import NotificationDropdown from './dropdowns/NotificationDropdown';
-import MessageIcon from './icons/MessageIcon';
-import NotificationIcon from './icons/NotificationIcon';
+import SearchBar from "./SearchBar";
+import ProfileCircle from "./ProfileCircle";
+import ProfileDropdown from "./dropdowns/ProfileDropdown";
+import MessageDropdown from "./dropdowns/MessageDropdown";
+import NotificationDropdown from "./dropdowns/NotificationDropdown";
+import MessageIcon from "./icons/MessageIcon";
+import NotificationIcon from "./icons/NotificationIcon";
 
-import type { Message } from '../../../types/Message';
-import type { Notification } from '../../../types/Notification';
-
-// 더미 데이터 (한 곳에서만 관리)
-import { dummyMessages } from '../../../data/dummyMessages';
-import { dummyNotifications } from '../../../data/dummyNotifications';
+import type { Message } from "../../../types/Message";
+import type { Notification } from "../../../types/Notification";
+import { dummyMessages } from "../../../data/dummyMessages";
+import { dummyNotifications } from "../../../data/dummyNotifications";
 
 interface Props {
     onLogout: () => void;
@@ -26,26 +23,33 @@ interface Props {
 
 const DesktopNav: React.FC<Props> = ({ onLogout }) => {
     const location = useLocation();
-    const { isLoggedIn } = useContext(AuthContext);
+    const { isLoggedIn, email } = useContext(AuthContext);
 
-    const email = localStorage.getItem('userEmail') || '';
+    // 안전한 이메일(토큰이 섞여 들어오는 경우 방지)
+    const safeEmail = useMemo(() => {
+        if (!email) return "";
+        const looksLikeJwt = email.split(".").length === 3 && email.length > 50;
+        return looksLikeJwt ? "" : email;
+    }, [email]);
 
-    // 드롭다운 토글
+    const displayName = useMemo(
+        () => (safeEmail ? safeEmail.split("@")[0] : "사용자"),
+        [safeEmail]
+    );
+
     const [showProfile, setShowProfile] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
     const [showMessage, setShowMessage] = useState(false);
 
-    // 상태: 더미로 초기화 (전체 데이터 노출)
-    const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
+    const [notifications, setNotifications] =
+        useState<Notification[]>(dummyNotifications);
     const [messages] = useState<Message[]>(dummyMessages);
 
-    // 읽지 않은 개수
-    const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
-    const unreadMessagesCount = messages.filter(m => !m.isRead).length;
+    const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
+    const unreadMessagesCount = messages.filter((m) => !m.isRead).length;
 
-    // 모두 읽음
     const handleMarkAllNotiAsRead = () =>
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
 
     return (
         <div className="flex items-center justify-between w-full relative">
@@ -58,13 +62,19 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                 <nav className="flex gap-6 text-[18px] ml-6">
                     <Link
                         to="/"
-                        className={`text-black ${location.pathname === '/' ? 'font-semibold' : 'font-medium'}`}
+                        className={`text-black ${
+                            location.pathname === "/" ? "font-semibold" : "font-medium"
+                        }`}
                     >
                         둘러보기
                     </Link>
                     <Link
                         to="/community"
-                        className={`text-black ${location.pathname === '/community' ? 'font-semibold' : 'font-medium'}`}
+                        className={`text-black ${
+                            location.pathname === "/community"
+                                ? "font-semibold"
+                                : "font-medium"
+                        }`}
                     >
                         커뮤니티
                     </Link>
@@ -81,7 +91,7 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                         <div className="relative">
                             <button
                                 onClick={() => {
-                                    setShowMessage(prev => !prev);
+                                    setShowMessage((prev) => !prev);
                                     setShowNotification(false);
                                     setShowProfile(false);
                                 }}
@@ -94,7 +104,6 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
 
                             {showMessage && (
                                 <div className="absolute right-0 z-50">
-                                    {/* Dropdown 내부에서 max-h + overflow로 5개 이상일 때 스크롤 */}
                                     <MessageDropdown messages={messages} />
                                 </div>
                             )}
@@ -104,7 +113,7 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                         <div className="relative">
                             <button
                                 onClick={() => {
-                                    setShowNotification(prev => !prev);
+                                    setShowNotification((prev) => !prev);
                                     setShowMessage(false);
                                     setShowProfile(false);
                                 }}
@@ -129,30 +138,39 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                         <div className="relative mb-1">
                             <button
                                 onClick={() => {
-                                    setShowProfile(prev => !prev);
+                                    setShowProfile((prev) => !prev);
                                     setShowNotification(false);
                                     setShowMessage(false);
                                 }}
                                 aria-haspopup="menu"
                                 aria-expanded={showProfile}
                                 aria-label="프로필 열기"
+                                className="flex items-center gap-2 max-w-[180px]"
                             >
-                                <ProfileCircle email={email} size={32} />
+                                <ProfileCircle email={safeEmail} size={32} />
+                                {/* 필요하면 이름도 짧게 표시 */}
+                                {/* <span className="text-sm max-w-[120px] truncate">{displayName}</span> */}
                             </button>
 
                             {showProfile && (
-                                <ProfileDropdown
-                                    email={email}
-                                    username={email.split('@')[0]}
-                                    onLogout={onLogout}
-                                />
+                                <div className="absolute right-0 z-50">
+                                    <ProfileDropdown
+                                        email={safeEmail}
+                                        username={displayName}
+                                        onLogout={onLogout}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>
                 ) : (
                     <div className="flex gap-3 text-[14px] text-black">
-                        <Link to="/login" className="hover:underline">로그인</Link>
-                        <Link to="/join" className="hover:underline">회원가입</Link>
+                        <Link to="/login" className="hover:underline">
+                            로그인
+                        </Link>
+                        <Link to="/join" className="hover:underline">
+                            회원가입
+                        </Link>
                     </div>
                 )}
             </div>
