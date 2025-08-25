@@ -19,6 +19,7 @@ import com.sandwich.SandWich.user.repository.UserRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -26,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageService {
@@ -68,6 +70,16 @@ public class MessageService {
                                 .build()
                 ));
 
+        // 중복 체크: nonce가 있으면 기존 메시지 먼저 검색
+        if (req.getClientNonce() != null && !req.getClientNonce().isBlank()) {
+            var dup = messageRepo.findBySenderIdAndRoomIdAndClientNonce(
+                    me.getId(), room.getId(), req.getClientNonce());
+            if (dup.isPresent()) {
+                // 이미 저장된 동일 메시지 → 재브로드캐스트 금지, 기존 DTO만 반환
+                return toDto(dup.get());
+            }
+        }
+
         // 4) 메시지 생성 및 타입별 매핑 + payload 저장
         Message msg = toEntity(room, me, target, req);
 
@@ -76,7 +88,22 @@ public class MessageService {
             msg.setPayload(req.getPayload());
         }
 
-        msg = messageRepo.save(msg);
+        // 중복 방지용 clientNonce 저장
+        if (req.getClientNonce() != null && !req.getClientNonce().isBlank()) {
+            msg.setClientNonce(req.getClientNonce());
+        }
+
+        // 6) 저장 (+동시성 대비)
+        try {
+            msg = messageRepo.save(msg);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            if (msg.getClientNonce() != null) {
+                var dup = messageRepo.findBySenderIdAndRoomIdAndClientNonce(
+                        me.getId(), room.getId(), msg.getClientNonce());
+                if (dup.isPresent()) return toDto(dup.get());
+            }
+            throw ex;
+        }
 
         // 5) 마지막 메시지 미리보기 갱신
         room.setLastMessage(msg);
@@ -84,7 +111,7 @@ public class MessageService {
         room.setLastMessagePreview(MessagePreviewer.preview(msg));
         room.setLastMessageAt(msg.getCreatedAt());
 
-        // 6) (나중에 구현) 웹소켓 브로드캐스트
+        // 6) 웹소켓 브로드캐스트
         broadcastToWebSocketClients(msg);
 
         // 7) 응답 DTO
@@ -176,6 +203,15 @@ public class MessageService {
 
         User receiver = room.getUser1().getId().equals(me.getId()) ? room.getUser2() : room.getUser1();
 
+        // 중복 체크: clientNonce가 있으면 기존 메시지 반환
+        if (req.getClientNonce() != null && !req.getClientNonce().isBlank()) {
+            var dup = messageRepo.findBySenderIdAndRoomIdAndClientNonce(
+                    me.getId(), roomId, req.getClientNonce());
+            if (dup.isPresent()) {
+                return dup.get(); // 저장/브로드캐스트 생략
+            }
+        }
+
         // 타입/필수값 검증: 기존 validateByType 재사용 위해 SendMessageRequest로 매핑해도 되고, 간단히 분기해도 됨
         // 여기서는 최소 구현: GENERAL/EMOJI만 바로, 카드형은 필드 존재 시 반영
         com.sandwich.SandWich.message.domain.Message.MessageBuilder b = Message.builder()
@@ -184,8 +220,7 @@ public class MessageService {
                 .receiver(receiver)
                 .isRead(false);
 
-        String type = req.getType();
-        if (type == null) type = "GENERAL";
+        String type = (req.getType() == null) ? "GENERAL" : req.getType();
         switch (type) {
             case "GENERAL" -> {
                 if (req.getContent() == null || req.getContent().isBlank())
@@ -219,8 +254,25 @@ public class MessageService {
             default -> throw new IllegalArgumentException("지원하지 않는 type: " + type);
         }
 
-        Message saved = messageRepo.save(b.build());
+        // clientNonce 저장(옵션)
+        if (req.getClientNonce() != null && !req.getClientNonce().isBlank()) {
+            b.clientNonce(req.getClientNonce());
+        }
 
+        Message saved;
+        try {
+            saved = messageRepo.save(b.build());
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            // 동시 저장 레이스일 때 안전 복구
+            if (req.getClientNonce() != null && !req.getClientNonce().isBlank()) {
+                var dup = messageRepo.findBySenderIdAndRoomIdAndClientNonce(
+                        me.getId(), roomId, req.getClientNonce());
+                if (dup.isPresent()) return dup.get();
+            }
+            throw ex;
+        }
+
+        // 마지막 메시지 갱신
         room.setLastMessage(saved);
         room.setLastMessageType(saved.getType());
         room.setLastMessagePreview(MessagePreviewer.preview(saved));
@@ -233,6 +285,9 @@ public class MessageService {
     }
 
     private void broadcastToWebSocketClients(Message m) {
+        log.info("[WS][BROADCAST] room={} messageId={} nonce={}",
+                m.getRoom().getId(), m.getId(), m.getClientNonce());
+
         // REST로 보낸 메시지도 동일 경로로 브로드캐스트 (양방향 경로 통합)
         var out = com.sandwich.SandWich.message.ws.dto.WsMessageBroadcast.builder()
                 .roomId(m.getRoom().getId())

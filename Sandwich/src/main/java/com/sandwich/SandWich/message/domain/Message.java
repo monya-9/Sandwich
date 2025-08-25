@@ -62,4 +62,6 @@ public class Message extends BaseEntity {
     private OffsetDateTime deletedAt;     // 삭제(마스킹) 시각
     @Column(name = "deleted_by_user_id")
     private Long deletedByUserId;        // 누가 삭제했는지
+    @Column(name = "client_nonce", length = 64)
+    private String clientNonce;
 }
