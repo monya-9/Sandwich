@@ -5,6 +5,7 @@ import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ public class WsEventListener {
 
     private final UserRepository userRepo;
     private final SubscriptionRegistry subRegistry;
+    private final SimpMessagingTemplate template;
 
     // 간단한 온라인 상태: userId -> 활성 세션 수
     private final Map<Long, Integer> onlineCount = new ConcurrentHashMap<>();
@@ -46,7 +48,12 @@ public class WsEventListener {
         String email = (p != null) ? p.getName() : null;
         Long userId = emailToUserId(email);
         System.out.println("[WS][CONNECT] user=" + email + " userId=" + userId);
-        if (userId != null) onlineCount.merge(userId, 1, Integer::sum);
+        if (userId != null) {
+            onlineCount.merge(userId, 1, Integer::sum);
+            template.convertAndSend("/topic/presence/" + userId, Map.of(
+                    "event", "ONLINE", "userId", userId
+            ));
+        }
     }
 
     @EventListener
@@ -72,12 +79,19 @@ public class WsEventListener {
         String email = resolveEmail(e.getMessage(), e.getUser()); // ★ 핵심: 세션 속성 fallback
         Long userId = emailToUserId(email);
         System.out.println("[WS][DISCONNECT] user=" + email + " status=" + e.getCloseStatus());
-        if (userId != null) {
-            onlineCount.computeIfPresent(userId, (k, v) -> Math.max(0, v - 1));
-        }
-        // 세션 종료 시 구독 일괄 정리 + 로그
+        // 사용자의 모든 구독 정리
         if (email != null) {
-            subRegistry.clearFor(email); // 아래에 메서드 추가했죠
+            subRegistry.clearFor(email);  // 이 메서드 네가 추가해둔 버전 사용
+            System.out.println("[WS][SUBS] cleared all subscriptions for " + email);
+        }
+
+        if (userId != null) {
+            int now = onlineCount.compute(userId, (k, v) -> (v == null) ? 0 : Math.max(0, v - 1));
+            if (now == 0) {
+                // 오프라인 방송 (세션이 0이 되었을 때만)
+                template.convertAndSend("/topic/presence/" + userId,
+                        Map.of("event", "OFFLINE", "userId", userId));
+            }
         }
     }
 
