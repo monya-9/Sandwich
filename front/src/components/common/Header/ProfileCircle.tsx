@@ -1,12 +1,14 @@
-import React from 'react';
+import React from "react";
 
 interface Props {
-    email: string | null; // ✅ null 허용
+    email: string | null;
+    name?: string;        // ✅ 추가: 표시 이름
     size?: number;
 }
 
-const ProfileCircle = ({ email, size = 40 }: Props) => {
-    const initial = email ? email[0].toUpperCase() : '?';
+const ProfileCircle = ({ email, name, size = 40 }: Props) => {
+    const source = (name && name.trim()) || (email || "");
+    const initial = source ? source[0].toUpperCase() : "?";
 
     return (
         <div

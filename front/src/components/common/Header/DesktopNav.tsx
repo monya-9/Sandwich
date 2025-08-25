@@ -25,17 +25,26 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
     const location = useLocation();
     const { isLoggedIn, email } = useContext(AuthContext);
 
-    // 안전한 이메일(토큰이 섞여 들어오는 경우 방지)
     const safeEmail = useMemo(() => {
         if (!email) return "";
         const looksLikeJwt = email.split(".").length === 3 && email.length > 50;
         return looksLikeJwt ? "" : email;
     }, [email]);
 
-    const displayName = useMemo(
-        () => (safeEmail ? safeEmail.split("@")[0] : "사용자"),
-        [safeEmail]
-    );
+    const displayName = useMemo(() => {
+        const getItem = (k: string) =>
+            (typeof window !== "undefined" &&
+                (localStorage.getItem(k) || sessionStorage.getItem(k))) ||
+            "";
+
+        const nick = getItem("userNickname")?.trim();
+        const user = getItem("userUsername")?.trim();
+
+        if (nick) return nick;
+        if (user) return user;
+        if (safeEmail) return safeEmail.split("@")[0];
+        return "사용자";
+    }, [safeEmail]);
 
     const [showProfile, setShowProfile] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
@@ -148,7 +157,7 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                                 className="flex items-center gap-2 max-w-[180px]"
                             >
                                 <ProfileCircle email={safeEmail} size={32} />
-                                {/* 필요하면 이름도 짧게 표시 */}
+                                {/* 이름을 함께 보여주고 싶으면 아래 주석 해제 */}
                                 {/* <span className="text-sm max-w-[120px] truncate">{displayName}</span> */}
                             </button>
 
