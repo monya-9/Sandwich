@@ -2,6 +2,10 @@
 package com.sandwich.SandWich.message.service;
 
 import com.sandwich.SandWich.global.exception.exceptiontype.*;
+import com.sandwich.SandWich.message.attach.repository.AttachmentMetadataRepository;
+import com.sandwich.SandWich.message.attach.storage.StorageService;
+import com.sandwich.SandWich.message.attach.util.DefaultThumbnailResolver;
+import com.sandwich.SandWich.message.attach.util.ThumbnailResolver;
 import com.sandwich.SandWich.message.domain.*;
 import com.sandwich.SandWich.message.dto.MessageResponse;
 import com.sandwich.SandWich.message.dto.MessageType;
@@ -30,6 +34,8 @@ public class MessageService {
     private final MessageRepository messageRepo;
     private final UserRepository userRepo;
     private final MessagePreferenceService prefService; // 수신 토글 확인
+    private final AttachmentMetadataRepository attachmentMetadataRepository;
+    private final StorageService storageService;
 
     // 클래스 상단에 재사용용 ObjectMapper 하나 두기
     private static final ObjectMapper OM = new ObjectMapper();
@@ -229,7 +235,13 @@ public class MessageService {
 
         var list = messageRepo.findAllByRoomIdOrderByCreatedAtAsc(roomId);
         try {
-            return ChatScreenshotRenderer.renderPng(list, me.getId());
+            // 썸네일까지 그리고 싶을 때:
+            ThumbnailResolver resolver =
+                    new DefaultThumbnailResolver(attachmentMetadataRepository, storageService);
+            return ChatScreenshotRenderer.renderPng(list, me.getId(), resolver);
+
+            // 만약 썸네일 없이 텍스트만 먼저 확인하려면 ↓ 이 한 줄로 바꾸기
+            // return ChatScreenshotRenderer.renderPng(list, me.getId());
         } catch (Exception e) {
             throw new RuntimeException("스크린샷 생성 중 오류", e);
         }
