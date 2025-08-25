@@ -64,6 +64,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
+                        // ws
+                        .requestMatchers("/ws/chat/**").permitAll()
+                        .requestMatchers("/topic/**", "/app/**").permitAll()
                         // 프로젝트 전체 조회
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
                         // 프로젝트 단일 조회

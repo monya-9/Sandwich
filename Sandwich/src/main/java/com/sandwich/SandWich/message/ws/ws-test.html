@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>WS Chat Quick Tester</title>
+</head>
+<body>
+<h3>WS Chat Quick Tester</h3>
+<div style="display:grid;gap:8px;max-width:520px">
+    <label>Base URL (예: http://localhost:8080)
+        <input id="baseUrl" value="http://localhost:8080" style="width:100%">
+    </label>
+    <label>JWT Access Token (Bearer 없이 생토큰만)
+        <input id="token" placeholder="eyJhbGciOi..." style="width:100%">
+    </label>
+    <label>Room ID
+        <input id="roomId" type="number" placeholder="123" style="width:100%">
+    </label>
+    <div>
+        <button id="btnConnect">Connect</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+        <button id="btnSubscribe" disabled>Subscribe</button>
+    </div>
+    <label>Type
+        <select id="type">
+            <option>GENERAL</option>
+            <option>EMOJI</option>
+            <option>JOB_OFFER</option>
+            <option>PROJECT_OFFER</option>
+        </select>
+    </label>
+    <label>Content / 카드 설명
+        <input id="content" placeholder="안녕! 또는 😊" style="width:100%">
+    </label>
+    <div>
+        <button id="btnSend" disabled>Send</button>
+        <button id="btnRead" disabled>Mark Read</button>
+    </div>
+    <pre id="log" style="background:#111;color:#0f0;padding:12px;min-height:180px;overflow:auto"></pre>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script>
+    let stomp, sub;
+    const el = id => document.getElementById(id);
+    const log = (...a) => { el('log').textContent += a.join(' ') + "\n"; };
+
+    function connect() {
+      const base = el('baseUrl').value.replace(/\/$/, '');
+      const token = el('token').value.trim();
+      if (!token) return alert('토큰을 입력하세요');
+
+      const url = base + '/ws/chat?token=' + encodeURIComponent('Bearer ' + token);
+      const socket = new SockJS(url);
+      stomp = Stomp.over(socket);
+      stomp.debug = null; // 콘솔 깔끔
+
+      stomp.connect({}, () => {
+        log('[WS] connected');
+        el('btnDisconnect').disabled = false;
+        el('btnSubscribe').disabled = false;
+        el('btnSend').disabled = false;
+        el('btnRead').disabled = false;
+      }, (err) => log('[WS] error', err));
+    }
+
+    function disconnect() {
+      if (stomp) stomp.disconnect(() => log('[WS] disconnected'));
+      el('btnDisconnect').disabled = true;
+      el('btnSubscribe').disabled = true;
+      el('btnSend').disabled = true;
+      el('btnRead').disabled = true;
+    }
+
+    function subscribeRoom() {
+      const roomId = el('roomId').value.trim();
+      if (!roomId) return alert('roomId 입력');
+      if (sub) sub.unsubscribe();
+      sub = stomp.subscribe('/topic/rooms/' + roomId, msg => {
+        log('[RECV]', msg.body);
+      });
+      log('[SUB] /topic/rooms/' + roomId);
+    }
+
+    function sendMsg() {
+      const roomId = el('roomId').value.trim();
+      const type = el('type').value;
+      const content = el('content').value;
+      if (!roomId) return alert('roomId 입력');
+
+      const payload = { roomId: Number(roomId), type, content };
+      stomp.send('/app/messages.send.' + roomId, {}, JSON.stringify(payload));
+      log('[SEND]', JSON.stringify(payload));
+    }
+
+    function markRead() {
+      const roomId = el('roomId').value.trim();
+      if (!roomId) return alert('roomId 입력');
+      stomp.send('/app/messages.read.' + roomId, {}, '{}');
+      log('[READ] sent for room ' + roomId);
+    }
+
+    el('btnConnect').onclick = connect;
+    el('btnDisconnect').onclick = disconnect;
+    el('btnSubscribe').onclick = subscribeRoom;
+    el('btnSend').onclick = sendMsg;
+    el('btnRead').onclick = markRead;
+</script>
+</body>
+</html>
