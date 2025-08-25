@@ -1,8 +1,6 @@
-package com.sandwich.SandWich.message.ws;
+package com.sandwich.SandWich.message.ws.controller;
 
-import com.sandwich.SandWich.message.domain.Message;
 import com.sandwich.SandWich.message.service.MessageService;
-import com.sandwich.SandWich.message.ws.dto.WsMessageBroadcast;
 import com.sandwich.SandWich.message.ws.dto.WsSendMessageRequest;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
