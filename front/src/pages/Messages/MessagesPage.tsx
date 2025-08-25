@@ -1,6 +1,7 @@
+// src/pages/Messages/MessagesPage.tsx
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { dummyMessages } from "../../data/dummyMessages";
+import { dummyMessages as seed } from "../../data/dummyMessages";
 import MessageList from "../../components/common/Message/MessageList";
 import MessageDetail from "../../components/common/Message/MessageDetail";
 
@@ -9,35 +10,37 @@ const MessagesPage: React.FC = () => {
     const { id } = useParams<{ id?: string }>();
     const routeId = id ? Number(id) : undefined;
 
+    const [messages, setMessages] = React.useState(seed);
     const [selectedId, setSelectedId] = React.useState<number | undefined>(routeId);
     React.useEffect(() => setSelectedId(routeId), [routeId]);
 
     const handleSelect = (mid: number) => {
         setSelectedId(mid);
+        // ✅ 선택 즉시 읽음 처리(낙관적)
+        setMessages(prev =>
+            prev.map(m => (m.id === mid ? { ...m, isRead: true, unreadCount: 0 } : m)),
+        );
         navigate(`/messages/${mid}`);
     };
 
-    const selectedMessage = dummyMessages.find((m) => m.id === selectedId);
+    // 상세에서 열릴 때도 안전하게 한 번 더 읽음 처리
+    const markRead = (mid: number | string) => {
+        setMessages(prev =>
+            prev.map(m => (m.id === mid ? { ...m, isRead: true, unreadCount: 0 } : m)),
+        );
+        // TODO: await api.messages.markRead(mid)  // 실제 연동 시
+    };
+
+    const selectedMessage = messages.find(m => m.id === selectedId);
 
     return (
-        <main className="mx-auto max-w-6xl px-4 mt-3">
-            {/* 고정 높이 컨테이너: 내부 스크롤을 위해 min-h-0 */}
+        <main className="mx-auto max-w-6xl px-4">
             <section className="bg-white rounded-lg border overflow-hidden flex h-[600px] min-h-0">
-                <MessageList
-                    messages={dummyMessages}
-                    selectedId={selectedId}
-                    onSelect={handleSelect}
-                />
+                <MessageList messages={messages} selectedId={selectedId} onSelect={handleSelect} />
                 <MessageDetail
                     message={selectedMessage}
-                    onSend={async (_id, _body) => {
-                        // 이곳에 실제 API 연동
-                        // await api.messages.reply(_id, _body)
-                    }}
-                    onMarkRead={(mid) => {
-                        // 이곳에 읽음 처리 API 연동(optional)
-                        // await api.messages.markRead(mid)
-                    }}
+                    onSend={async () => {/* TODO: api */}}
+                    onMarkRead={markRead}
                 />
             </section>
         </main>

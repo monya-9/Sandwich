@@ -1,16 +1,16 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import logo from '../../../assets/logo.png';
-import SearchBar from './SearchBar';
-import MessageIcon from '../Header/icons/MessageIcon';
-import NotificationIcon from '../Header/icons/NotificationIcon';
+import React from "react";
+import { Link } from "react-router-dom";
+import logo from "../../../assets/logo.png";
+import SearchBar from "./SearchBar";
+import MessageIcon from "../Header/icons/MessageIcon";
+import NotificationIcon from "../Header/icons/NotificationIcon";
 
 interface Props {
     onOpenMenu: () => void;
     onLogout: () => void;
 }
 
-const MobileNav = ({ onOpenMenu, onLogout }: Props) => {
+const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
     const hasNewMessage = true;
     const hasNewNotification = true;
 

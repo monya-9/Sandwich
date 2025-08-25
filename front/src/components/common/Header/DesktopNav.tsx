@@ -1,5 +1,5 @@
-import React, { useContext, useState, useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useContext, useState, useMemo, useEffect } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 
 import logo from "../../../assets/logo.png";
 import { AuthContext } from "../../../context/AuthContext";
@@ -17,11 +17,7 @@ import type { Notification } from "../../../types/Notification";
 import { dummyMessages } from "../../../data/dummyMessages";
 import { dummyNotifications } from "../../../data/dummyNotifications";
 
-interface Props {
-    onLogout: () => void;
-}
-
-const DesktopNav: React.FC<Props> = ({ onLogout }) => {
+const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const location = useLocation();
     const { isLoggedIn, email } = useContext(AuthContext);
 
@@ -36,29 +32,50 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
             (typeof window !== "undefined" &&
                 (localStorage.getItem(k) || sessionStorage.getItem(k))) ||
             "";
-
         const nick = getItem("userNickname")?.trim();
         const user = getItem("userUsername")?.trim();
-
         if (nick) return nick;
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
     }, [safeEmail]);
 
+    // ▼ 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
     const [showMessage, setShowMessage] = useState(false);
 
-    const [notifications, setNotifications] =
-        useState<Notification[]>(dummyNotifications);
-    const [messages] = useState<Message[]>(dummyMessages);
+    // ▼ 데이터 상태(더미)
+    const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
+    const [messages, setMessages] = useState<Message[]>(dummyMessages);
 
     const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
     const unreadMessagesCount = messages.filter((m) => !m.isRead).length;
 
     const handleMarkAllNotiAsRead = () =>
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+
+    // 드롭다운 닫기 이벤트 동기화
+    useEffect(() => {
+        const closeAll = () => {
+            setShowMessage(false);
+            setShowNotification(false);
+            setShowProfile(false);
+        };
+        window.addEventListener("hide-dropdowns", closeAll);
+        return () => window.removeEventListener("hide-dropdowns", closeAll);
+    }, []);
+
+    // 드롭다운에서 읽음 처리
+    const markMessageRead = (id: number | string) => {
+        setMessages((prev) =>
+            prev.map((m) => (m.id === id ? { ...m, isRead: true, unreadCount: 0 } : m)),
+        );
+    };
+
+    // NavLink 클래스
+    const navCls = ({ isActive }: { isActive: boolean }) =>
+        `text-black ${isActive ? "font-semibold" : "font-medium"}`;
 
     return (
         <div className="flex items-center justify-between w-full relative">
@@ -68,25 +85,14 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                     <img src={logo} alt="Sandwich" className="w-[120px] h-auto" />
                 </Link>
 
+                {/* ✅ 커뮤니티 복구 */}
                 <nav className="flex gap-6 text-[18px] ml-6">
-                    <Link
-                        to="/"
-                        className={`text-black ${
-                            location.pathname === "/" ? "font-semibold" : "font-medium"
-                        }`}
-                    >
+                    <NavLink to="/" className={navCls} end>
                         둘러보기
-                    </Link>
-                    <Link
-                        to="/community"
-                        className={`text-black ${
-                            location.pathname === "/community"
-                                ? "font-semibold"
-                                : "font-medium"
-                        }`}
-                    >
+                    </NavLink>
+                    <NavLink to="/community" className={navCls}>
                         커뮤니티
-                    </Link>
+                    </NavLink>
                 </nav>
             </div>
 
@@ -113,7 +119,7 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
 
                             {showMessage && (
                                 <div className="absolute right-0 z-50">
-                                    <MessageDropdown messages={messages} />
+                                    <MessageDropdown messages={messages} onRead={markMessageRead} />
                                 </div>
                             )}
                         </div>
@@ -157,17 +163,12 @@ const DesktopNav: React.FC<Props> = ({ onLogout }) => {
                                 className="flex items-center gap-2 max-w-[180px]"
                             >
                                 <ProfileCircle email={safeEmail} size={32} />
-                                {/* 이름을 함께 보여주고 싶으면 아래 주석 해제 */}
                                 {/* <span className="text-sm max-w-[120px] truncate">{displayName}</span> */}
                             </button>
 
                             {showProfile && (
                                 <div className="absolute right-0 z-50">
-                                    <ProfileDropdown
-                                        email={safeEmail}
-                                        username={displayName}
-                                        onLogout={onLogout}
-                                    />
+                                    <ProfileDropdown email={safeEmail} username={displayName} onLogout={onLogout} />
                                 </div>
                             )}
                         </div>

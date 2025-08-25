@@ -6,17 +6,20 @@ import EmptyState from "./EmptyState";
 import UnreadBadge from "../../UnreadBadge";
 import type { Message } from "../../../../types/Message";
 
-interface Props {
+type Props = {
     messages: Message[];
-}
+    /** 드롭다운 항목 클릭 시 읽음 처리(부모 상태 갱신) */
+    onRead?: (id: number | string) => void;
+};
 
-const MessageDropdown: React.FC<Props> = ({ messages }) => {
+const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
     const navigate = useNavigate();
 
     const goDetail = (id: number | string) => {
-        // ✅ 먼저 모두 닫게 신호 보냄
+        // ✅ 먼저 읽음 처리 → 하이라이트 즉시 제거
+        onRead?.(id);
+        // ✅ 드롭다운 닫고 페이지 이동
         emitHideDropdowns();
-        // ✅ 그리고 라우팅
         navigate(`/messages/${id}`);
     };
 
@@ -54,6 +57,7 @@ const MessageDropdown: React.FC<Props> = ({ messages }) => {
                                 }}
                                 className="w-full text-left p-2 rounded-lg text-sm hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500/30"
                             >
+                                {/* ✅ 안읽음 하이라이트는 isRead=false일 때만 */}
                                 <UnreadBadge show={!m.isRead} radius="lg" colorClass="bg-green-500/10" />
                                 <div className="relative z-[1]">
                                     <p className="font-medium truncate">{m.title}</p>
