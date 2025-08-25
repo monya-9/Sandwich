@@ -1,38 +1,54 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosRequestConfig, AxiosHeaders } from "axios";
 
-const api = axios.create({
-    baseURL: "/api", // setupProxy 사용 시
-});
+const api = axios.create({ baseURL: "/api" });
 
-// 요청 시 AccessToken 자동 첨부
+// 공용: 헤더에 Authorization 세팅 (AxiosHeaders | object 모두 대응)
+function setAuthHeader(headers: AxiosRequestConfig["headers"], token: string) {
+    if (!headers) return { Authorization: `Bearer ${token}` } as any;
+
+    // Axios v1: AxiosHeaders에는 set 메서드가 있음
+    if (headers instanceof AxiosHeaders || typeof (headers as any).set === "function") {
+        (headers as AxiosHeaders).set("Authorization", `Bearer ${token}`);
+        return headers;
+    }
+
+    // 그 외: 평범한 객체
+    (headers as any).Authorization = `Bearer ${token}`;
+    return headers;
+}
+
+// /api로 가는 요청에만 토큰 부착
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const url = config.url || "";
+    if (url.startsWith("/")) {
+        const token =
+            localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+        if (token) {
+            config.headers = setAuthHeader(config.headers, token);
+        }
     }
     return config;
 });
 
-// 응답 시 401 → Refresh Token으로 재발급
+// 401 → refresh
 api.interceptors.response.use(
     (res) => res,
-    async (error) => {
-        const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
+    async (error: AxiosError) => {
+        const originalRequest: any = error.config;
+        if (error.response?.status === 401 && !originalRequest?._retry) {
             originalRequest._retry = true;
 
-            const refreshToken = localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
+            const refreshToken =
+                localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
             if (!refreshToken) {
-                // 토큰 없으면 로그인으로
                 window.location.href = "/login";
                 return Promise.reject(error);
             }
 
             try {
                 const res = await axios.post("/api/auth/refresh", { refreshToken });
-                const { accessToken, refreshToken: newRefreshToken } = res.data;
+                const { accessToken, refreshToken: newRefreshToken } = (res as any).data;
 
-                // Storage 갱신
                 const keep = !!localStorage.getItem("refreshToken");
                 if (keep) {
                     localStorage.setItem("accessToken", accessToken);
@@ -42,8 +58,8 @@ api.interceptors.response.use(
                     sessionStorage.setItem("refreshToken", newRefreshToken);
                 }
 
-                // 원래 요청 재시도
-                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                // 원요청 재시도 시에도 안전하게 세팅
+                originalRequest.headers = setAuthHeader(originalRequest.headers, accessToken);
                 return api(originalRequest);
             } catch (refreshErr) {
                 localStorage.clear();

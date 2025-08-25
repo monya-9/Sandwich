@@ -2,8 +2,8 @@ import React, { createContext, useState, useEffect, ReactNode } from "react";
 
 interface AuthContextType {
     isLoggedIn: boolean;
-    email: string | null;
-    login: (email?: string) => void;
+    email: string | null;          // 화면에 보여줄 이메일
+    login: (email?: string) => void; // 로그인 시 이메일 주입
     logout: () => void;
 }
 
@@ -14,9 +14,7 @@ export const AuthContext = createContext<AuthContextType>({
     logout: () => {},
 });
 
-interface Props {
-    children: ReactNode;
-}
+interface Props { children: ReactNode }
 
 export const AuthProvider = ({ children }: Props) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -25,14 +23,11 @@ export const AuthProvider = ({ children }: Props) => {
     // 부팅 시 복원 + 잘못 저장된 이메일(JWT) 정리
     useEffect(() => {
         const token =
-            localStorage.getItem("accessToken") ||
-            sessionStorage.getItem("accessToken");
+            localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
 
         let storedEmail =
-            localStorage.getItem("userEmail") ||
-            sessionStorage.getItem("userEmail");
+            localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail");
 
-        // 이메일 자리에 JWT가 들어간 흔적 제거
         const looksLikeJwt =
             !!storedEmail && storedEmail.split(".").length === 3 && storedEmail.length > 50;
         if (looksLikeJwt) {
@@ -49,11 +44,9 @@ export const AuthProvider = ({ children }: Props) => {
     useEffect(() => {
         const handleStorageChange = () => {
             const token =
-                localStorage.getItem("accessToken") ||
-                sessionStorage.getItem("accessToken");
+                localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
             let storedEmail =
-                localStorage.getItem("userEmail") ||
-                sessionStorage.getItem("userEmail");
+                localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail");
 
             const looksLikeJwt =
                 !!storedEmail && storedEmail.split(".").length === 3 && storedEmail.length > 50;
@@ -89,8 +82,15 @@ export const AuthProvider = ({ children }: Props) => {
         localStorage.removeItem("accessToken");
         sessionStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        sessionStorage.removeItem("refreshToken"); // ✅ 추가
         localStorage.removeItem("userEmail");
         sessionStorage.removeItem("userEmail");
+        localStorage.removeItem("userNickname");
+        sessionStorage.removeItem("userNickname");
+        localStorage.removeItem("userUsername");
+        sessionStorage.removeItem("userUsername");
+        localStorage.removeItem("userProfileName");
+        sessionStorage.removeItem("userProfileName");
     };
 
     return (

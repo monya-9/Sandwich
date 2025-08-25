@@ -10,6 +10,7 @@ import LoginActions from "./LoginActions";
 import RecentLogin from "../RecentLogin";
 import api from "../../../api/axiosInstance";
 import { setToken } from "../../../utils/tokenStorage";
+import { ensureNicknameInStorage } from "../../../utils/profile";
 
 const LoginForm = () => {
     const navigate = useNavigate();
@@ -24,15 +25,21 @@ const LoginForm = () => {
     const handleLogin = async () => {
         try {
             const res = await api.post("/auth/login", { email, password });
-            // 백엔드 응답 스키마에 맞춰 키 이름 확인(예: accessToken/refreshToken)
-            const { accessToken } = res.data;
+            const { accessToken, email: serverEmail } = res.data;
 
-            // 토큰 저장 (keepLogin=true면 localStorage, false면 sessionStorage 사용한다고 가정)
+            // 토큰 저장 (keepLogin=true → localStorage, false → sessionStorage)
             setToken(accessToken, keepLogin);
 
-            // 컨텍스트에 로그인 상태 반영
-            // AuthContext가 login(token) 시그니처라면 아래처럼:
-            login(accessToken);
+            // 이메일 결정 + 저장
+            const storage = keepLogin ? localStorage : sessionStorage;
+            const effectiveEmail = (serverEmail as string) || email;
+            storage.setItem("userEmail", effectiveEmail);
+
+            // 로그인 직후 프로필/닉네임 보강 (→ /api/users/me 호출)
+            await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
+
+            // 컨텍스트에 '이메일' 주입 (토큰 아님!)
+            login(effectiveEmail);
 
             setLoginFailed(false);
             navigate("/");
@@ -58,7 +65,6 @@ const LoginForm = () => {
                 />
 
                 <LoginButton onClick={handleLogin} isActive={isActive} />
-
                 <KeepLoginCheck checked={keepLogin} onChange={setKeepLogin} />
             </div>
 
