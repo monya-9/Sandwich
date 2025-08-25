@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { toRelativeTime } from "../../../../utils/time";
-import DropdownWrapper from "./DropdownWrapper";
+import DropdownWrapper, { emitHideDropdowns } from "./DropdownWrapper";
 import EmptyState from "./EmptyState";
 import UnreadBadge from "../../UnreadBadge";
 import type { Message } from "../../../../types/Message";
@@ -14,6 +14,9 @@ const MessageDropdown: React.FC<Props> = ({ messages }) => {
     const navigate = useNavigate();
 
     const goDetail = (id: number | string) => {
+        // ✅ 먼저 모두 닫게 신호 보냄
+        emitHideDropdowns();
+        // ✅ 그리고 라우팅
         navigate(`/messages/${id}`);
     };
 
@@ -23,7 +26,10 @@ const MessageDropdown: React.FC<Props> = ({ messages }) => {
                 <span className="text-black">메시지</span>
                 <button
                     type="button"
-                    onClick={() => navigate("/messages")}
+                    onClick={() => {
+                        emitHideDropdowns();
+                        navigate("/messages");
+                    }}
                     className="text-green-600 cursor-pointer hover:underline text-xs"
                 >
                     모든 메시지 보기 &gt;
@@ -37,7 +43,6 @@ const MessageDropdown: React.FC<Props> = ({ messages }) => {
                 <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
                     {messages.map((m) => (
                         <li key={m.id} className="relative">
-                            {/* 클릭 영역 전체를 버튼으로 */}
                             <button
                                 type="button"
                                 onClick={() => goDetail(m.id)}
@@ -49,7 +54,6 @@ const MessageDropdown: React.FC<Props> = ({ messages }) => {
                                 }}
                                 className="w-full text-left p-2 rounded-lg text-sm hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500/30"
                             >
-                                {/* 읽지 않은 항목 하이라이트 */}
                                 <UnreadBadge show={!m.isRead} radius="lg" colorClass="bg-green-500/10" />
                                 <div className="relative z-[1]">
                                     <p className="font-medium truncate">{m.title}</p>
