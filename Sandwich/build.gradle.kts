@@ -47,6 +47,9 @@ dependencies {
 	implementation("com.vladmihalcea:hibernate-types-60:2.21.1")
 	implementation ("com.microsoft.playwright:playwright:1.46.0")
 	implementation("software.amazon.awssdk:s3:2.25.61")
+	implementation ("org.springframework.boot:spring-boot-starter-websocket")
+	implementation ("org.springframework:spring-messaging")
+
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	runtimeOnly("org.postgresql:postgresql")
