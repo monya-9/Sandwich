@@ -35,6 +35,18 @@ services:
       - sandwich-net
     profiles: ["dev"]
 
+  api-redis:
+    build: .
+    command: uvicorn src.api_redis.main:app --host 0.0.0.0 --port 8010
+    ports:
+      - "8010:8010"
+    env_file: .env
+    depends_on:
+      - redis
+    networks:
+      - sandwich-net
+
+
 networks:
   sandwich-net:
     external: true
