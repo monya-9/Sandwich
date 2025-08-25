@@ -6,11 +6,21 @@ import com.sandwich.SandWich.message.dto.MessageType;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Collections;
+
 
 public class ChatScreenshotHtmlRenderer {
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    // (A) 기존 5-인자 시그니처는 유지하되, 내부에서 6-인자 버전으로 위임
     public static String buildHtml(List<Message> messages, Long meId, int width, String theme, ZoneId zone) {
+        return buildHtml(messages, meId, width, theme, zone, java.util.Collections.emptyMap());
+    }
+
+    // 6-인자: 썸네일 data URL 맵 포함
+    public static String buildHtml(List<Message> messages, Long meId, int width, String theme, ZoneId zone,
+                                   Map<Long, String> thumbDataUrls) {
         String bg    = "dark".equals(theme) ? "#0b1220" : "#f5f7fa";
         String meBg  = "dark".equals(theme) ? "#244c77" : "#d2e9ff";
         String other = "dark".equals(theme) ? "#101826" : "#ffffff";
@@ -24,20 +34,13 @@ public class ChatScreenshotHtmlRenderer {
           @font-face { font-family: "NotoSansKR"; src: local("Noto Sans KR"); }
           @font-face { font-family: "Noto Color Emoji"; src: local("Noto Color Emoji"), local("Apple Color Emoji"), local("Segoe UI Emoji"); }
 
-          /* 전역 자간/어간 0 강제 */
-          html, body, .wrap, .msg, .text {
-            letter-spacing: 0 !important;
-            word-spacing: 0 !important;
-            box-sizing: border-box;
-          }
+          html, body, .wrap, .msg, .text { letter-spacing:0 !important; word-spacing:0 !important; box-sizing:border-box; }
 
           body{
             margin:0; background:%s; color:%s;
             font-size:16px; line-height:1.45;
-            font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
-                         "Segoe UI", Roboto, Helvetica, Arial,
-                         "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
-                         sans-serif;
+            font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+                         "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
           }
 
           .wrap{ width:%dpx; margin:0 auto; padding:20px; }
@@ -49,39 +52,46 @@ public class ChatScreenshotHtmlRenderer {
           .me{ margin-left:auto; background:%s; }
           .other{ background:%s; }
 
-          .text{
-            white-space: pre-wrap;           /* 유저 공백/줄바꿈 유지 */
-            word-break: break-word;
-            /* 이모지는 폴백으로만 사용되도록 뒤쪽에 둠 */
-            font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo",
-                         Arial, Helvetica, sans-serif,
-                         "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
-          }
+          .row{ display:flex; gap:12px; align-items:flex-start; }
+          .thumb{ width:160px; height:160px; object-fit:cover; border-radius:12px; flex:0 0 auto; }
 
-          .ts{
-            font-size:12px; color:%s; margin-top:8px;
-            letter-spacing: 0;               /* 먼저 0으로 확인 */
-            /* 필요하면 .04em 정도로 아주 살짝만 늘리세요 */
-          }
+          .text{ white-space:pre-wrap; word-break:break-word; color:%s; }
+          .ts{ font-size:12px; color:%s; margin-top:8px; }
         </style></head><body><div class="wrap">
-        """.formatted(bg, text, width, meBg, other, sub);
+        """.formatted(bg, text, width, meBg, other, text, sub); // ← 7개로 맞춤
 
         StringBuilder sb = new StringBuilder(css);
 
         for (Message m : messages) {
             boolean mine = m.getSender().getId().equals(meId);
-            // 숨은 공백 정규화 -> escape 한 번만!
-            String content = escape(normalizeSpaces(getDisplayText(m)));
 
-            String ts = m.getCreatedAt()
-                    .atZoneSameInstant(zone)
-                    .format(DTF);
+            // ★ 여기서 공용 프리뷰 유틸 사용 (중복 제거)
+            String content = escape(normalizeSpaces(
+                    com.sandwich.SandWich.message.attach.util.ChatScreenshotRendererText.previewForHtml(m)
+            ));
 
-            sb.append("<div class='msg ").append(mine ? "me" : "other").append("'>")
-                    .append("<div class='text'>").append(content).append("</div>")
-                    .append("<div class='ts'>").append(ts).append("</div>")
+            String ts = m.getCreatedAt().atZoneSameInstant(zone).format(DTF);
+
+            sb.append("<div class='msg ").append(mine ? "me" : "other").append("'>");
+
+            if (m.getType() == MessageType.ATTACHMENT) {
+                String dataUrl = (thumbDataUrls == null) ? null : thumbDataUrls.get(m.getId());
+                if (dataUrl != null && !dataUrl.isBlank()) {
+                    sb.append("<div class='row'>")
+                            .append("<img class='thumb' src='").append(escape(dataUrl)).append("' alt='thumb'/>")
+                            .append("<div class='text'>").append(content).append("</div>")
+                            .append("</div>");
+                } else {
+                    sb.append("<div class='text'>").append(content).append("</div>");
+                }
+            } else {
+                sb.append("<div class='text'>").append(content).append("</div>");
+            }
+
+            sb.append("<div class='ts'>").append(ts).append("</div>")
                     .append("</div>");
         }
+
         sb.append("</div></body></html>");
         return sb.toString();
     }
@@ -90,25 +100,6 @@ public class ChatScreenshotHtmlRenderer {
         if (s == null) return "";
         // 얇은 공백/특수 공백을 보통 공백으로 치환
         return s.replaceAll("[\\u2000-\\u200B\\u202F\\u205F\\u3000]", " ");
-    }
-
-    private static String getDisplayText(Message m) {
-        MessageType t = m.getType();
-        if (t == MessageType.GENERAL || t == MessageType.EMOJI) return n(m.getContent());
-        if (t == MessageType.JOB_OFFER) {
-            return "[채용 제안] " + n(m.getCompanyName()) + " / " + n(m.getPosition()) +
-                    (Boolean.TRUE.equals(m.getIsNegotiable()) ? " / 연봉 협의"
-                            : (m.getSalary() != null ? " / " + m.getSalary() : "")) +
-                    (m.getLocation() != null ? " / " + m.getLocation() : "") +
-                    (m.getCardDescription() != null ? " — " + m.getCardDescription() : "");
-        }
-        if (t == MessageType.PROJECT_OFFER) {
-            return "[프로젝트 제안] " + n(m.getTitle()) + " / 예산:" + n(m.getBudget()) +
-                    (Boolean.TRUE.equals(m.getIsNegotiable()) ? "(협의)" : "") +
-                    (m.getContact() != null ? " / " + m.getContact() : "") +
-                    (m.getCardDescription() != null ? " — " + m.getCardDescription() : "");
-        }
-        return "";
     }
 
     private static String n(String s) { return s == null ? "" : s; }

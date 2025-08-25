@@ -4,6 +4,7 @@ import com.sandwich.SandWich.auth.web.RestAccessDeniedHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
+import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -42,7 +44,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -58,9 +60,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
-                        // 프로젝트 조회
+                        // WebSocket/STOMP
+                        .requestMatchers("/ws/chat/**").permitAll()
+                        .requestMatchers("/topic/**", "/app/**").permitAll()
+
+                        // 프로젝트: 공개 조회 2개만 허용, 나머지는 보호
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
+                        .requestMatchers("/api/projects/**").authenticated()
 
                         // 팔로우/팔로잉/카운트
                         .requestMatchers("/api/users/*/following").permitAll()
@@ -90,6 +97,7 @@ public class SecurityConfig {
                                 "/api/auth/**", "/api/email/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
                                 "/swagger-ui.html", "/webjars/**", "/api/upload/image",
+                                // OAuth2 redirect/callback은 반드시 열어둔다
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
 
@@ -111,6 +119,11 @@ public class SecurityConfig {
 
                 // OAuth2 로그인
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestResolver(
+                                        new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
+                                )
+                        )
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)

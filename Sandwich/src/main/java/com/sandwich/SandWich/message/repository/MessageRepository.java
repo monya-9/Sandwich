@@ -52,4 +52,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     );
 
     Message findTopByRoomIdOrderByIdDesc(Long roomId);
+
+    Optional<Message> findBySenderIdAndRoomIdAndClientNonce(Long senderId, Long roomId, String clientNonce);
 }

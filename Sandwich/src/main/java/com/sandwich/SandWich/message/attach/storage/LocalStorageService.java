@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,4 +43,18 @@ public class LocalStorageService implements StorageService, InitializingBean {
     }
 
     @Override public URL presignedGetUrl(String key, Duration ttl) { return null; }
+
+    @Override
+    public byte[] load(String key) {
+        Path path = Path.of(props.getLocal().getBaseDir(), key);
+        try {
+            return Files.readAllBytes(path);
+        } catch (java.nio.file.NoSuchFileException e) {
+            // 썸네일 파일이 없으면 조용히 건너뛰기
+            return null;
+        } catch (IOException e) {
+            // 진짜 I/O 문제는 알림 (로그 + 예외)
+            throw new RuntimeException("로컬 파일 로드 실패: " + path, e);
+        }
+    }
 }

@@ -34,5 +34,7 @@ public class AttachmentMetadata {
     private User uploader;
 
     @Column(nullable=false, length=512)
-    private String storageKey;         // S3/local key
+    private String storageKey;
+
+    private String thumbnailKey;
 }
