@@ -82,4 +82,4 @@ volumes:
 
 networks:
   sandwich-net:
-    external: false
+    external: true

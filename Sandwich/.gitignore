@@ -19,6 +19,8 @@ Sandwich/build/
 
 front/build/
 
+run-local.sh
+
 ### STS ###
 .apt_generated
 .classpath
