@@ -4,6 +4,7 @@ import com.sandwich.SandWich.auth.security.JwtUtil;
 import com.sandwich.SandWich.global.exception.exceptiontype.JwtInvalidException;
 import com.sandwich.SandWich.global.exception.exceptiontype.TokenExpiredException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -18,13 +19,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
-    private final JwtUtil jwtUtil; // getUsername()/validate() 등에 맞춰 수정
+    private final JwtUtil jwtUtil;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
         String token = extractToken(request);
         if (token == null || token.isBlank()) {
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            System.out.println("[WS][AUTH] missing token");
             return false;
         }
 
@@ -37,14 +40,27 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
             // subject = email (네 JwtUtil 설계)
             String email = jwtUtil.extractUsername(token); // ← 여기!
             if (email == null || email.isBlank()) {
+                response.setStatusCode(HttpStatus.UNAUTHORIZED);
+                System.out.println("[WS][AUTH] empty email in token");
                 return false;
             }
             attributes.put("username", email); // PrincipalHandshakeHandler에서 사용
+            System.out.println("[WS][AUTH] ok user=" + email);
             return true;
 
-        } catch (TokenExpiredException | JwtInvalidException e) {
-            return false; // 만료/유효하지 않음 → 핸드셰이크 거부
+        } catch (TokenExpiredException e) {
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            System.out.println("[WS][AUTH] token expired");
+            return false;
+
+        } catch (JwtInvalidException e) {
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            System.out.println("[WS][AUTH] token invalid");
+            return false;
+
         } catch (Exception e) {
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            System.out.println("[WS][AUTH] unexpected: " + e.getMessage());
             return false;
         }
     }
@@ -56,17 +72,11 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     private String extractToken(ServerHttpRequest request) {
         // 1) ?token=... 또는 2) Authorization: Bearer ...
         URI uri = request.getURI();
-        String query = uri.getQuery();
-        if (query != null && query.contains("token=")) {
-            for (String q : query.split("&")) {
-                if (q.startsWith("token=")) return q.substring("token=".length());
-            }
+        String q = uri.getQuery();
+        if (q != null && q.contains("token=")) {
+            for (String s : q.split("&")) if (s.startsWith("token=")) return s.substring(6);
         }
         List<String> auth = request.getHeaders().get("Authorization");
-        if (auth != null && !auth.isEmpty()) {
-            String v = auth.get(0);
-            if (v.startsWith("Bearer ")) return v.substring(7);
-        }
-        return null;
+        return (auth != null && !auth.isEmpty()) ? auth.get(0) : null;
     }
 }
