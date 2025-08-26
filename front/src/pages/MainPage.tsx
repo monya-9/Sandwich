@@ -1,6 +1,5 @@
 //MainPage.tsx
 import React, { useState } from 'react';
-import Header from '../components/Main/Header';
 import MainHeroSection from '../components/Main/MainHeroSection';
 import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
@@ -78,15 +77,16 @@ const MainPage = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
-      <main className="px-8 py-6">
+       <main className="px-8 py-6">
         <MainHeroSection projects={dummyProjects.slice(0, 7)} />
 
-        <MainCategoryFilter
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          onOpenSortModal={handleOpenSortModal}
-        />
+         <div className="mb-10">
+            <MainCategoryFilter
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              onOpenSortModal={handleOpenSortModal}
+            />
+         </div>
 
         {sortedProjects.length === 0 ? (
           <div className="text-center text-gray-500 py-[50px] text-lg">

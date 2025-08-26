@@ -1,30 +1,42 @@
-const interestsList = [
-    "자료구조 & 알고리즘",
-    "운영체제",
-    "테스트 코드 작성 (TDD)",
-    "디자인 패턴",
-    "소프트웨어 아키텍처",
-    "네트워크",
-    "클린 코드",
-    "CI / CD",
-    "API 설계",
-    "운영환경",
-    "DB모델링/정규화",
-];
+import React, { useEffect, useState } from "react";
+import api from "../../../../api/axiosInstance";
+import { FALLBACK_INTERESTS_GENERAL } from "../../../../constants/position";
 
 interface Props {
     selected: string[];
     onChange: (val: string[]) => void;
 }
 
+const LS_KEY = "meta.interests.GENERAL.v1";
+
 const InterestSelect = ({ selected, onChange }: Props) => {
+    const [items, setItems] = useState<string[]>(
+        FALLBACK_INTERESTS_GENERAL.map(i => i.name)
+    );
+
+    useEffect(() => {
+        let mounted = true;
+        api
+            .get<Array<{ id: number; name: string }>>("/meta/interests", { params: { type: "GENERAL" } })
+            .then((res) => {
+                if (!mounted) return;
+                localStorage.setItem(LS_KEY, JSON.stringify(res.data)); // 캐시
+                setItems(res.data.map(i => i.name));
+            })
+            .catch(() => {
+                // 실패 시 폴백도 캐시해둠
+                localStorage.setItem(LS_KEY, JSON.stringify(FALLBACK_INTERESTS_GENERAL));
+            });
+        return () => { mounted = false; };
+    }, []);
+
     const toggle = (item: string) => {
-        const newList = selected.includes(item)
+        const next = selected.includes(item)
             ? selected.filter((i) => i !== item)
             : selected.length < 3
                 ? [...selected, item]
-                : selected;
-        onChange(newList);
+                : selected; // 최대 3개
+        onChange(next);
     };
 
     return (
@@ -33,11 +45,8 @@ const InterestSelect = ({ selected, onChange }: Props) => {
                 관심 분야(최대 3개 선택)
             </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full max-w-md">
-                {interestsList.map((item) => (
-                    <label
-                        key={item}
-                        className="flex items-start gap-2 cursor-pointer"
-                    >
+                {items.map((item) => (
+                    <label key={item} className="flex items-start gap-2 cursor-pointer">
                         <input
                             type="checkbox"
                             checked={selected.includes(item)}
