@@ -120,9 +120,7 @@ public class SecurityConfig {
                 // OAuth2 로그인
                 .oauth2Login(oauth -> oauth
                         .authorizationEndpoint(endpoint -> endpoint
-                                .authorizationRequestResolver(
-                                        new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
-                                )
+                                .baseUri("/oauth2/authorization") // ✅ 커스텀 리졸버 제거
                         )
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
