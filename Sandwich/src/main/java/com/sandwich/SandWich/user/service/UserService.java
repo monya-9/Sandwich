@@ -110,6 +110,7 @@ public class UserService {
         return new UserProfileResponse(
                 user.getUsername(),
                 user.getEmail(),
+                profile != null ? profile.getNickname()   : null,
                 profile != null ? profile.getBio() : null,
                 profile != null ? profile.getSkills() : null,
                 profile != null ? profile.getGithub() : null,

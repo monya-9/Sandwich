@@ -10,6 +10,7 @@ import java.util.List;
 public class UserProfileResponse {
     private String username;
     private String email;
+    private String nickname;
     private String bio;
     private String skills;
     private String github;
