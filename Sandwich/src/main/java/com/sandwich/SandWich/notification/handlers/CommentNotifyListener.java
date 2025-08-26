@@ -1,9 +1,8 @@
 package com.sandwich.SandWich.notification.handlers;
 
-
-import com.sandwich.SandWich.notification.NotificationPublisher;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.CommentCreatedEvent;
+import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -15,7 +14,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CommentNotifyListener {
 
-    private final NotificationPublisher publisher;
+    private final NotificationFanoutService fanout;
 
     @TransactionalEventListener // AFTER_COMMIT
     public void onCommentCreated(CommentCreatedEvent ev) {
@@ -29,6 +28,6 @@ public class CommentNotifyListener {
                 .createdAt(OffsetDateTime.now())
                 .build();
 
-        publisher.sendToUser(payload);
+        fanout.fanout(payload);
     }
 }
