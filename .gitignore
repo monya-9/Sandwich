@@ -1,0 +1,12 @@
+.idea/
+.vscode/
+node_modules/
+.DS_Store
+.env
+# 프런트 빌드/캐시
+**/build/
+**/dist/
+**/coverage/
+**/.eslintcache
+**/.parcel-cache/
+**/node_modules/.vite/
