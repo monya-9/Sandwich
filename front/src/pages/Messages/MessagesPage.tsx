@@ -34,7 +34,7 @@ const MessagesPage: React.FC = () => {
     const selectedMessage = messages.find(m => m.id === selectedId);
 
     return (
-        <main className="mx-auto max-w-6xl px-4">
+        <main className="mx-auto max-w-6xl px-4 mt-4">
             <section className="bg-white rounded-lg border overflow-hidden flex h-[600px] min-h-0">
                 <MessageList messages={messages} selectedId={selectedId} onSelect={handleSelect} />
                 <MessageDetail
