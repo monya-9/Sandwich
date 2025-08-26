@@ -68,13 +68,23 @@
         <span id="presenceSubInfo" style="opacity:.8"></span>
     </div>
 
+    <!-- Notify 전용 UI -->
+    <div class="row">
+        <label>Notify User ID
+            <input id="notifyUserId" type="number" placeholder="내 userId">
+        </label>
+        <button id="btnNotifySub" disabled>Subscribe Notifications</button>
+        <button id="btnNotifyUnsub" disabled>Unsubscribe</button>
+        <span id="notifySubInfo" style="opacity:.8"></span>
+    </div>
+
     <pre id="log"></pre>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
-    let stomp, roomSub, presenceSub;
+    let stomp, roomSub, presenceSub, notifySub;
     const el = id => document.getElementById(id);
     const log = (...a) => { el('log').textContent += a.join(' ') + "\n"; el('log').scrollTop = el('log').scrollHeight; };
 
@@ -100,6 +110,7 @@
     function disconnect() {
       if (roomSub) { roomSub.unsubscribe(); roomSub = null; }
       if (presenceSub) { presenceSub.unsubscribe(); presenceSub = null; }
+      if (notifySub) { notifySub.unsubscribe(); notifySub = null; }
       if (stomp) stomp.disconnect(() => log('[WS] disconnected'));
       setConnected(false);
     }
@@ -114,6 +125,8 @@
       el('btnTypingStop').disabled = !on;
       el('btnPresenceSub').disabled = !on;
       el('btnPresenceUnsub').disabled = !on;
+      el('btnNotifySub').disabled = !on;
+      el('btnNotifyUnsub').disabled = !on;
     }
 
     // -------- Room subscribe --------
@@ -191,6 +204,28 @@
       }
     }
 
+    // -------- Notify subscribe --------
+    function subscribeNotify() {
+      const uid = el('notifyUserId').value.trim();
+      if (!uid) return alert('userId 입력');
+      if (notifySub) notifySub.unsubscribe();
+      const dest = '/topic/users/' + uid + '/notifications';
+      notifySub = stomp.subscribe(dest, msg => {
+        log('[RECV][NOTIFY ' + uid + ']', msg.body);
+      });
+      el('notifySubInfo').textContent = 'sub: ' + dest;
+      log('[SUB][NOTIFY] ' + dest);
+    }
+
+    function unsubscribeNotify() {
+      if (notifySub) {
+        notifySub.unsubscribe();
+        notifySub = null;
+        el('notifySubInfo').textContent = 'unsubscribed';
+        log('[UNSUB][NOTIFY]');
+      }
+    }
+
     // bind
     el('btnConnect').onclick = connect;
     el('btnDisconnect').onclick = disconnect;
@@ -202,6 +237,8 @@
     el('btnTypingStop').onclick = typingStop;
     el('btnPresenceSub').onclick = subscribePresence;
     el('btnPresenceUnsub').onclick = unsubscribePresence;
+    el('btnNotifySub').onclick = subscribeNotify;
+    el('btnNotifyUnsub').onclick = unsubscribeNotify;
 </script>
 </body>
 </html>
