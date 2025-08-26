@@ -1,28 +1,23 @@
 package com.sandwich.SandWich.auth.security;
+
 import com.sandwich.SandWich.auth.web.RestAccessDeniedHandler;
-import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
-import org.springframework.http.HttpMethod;
-import jakarta.servlet.http.HttpServletResponse;
+import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
+import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -32,10 +27,11 @@ public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
+    // OAuth2 (구글/깃허브) 연동
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
-    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,52 +43,46 @@ public class SecurityConfig {
         return new RestAccessDeniedHandler();
     }
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-
+                        // ====== 공용/예외 라우트 ======
                         // meta
                         .requestMatchers("/api/meta/**").permitAll()
-                        // 디버그 타임 엔드포인트 허용
+                        // 디버그 타임 엔드포인트 (관리자만)
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
-                        // 좋아요 기능
+
+                        // 좋아요
                         .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
-                        // ws
+                        // WebSocket/STOMP
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/topic/**", "/app/**").permitAll()
-                        // 프로젝트 전체 조회
-                        .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
-                        // 프로젝트 단일 조회
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER", "ADMIN", "AI")
-                        // 그 외 프로젝트 관련
+                        // 프로젝트: 공개 조회 2개만 허용, 나머지는 보호
+                        .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
                         .requestMatchers("/api/projects/**").authenticated()
 
-                        // 팔로잉 목록 조회
+                        // 팔로우/팔로잉/카운트
                         .requestMatchers("/api/users/*/following").permitAll()
-                        // 팔로워 목록 조회
                         .requestMatchers("/api/users/*/followers").permitAll()
-
-                        // 수 조회 추가
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER","ADMIN","AI")
 
-                        // gitUrl
-                        .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated() // gitUrl 저장 (인증 필요)
-                        .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()      // gitUrl 조회 (누구나 접근 허용)
+                        // build (gitUrl)
+                        .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
 
-                        // 공개 메시지 선호도 조회
+                        // 공개 메시지 선호도
                         .requestMatchers(HttpMethod.GET, "/api/public/users/*/message-preferences").permitAll()
-
-                        // 내 메시지 선호도 조회/수정 (JWT 필요)
-                        .requestMatchers(HttpMethod.GET,   "/api/users/me/message-preferences").authenticated()
+                        // 내 메시지 선호도 (JWT 필요)
+                        .requestMatchers(HttpMethod.GET, "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/message-preferences/me").authenticated()
 
                         // 이모지
@@ -101,30 +91,40 @@ public class SecurityConfig {
                         // 다운로드 보호
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/messages/*/attachments").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,  "/api/files/**").authenticated()
-                        // 기타 인증 예외 경로
+
+                        // 인증/문서/OAuth 콜백 등
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
-                                "/swagger-ui.html", "/webjars/**", "/api/upload/image"
+                                "/swagger-ui.html", "/webjars/**", "/api/upload/image",
+                                // OAuth2 redirect/callback은 반드시 열어둔다
+                                "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
+
+                        // 관리자
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
+
+                // JWT 필터 연결
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
+                // 예외 처리: 401 / 403
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(customAuthenticationEntryPoint) // 401: 토큰 없음/유효하지 않음
-                        .accessDeniedHandler(restAccessDeniedHandler())          // 403: 권한 부족 → JSON
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // 401: 토큰 없음/무효
+                        .accessDeniedHandler(restAccessDeniedHandler())           // 403: 권한 부족 → JSON 응답
                 )
+
+                // OAuth2 로그인
                 .oauth2Login(oauth -> oauth
                         .authorizationEndpoint(endpoint -> endpoint
                                 .authorizationRequestResolver(
                                         new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
                                 )
                         )
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService)
-                        )
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)
                 );
