@@ -14,6 +14,7 @@ import com.sandwich.SandWich.message.repository.MessageRepository;
 import com.sandwich.SandWich.message.repository.MessageRoomRepository;
 import com.sandwich.SandWich.message.util.ChatScreenshotRenderer;
 import com.sandwich.SandWich.message.util.MessagePreviewer;
+import com.sandwich.SandWich.notification.fanout.MessageFanoutHelper;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -39,6 +40,7 @@ public class MessageService {
     private final AttachmentMetadataRepository attachmentMetadataRepository;
     private final StorageService storageService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MessageFanoutHelper fanoutHelper;
 
     // 클래스 상단에 재사용용 ObjectMapper 하나 두기
     private static final ObjectMapper OM = new ObjectMapper();
@@ -53,15 +55,15 @@ public class MessageService {
         User target = userRepo.findById(req.getTargetUserId())
                 .orElseThrow(() -> new UserNotFoundException("상대 사용자를 찾을 수 없습니다."));
 
-        // 1) 수신 토글 검사
+        // 수신 토글 검사
         if (!prefService.isAllowedToReceive(target.getId(), req.getType())) {
             throw new MessageNotAllowedException("상대방이 이 유형의 메시지 수신을 허용하지 않습니다.");
         }
 
-        // 2) 타입별 유효성 검증(예: PROJECT_OFFER면 budget 필수, JOB_OFFER는 협의면 salary 무시 등)
+        // 타입별 유효성 검증(예: PROJECT_OFFER면 budget 필수, JOB_OFFER는 협의면 salary 무시 등)
         validateByType(req);
 
-        // 3) 방 찾거나 생성
+        // 방 찾거나 생성
         MessageRoom room = roomRepo.findBetween(me.getId(), target.getId())
                 .orElseGet(() -> roomRepo.save(
                         MessageRoom.builder()
@@ -80,7 +82,7 @@ public class MessageService {
             }
         }
 
-        // 4) 메시지 생성 및 타입별 매핑 + payload 저장
+        // 메시지 생성 및 타입별 매핑 + payload 저장
         Message msg = toEntity(room, me, target, req);
 
         // 프론트가 보낸 payload만 저장(없으면 null)
@@ -93,7 +95,7 @@ public class MessageService {
             msg.setClientNonce(req.getClientNonce());
         }
 
-        // 6) 저장 (+동시성 대비)
+        // 저장 (+동시성 대비)
         try {
             msg = messageRepo.save(msg);
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
@@ -105,16 +107,34 @@ public class MessageService {
             throw ex;
         }
 
-        // 5) 마지막 메시지 미리보기 갱신
+        // 마지막 메시지 미리보기 갱신
         room.setLastMessage(msg);
         room.setLastMessageType(msg.getType());
         room.setLastMessagePreview(MessagePreviewer.preview(msg));
         room.setLastMessageAt(msg.getCreatedAt());
 
-        // 6) 웹소켓 브로드캐스트
+        // 웹소켓 브로드캐스트
         broadcastToWebSocketClients(msg);
 
-        // 7) 응답 DTO
+        // FCM/WebPush 팬아웃 (상대가 오프라인/미구독이면만)
+        try {
+            Long roomId   = msg.getRoom().getId();
+            Long targetId = msg.getReceiver().getId(); // 상대
+            String sender = msg.getSender().getNickname();
+            String prev   = MessagePreviewer.preview(msg);
+
+            fanoutHelper.maybeSendWebPush(
+                    targetId,
+                    roomId,
+                    sender == null ? "" : sender,
+                    prev == null ? "" : prev,
+                    Map.of("messageId", String.valueOf(msg.getId())) // 선택
+            );
+        } catch (Exception ex) {
+            log.warn("[FANOUT][WARN] push fanout failed msgId={} : {}", msg.getId(), ex.toString());
+        }
+
+        // 응답 DTO
         return toDto(msg);
     }
 
@@ -280,6 +300,21 @@ public class MessageService {
 
         // WS 브로드캐스트 훅에서도 쏘도록(REST 경로 일원화)
         broadcastToWebSocketClients(saved);
+
+        try {
+            Long targetId = saved.getReceiver().getId();
+            String sender = saved.getSender().getNickname();
+            String prev   = MessagePreviewer.preview(saved);
+
+            fanoutHelper.maybeSendWebPush(
+                    targetId, roomId,
+                    sender == null ? "" : sender,
+                    prev == null ? "" : prev,
+                    Map.of("messageId", String.valueOf(saved.getId()))
+            );
+        } catch (Exception ex) {
+            log.warn("[FANOUT][WARN] push fanout failed msgId={} : {}", saved.getId(), ex.toString());
+        }
 
         return saved;
     }
