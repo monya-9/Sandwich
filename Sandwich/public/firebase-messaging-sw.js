@@ -2,7 +2,6 @@
 importScripts('https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.1.0/firebase-messaging-compat.js');
 
-// ws-test.html과 동일한 설정
 firebase.initializeApp({
   apiKey: "AIzaSyDEu2qTgKqvnPm0c9LU8u69xi-lELSWpp8",
   authDomain: "sandwich-b3e09.firebaseapp.com",
@@ -14,40 +13,67 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// 백그라운드 수신 시 브라우저 알림 표시
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] onBackgroundMessage', payload);
-
-  const notif = payload.notification || {};
-  const data  = payload.data || {};
-
-  const sender = data.senderName || '';
-  const preview = data.preview || '';
-
-  const title = notif.title || 'Sandwich';
-  const body  = notif.body  || (sender ? `${sender}: ${preview}` : (preview || '메시지가 도착했어요'));
-
-  const url   = data.deepLink || '/';
-  const silent = data.silent === '1';
-
-  self.registration.showNotification(title, {
-    body,
-    data: { url },
-    // silent 옵션은 브라우저에 따라 무시될 수 있음
-    silent,
-    icon: '/icon-192.png'
-  });
+self.addEventListener('install', () => {
+  console.log('[SW] install');
+  self.skipWaiting?.();
+});
+self.addEventListener('activate', () => {
+  console.log('[SW] activate');
+  clients.claim?.();
 });
 
-// 클릭하면 탭 포커스/네비게이트
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] onBackgroundMessage payload=', payload);
+
+  const d = payload.data || {};
+  console.log('[SW] parsed data=', d);
+
+  const title = d.title || 'Sandwich';
+  const body  = d.body  || d.preview || '메시지가 도착했어요';
+  const url   = d.deepLink || '/';
+  const silent = d.silent === '1';
+
+  const options = {
+    body,
+    data: { url, raw: d },
+    silent,
+    tag: `room-${d.roomId || 'unknown'}`, // 같은 방 중복 방지용
+    renotify: false
+    // icon: '/icon-192.png',  // 원하면 추가
+    // badge: '/badge.png'
+  };
+
+  console.log('[SW] showNotification', title, options);
+  self.registration.showNotification(title, options);
+});
+
 self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] notificationclick data=', event.notification?.data);
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil((async () => {
-    const clientsList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const client of clientsList) {
-      try { await client.focus(); await client.navigate(url); return; } catch(e){}
+    const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of list) {
+      try { await c.focus(); await c.navigate(url); return; } catch {}
     }
-    clients.openWindow(url);
+    await clients.openWindow(url);
   })());
+
+
+});
+self.addEventListener('push', (event) => {
+  try {
+    const payload = event.data?.json?.() ?? {};
+    const d = payload.data || payload || {};
+    const title = d.title || 'Sandwich';
+    const body  = d.body  || '메시지가 도착했어요';
+    const url   = d.deepLink || '/';
+    console.log('[SW] push event fallback', d);
+    event.waitUntil(
+      self.registration.showNotification(title, { body, data: { url, raw: d } })
+    );
+  } catch (e) {
+    console.log('[SW] push event parse error', e);
+  }
 });
