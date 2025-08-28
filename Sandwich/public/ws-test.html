@@ -5,11 +5,12 @@
     <title>WS Chat Quick Tester</title>
     <style>
         body {font-family: ui-monospace, SFMono-Regular, Menlo, monospace}
-        .grid {display:grid;gap:8px;max-width:620px}
+        .grid {display:grid;gap:8px;max-width:720px}
         .row {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
         pre {background:#111;color:#0f0;padding:12px;min-height:220px;overflow:auto}
         input,select,button{padding:6px 8px}
         button:disabled{opacity:.5}
+        label {display:block}
     </style>
 </head>
 <body>
@@ -58,7 +59,7 @@
         <button id="btnTypingStop" disabled>Typing Stop</button>
     </div>
 
-    <!-- Presence 전용 UI -->
+    <!-- Presence -->
     <div class="row">
         <label>Presence User ID
             <input id="presenceUserId" type="number" placeholder="상대 userId">
@@ -68,7 +69,7 @@
         <span id="presenceSubInfo" style="opacity:.8"></span>
     </div>
 
-    <!-- Notify 전용 UI -->
+    <!-- Notify (개인 알림) -->
     <div class="row">
         <label>Notify User ID
             <input id="notifyUserId" type="number" placeholder="내 userId">
@@ -76,6 +77,13 @@
         <button id="btnNotifySub" disabled>Subscribe Notifications</button>
         <button id="btnNotifyUnsub" disabled>Unsubscribe</button>
         <span id="notifySubInfo" style="opacity:.8"></span>
+    </div>
+
+    <!-- Web Push (FCM) -->
+    <div class="row">
+        <button id="btnPushRegister" disabled>Register Web Push</button>
+        <button id="btnPushUnregister" disabled>Unregister</button>
+        <span id="pushInfo" style="opacity:.8"></span>
     </div>
 
     <pre id="log"></pre>
@@ -96,7 +104,7 @@
       const url = base + '/ws/chat?token=' + encodeURIComponent('Bearer ' + token);
       const socket = new SockJS(url);
       stomp = Stomp.over(socket);
-      stomp.debug = null; // 콘솔 지저분한 로그 끔
+      stomp.debug = null;
 
       stomp.connect({}, () => {
         log('[WS] connected');
@@ -127,9 +135,11 @@
       el('btnPresenceUnsub').disabled = !on;
       el('btnNotifySub').disabled = !on;
       el('btnNotifyUnsub').disabled = !on;
+      el('btnPushRegister').disabled = !on;
+      el('btnPushUnregister').disabled = !on;
     }
 
-    // -------- Room subscribe --------
+    // Room subscribe
     function subscribeRoom() {
       const roomId = el('roomId').value.trim();
       if (!roomId) return alert('roomId 입력');
@@ -140,42 +150,36 @@
       el('roomSubInfo').textContent = 'sub: /topic/rooms/' + roomId;
       log('[SUB][ROOM] /topic/rooms/' + roomId);
     }
-
     function unsubscribeRoom() {
       if (roomSub) {
-        roomSub.unsubscribe();
-        roomSub = null;
+        roomSub.unsubscribe(); roomSub = null;
         el('roomSubInfo').textContent = 'unsubscribed';
         log('[UNSUB][ROOM]');
       }
     }
 
-    // -------- Send/Read/Typing --------
+    // Send/Read/Typing
     function sendMsg() {
       const roomId = el('roomId').value.trim();
       const type = el('type').value;
       const content = el('content').value;
       if (!roomId) return alert('roomId 입력');
-
       const payload = { roomId: Number(roomId), type, content };
       stomp.send('/app/messages.send.' + roomId, {}, JSON.stringify(payload));
       log('[SEND]', JSON.stringify(payload));
     }
-
     function markRead() {
       const roomId = el('roomId').value.trim();
       if (!roomId) return alert('roomId 입력');
       stomp.send('/app/messages.read.' + roomId, {}, '{}');
       log('[READ] room ' + roomId);
     }
-
     function typingStart() {
       const roomId = el('roomId').value.trim();
       if (!roomId) return alert('roomId 입력');
       stomp.send('/app/typing.start.' + roomId, {}, '{}');
       log('[TYPING_START] room ' + roomId);
     }
-
     function typingStop() {
       const roomId = el('roomId').value.trim();
       if (!roomId) return alert('roomId 입력');
@@ -183,7 +187,7 @@
       log('[TYPING_STOP] room ' + roomId);
     }
 
-    // -------- Presence subscribe --------
+    // Presence
     function subscribePresence() {
       const uid = el('presenceUserId').value.trim();
       if (!uid) return alert('Presence userId 입력');
@@ -194,17 +198,15 @@
       el('presenceSubInfo').textContent = 'sub: /topic/presence/' + uid;
       log('[SUB][PRESENCE] /topic/presence/' + uid);
     }
-
     function unsubscribePresence() {
       if (presenceSub) {
-        presenceSub.unsubscribe();
-        presenceSub = null;
+        presenceSub.unsubscribe(); presenceSub = null;
         el('presenceSubInfo').textContent = 'unsubscribed';
         log('[UNSUB][PRESENCE]');
       }
     }
 
-    // -------- Notify subscribe --------
+    // Notify
     function subscribeNotify() {
       const uid = el('notifyUserId').value.trim();
       if (!uid) return alert('userId 입력');
@@ -216,11 +218,9 @@
       el('notifySubInfo').textContent = 'sub: ' + dest;
       log('[SUB][NOTIFY] ' + dest);
     }
-
     function unsubscribeNotify() {
       if (notifySub) {
-        notifySub.unsubscribe();
-        notifySub = null;
+        notifySub.unsubscribe(); notifySub = null;
         el('notifySubInfo').textContent = 'unsubscribed';
         log('[UNSUB][NOTIFY]');
       }
@@ -239,6 +239,99 @@
     el('btnPresenceUnsub').onclick = unsubscribePresence;
     el('btnNotifySub').onclick = subscribeNotify;
     el('btnNotifyUnsub').onclick = unsubscribeNotify;
+</script>
+
+<!-- Firebase v12 모듈: Web Push 등록/해제 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDEu2qTgKqvnPm0c9LU8u69xi-lELSWpp8",
+      authDomain: "sandwich-b3e09.firebaseapp.com",
+      projectId: "sandwich-b3e09",
+      storageBucket: "sandwich-b3e09.firebasestorage.app",
+      messagingSenderId: "1097062424285",
+      appId: "1:1097062424285:web:67ea70c23d90de8ba0c534"
+    };
+
+    const VAPID_PUBLIC_KEY = "BPfv2mducX32XZ2U3xb_DSkGCY_TRU-SwHpmRjTn43NjA1CRmhU6lKNpPWG5XbMdX5XeaxjgKEQUjTllnNake4E";
+
+    const appFB = initializeApp(firebaseConfig);
+    const messaging = getMessaging(appFB);
+    let pushToken = null;
+
+    async function registerPush() {
+      try {
+        const jwtRaw = document.getElementById('token').value.trim();
+        if (!jwtRaw) return alert('Access Token 먼저 입력');
+
+        // SW 등록 (루트에 /firebase-messaging-sw.js 필요)
+        const swUrl = '/firebase-messaging-sw.js?v=' + Date.now();
+        const reg = await navigator.serviceWorker.register(swUrl);
+
+        // 권한 요청
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          console.warn('[PUSH] permission=', perm);
+          return;
+        }
+
+        // 토큰 발급 (VAPID 필수)
+        pushToken = await getToken(messaging, { vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+        console.log('[FCM] token', pushToken);
+
+        // 서버 등록
+        const res = await fetch('/api/push/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtRaw },
+          body: JSON.stringify({ platform: 'WEB', token: pushToken })
+        });
+        const js = await res.json().catch(()=>({}));
+        document.getElementById('pushInfo').textContent = 'registered: ...' + (pushToken?.slice(-8) || '');
+        console.log('[REGISTER]', res.status, js);
+      } catch (e) {
+        console.error('[PUSH][ERR]', e);
+        alert('Push 등록 실패: ' + (e?.message || e));
+      }
+    }
+
+    async function unregisterPush() {
+      try {
+        const jwtRaw = document.getElementById('token').value.trim();
+        if (!jwtRaw) return alert('Access Token 먼저 입력');
+        if (!pushToken) return alert('먼저 Register로 토큰을 발급하세요');
+
+        const res = await fetch('/api/push/register?token=' + encodeURIComponent(pushToken), {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + jwtRaw }
+        });
+        const js = await res.json().catch(()=>({}));
+        document.getElementById('pushInfo').textContent = 'unregistered';
+        console.log('[UNREGISTER]', res.status, js);
+      } catch (e) {
+        console.error('[PUSH][ERR]', e);
+      }
+    }
+
+    // WS 연결되면 버튼 활성화(기존 setConnected 훅킹)
+    const origSetConnected = window.setConnected;
+    window.setConnected = function(on){
+      origSetConnected(on);
+      document.getElementById('btnPushRegister').disabled = !on;
+      document.getElementById('btnPushUnregister').disabled = !on;
+    };
+
+    document.getElementById('btnPushRegister').onclick = registerPush;
+    document.getElementById('btnPushUnregister').onclick = unregisterPush;
+
+    // 포그라운드 메시지 수신 (탭 열려있을 때도 표시)
+    onMessage(messaging, (payload) => {
+      console.log('[FCM][FOREGROUND]', payload);
+      const data = payload.data || {};
+      const text = (data.senderName ? `${data.senderName}: ` : '') + (data.preview || '');
+      alert(text || '새 메시지');  // 간단 알림
+    });
 </script>
 </body>
 </html>
