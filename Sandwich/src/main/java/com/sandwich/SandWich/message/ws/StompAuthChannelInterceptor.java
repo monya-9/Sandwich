@@ -38,13 +38,24 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         StompCommand cmd = acc.getCommand();
         if (cmd == null) return message;
 
+        String sid = acc.getSessionId();
+        String dest = acc.getDestination();
         Principal user = acc.getUser();
+
+        // 공통 로그: CONNECT/DISCONNECT/SUBSCRIBE/UNSUBSCRIBE를 항상 남김
+        switch (cmd) {
+            case CONNECT -> log.info("[WS][CONNECT]   sid={} user={}", sid, user);
+            case DISCONNECT -> log.info("[WS][DISCONNECT] sid={}", sid);
+            case SUBSCRIBE -> log.info("[WS][SUB]       sid={} dest={} subId={}", sid, dest, acc.getSubscriptionId());
+            case UNSUBSCRIBE -> log.info("[WS][UNSUB]     sid={} subId={}", sid, acc.getSubscriptionId());
+            default -> {}
+        }
+
         if (user == null) {
             log.debug("[WS][BLOCK] no principal for cmd={} dest={}", cmd, acc.getDestination());
             return null;
         }
 
-        String dest = acc.getDestination();
 
         if (cmd == StompCommand.SEND) {
             if (dest == null || !SEND_ALLOWED.matcher(dest).matches()) {

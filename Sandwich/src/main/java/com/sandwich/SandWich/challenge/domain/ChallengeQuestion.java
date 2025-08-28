@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.challenge.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
+import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
@@ -22,4 +23,8 @@ public class ChallengeQuestion extends BaseEntity {
 
     @OneToMany(mappedBy = "challengeQuestion")
     private List<ChallengeVote> challengeVotes = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false) // 작성자
+    private User user;
 }

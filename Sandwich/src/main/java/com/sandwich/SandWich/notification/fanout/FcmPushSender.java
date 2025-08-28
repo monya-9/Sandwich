@@ -19,6 +19,10 @@ public class FcmPushSender implements PushSender {
     @Value("${app.web.base-url}")
     private String baseUrl; // 예: http://localhost
 
+    // 테스트 때만 true
+    @Value("${push.web.fallback-notification:false}")
+    private boolean fallback;
+
     @Override
     public void sendData(Long targetUserId, Map<String, String> data) {
         final String token = data.get("_token");
@@ -33,32 +37,50 @@ public class FcmPushSender implements PushSender {
         }
 
         // 2) 표시용 title/body를 data에 함께 넣어준다(서비스워커에서 사용)
-        clean.putIfAbsent("title", "새 메시지 도착");
-        String body = clean.getOrDefault("preview", "");
-        String sender = clean.getOrDefault("senderName", "");
-        if (!sender.isBlank() && !body.isBlank()) body = sender + ": " + body;
-        if (body.isBlank()) body = "메시지가 도착했어요";
+        clean.putIfAbsent("title", "새 알림");
+        // body 우선순위: 내려온 body -> extra.snippet -> preview -> 기본 문구
+        String body = clean.get("body");
+        if (body == null || body.isBlank()) {
+            String snippet = clean.getOrDefault("extra.snippet", "");
+            if (!snippet.isBlank()) body = snippet;
+        }
+        if (body == null || body.isBlank()) {
+            body = clean.getOrDefault("preview", "");
+        }
+        if (body == null || body.isBlank()) {
+            body = "새 알림이 도착했어요";
+        }
         clean.put("body", body);
 
         // 3) 딥링크 기본값(절대경로 보장)
         String deepLink = clean.get("deepLink");
         if (deepLink == null || deepLink.isBlank()) deepLink = "/";
-        if (deepLink.startsWith("/")) deepLink = baseUrl.replaceAll("/+$","") + deepLink;
+        if (deepLink.startsWith("/")) {
+            String base = baseUrl == null ? "" : baseUrl.replaceAll("/+$","");
+            deepLink = base + deepLink;
+        }
         clean.put("deepLink", deepLink);
 
-        // 4) WebPush 옵션만 설정 (data-only)
-        WebpushConfig webpush = WebpushConfig.builder()
+        // 4) WebPush 구성: 기본은 data-only, 테스트 모드에서만 notification 폴백 추가
+        WebpushConfig.Builder webpushB = WebpushConfig.builder()
                 .setFcmOptions(WebpushFcmOptions.withLink(deepLink))
-                .putHeader("TTL", "86400")
-                // .putHeader("Urgency", "normal")  // 필요시
-                .build();
+                .putHeader("TTL", "86400");
+
+        if (fallback) { // 폴백 알림(테스트/트러블슈팅용)
+            WebpushNotification notif = WebpushNotification.builder()
+                    .setTitle(clean.get("title"))
+                    .setBody(clean.get("body"))
+                    // .setIcon("/icons/icon-192.png") // 있으면 사용
+                    // .setBadge("/icons/badge-72.png")
+                    .build();
+            webpushB.setNotification(notif);
+        }
 
         Message msg = Message.builder()
                 .setToken(token)
-                .putAllData(clean)
-                .setWebpushConfig(webpush)
+                .putAllData(clean)                 // data는 항상 유지(운영 data-only용)
+                .setWebpushConfig(webpushB.build())
                 .build();
-
         try {
             String id = firebaseMessaging.send(msg);
             log.info("[FCM][OK] targetUser={} tokenTail={} msgId={}",
