@@ -12,7 +12,7 @@ const ProjectCard: React.FC<Props> = ({ project }) => {
   const initial = author?.name.charAt(0).toUpperCase() || '?';
 
   return (
-    <div className="relative w-full h-[240px] flex flex-col items-center">
+    <div className="relative w-full h-[240px] flex flex-col items-center mb-5">
       {/* 이미지 영역 */}
       <div
         className="w-full h-[300px] bg-gray-200 rounded-[20px] overflow-hidden relative cursor-pointer"

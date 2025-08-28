@@ -1,23 +1,34 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# deps
 /node_modules
-/.pnp
-.pnp.js
 
-# testing
+# build output
+/build
+/dist
+
+# coverage
 /coverage
 
-# production
-/build
+# env (예시는 허용)
+.env
+.env.*
+!.env.example
 
-# misc
+# OS
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# tool caches
+.eslintcache
+.parcel-cache/
+.turbo/
+.swc/
+*.tsbuildinfo
+
+# editors
+.vscode/
+.idea/
