@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @Service
@@ -58,7 +58,7 @@ public class customDomainService {
             customDomain.setCustomPath(newCustomPath);
         }
 
-        customDomain.setUpdatedAt(LocalDateTime.now());
+        customDomain.setUpdatedAt(OffsetDateTime.now());
 
         return customDomainRepository.save(customDomain);
     }

@@ -1,18 +1,18 @@
 package com.sandwich.SandWich.oauth.handler;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
-import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
-import com.sandwich.SandWich.user.domain.User;
-import com.sandwich.SandWich.common.util.RedisUtil;
-import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.JwtUtil;
+import com.sandwich.SandWich.common.util.RedisUtil;
+import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
+import com.sandwich.SandWich.user.domain.Role;
+import com.sandwich.SandWich.user.domain.User;
+import com.sandwich.SandWich.user.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Component
@@ -27,28 +27,51 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        System.out.println("OAuth2SuccessHandler 실행됨");
+        System.out.println("✅ OAuth2SuccessHandler 실행됨");
+
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         String provider = oAuth2User.getProvider();
         String email = oAuth2User.getAttribute("email");
-        String username = oAuth2User.getAttribute("login");
+        String username = oAuth2User.getAttribute("login"); // GitHub 전용
 
+        // GitHub 같은 경우 이메일이 없으면 대체 이메일 생성
         if (email == null || email.isBlank()) {
             email = username + "@github.local";
         }
 
-        // DB에서 유저 정보 조회
-        User user = userRepository.findByEmailAndIsDeletedFalse(email)
-                .orElseThrow(() -> new UserNotFoundException());
+        final String socialEmail = email;
+        final String socialProvider = provider;
 
-        // JWT 생성
-        String accessToken = jwtUtil.createToken(user.getEmail(), user.getRole().name());
+        // DB에 유저 존재 여부 확인, 없으면 신규 생성
+        User user = userRepository.findByEmailAndIsDeletedFalse(socialEmail)
+                .orElseGet(() -> {
+                    User newUser = User.builder()
+                            .email(socialEmail)
+                            .provider(socialProvider)
+                            .role(Role.ROLE_USER)
+                            .build();
+                    System.out.println("[OAuth2] 신규 소셜 유저 생성됨: " + socialEmail);
+                    return userRepository.saveAndFlush(newUser);
+                });
+
+        // JWT 발급
+        String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+
+        // RefreshToken을 Redis에 저장
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
-        // 프론트엔드 리다이렉트 URI
-        String redirectUri = "http://localhost:3000/oauth2/success?token=" + accessToken
-                + "&provider=" + user.getProvider();
+        // 프로필 세팅 여부
+        boolean profileComplete = user.getProfile() != null;
+
+        // ✅ 프론트로 redirect 시 email까지 포함
+        String redirectUri = "http://localhost:3000/oauth2/success"
+                + "?token=" + accessToken
+                + "&refreshToken=" + refreshToken
+                + "&email=" + user.getEmail()
+                + "&provider=" + user.getProvider()
+                + "&isProfileSet=" + profileComplete;
+
         response.sendRedirect(redirectUri);
     }
 }

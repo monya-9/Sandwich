@@ -7,7 +7,5 @@ public class BadRequestException extends CustomException {
         super(HttpStatus.BAD_REQUEST, message);
     }
 
-    public BadRequestException() {
-        super(HttpStatus.BAD_REQUEST, "잘못된 요청입니다.");
-    }
+
 }

@@ -10,6 +10,8 @@ public class GitHubBranchService {
     private final WorkflowFileService workflowFileService;
     private final GitHubApiService gitHubApiService;
     private final GitHubSecretsService gitHubSecretsService;
+    private final DeployWorkflowService deployWorkflowService;
+    private final EcrCdWorkflowService awsOidcWorkflowService;
 
     public void createBranchWithFileAndPR(Long userId, Long projectId, String owner, String repo, String baseBranch, String newBranchName, String gitHubToken) throws Exception {
         if (gitHubToken == null || gitHubToken.isEmpty()) {
@@ -23,30 +25,32 @@ public class GitHubBranchService {
         // 2. 새 브랜치 생성
         gitHubApiService.createBranch(gitHubToken, owner, repo, newBranchName, baseSha);
 
-        // 3. workflows 커밋
-        // 3. .github/workflows 폴더 없으면 생성 (빈 .gitkeep 커밋)
-        workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
-        workflowFileService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId);
-        // .sandwich.json 생성 및 커밋
+        // 3. workflows 커밋 / .sandwich.json 생성 및 커밋
         workflowFileService.commitSandwichJson(gitHubToken, owner, repo, newBranchName);
+        workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
 
-        // 4. PR 생성
-        gitHubApiService.createPullRequest(gitHubToken, owner, repo, newBranchName, baseBranch);
+        // 4. 배포 워크플로우 커밋
+        deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId);
 
         // 5. GitHub Secrets 자동 등록
+        String awsRoleArn = System.getenv("AWS_ROLE_ARN");
+        gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "AWS_ROLE_ARN", awsRoleArn);
+        awsOidcWorkflowService.commitOidcFullCdWorkflow(gitHubToken, owner, repo, newBranchName, awsRoleArn);
+
         String awsAccessKey = System.getenv("SANDWICH_USER_AWS_ACCESS_KEY_ID");
         String awsSecretKey = System.getenv("SANDWICH_USER_AWS_SECRET_ACCESS_KEY");
 
         gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "SANDWICH_USER_AWS_ACCESS_KEY_ID", awsAccessKey);
         gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "SANDWICH_USER_AWS_SECRET_ACCESS_KEY", awsSecretKey);
 
-        // 6. SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID 자동 등록
         String cloudFrontDistributionId = System.getenv("SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID");
         gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID", cloudFrontDistributionId);
 
-        // 7. user_id, poject_id 삽입
         gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "USER_ID", userId.toString());
         gitHubSecretsService.createOrUpdateSecret(gitHubToken, owner, repo, "PROJECT_ID", projectId.toString());
+
+        // 6. PR 생성
+        gitHubApiService.createPullRequest(gitHubToken, owner, repo, newBranchName, baseBranch);
 
     }
 }

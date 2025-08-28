@@ -32,4 +32,7 @@ public class SendMessageRequest {
     private String contact;
     private String budget;     // 무조건 필수(서버에서 검증)
     private String description; // 카드 공통 설명
+
+    // 중복 방지용
+    private String clientNonce;
 }

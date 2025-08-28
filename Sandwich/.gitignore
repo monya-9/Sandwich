@@ -40,3 +40,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+firebase-service-account.json
+creds/*.json

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -74,7 +74,7 @@ public class ProjectViewService {
                     .project(project)
                     .viewer(viewer) // 회원이면 user 객체, 비회원이면 null
                     .count(1)
-                    .viewedAt(LocalDateTime.now())
+                    .viewedAt(OffsetDateTime.now())
                     .build());
         }
     }
