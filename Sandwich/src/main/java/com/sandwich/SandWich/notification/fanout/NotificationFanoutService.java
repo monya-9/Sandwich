@@ -46,6 +46,7 @@ public class NotificationFanoutService {
             case "LIKE_CREATED":     return NotifyKind.LIKE;
             case "FOLLOW_CREATED":   return NotifyKind.FOLLOW;
             case "WORK_DIGEST_READY":return NotifyKind.WORK_DIGEST;
+            case "COLLECTION_SAVED":  return NotifyKind.COLLECTION;
             case "SYSTEM_EVENT":
             case "SYSTEM_BROADCAST":
             default:
@@ -198,6 +199,7 @@ public class NotificationFanoutService {
             case FOLLOW      -> "tpl_follow_created";
             case EVENT       -> "tpl_system_event";
             case WORK_DIGEST -> "tpl_work_digest";
+            case COLLECTION  -> "tpl_collection_saved";
         };
     }
     private static String tail(String t){
