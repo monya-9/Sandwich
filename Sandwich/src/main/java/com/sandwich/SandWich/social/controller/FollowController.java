@@ -2,6 +2,7 @@ package com.sandwich.SandWich.social.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.social.dto.FollowCountResponse;
+import com.sandwich.SandWich.social.dto.FollowStatusResponse;
 import com.sandwich.SandWich.social.service.FollowService;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.SimpleUserResponse;
@@ -21,19 +22,17 @@ public class FollowController {
     private final FollowService followService;
 
     @PostMapping("/{id}/follow")
-    public ResponseEntity<String> follow(@PathVariable Long id,
-                                         @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    public ResponseEntity<FollowStatusResponse> follow(@PathVariable Long id,
+                                                       @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User currentUser = userDetails.getUser();
-        followService.follow(currentUser, id);
-        return ResponseEntity.ok("팔로우 성공");
+        return ResponseEntity.ok(followService.follow(currentUser, id));
     }
 
     @DeleteMapping("/{id}/unfollow")
-    public ResponseEntity<String> unfollow(@PathVariable Long id,
-                                           @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    public ResponseEntity<FollowStatusResponse> unfollow(@PathVariable Long id,
+                                                         @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User currentUser = userDetails.getUser();
-        followService.unfollow(currentUser, id);
-        return ResponseEntity.ok("언팔로우 성공");
+        return ResponseEntity.ok(followService.unfollow(currentUser, id));
     }
 
     @GetMapping("/{id}/follow-status")
@@ -46,15 +45,12 @@ public class FollowController {
 
     @GetMapping("/{id}/following")
     public ResponseEntity<List<SimpleUserResponse>> getFollowingList(@PathVariable Long id) {
-        List<SimpleUserResponse> response = followService.getFollowingList(id);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(followService.getFollowingList(id));
     }
 
     @GetMapping("/{id}/follow-counts")
     public ResponseEntity<FollowCountResponse> getFollowCounts(@PathVariable Long id) {
-        FollowCountResponse response = followService.getFollowCounts(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(followService.getFollowCounts(id));
     }
     @GetMapping("/{id}/followers")
     public ResponseEntity<List<SimpleUserResponse>> getFollowers(@PathVariable Long id) {
