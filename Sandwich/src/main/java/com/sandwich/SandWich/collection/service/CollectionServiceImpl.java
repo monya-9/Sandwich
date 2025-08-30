@@ -17,6 +17,9 @@ import com.sandwich.SandWich.social.domain.LikeTargetType;
 import com.sandwich.SandWich.social.repository.LikeRepository;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import com.sandwich.SandWich.notification.events.CollectionSavedEvent;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +36,10 @@ public class CollectionServiceImpl implements CollectionService {
     private final ProjectRepository projectRepository;
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
+    private final ApplicationEventPublisher events;
+
+    @Value("${app.system.user-id}")
+    private Long systemUserId;
 
     @Override
     @Transactional
@@ -63,6 +70,10 @@ public class CollectionServiceImpl implements CollectionService {
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(ProjectNotFoundException::new);
 
+        boolean anyNewInserted = false;
+        String firstFolderName = null;
+        Long firstFolderId = null;
+
         for (Long folderId : request.getFolderIds()) {
             CollectionFolder folder = folderRepository.findById(folderId)
                     .orElseThrow(CollectionFolderNotFoundException::new);
@@ -79,6 +90,30 @@ public class CollectionServiceImpl implements CollectionService {
                 item.setFolder(folder);
                 item.setProject(project);
                 itemRepository.save(item);
+
+                anyNewInserted = true;
+                if (firstFolderName == null) {
+                    firstFolderName = folder.getTitle();
+                    firstFolderId = folder.getId();
+                }
+            }
+        }
+
+        // 실제로 새로 추가된 경우에만 알림 발행
+        if (anyNewInserted) {
+            Long authorId = (project.getUser() != null) ? project.getUser().getId() : null;
+            // (참고) findAuthorIdById(...) 메서드가 있으면 그걸 사용해도 됨
+
+            if (authorId != null
+                    && !authorId.equals(user.getId())      // 자기 자신 스킵
+                    && !authorId.equals(systemUserId)) {   // 시스템 계정 스킵
+                events.publishEvent(new CollectionSavedEvent(
+                        user.getId(),
+                        project.getId(),
+                        authorId,
+                        firstFolderId,       // optional
+                        firstFolderName      // optional
+                ));
             }
         }
     }

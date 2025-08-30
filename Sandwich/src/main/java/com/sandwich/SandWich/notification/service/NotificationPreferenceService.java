@@ -25,6 +25,7 @@ public class NotificationPreferenceService {
                 .pushComment(true)
                 .pushLike(false)       // 정책
                 .pushFollow(true)
+                .pushCollection(false)
                 .pushEvent(false)      // 정책
                 .pushWorkDigest(false) // 정책
                 .emailMessage(false)
@@ -53,6 +54,7 @@ public class NotificationPreferenceService {
         if (req.getPushComment()     != null) pref.setPushComment(req.getPushComment());
         if (req.getPushLike()        != null) pref.setPushLike(req.getPushLike());
         if (req.getPushFollow()      != null) pref.setPushFollow(req.getPushFollow());
+        if (req.getPushCollection()  != null) pref.setPushCollection(req.getPushCollection());
         if (req.getPushEvent()       != null) pref.setPushEvent(req.getPushEvent());
         if (req.getPushWorkDigest()  != null) pref.setPushWorkDigest(req.getPushWorkDigest());
 
@@ -73,6 +75,7 @@ public class NotificationPreferenceService {
                 .pushComment(p.isPushComment())
                 .pushLike(p.isPushLike())
                 .pushFollow(p.isPushFollow())
+                .pushCollection(p.isPushCollection())
                 .pushEvent(p.isPushEvent())
                 .pushWorkDigest(p.isPushWorkDigest())
                 .emailMessage(p.isEmailMessage())

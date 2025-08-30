@@ -12,6 +12,7 @@ public class NotificationPrefsUpdateRequest {
     private Boolean pushLike;
     private Boolean pushFollow;
     private Boolean pushEvent;
+    private Boolean pushCollection;
     private Boolean pushWorkDigest;
 
     // email
