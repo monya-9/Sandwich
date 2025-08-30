@@ -34,32 +34,46 @@ public class OnlineGateSimpImpl implements OnlineGate {
     @Override
     public boolean isSubscribed(Long userId, String dest) {
         String principalName = resolvePrincipalName(userId);
-        if (principalName == null) return false;
+        if (principalName == null) {
+            log.info("[OnlineGate] isSub? uid={} -> principal=null dest={}", userId, dest);
+            return false;
+        }
 
         SimpUser user = userRegistry.getUser(principalName);
-        if (user == null) return false;
+        if (user == null) {
+            log.info("[OnlineGate] isSub? uid={} principal={} -> user=null dest={}", userId, principalName, dest);
+            return false;
+        }
 
+        int subs = 0;
         for (var session : user.getSessions()) {
             for (SimpSubscription sub : session.getSubscriptions()) {
-                if (Objects.equals(sub.getDestination(), dest)) {
-                    // log.debug("[OnlineGate] sub found userId={} dest={}", userId, dest);
+                subs++;
+                String d = sub.getDestination();
+                if (Objects.equals(d, dest)) {
+                    log.info("[OnlineGate] isSub? uid={} principal={} FOUND dest={} (session={})",
+                            userId, principalName, dest, session.getId());
                     return true;
                 }
             }
         }
+        log.info("[OnlineGate] isSub? uid={} principal={} dest={} -> false (totalSubs={})",
+                userId, principalName, dest, subs);
         return false;
     }
 
     /**
-     * Principal 이름이 email이라고 가정 (StompAuthChannelInterceptor에서 acc.getUser().getName() 사용).
+     * Principal 이름이 email이라고 가정 (StompAuthChannelInterceptor에서 acc.getUser().getName()).
      * 만약 Principal이 userId 문자열이라면 아래 주석처럼 바꿔주세요.
      */
     private String resolvePrincipalName(Long userId) {
-        return userRepository.findById(userId)
-                .map(User::getEmail)
-                .orElse(null);
+        String name = userRepository.findById(userId).map(User::getEmail).orElse(null);
+        log.info("[OnlineGate] resolve uid={} -> principal={}", userId, name);
+        return name;
 
         // Principal이 userId 문자열인 프로젝트라면:
-        // return String.valueOf(userId);
+        // String name = String.valueOf(userId);
+        // log.info("[OnlineGate] resolve uid={} -> principal(userIdStr)={}", userId, name);
+        // return name;
     }
 }

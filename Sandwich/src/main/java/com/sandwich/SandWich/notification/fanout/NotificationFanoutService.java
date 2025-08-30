@@ -24,6 +24,8 @@ public class NotificationFanoutService {
     private final DeviceTokenRepository tokenRepo;
     private final PushSender pushSender;
     private final EmailSender emailSender; // 현재는 No-op
+    private final com.sandwich.SandWich.notification.service.NotificationLedgerService ledgerService;
+
 
     // 테스트/운영 토글 (application-*.properties에서 조절)
     @Value("${push.skip.online-gate:false}")
@@ -59,6 +61,12 @@ public class NotificationFanoutService {
     public void fanout(NotifyPayload payload) {
         Long targetUserId = payload.getTargetUserId();
         NotifyKind kind = mapEventToKind(payload.getEvent());
+
+        log.info("[LEDGER] fanout -> save target={} event={}",
+                payload.getTargetUserId(), payload.getEvent());
+        // 0) 레저 저장: 항상
+        ledgerService.saveFromPayload(payload);
+
 
         // 1) WS: 항상 전송
         publisher.sendToUser(payload);
