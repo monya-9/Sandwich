@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.user.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.ProfileRepository;

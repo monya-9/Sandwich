@@ -1,7 +1,7 @@
 
 package com.sandwich.SandWich.message.service;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.*;
+import com.sandwich.SandWich.common.exception.exceptiontype.*;
 import com.sandwich.SandWich.message.attach.repository.AttachmentMetadataRepository;
 import com.sandwich.SandWich.message.attach.storage.StorageService;
 import com.sandwich.SandWich.message.attach.util.DefaultThumbnailResolver;

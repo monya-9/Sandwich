@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.auth;
 
 import com.sandwich.SandWich.common.util.RedisUtil;
-import com.sandwich.SandWich.global.exception.exceptiontype.RefreshTokenNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.RefreshTokenNotFoundException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

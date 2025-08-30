@@ -1,8 +1,8 @@
 package com.sandwich.SandWich.message.ws;
 
 import com.sandwich.SandWich.auth.security.JwtUtil;
-import com.sandwich.SandWich.global.exception.exceptiontype.JwtInvalidException;
-import com.sandwich.SandWich.global.exception.exceptiontype.TokenExpiredException;
+import com.sandwich.SandWich.common.exception.exceptiontype.JwtInvalidException;
+import com.sandwich.SandWich.common.exception.exceptiontype.TokenExpiredException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;

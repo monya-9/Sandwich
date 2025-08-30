@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface FollowRepository extends JpaRepository<Follow, Long> {
 
@@ -35,6 +36,10 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
 
     @Query("SELECT f.follower FROM Follow f WHERE f.following.id = :userId AND f.follower.isDeleted = false")
     List<User> findFollowersByUserId(@Param("userId") Long userId);
+
+    // 팔로우 "하는" 사람 = follower, "당하는" 사람 = following
+    @Query("select f.following.id from Follow f where f.follower.id = :uid")
+    Set<Long> findFollowingUserIds(@Param("uid") Long userId);
 
     Page<Follow> findAllByFollower(User follower, Pageable pageable);
     Page<Follow> findAllByFollowing(User following, Pageable pageable);

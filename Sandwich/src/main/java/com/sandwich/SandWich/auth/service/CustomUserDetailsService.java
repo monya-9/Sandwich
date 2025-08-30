@@ -1,6 +1,5 @@
 package com.sandwich.SandWich.auth.service;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.UserDeletedException;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;

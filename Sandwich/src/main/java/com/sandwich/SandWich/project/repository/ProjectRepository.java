@@ -3,6 +3,7 @@ package com.sandwich.SandWich.project.repository;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ProjectRepository extends JpaRepository<Project, Long> {
+public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpecificationExecutor<Project> {
     @Query("SELECT pr FROM Project pr WHERE pr.user.isDeleted = false")
     List<Project> findAllByUserIsNotDeleted();
     List<Project> findByUser(User user);

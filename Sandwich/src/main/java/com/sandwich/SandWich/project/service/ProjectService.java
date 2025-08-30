@@ -8,15 +8,23 @@ import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
 import com.sandwich.SandWich.project.dto.ProjectRequest;
 import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
+import com.sandwich.SandWich.project.repository.ProjectSpecs;
+import com.sandwich.SandWich.project.support.UploadWindow;
+import com.sandwich.SandWich.social.repository.FollowRepository;
 import com.sandwich.SandWich.upload.util.S3Uploader;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.time.Clock;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +32,9 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final S3Uploader s3Uploader;
+    private final FollowRepository followRepository;
+    private final Clock clock;
+
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
     @Transactional
@@ -101,6 +112,49 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public PageResponse<ProjectListItemResponse> findAllProjects(Pageable pageable) {
         Page<Project> page = projectRepository.findAllByOrderByCreatedAtDesc(pageable);
-        return PageResponse.of(page.map(ProjectListItemResponse::new));
+        Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
+        return PageResponse.of(mapped);
+    }
+
+    // 신규: 필터/팔로우/검색 대응 (정렬 최신순 고정)
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectListItemResponse> findAllProjects(
+            String q,
+            UploadWindow uploadedWithin,
+            boolean followingOnly,
+            Long currentUserId,
+            Pageable pageable
+    ) {
+        Specification<Project> spec = Specification.where(ProjectSpecs.always());
+
+        if (uploadedWithin != null) {
+            spec = spec.and(ProjectSpecs.createdAfter(uploadedWithin.since(clock)));
+        }
+        if (q != null && !q.isBlank()) {
+            spec = spec.and(ProjectSpecs.keywordLike(q));
+        }
+        if (followingOnly) {
+            if (currentUserId == null) {
+                throw new IllegalStateException("Login required for followingOnly=true");
+            }
+            Set<Long> followingIds = followRepository.findFollowingUserIds(currentUserId);
+            if (followingIds.isEmpty()) {
+                Page<Project> empty = Page.empty(pageable);
+                Page<ProjectListItemResponse> mappedEmpty =
+                        empty.map((Project p) -> new ProjectListItemResponse(p));
+                return PageResponse.of(mappedEmpty);
+            }
+            spec = spec.and(ProjectSpecs.authorIn(followingIds));
+        }
+
+        Pageable byLatest = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Project> page = projectRepository.findAll(spec, byLatest);
+        Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
+        return PageResponse.of(mapped);
     }
 }

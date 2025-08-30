@@ -4,13 +4,13 @@ package com.sandwich.SandWich.collection.service;
 import com.sandwich.SandWich.collection.domain.CollectionFolder;
 import com.sandwich.SandWich.collection.domain.CollectionItem;
 import com.sandwich.SandWich.collection.dto.*;
-import com.sandwich.SandWich.global.exception.exceptiontype.CollectionFolderNotFoundException;
-import com.sandwich.SandWich.global.exception.exceptiontype.ProjectNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.CollectionFolderNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.ProjectNotFoundException;
 import com.sandwich.SandWich.collection.repository.CollectionFolderRepository;
 import com.sandwich.SandWich.collection.repository.CollectionItemRepository;
 
 import com.sandwich.SandWich.comment.repository.CommentRepository;
-import com.sandwich.SandWich.global.exception.exceptiontype.ForbiddenAccessException;
+import com.sandwich.SandWich.common.exception.exceptiontype.ForbiddenAccessException;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.social.domain.LikeTargetType;

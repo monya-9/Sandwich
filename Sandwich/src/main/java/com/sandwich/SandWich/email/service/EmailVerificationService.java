@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.email.service;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.EmailVerificationExpiredException;
-import com.sandwich.SandWich.global.exception.exceptiontype.InvalidVerificationCodeException;
+import com.sandwich.SandWich.common.exception.exceptiontype.EmailVerificationExpiredException;
+import com.sandwich.SandWich.common.exception.exceptiontype.InvalidVerificationCodeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

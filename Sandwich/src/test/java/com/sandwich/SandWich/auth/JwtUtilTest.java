@@ -1,8 +1,7 @@
 package com.sandwich.SandWich.auth;
 
 import com.sandwich.SandWich.auth.security.JwtUtil;
-import com.sandwich.SandWich.global.exception.exceptiontype.JwtInvalidException;
-import com.sandwich.SandWich.global.exception.exceptiontype.TokenExpiredException;
+import com.sandwich.SandWich.common.exception.exceptiontype.JwtInvalidException;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,11 +1,10 @@
 package com.sandwich.SandWich.email;
 
 import com.sandwich.SandWich.email.service.EmailVerificationService;
-import com.sandwich.SandWich.global.exception.exceptiontype.EmailVerificationExpiredException;
-import com.sandwich.SandWich.global.exception.exceptiontype.InvalidVerificationCodeException;
+import com.sandwich.SandWich.common.exception.exceptiontype.EmailVerificationExpiredException;
+import com.sandwich.SandWich.common.exception.exceptiontype.InvalidVerificationCodeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 

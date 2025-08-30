@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.message.attach.util;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.BadRequestException;
-import com.sandwich.SandWich.global.exception.exceptiontype.PayloadTooLargeException;
+import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.common.exception.exceptiontype.PayloadTooLargeException;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;

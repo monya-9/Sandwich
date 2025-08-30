@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.auth.security;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.JwtInvalidException;
-import com.sandwich.SandWich.global.exception.exceptiontype.TokenExpiredException;
+import com.sandwich.SandWich.common.exception.exceptiontype.JwtInvalidException;
+import com.sandwich.SandWich.common.exception.exceptiontype.TokenExpiredException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
