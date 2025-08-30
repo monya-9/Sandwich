@@ -19,8 +19,7 @@ public class NotificationPublisher {
         log.info("[NOTIFY][WS] dest={} event={} actor={} resource={}:{}",
                 dest, payload.getEvent(), payload.getActorId(),
                 payload.getResource() != null ? payload.getResource().getType() : "null",
-                payload.getResource() != null ? payload.getResource().getId()   : null);
-
+                payload.getResource() != null ? payload.getResource().getId() : null);
         template.convertAndSend(dest, payload);
     }
 }

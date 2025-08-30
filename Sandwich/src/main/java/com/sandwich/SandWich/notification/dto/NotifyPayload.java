@@ -13,6 +13,10 @@ public class NotifyPayload {
     private Resource resource;         // 알림 관련 리소스
     private Map<String, Object> extra; // 스니펫 등
     private OffsetDateTime createdAt;
+    private String deepLink;
+    private String title;
+    private String body;
+
 
     @Getter @Builder
     @AllArgsConstructor @NoArgsConstructor
