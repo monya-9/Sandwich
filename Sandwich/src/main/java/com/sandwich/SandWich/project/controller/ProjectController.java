@@ -12,6 +12,7 @@ import com.sandwich.SandWich.project.repository.ProjectViewRepository;
 import com.sandwich.SandWich.project.service.ProjectService;
 import com.sandwich.SandWich.project.service.ProjectViewQueryService;
 import com.sandwich.SandWich.project.service.ProjectViewService;
+import com.sandwich.SandWich.project.support.UploadWindow;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -60,10 +61,28 @@ public class ProjectController {
     @GetMapping
     public PageResponse<ProjectListItemResponse> getAllProjects(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) UploadWindow uploadedWithin,
+            @RequestParam(defaultValue = "false") boolean followingOnly,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        return projectService.findAllProjects(pageable);
+
+        Long currentUserId = null;
+        if (followingOnly) {
+            if (userDetails == null) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.UNAUTHORIZED,
+                        "Login required for followingOnly=true"
+                );
+            }
+            currentUserId = userDetails.getId();
+        } else if (userDetails != null) {
+            currentUserId = userDetails.getId(); // 사용 안 해도 무방
+        }
+
+        return projectService.findAllProjects(q, uploadedWithin, followingOnly, currentUserId, pageable);
     }
 
     @GetMapping("/{id}/views")

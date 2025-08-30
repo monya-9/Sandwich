@@ -1,6 +1,6 @@
 package com.sandwich.SandWich.common.util;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.RefreshTokenNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.RefreshTokenNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
