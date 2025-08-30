@@ -91,6 +91,9 @@ public class NotificationFanoutService {
                 ? String.valueOf(p.getResource().getId()) : "0";
         // 디바운스(같은 사용자/이벤트 30초)
         String debKey = "notify:" + userId + ":" + p.getEvent();
+        if (p.getResource()!=null) {
+            debKey += ":" + p.getResource().getType() + ":" + p.getResource().getId();
+        }
         if (!debouncer.allow(debKey, Duration.ofSeconds(30))) {
             log.debug("[NOTIFY][PUSH][SKIP] debounce key={}", debKey);
             return;
