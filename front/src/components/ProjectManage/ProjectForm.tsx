@@ -19,6 +19,8 @@ function BlockItem({ type, onRemove, onOpenReorder, isFirst, isLast, hasGap }: {
   // 이미지 상태
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 이미지 원본 가로폭
+  const [imageNaturalWidth, setImageNaturalWidth] = useState<number>(0);
 
   // 공통 크기
   const [imgSize, setImgSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -31,15 +33,16 @@ function BlockItem({ type, onRemove, onOpenReorder, isFirst, isLast, hasGap }: {
   const [removePadding, setRemovePadding] = useState<boolean>(false);
   const [fileSelectMode, setFileSelectMode] = useState<"add" | "replace">("add");
   const [replaceIndex, setReplaceIndex] = useState<number | null>(0);
+  // 원본 크기 모드 (기본: 활성화)
+  const [useOriginalSize, setUseOriginalSize] = useState<boolean>(true);
+  // 1100px 안내 토스트
+  const [showWidthToast, setShowWidthToast] = useState<boolean>(false);
+  const notifyNeed1100 = () => {
+    setShowWidthToast(true);
+    window.setTimeout(() => setShowWidthToast(false), 2000);
+  };
 
   const handleUploadBack = () => {
-    setImagePreviews([]);
-    setIsHovered(false);
-    setHoveredButton(null);
-    setRemovePadding(false);
-    setFileSelectMode("add");
-    setReplaceIndex(0);
-    setVideoUploaded(false);
     onRemove();
   };
 
@@ -48,8 +51,8 @@ function BlockItem({ type, onRemove, onOpenReorder, isFirst, isLast, hasGap }: {
   const showVideoUpload = type === "video";
 
   const dynamicWidth = (showImageUpload && imagePreviews.length > 0) || (showVideoUpload && videoUploaded)
-    ? (imgSize.width || 400)
-    : 800;
+    ? "w-full"
+    : (showTextUpload ? "w-full" : "w-[820px]");
   const dynamicHeight = (showImageUpload && imagePreviews.length > 0)
     ? (imgSize.height || 400)
     : (showVideoUpload && videoUploaded)
@@ -69,267 +72,239 @@ function BlockItem({ type, onRemove, onOpenReorder, isFirst, isLast, hasGap }: {
           : "rounded-none";
 
   return (
-    <div className="w-full flex justify-center">
-      <div
-        className={`relative border ${roundedClass} transition-colors duration-200 flex flex-col items-center justify-start ${
-          showTextUpload ? "" : ""
-        } ${showTextUpload ? "border-transparent" : isHovered ? "border-black" : "border-transparent"} ${!hasGap && !isFirst && !isHovered ? "border-t-0" : ""}`}
-        style={{ background: showTextUpload ? "transparent" : "white", width: dynamicWidth, height: dynamicHeight as number | string, transition: "width 0.2s, height 0.2s", paddingTop: initialPad }}
-        onMouseEnter={() => {
-          if (showImageUpload || showVideoUpload) setIsHovered(true);
-        }}
-        onMouseLeave={() => {
-          setIsHovered(false);
-          setHoveredButton(null);
-        }}
-      >
-        <div className={`w-full flex flex-col ${showTextUpload ? "items-stretch h-full" : "items-center"}`}>
-          {showImageUpload ? (
-            <ImageUploadSection
-              showImageUpload={showImageUpload}
-              setShowImageUpload={() => {}}
-              imagePreviews={imagePreviews}
-              setImagePreviews={setImagePreviews}
-              fileInputRef={fileInputRef}
-              handleUploadBack={handleUploadBack}
-              setImgSize={setImgSize}
-              imgSize={imgSize}
-              removePadding={removePadding}
-              setRemovePadding={setRemovePadding}
-              fileSelectMode={fileSelectMode}
-              replaceIndex={replaceIndex}
-              setFileSelectMode={setFileSelectMode}
-              setReplaceIndex={setReplaceIndex}
-            />
-          ) : showTextUpload ? (
-            <TextUploadSection onBack={handleUploadBack} />
-          ) : showVideoUpload ? (
-            <VideoUploadSection
-              ref={videoSectionRef}
-              onBack={handleUploadBack}
-              setImgSize={setImgSize}
-              imgSize={imgSize}
-              onUploadedChange={setVideoUploaded}
-              removePadding={removePadding}
-              setRemovePadding={setRemovePadding}
-            />
-          ) : null}
+    <div
+      className={`relative ${dynamicWidth} mx-auto`}
+      onMouseEnter={() => {
+        if (showImageUpload || showVideoUpload) setIsHovered(true);
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setHoveredButton(null);
+      }}
+    >
+      {/* 1100px 제한 토스트 */}
+      {showWidthToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000]" onClick={() => setShowWidthToast(false)}>
+          <div className="bg-[#111] text-white rounded-[10px] px-4 py-2 shadow-lg flex items-center gap-3">
+            <span className="w-6 h-6 rounded-full bg-[#111827] flex items-center justify-center text-[10px] font-bold">!</span>
+            <span className="text-[14px]">가로 폭 1100px 이상의 콘텐츠만 사용 가능한 기능입니다</span>
+          </div>
         </div>
+      )}
 
-        {/* 공통 오버레이: 텍스트 제외, 이미지/동영상 업로드 전 */}
-        {(((showVideoUpload && !videoUploaded) || (showImageUpload && imagePreviews.length === 0)) && isHovered) && (
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
-            <div className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative">
-              {/* 재정렬 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('reorder')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={(e) => { e.stopPropagation(); onOpenReorder(); }}
-                >
-                  <HiMiniArrowsUpDown className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'reorder' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      콘텐츠 재정렬
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* 삭제 (블록 제거) */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('delete')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={handleUploadBack}
-                >
-                  <FaTrash className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'delete' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30" onMouseEnter={() => setHoveredButton('delete')} onMouseLeave={() => setHoveredButton(null)}>
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      콘텐츠 삭제
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 이미지 업로드 후 → 패딩/이미지변경/재정렬/삭제 */}
-        {(showImageUpload && imagePreviews.length > 0 && isHovered) && (
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
-            <div className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative">
-              {/* 패딩 토글 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('padding')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={() => setRemovePadding((v) => !v)}
-                >
-                  <FiMaximize2 className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'padding' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      {removePadding ? '패딩 복원' : '패딩 제거'}
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* 이미지 변경 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('image')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <FiImage className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'image' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      이미지 변경
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* 재정렬 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('reorder')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={(e) => { e.stopPropagation(); onOpenReorder(); }}
-                >
-                  <HiMiniArrowsUpDown className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'reorder' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      콘텐츠 재정렬
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* 삭제 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('delete')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={handleUploadBack}
-                >
-                  <FaTrash className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'delete' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30" onMouseEnter={() => setHoveredButton('delete')} onMouseLeave={() => setHoveredButton(null)}>
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      콘텐츠 삭제
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 동영상 업로드 후 → 패딩/URL변경/재정렬/삭제 */}
-        {(showVideoUpload && videoUploaded && isHovered) && (
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
-            <div className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative">
-              {/* 패딩 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('padding')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={() => setRemovePadding((v) => !v)}
-                >
-                  <FiMaximize2 className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'padding' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      {removePadding ? '패딩 복원' : '패딩 제거'}
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* URL 변경 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('url')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={() => { videoSectionRef.current?.openUrlModal(); }}
-                >
-                  <IoMdVideocam className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'url' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      URL 변경
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* 재정렬 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('reorder')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={(e) => { e.stopPropagation(); onOpenReorder(); }}
-                >
-                  <HiMiniArrowsUpDown className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'reorder' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      콘텐츠 재정렬
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-              {/* 삭제 */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
-                  onMouseEnter={() => setHoveredButton('delete')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  onClick={handleUploadBack}
-                >
-                  <FaTrash className="w-4 h-4" />
-                </button>
-                {hoveredButton === 'delete' && (
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30" onMouseEnter={() => setHoveredButton('delete')} onMouseLeave={() => setHoveredButton(null)}>
-                    <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
-                      콘텐츠 삭제
-                    </div>
-                    <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+      <div className={`w-full flex flex-col ${showTextUpload ? "items-stretch h-full" : "items-center"}`}>
+        {showImageUpload ? (
+          <ImageUploadSection
+            showImageUpload={showImageUpload}
+            setShowImageUpload={() => {}}
+            imagePreviews={imagePreviews}
+            setImagePreviews={setImagePreviews}
+            fileInputRef={fileInputRef}
+            handleUploadBack={handleUploadBack}
+            setImgSize={setImgSize}
+            imgSize={imgSize}
+            removePadding={removePadding}
+            setRemovePadding={setRemovePadding}
+            fileSelectMode={fileSelectMode}
+            replaceIndex={replaceIndex}
+            setFileSelectMode={setFileSelectMode}
+            setReplaceIndex={setReplaceIndex}
+            onDetectNaturalWidth={(w) => setImageNaturalWidth(w)}
+            useOriginalSize={useOriginalSize}
+          />
+        ) : showTextUpload ? (
+          <TextUploadSection onBack={handleUploadBack} />
+        ) : showVideoUpload ? (
+          <VideoUploadSection
+            ref={videoSectionRef}
+            onBack={handleUploadBack}
+            setImgSize={setImgSize}
+            imgSize={imgSize}
+            onUploadedChange={setVideoUploaded}
+            removePadding={removePadding}
+            setRemovePadding={setRemovePadding}
+            useOriginalSize={useOriginalSize}
+          />
+        ) : null}
       </div>
+
+      {/* 공통 오버레이: 텍스트 제외, 이미지/동영상 업로드 전 */}
+      {(((showVideoUpload && !videoUploaded) || (showImageUpload && imagePreviews.length === 0)) && isHovered) && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
+          <div className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative">
+            {/* 정렬 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('reorder')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={(e) => { e.stopPropagation(); onOpenReorder(); }}
+              >
+                <HiMiniArrowsUpDown className="w-4 h-4" />
+              </button>
+              {hoveredButton === 'reorder' && (
+                <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30">
+                  <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
+                    정렬/삭제
+                  </div>
+                  <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
+                </div>
+              )}
+            </div>
+            {/* 삭제 (블록 제거) */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('delete')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={handleUploadBack}
+              >
+                <FaTrash className="w-4 h-4" />
+              </button>
+              {hoveredButton === 'delete' && (
+                <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30" onMouseEnter={() => setHoveredButton('delete')} onMouseLeave={() => setHoveredButton(null)}>
+                  <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
+                    콘텐츠 삭제
+                  </div>
+                  <div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 업로드 후 → 패딩/원본크기/이미지변경/재정렬/삭제 */}
+      {(showImageUpload && imagePreviews.length > 0 && isHovered) && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
+          <div className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative">
+            {/* 패딩 토글 (가로 1100px 이상에서만 허용) */}
+            <div className="relative">
+              <button
+                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${imageNaturalWidth >= 1100 ? 'hover:bg-gray-100' : 'opacity-50 cursor-not-allowed'}`}
+                onMouseEnter={() => setHoveredButton('padding')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => {
+                  if (imageNaturalWidth < 1100) { notifyNeed1100(); return; }
+                  setRemovePadding((v) => !v);
+                }}
+                title={imageNaturalWidth < 1100 ? '가로 폭 1100px 이상의 콘텐츠만 사용 가능한 기능입니다' : undefined}
+              >
+                <FiMaximize2 className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 원본 크기 토글 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('original')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => setUseOriginalSize(v => !v)}
+                title="원본 크기로 보기"
+              >
+                1:1
+              </button>
+            </div>
+            {/* 이미지 변경 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('image')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FiImage className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 재정렬 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('reorder')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={(e) => { e.stopPropagation(); onOpenReorder(); }}
+              >
+                <HiMiniArrowsUpDown className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 삭제 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('delete')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={handleUploadBack}
+              >
+                <FaTrash className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 동영상 업로드 후 → 패딩/원본크기/URL변경/재정렬/삭제 */}
+      {(showVideoUpload && videoUploaded && isHovered) && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
+          <div className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative">
+            {/* 패딩 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('padding')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => setRemovePadding((v) => !v)}
+              >
+                <FiMaximize2 className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 원본 크기 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('original-v')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => setUseOriginalSize(v => !v)}
+                title="원본 크기로 보기"
+              >
+                1:1
+              </button>
+            </div>
+            {/* URL 변경 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('url')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={() => { videoSectionRef.current?.openUrlModal(); }}
+              >
+                <IoMdVideocam className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 재정렬 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('reorder')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={(e) => { e.stopPropagation(); onOpenReorder(); }}
+              >
+                <HiMiniArrowsUpDown className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 삭제 */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+                onMouseEnter={() => setHoveredButton('delete')}
+                onMouseLeave={() => setHoveredButton(null)}
+                onClick={handleUploadBack}
+              >
+                <FaTrash className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

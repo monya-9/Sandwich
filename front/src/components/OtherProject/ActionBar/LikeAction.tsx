@@ -165,24 +165,20 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
             <FaHeart
               className={`w-6 h-6 transition-colors duration-150
                   ${liked ? "text-white" : "text-gray-800"}`}
-                  style={{ transform: "translateY(-8px)" }}
             />
-            <span
-              className={`absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-100%] text-lg font-bold cursor-pointer select-none ${liked ? "text-white" : "text-gray-800"}`}
-              style={{
-                lineHeight: 1,
-                marginTop: 25,
-                textShadow: liked ? "0 1px 2px #0004" : "none",
-              }}
-              onClick={(e) => {
+          </div>
+          <span
+            className="text-xs text-gray-800 font-semibold text-center"
+            onClick={(e) => {
+              if (count > 0) {
                 e.stopPropagation();
                 setShowLikedUsers(true);
-              }}
-            >
-              {count}
-            </span>
-          </div>
-          <span className="text-xs text-gray-800 font-semibold text-center">좋아요</span>
+              }
+            }}
+            style={{ cursor: count > 0 ? "pointer" : "default" }}
+          >
+            {count > 0 ? count : "좋아요"}
+          </span>
         </button>
       </div>
     </>
