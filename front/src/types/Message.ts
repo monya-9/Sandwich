@@ -1,3 +1,4 @@
+// src/types/Message.ts
 export interface Message {
     id: number;
     title: string;
@@ -12,4 +13,9 @@ export interface Message {
 
     /** (옵션) 아바타 이미지 경로 */
     avatarUrl?: string;
+
+    /** 🔹 백엔드 연동용 메타(선택) */
+    roomId?: number;
+    senderId?: number;
+    receiverId?: number;
 }

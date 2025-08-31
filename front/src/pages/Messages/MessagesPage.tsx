@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { dummyMessages as seed } from "../../data/dummyMessages";
 import MessageList from "../../components/common/Message/MessageList";
 import MessageDetail from "../../components/common/Message/MessageDetail";
+import { markRoomRead } from "../../api/messages";
 
 const MessagesPage: React.FC = () => {
     const navigate = useNavigate();
@@ -16,19 +17,21 @@ const MessagesPage: React.FC = () => {
 
     const handleSelect = (mid: number) => {
         setSelectedId(mid);
-        // ✅ 선택 즉시 읽음 처리(낙관적)
+        // 낙관적 읽음 처리
         setMessages(prev =>
             prev.map(m => (m.id === mid ? { ...m, isRead: true, unreadCount: 0 } : m)),
         );
         navigate(`/messages/${mid}`);
     };
 
-    // 상세에서 열릴 때도 안전하게 한 번 더 읽음 처리
-    const markRead = (mid: number | string) => {
+    const markRead = async (mid: number | string) => {
         setMessages(prev =>
             prev.map(m => (m.id === mid ? { ...m, isRead: true, unreadCount: 0 } : m)),
         );
-        // TODO: await api.messages.markRead(mid)  // 실제 연동 시
+        const target = messages.find(m => m.id === mid);
+        if (target?.roomId) {
+            try { await markRoomRead(target.roomId); } catch { /* noop */ }
+        }
     };
 
     const selectedMessage = messages.find(m => m.id === selectedId);
@@ -39,7 +42,7 @@ const MessagesPage: React.FC = () => {
                 <MessageList messages={messages} selectedId={selectedId} onSelect={handleSelect} />
                 <MessageDetail
                     message={selectedMessage}
-                    onSend={async () => {/* TODO: api */}}
+                    onSend={async () => { /* 전송 성공 후 별도 동작 필요 시 여기에 */ }}
                     onMarkRead={markRead}
                 />
             </section>

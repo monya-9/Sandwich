@@ -22,3 +22,6 @@
 body {
   font-family: 'GmarketSans', sans-serif;
 }
+/* 스크롤은 가능, 바는 숨김 */
+.no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } /* IE/Firefox */
