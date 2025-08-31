@@ -7,6 +7,5 @@ module.exports = function (app) {
         target,
         changeOrigin: true,
     });
-    
     app.use(["/api", "/oauth2/authorization", "/login/oauth2"], proxy);
 };
