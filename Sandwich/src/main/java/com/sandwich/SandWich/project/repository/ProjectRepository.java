@@ -25,4 +25,17 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     @Query("select p.user.id from Project p where p.id = :id")
     Optional<Long> findAuthorIdById(@Param("id") Long id);
 
+    @Query("""
+        select p
+          from Project p
+         where p.user.id = :authorId
+           and p.id <> :excludeId
+           and p.user.isDeleted = false
+         order by p.createdAt desc
+    """)
+    List<Project> findAuthorOthersByLatest(
+            @Param("authorId") Long authorId,
+            @Param("excludeId") Long excludeId,
+            Pageable pageable
+    );
 }
