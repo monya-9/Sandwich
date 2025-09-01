@@ -42,6 +42,7 @@ public class Message extends BaseEntity {
     @Column(name = "payload", columnDefinition = "jsonb")
     private String payload;
 
+    @Builder.Default
     private boolean isRead = false;
 
     // --- 카드형(채용/프로젝트) 전용 필드 (NULL 허용) ---
