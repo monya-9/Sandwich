@@ -4,7 +4,7 @@ import com.sandwich.SandWich.common.exception.exceptiontype.InvalidPasswordExcep
 import com.sandwich.SandWich.common.exception.exceptiontype.UnverifiedUserException;
 import com.sandwich.SandWich.common.exception.exceptiontype.UserDeletedException;
 import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
-import com.sandwich.SandWich.global.exception.exceptiontype.*;
+import com.sandwich.SandWich.common.exception.exceptiontype.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException; // ★ 403용

@@ -54,7 +54,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/meta/**").permitAll()
                         // 디버그 타임 엔드포인트 (관리자만)
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
-
+                        // 계정 검색
+                        .requestMatchers(HttpMethod.GET, "/api/search/accounts").permitAll()
                         // 좋아요
                         .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
