@@ -3,6 +3,9 @@ package com.sandwich.SandWich.challenge.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.OffsetDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -34,6 +37,11 @@ public class Submission extends BaseEntity {
 
     @Column(name="demo_url")
     private String demoUrl;
+
+    @Column(name = "extra_json", columnDefinition = "jsonb", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    private String extraJson = "{}";
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
