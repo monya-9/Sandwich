@@ -49,67 +49,55 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // ====== 공용/예외 라우트 ======
-                        // meta
-                        .requestMatchers("/api/meta/**").permitAll()
-                        // 디버그 타임 엔드포인트 (관리자만)
-                        .requestMatchers("/api/_debug/**").hasRole("ADMIN")
-                        // 계정 검색
-                        .requestMatchers(HttpMethod.GET, "/api/search/accounts").permitAll()
-                        // 최근 검색어
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,    "/api/search/recent").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST,   "/api/search/recent").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/search/recent/**").authenticated()
-                        // 좋아요
-                        .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
-
-                        // WebSocket/STOMP
-                        .requestMatchers("/ws/chat/**").permitAll()
-                        .requestMatchers("/topic/**", "/app/**").permitAll()
-
-                        // 프로젝트: 공개 조회 2개만 허용, 나머지는 보호
-                        .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/projects/{userId}/{id}").permitAll()
-                        .requestMatchers("/api/projects/**").authenticated()
-
-                        // 팔로우/팔로잉/카운트
-                        .requestMatchers("/api/users/*/following").permitAll()
-                        .requestMatchers("/api/users/*/followers").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER","ADMIN","AI")
-
-                        // build (gitUrl)
-                        .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
-
-                        // 공개 메시지 선호도
-                        .requestMatchers(HttpMethod.GET, "/api/public/users/*/message-preferences").permitAll()
-                        // 내 메시지 선호도 (JWT 필요)
-                        .requestMatchers(HttpMethod.GET, "/api/users/me/message-preferences").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/users/message-preferences/me").authenticated()
-
-                        // 이모지
-                        .requestMatchers("/api/emojis/**").permitAll()
-
-                        // 다운로드 보호
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/messages/*/attachments").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,  "/api/files/**").authenticated()
-
                         // 인증/문서/OAuth 콜백 등
+                        // ===== 공개 라우트들 =====
                         .requestMatchers(
                                 "/api/auth/**", "/api/email/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
                                 "/swagger-ui.html", "/webjars/**", "/api/upload/image",
-                                // OAuth2 redirect/callback은 반드시 열어둔다
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
-
-                        // 관리자
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/meta/**").permitAll()
+                        .requestMatchers("/api/_debug/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/search/accounts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/users/*/message-preferences").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
+                        .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
+                        .requestMatchers("/api/emojis/**").permitAll()
 
-                        // 나머지는 인증 필요
+                        // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
+                        .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트
+                        .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)
+                        .requestMatchers(HttpMethod.GET, "/api/projects/*/author/**").permitAll()// 작성자 다른 작품(캐러셀)
+
+                        // ===== 사용자 공개 정보 =====
+                        .requestMatchers("/api/users/*/following").permitAll()
+                        .requestMatchers("/api/users/*/followers").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+
+                        // ===== 보호 구간 (여기부터 인증 필요) =====
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER","ADMIN","AI")
+                        .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/build/**").authenticated()
+                        .requestMatchers(HttpMethod.GET,  "/api/files/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/messages/*/attachments").authenticated()
+
+                        // 최근 검색어(로그인 전용)
+                        .requestMatchers(HttpMethod.GET,    "/api/search/recent").authenticated()
+                        .requestMatchers(HttpMethod.POST,   "/api/search/recent").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/search/recent/**").authenticated()
+
+                        // 이 라인이 '프로젝트 공개 GET'들보다 반드시 아래에 와야 함
+                        .requestMatchers("/api/projects/**").authenticated()
+
+                        // 마이 페이지 등
+                        .requestMatchers(HttpMethod.GET,  "/api/users/me/message-preferences").authenticated()
+                        .requestMatchers(HttpMethod.PUT,  "/api/users/message-preferences/me").authenticated()
+
+                        // 그 외 전부 인증
                         .anyRequest().authenticated()
                 )
 
