@@ -1,49 +1,100 @@
-// src/pages/Messages/MessagesPage.tsx
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { dummyMessages as seed } from "../../data/dummyMessages";
 import MessageList from "../../components/common/Message/MessageList";
 import MessageDetail from "../../components/common/Message/MessageDetail";
-import { markRoomRead } from "../../api/messages";
+import { fetchRooms, markRoomRead } from "../../api/messages";
+import type { Message } from "../../types/Message";
 
 const MessagesPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id?: string }>();
-    const routeId = id ? Number(id) : undefined;
+    const routeRoomId = id ? Number(id) : undefined;
 
-    const [messages, setMessages] = React.useState(seed);
-    const [selectedId, setSelectedId] = React.useState<number | undefined>(routeId);
-    React.useEffect(() => setSelectedId(routeId), [routeId]);
+    const [items, setItems] = React.useState<Message[]>([]);
+    const [selectedRoomId, setSelectedRoomId] =
+        React.useState<number | undefined>(routeRoomId);
+    const callReadOnce = React.useRef<Record<number, boolean>>({});
 
-    const handleSelect = (mid: number) => {
-        setSelectedId(mid);
-        // 낙관적 읽음 처리
-        setMessages(prev =>
-            prev.map(m => (m.id === mid ? { ...m, isRead: true, unreadCount: 0 } : m)),
+    const loadRooms = React.useCallback(async () => {
+        try {
+            const rooms = await fetchRooms();
+            const mapped: Message[] = rooms
+                .map((r) => ({
+                    id: r.roomId, // 리스트 key/선택용으로 roomId 재사용
+                    roomId: r.roomId,
+                    title: r.peerName,
+                    sender: r.peerName,
+                    content: r.lastContent,
+                    createdAt: r.lastAt,
+                    isRead: r.unreadCount === 0,
+                    unreadCount: r.unreadCount,
+                    /** 👇 전송 대상 계산을 위해 보관 */
+                    receiverId: r.peerId,
+                }))
+                .sort(
+                    (a, b) =>
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+
+            setItems(mapped);
+
+            if (!routeRoomId && mapped[0]?.roomId) {
+                setSelectedRoomId(mapped[0].roomId!);
+                navigate(`/messages/${mapped[0].roomId}`);
+            }
+        } catch (e) {
+            console.warn("[rooms] fetchRooms failed:", e);
+            setItems([]);
+        }
+    }, [navigate, routeRoomId]);
+
+    React.useEffect(() => {
+        loadRooms();
+    }, [loadRooms]);
+
+    React.useEffect(() => {
+        setSelectedRoomId(routeRoomId);
+    }, [routeRoomId]);
+
+    const handleSelect = async (roomId: number) => {
+        setSelectedRoomId(roomId);
+        navigate(`/messages/${roomId}`);
+
+        // 낙관적 읽음 반영
+        setItems((prev) =>
+            prev.map((m) =>
+                m.roomId === roomId ? { ...m, isRead: true, unreadCount: 0 } : m
+            )
         );
-        navigate(`/messages/${mid}`);
-    };
 
-    const markRead = async (mid: number | string) => {
-        setMessages(prev =>
-            prev.map(m => (m.id === mid ? { ...m, isRead: true, unreadCount: 0 } : m)),
-        );
-        const target = messages.find(m => m.id === mid);
-        if (target?.roomId) {
-            try { await markRoomRead(target.roomId); } catch { /* noop */ }
+        if (callReadOnce.current[roomId]) return;
+        callReadOnce.current[roomId] = true;
+        try {
+            await markRoomRead(roomId);
+        } catch (e) {
+            console.warn("[read] markRoomRead failed:", e);
         }
     };
 
-    const selectedMessage = messages.find(m => m.id === selectedId);
+    const selectedMessage = React.useMemo(
+        () => items.find((m) => m.roomId === selectedRoomId),
+        [items, selectedRoomId]
+    );
 
     return (
         <main className="mx-auto max-w-6xl px-4 mt-4">
-            <section className="bg-white rounded-lg border overflow-hidden flex h-[600px] min-h-0">
-                <MessageList messages={messages} selectedId={selectedId} onSelect={handleSelect} />
+            <section className="bg-white rounded-lg border overflow-hidden flex h-[600px] md:h-[680px] min-h-0">
+                <MessageList
+                    messages={items}
+                    selectedId={selectedRoomId}
+                    onSelect={handleSelect}
+                />
                 <MessageDetail
+                    /** 상세는 방 히스토리를 스스로 불러옵니다 */
                     message={selectedMessage}
-                    onSend={async () => { /* 전송 성공 후 별도 동작 필요 시 여기에 */ }}
-                    onMarkRead={markRead}
+                    onSend={async () => {
+                        await loadRooms(); // 전송 후 좌측 요약 갱신
+                    }}
                 />
             </section>
         </main>

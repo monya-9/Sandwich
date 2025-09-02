@@ -24,10 +24,10 @@ export function serverToUi(
 ): UiMessage {
     const title = (s.content ?? "").slice(0, 40) || "(빈 메시지)";
     return {
-        id: s.messageId,
+        id: s.messageId, // 여기 id는 '메시지ID'
         title,
         content: s.content ?? "",
-        createdAt: opts?.createdAt ?? new Date().toISOString(),
+        createdAt: opts?.createdAt ?? s.createdAt ?? new Date().toISOString(),
         sender: opts?.senderName ?? `user#${s.senderId}`,
         isRead: s.read,
         unreadCount: s.read ? 0 : 1,
