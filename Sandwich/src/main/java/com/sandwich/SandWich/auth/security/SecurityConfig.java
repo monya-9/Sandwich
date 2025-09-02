@@ -76,6 +76,7 @@ public class SecurityConfig {
                         // ===== 챌린지 공개 GET  =====
                         .requestMatchers(HttpMethod.GET, "/api/challenges").permitAll()     // 목록
                         .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()  // 상세(/{id}) 및 확장 대비
+                        .requestMatchers(HttpMethod.GET, "/api/challenges/*/votes/summary").permitAll()
 
                         // ===== 사용자 공개 정보 =====
                         .requestMatchers("/api/users/*/following").permitAll()
@@ -91,6 +92,9 @@ public class SecurityConfig {
 
                         // 챌린지
                         .requestMatchers(HttpMethod.POST, "/api/challenges/*/submissions").authenticated()
+                        .requestMatchers(HttpMethod.GET,  "/api/challenges/*/votes/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/challenges/*/votes").authenticated()
+                        .requestMatchers(HttpMethod.PUT,  "/api/challenges/*/votes/me").authenticated()
 
                         // 최근 검색어(로그인 전용)
                         .requestMatchers(HttpMethod.GET,    "/api/search/recent").authenticated()
