@@ -56,6 +56,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
                         // 계정 검색
                         .requestMatchers(HttpMethod.GET, "/api/search/accounts").permitAll()
+                        // 최근 검색어
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,    "/api/search/recent").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,   "/api/search/recent").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/search/recent/**").authenticated()
                         // 좋아요
                         .requestMatchers(HttpMethod.GET, "/api/likes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
