@@ -89,6 +89,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,  "/api/files/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/messages/*/attachments").authenticated()
 
+                        // 챌린지
+                        .requestMatchers(HttpMethod.POST, "/api/challenges/*/submissions").authenticated()
+
                         // 최근 검색어(로그인 전용)
                         .requestMatchers(HttpMethod.GET,    "/api/search/recent").authenticated()
                         .requestMatchers(HttpMethod.POST,   "/api/search/recent").authenticated()
