@@ -23,6 +23,8 @@ public class NotificationPreference extends BaseEntity {
     @Column(nullable = false) private boolean pushComment;     // 기본 on
     @Column(nullable = false) private boolean pushLike;        // 정책 (예: off)
     @Column(nullable = false) private boolean pushFollow;      // 기본 on
+
+    @Builder.Default
     @Column(name = "push_collection", nullable = false)
     private boolean pushCollection = false;
     @Column(nullable = false) private boolean pushEvent;       // 정책 (예: off)

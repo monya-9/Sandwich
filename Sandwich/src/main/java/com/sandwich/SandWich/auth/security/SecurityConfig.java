@@ -73,6 +73,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/author/**").permitAll()// 작성자 다른 작품(캐러셀)
 
+                        // ===== 챌린지 공개 GET  =====
+                        .requestMatchers(HttpMethod.GET, "/api/challenges").permitAll()     // 목록
+                        .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()  // 상세(/{id}) 및 확장 대비
+
                         // ===== 사용자 공개 정보 =====
                         .requestMatchers("/api/users/*/following").permitAll()
                         .requestMatchers("/api/users/*/followers").permitAll()
