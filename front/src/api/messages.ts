@@ -1,3 +1,4 @@
+// src/api/messages.ts
 import api from "./axiosInstance";
 
 /** ===== 서버 스키마 ===== */
@@ -28,7 +29,7 @@ export type ServerMessage = {
     type: ServerMessageType;
     content: string | null;
     read: boolean;
-    createdAt?: string | null; // optional
+    createdAt?: string | null; // optional 방어
 };
 
 /** ====== 방 목록(Page 래퍼) ====== */
@@ -40,7 +41,7 @@ type PageResp<T> = {
     size: number;
 };
 
-/** ✅ Room 목록 DTO (백엔드 네이밍에 맞춤) */
+/** 백엔드 Room 목록 DTO (스웨거/네트워크 탭과 1:1) */
 export type RoomListItemResponse = {
     roomId: number;
     partnerId: number;
@@ -56,14 +57,14 @@ export type RoomListItemResponse = {
 /** 프런트에서 쓰는 방 요약 */
 export type RoomSummary = {
     roomId: number;
-    peerId: number;
+    peerId?: number;
     peerName: string;
     lastContent: string;
     lastAt: string;
     unreadCount: number;
 };
 
-/** ===== 공통 API ===== */
+/** 공통 API */
 export async function postMessage(body: SendMessageBody) {
     const { data } = await api.post<ServerMessage>("/messages", body);
     return data;
@@ -107,9 +108,9 @@ export async function downloadRoomScreenshot(
     const theme = opts?.theme || "light";
 
     const res = await fetch(
-        `/api/messages/${roomId}/screenshot?tz=${encodeURIComponent(
-            tz
-        )}&width=${encodeURIComponent(width)}&theme=${encodeURIComponent(theme)}`,
+        `/api/messages/${roomId}/screenshot?tz=${encodeURIComponent(tz)}&width=${encodeURIComponent(
+            width
+        )}&theme=${encodeURIComponent(theme)}`,
         { method: "GET", headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) {
@@ -127,7 +128,7 @@ export async function downloadRoomScreenshot(
     URL.revokeObjectURL(url);
 }
 
-/** ✅ 방 목록: /api/rooms (Page 응답 → 요약으로 변환) */
+/** ✅ 방 목록: /api/rooms */
 export async function fetchRooms(page = 0, size = 20) {
     const { data } = await api.get<PageResp<RoomListItemResponse>>("/rooms", {
         params: { page, size },
@@ -144,9 +145,9 @@ export async function fetchRooms(page = 0, size = 20) {
     return list;
 }
 
-/** ✅ 방 히스토리: /api/rooms/{roomId}?cursorId&size */
+/** ✅ 방 히스토리: /api/rooms/{roomId}?cursorId&size (최신 30개 등) */
 export type RoomHistoryResponse = {
-    items: ServerMessage[];
+    items: ServerMessage[];    // 백엔드 DTO 명과 다르면 여기만 맞춰주면 됨
     nextCursor: number | null;
     size: number;
 };

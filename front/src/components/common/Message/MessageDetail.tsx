@@ -1,3 +1,4 @@
+// src/components/common/Message/MessageDetail.tsx
 import React from "react";
 import type { Message } from "../../../types/Message";
 import { timeAgo } from "../../../utils/time";
@@ -7,29 +8,18 @@ import {
     uploadAttachment,
     downloadRoomScreenshot,
     fetchRoomMessages,
-    ServerMessage,
+    type ServerMessage,
 } from "../../../api/messages";
-import { serverToUi } from "../../../api/message.adapter";
 import { getMe } from "../../../api/users";
 import EmojiPicker from "./Emoji/EmojiPicker";
 
 type Props = {
     message?: Message;
     onSend?: (messageId: number | string, body: string) => Promise<void> | void;
-    /** 읽음은 상위(MessagesPage)에서 처리 */
-    onMarkRead?: (messageId: number | string) => void;
 };
 
 const youBubble = "max-w-[520px] bg-gray-100 rounded-2xl px-4 py-3 shadow-sm";
 const meBubble = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
-
-/** 히스토리 아이템 UI */
-type UiLine = {
-    id: string;
-    me: boolean;
-    content: string;
-    at: string; // ISO
-};
 
 const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [text, setText] = React.useState("");
@@ -37,20 +27,15 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [uploading, setUploading] = React.useState(false);
     const [isComposing, setIsComposing] = React.useState(false);
     const [showEmoji, setShowEmoji] = React.useState(false);
+
     const [myId, setMyId] = React.useState<number | null>(null);
-    const [history, setHistory] = React.useState<UiLine[]>([]);
+    const [history, setHistory] = React.useState<ServerMessage[]>([]); // 서버 히스토리
 
     const taRef = React.useRef<HTMLTextAreaElement>(null);
     const endRef = React.useRef<HTMLDivElement>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const caretRef = React.useRef<{ start: number; end: number }>({
-        start: 0,
-        end: 0,
-    });
 
-    const roomId = (message as any)?.roomId as number | undefined;
-
-    // 내 id 1회 조회
+    // 내 id 로드
     React.useEffect(() => {
         let mounted = true;
         getMe()
@@ -61,89 +46,95 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         };
     }, []);
 
-    // 방 히스토리 로드
+    // 목록에서 내려준 메타
+    const roomId = (message as any)?.roomId as number | undefined;
+    const peerId = (message as any)?.receiverId as number | undefined; // 상대 id(목록 맵핑 때 넣어둔 값)
+
+    // 히스토리 로드
+    const loadHistory = React.useCallback(async () => {
+        if (!roomId) return;
+        try {
+            const res = await fetchRoomMessages(roomId, undefined, 30);
+            const items = [...(res.items || [])].sort((a, b) => {
+                const da = new Date(a.createdAt || 0).getTime();
+                const db = new Date(b.createdAt || 0).getTime();
+                if (da === db) return a.messageId - b.messageId;
+                return da - db;
+            });
+            setHistory(items);
+        } catch (e) {
+            console.warn("[history] fetchRoomMessages failed:", e);
+            setHistory([]);
+        }
+    }, [roomId]);
+
+    // 방 바뀌면 초기화 + 로드
     React.useEffect(() => {
-        setHistory([]);
         setText("");
         setShowEmoji(false);
+        setHistory([]);
+        loadHistory();
+    }, [loadHistory]);
 
+    // 간단 폴링 (5초)
+    React.useEffect(() => {
         if (!roomId) return;
-
-        (async () => {
-            try {
-                const res = await fetchRoomMessages(roomId);
-                const lines = (res.items || []).map((m: ServerMessage) => ({
-                    id: String(m.messageId),
-                    me: myId != null ? m.senderId === myId : false,
-                    content: m.content ?? "",
-                    at: m.createdAt || new Date().toISOString(),
-                }));
-                setHistory(lines);
-            } catch (e) {
-                console.warn("[history] load failed:", e);
-                setHistory([]);
-            }
-        })();
-        // myId가 나중에 올 수도 있으니, myId 변화에도 재매핑
-    }, [roomId, myId]);
+        const t = setInterval(loadHistory, 5000);
+        return () => clearInterval(t);
+    }, [roomId, loadHistory]);
 
     // 입력창 자동 리사이즈
     React.useEffect(() => {
-        if (!taRef.current) return;
-        taRef.current.style.height = "auto";
-        taRef.current.style.height = taRef.current.scrollHeight + "px";
+        if (taRef.current) {
+            taRef.current.style.height = "auto";
+            taRef.current.style.height = taRef.current.scrollHeight + "px";
+        }
     }, [text]);
 
     // 항상 아래로 스크롤
     React.useEffect(() => {
         endRef.current?.scrollIntoView({ block: "end" });
-    }, [history]);
+    }, [history.length]);
 
-    // 전송 대상 ID: 우선 메시지(receiverId=상대) → 없으면 히스토리/내ID로 추론
+    // 상대 userId 계산 (우선 목록의 receiverId → 없으면 히스토리에서 추정)
     const targetUserId = React.useMemo(() => {
-        const fallback = (message as any)?.receiverId as number | undefined;
-        if (fallback) return fallback;
+        if (peerId) return peerId;
         if (!myId || history.length === 0) return undefined;
-        // 히스토리에서 나 아닌 senderId를 상대라고 가정
-        // (가장 최근 발화자 기준)
-        const last = history[history.length - 1];
-        // last.me === true면 상대는 receiver, 하지만 히스토리 UI에는 id가 없음.
-        // 안전하게 myId 기반 추론은 메시지 전송 시 서버가 roomId만으로 상대를 결정하면 불필요.
-        return undefined;
-    }, [message, myId, history]);
+        const h = history[history.length - 1];
+        return h.senderId === myId ? h.receiverId : h.senderId;
+    }, [peerId, myId, history]);
 
     const handleSendText = async () => {
-        if (!roomId) return;
-        if (isComposing) return;
-        const body = text.trim();
-        if (!body || sending) return;
-
-        if (!targetUserId) {
+        if (!message || !targetUserId) {
             alert("상대 사용자를 알 수 없어 전송할 수 없어요.");
             return;
         }
+        if (isComposing) return;
+
+        const body = text.trim();
+        if (!body || sending) return;
 
         setSending(true);
         try {
-            // 서버 전송
             const server = await postMessage({
                 targetUserId,
                 type: "GENERAL",
                 content: body,
             });
 
-            // 낙관적/실제 반영
-            const ui = serverToUi(server, {
-                senderName: "me",
-                createdAt: server.createdAt ?? new Date().toISOString(),
-            });
-            setHistory((prev) => [
-                ...prev,
-                { id: String(ui.id), me: true, content: ui.content, at: ui.createdAt },
-            ]);
+            // 서버 응답을 바로 히스토리에 반영
+            const createdAt = server.createdAt || new Date().toISOString();
+            setHistory((prev) =>
+                [...prev, { ...server, createdAt }].sort((a, b) => {
+                    const da = new Date(a.createdAt || 0).getTime();
+                    const db = new Date(b.createdAt || 0).getTime();
+                    if (da === db) return a.messageId - b.messageId;
+                    return da - db;
+                })
+            );
             setText("");
 
-            await onSend?.(ui.id, ui.content);
+            await onSend?.(server.messageId, body);
         } catch (e) {
             console.error(e);
             alert("메시지 전송에 실패했어요.");
@@ -161,6 +152,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         );
     }
 
+    // 헤더 시간: 목록 기준(없으면 히스토리 최신)
+    const headerTime =
+        message.createdAt ||
+        history[history.length - 1]?.createdAt ||
+        new Date().toISOString();
+
     return (
         <div className="flex-1 min-h-0 flex flex-col">
             {/* 헤더 */}
@@ -170,13 +167,10 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 </div>
                 <div className="flex flex-col">
                     <span className="font-semibold">{message.sender}</span>
-                    <span className="text-xs text-gray-400">
-            {timeAgo(message.createdAt)}
-          </span>
+                    <span className="text-xs text-gray-400">{timeAgo(headerTime)}</span>
                 </div>
 
                 <div className="ml-auto flex items-center gap-2">
-                    {/* 대화 캡처 */}
                     <button
                         type="button"
                         aria-label="대화 캡처"
@@ -203,65 +197,43 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             </div>
 
             {/* 타임라인 */}
-            <div
-                id="chat-panel"
-                className="flex-1 overflow-y-auto p-6 flex flex-col gap-4"
-            >
-                {history.map((h) =>
-                        h.me ? (
-                            <div key={h.id} className="flex items-end gap-2 self-end max-w-full">
-              <span className="text-[11px] text-gray-400 shrink-0 translate-y-1 order-1">
-                {new Date(h.at).toLocaleTimeString([], {
-                    hour: "numeric",
-                    minute: "2-digit",
-                })}
-              </span>
-                                <div className={`${meBubble} order-2`}>
-                                    <div className="whitespace-pre-wrap text-sm text-gray-800">
-                                        {h.content}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div key={h.id} className="flex items-end gap-2 max-w-full">
-                                <div className={youBubble}>
-                                    <div className="whitespace-pre-wrap text-sm text-gray-800">
-                                        {h.content}
-                                    </div>
-                                </div>
-                                <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">
-                {new Date(h.at).toLocaleTimeString([], {
-                    hour: "numeric",
-                    minute: "2-digit",
-                })}
-              </span>
-                            </div>
-                        )
-                )}
+            <div id="chat-panel" className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                {history.map((m) => {
+                    // ✅ myId가 아직 없어도 peerId로 임시 판별: 내 메시지는 senderId !== peerId
+                    const mine =
+                        myId != null ? m.senderId === myId : peerId != null ? m.senderId !== peerId : false;
 
+                    const when = new Date(m.createdAt || 0);
+                    const hhmm = isNaN(when.getTime())
+                        ? ""
+                        : when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+                    return mine ? (
+                        <div key={m.messageId} className="flex items-end gap-2 self-end max-w-full">
+                            <span className="text-[11px] text-gray-400 shrink-0 translate-y-1 order-1">{hhmm}</span>
+                            <div className={`${meBubble} order-2`}>
+                                <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div key={m.messageId} className="flex items-end gap-2 max-w-full">
+                            <div className={youBubble}>
+                                <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>
+                            </div>
+                            <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
+                        </div>
+                    );
+                })}
                 <div ref={endRef} />
             </div>
 
-            {/* 입력 영역 */}
+            {/* 입력 */}
             <div className="px-6 py-3 border-t flex flex-col gap-2">
                 <div className="flex items-end gap-2">
           <textarea
               ref={taRef}
               value={text}
-              onChange={(e) => {
-                  setText(e.currentTarget.value);
-                  caretRef.current = {
-                      start: e.currentTarget.selectionStart ?? 0,
-                      end: e.currentTarget.selectionEnd ?? 0,
-                  };
-              }}
-              onSelect={(e) => {
-                  const t = e.currentTarget;
-                  caretRef.current = {
-                      start: t.selectionStart ?? 0,
-                      end: t.selectionEnd ?? 0,
-                  };
-              }}
+              onChange={(e) => setText(e.currentTarget.value)}
               onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !isComposing) {
                       e.preventDefault();
@@ -298,23 +270,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                         <div className="absolute bottom-10 left-2 z-30">
                             <EmojiPicker
                                 onPick={(emoji) => {
-                                    const ta = taRef.current;
-                                    if (!ta) return;
-                                    const { start, end } = caretRef.current;
-                                    setText((prev) => {
-                                        const before = prev.slice(0, start);
-                                        const after = prev.slice(end);
-                                        const next = before + emoji + after;
-                                        requestAnimationFrame(() => {
-                                            if (taRef.current) {
-                                                const pos = start + emoji.length;
-                                                taRef.current.focus();
-                                                taRef.current.setSelectionRange(pos, pos);
-                                                caretRef.current = { start: pos, end: pos };
-                                            }
-                                        });
-                                        return next;
-                                    });
+                                    setText((prev) => prev + emoji);
                                     setShowEmoji(false);
                                 }}
                                 onClose={() => setShowEmoji(false)}
@@ -332,16 +288,15 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             setUploading(true);
                             try {
                                 const s = await uploadAttachment(roomId, f);
-                                const ui = serverToUi(s, { senderName: "me" });
-                                setHistory((prev) => [
-                                    ...prev,
-                                    {
-                                        id: String(ui.id),
-                                        me: true,
-                                        content: `[파일] ${f.name}`,
-                                        at: ui.createdAt,
-                                    },
-                                ]);
+                                const createdAt = s.createdAt || new Date().toISOString();
+                                setHistory((prev) =>
+                                    [...prev, { ...s, createdAt }].sort((a, b) => {
+                                        const da = new Date(a.createdAt || 0).getTime();
+                                        const db = new Date(b.createdAt || 0).getTime();
+                                        if (da === db) return a.messageId - b.messageId;
+                                        return da - db;
+                                    })
+                                );
                             } catch {
                                 alert("파일 업로드에 실패했어요.");
                             } finally {
