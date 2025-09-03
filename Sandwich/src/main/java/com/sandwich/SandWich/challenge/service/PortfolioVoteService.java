@@ -25,6 +25,7 @@ public class PortfolioVoteService {
     private final SubmissionRepository submissionRepo;
     private final PortfolioVoteRepository voteRepo;
     private final CurrentUserProvider currentUser;
+    private final PortfolioLeaderboardCache leaderboardCache;
 
     // ===== 에러 코드 상수 (오타 방지)
     private static final String ERR_DUP_VOTE          = "DUPLICATE_VOTE";
@@ -61,7 +62,18 @@ public class PortfolioVoteService {
                 .difficulty(req.getDifficulty())
                 .build();
 
-        return voteRepo.save(v).getId();
+        var saved = voteRepo.save(v);
+
+        // 리더보드 증분 반영 (+1 표)
+        try {
+            leaderboardCache.applyDelta(
+                    challengeId, ctx.submission().getId(),
+                    req.getUiUx(), req.getCreativity(), req.getCodeQuality(), req.getDifficulty(),
+                    +1
+            );
+        } catch (Exception ignore) { /* 캐시 실패는 본 로직 영향 X */ }
+
+        return saved.getId();
     }
 
     @Transactional
@@ -76,12 +88,41 @@ public class PortfolioVoteService {
             throw new BadRequestException(ERR_SELF_VOTE, "자기 작품에는 투표할 수 없습니다.");
         }
 
+        // 증분 계산을 위해 기존 값 백업
+        int ou = v.getUiUx(), oc = v.getCreativity(), oq = v.getCodeQuality(), od = v.getDifficulty();
+        Long oldSubId = v.getSubmission().getId();
+
         v.setSubmission(ctx.submission());
         v.setUiUx(req.getUiUx());
         v.setCreativity(req.getCreativity());
         v.setCodeQuality(req.getCodeQuality());
         v.setDifficulty(req.getDifficulty());
-        // JPA dirty checking
+
+        // 리더보드 증분 반영
+        try {
+            if (oldSubId.equals(ctx.submission().getId())) {
+                // 같은 제출물에서 점수만 바뀜 → 차이만 반영, 표 수 변화 0
+                leaderboardCache.applyDelta(
+                        challengeId, oldSubId,
+                        req.getUiUx() - ou,
+                        req.getCreativity() - oc,
+                        req.getCodeQuality() - oq,
+                        req.getDifficulty() - od,
+                        0
+                );
+            } else {
+                // 제출물 변경 → 이전 -1, 새 +1
+                leaderboardCache.applyDelta(
+                        challengeId, oldSubId, -ou, -oc, -oq, -od, -1
+                );
+                leaderboardCache.applyDelta(
+                        challengeId, ctx.submission().getId(),
+                        req.getUiUx(), req.getCreativity(), req.getCodeQuality(), req.getDifficulty(),
+                        +1
+                );
+            }
+        } catch (Exception ignore) { /* 캐시 실패는 본 로직 영향 X */ }
+
     }
 
     @Transactional(readOnly = true)
