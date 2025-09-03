@@ -1,6 +1,6 @@
 package com.sandwich.SandWich.challenge.dto;
 
-import com.beust.jcommander.internal.Nullable;
+import jakarta.validation.Valid;
 import com.sandwich.SandWich.challenge.domain.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -31,6 +31,11 @@ public class SubmissionDtos {
         @Size(max = 10, message = "assets can contain up to 10 items")
         private List<Asset> assets = List.of();
 
+        // --- 코드 챌린지용 추가 ---
+        @Valid
+        private Code code;
+
+
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class Asset {
             @NotBlank @Pattern(regexp="^https?://.*", message="asset.url must be http/https")
@@ -38,6 +43,17 @@ public class SubmissionDtos {
             private String url;
             @Size(max = 100)
             private String mime;
+        }
+
+        @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class Code {
+            @NotBlank @Size(max=30)
+            private String language;   // 예: "java","python","node","go","rust","cpp","ts","js"
+            @NotBlank @Size(max=120)
+            @Pattern(regexp = "^[\\w./:-]+$", message = "entrypoint has invalid characters")
+            private String entrypoint; // 예: "src/main.py", "app/Main.java", "npm:start"
+            @Pattern(regexp = "^[0-9a-fA-F]{7,64}$", message = "commitSha must be hex (7-64)")
+            private String commitSha;  // optional
         }
     }
 

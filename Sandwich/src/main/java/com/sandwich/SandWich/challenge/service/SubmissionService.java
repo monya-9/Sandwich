@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -25,24 +26,37 @@ public class SubmissionService {
     private final ChallengeRepository challengeRepo;
     private final SubmissionRepository submissionRepo;
     private final SubmissionAssetRepository assetRepo;
+    private final CodeSubmissionRepository codeRepo;
     private final CurrentUserProvider currentUser;
     private final ApplicationEventPublisher publisher;
 
+
+    private static final Set<String> ALLOWED_LANG =
+            Set.of("java","kotlin","python","node","js","ts","go","rust","cpp","c","ruby","php");
+
     @Transactional
-    public Long createPortfolio(Long challengeId, SubmissionDtos.CreateReq req) {
+    public Long create(Long challengeId, SubmissionDtos.CreateReq req) {
         var ch = challengeRepo.findById(challengeId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Challenge not found"));
 
+        return (ch.getType() == ChallengeType.CODE)
+                ? createCode(ch, req)
+                : createPortfolio(ch, req);
+    }
+
+    // ===== 포트폴리오  =====
+    @Transactional
+    private Long createPortfolio(Challenge ch, SubmissionDtos.CreateReq req) {
         if (ch.getType() != ChallengeType.PORTFOLIO)
             throw new ResponseStatusException(BAD_REQUEST, "Only PORTFOLIO challenge accepts submissions");
 
         var now = java.time.OffsetDateTime.now();
-        if (!(now.isBefore(ch.getEndAt())))
+        if (!now.isBefore(ch.getEndAt()))
             throw new ResponseStatusException(BAD_REQUEST, "Submission closed");
 
         Long userId = currentSafeUserId();
 
-        if (submissionRepo.existsByChallenge_IdAndOwnerId(challengeId, userId))
+        if (submissionRepo.existsByChallenge_IdAndOwnerId(ch.getId(), userId))
             throw new ResponseStatusException(CONFLICT, "Already submitted for this challenge");
 
         var sub = Submission.builder()
@@ -53,9 +67,11 @@ public class SubmissionService {
                 .repoUrl(req.getRepoUrl())
                 .demoUrl(req.getDemoUrl())
                 .extraJson("{}")
+                .status(SubmissionStatus.SUBMITTED)
                 .build();
 
         sub = submissionRepo.save(sub);
+
         if (req.getAssets() != null) {
             for (var a : req.getAssets()) {
                 assetRepo.save(SubmissionAsset.builder()
@@ -66,7 +82,55 @@ public class SubmissionService {
             }
         }
 
-        // 운영 알림 이벤트 (AFTER_COMMIT에서 outbox 기록)
+        publisher.publishEvent(new SubmissionCreatedEvent(
+                sub.getId(), ch.getId(), userId, sub.getTitle(), sub.getRepoUrl(), sub.getDemoUrl()
+        ));
+
+        return sub.getId();
+    }
+
+    // ===== 코드 챌린지 =====
+    private Long createCode(Challenge ch, SubmissionDtos.CreateReq req) {
+        // 기간 체크
+        var now = java.time.OffsetDateTime.now();
+        if (!now.isBefore(ch.getEndAt()))
+            throw new ResponseStatusException(BAD_REQUEST, "Submission closed");
+
+        // 필드 검증
+        if (req.getCode() == null)
+            throw new ResponseStatusException(BAD_REQUEST, "code block required");
+        var code = req.getCode();
+
+        var lang = code.getLanguage() == null ? "" : code.getLanguage().toLowerCase();
+        if (!ALLOWED_LANG.contains(lang))
+            throw new ResponseStatusException(BAD_REQUEST, "Unsupported language: " + code.getLanguage());
+
+        Long userId = currentSafeUserId();
+        if (submissionRepo.existsByChallenge_IdAndOwnerId(ch.getId(), userId))
+            throw new ResponseStatusException(CONFLICT, "Already submitted for this challenge");
+
+        // 제출본 생성(PENDING)
+        var sub = Submission.builder()
+                .challenge(ch)
+                .ownerId(userId)
+                .title(req.getTitle())
+                .descr(req.getDescr())
+                .repoUrl(req.getRepoUrl())
+                .demoUrl(req.getDemoUrl())
+                .status(SubmissionStatus.PENDING)
+                .build();
+        sub = submissionRepo.save(sub);
+
+        // 코드 메타 생성
+        var cs = CodeSubmission.builder()
+                .submission(sub)
+                .language(lang)
+                .entrypoint(code.getEntrypoint())
+                .commitSha(code.getCommitSha())
+                .build();
+        codeRepo.save(cs);
+
+        // (선택) 포트폴리오와 동일 이벤트로 운영 알림 연결
         publisher.publishEvent(new SubmissionCreatedEvent(
                 sub.getId(), ch.getId(), userId, sub.getTitle(), sub.getRepoUrl(), sub.getDemoUrl()
         ));

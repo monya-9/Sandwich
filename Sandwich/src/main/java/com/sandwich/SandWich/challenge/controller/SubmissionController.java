@@ -16,7 +16,7 @@ public class SubmissionController {
 
     @PostMapping
     public IdResp create(@PathVariable Long challengeId, @RequestBody @Valid SubmissionDtos.CreateReq req) {
-        Long id = service.createPortfolio(challengeId, req);
+        Long id = service.create(challengeId, req);
         return new IdResp(id);
     }
 
