@@ -9,10 +9,28 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PortfolioVoteRepository extends JpaRepository<PortfolioVote, Long> {
+    interface Agg {
+        Long getSubmissionId();
+        Long getSumUiUx();
+        Long getSumCreativity();
+        Long getSumCodeQuality();
+        Long getSumDifficulty();
+        Long getCnt();
+    }
 
-    boolean existsByChallenge_IdAndVoterId(Long challengeId, Long voterId);
+    @Query("""
+      select v.submission.id as submissionId,
+             sum(v.uiUx) as sumUiUx,
+             sum(v.creativity) as sumCreativity,
+             sum(v.codeQuality) as sumCodeQuality,
+             sum(v.difficulty) as sumDifficulty,
+             count(v) as cnt
+      from PortfolioVote v
+      where v.challenge.id = :challengeId
+      group by v.submission.id
+    """)
+    List<Agg> aggregateBySubmission(@Param("challengeId") Long challengeId);
 
-    Optional<PortfolioVote> findByChallenge_IdAndVoterId(Long challengeId, Long voterId);
 
     @Query(value = """
       select
@@ -29,4 +47,9 @@ public interface PortfolioVoteRepository extends JpaRepository<PortfolioVote, Lo
       order by totalScore desc, voteCount desc, submissionId asc
       """, nativeQuery = true)
     List<VoteSummaryRow> summarize(@Param("chId") Long challengeId);
+
+    boolean existsByChallenge_IdAndVoterId(Long challengeId, Long voterId);
+
+    Optional<PortfolioVote> findByChallenge_IdAndVoterId(Long challengeId, Long voterId);
+
 }
