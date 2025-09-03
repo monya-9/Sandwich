@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9600651a-9f0d-4f17-a608-365a7ecf44f2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/security/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/api/commentApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/api/commentApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/api/projectApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/api/projectApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/Auth/OAuth/OAuthSuccessHandler.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/Auth/OAuth/OAuthSuccessHandler.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/CollectionAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/CollectionAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/CommentAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/CommentAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/CommentLikeAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/CommentLikeAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/LikeAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/LikeAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/LiveDemoAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/LiveDemoAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/ProfileAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/ProfileAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/QrCodeAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/QrCodeAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/ShareAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/ShareAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/SuggestAction.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ActionBar/SuggestAction.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ProjectStatsBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ProjectStatsBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/ProjectTopInfo.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/ProjectTopInfo.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/OtherProject/UserProfileBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/OtherProject/UserProfileBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ProjectDetailsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ProjectDetailsModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ProjectMangeSampleForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ProjectMangeSampleForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ProjectPreviewModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ProjectPreviewModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ReorderModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/components/ProjectMangeSample/ReorderModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/pages/OtherProjectPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/pages/OtherProjectPage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/setupProxy.js" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/setupProxy.js" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$/Sandwich">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$/Sandwich">
+          <activation />
+        </task>
+        <projects_view>
+          <tree_state>
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="SandWich" type="f1a62948:ProjectNode" />
+              </path>
+            </expand>
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="322rh6Vm9oBnMs4DP8QQDORYJv9" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Gradle.SandWichApplicationTests.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.Sandwich [:SandWichApplication.main()].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;SCRUM-116-프로젝트-등록-페이지-피드백-적용-전&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/leejeongju/Sandwich&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\leejeongju\Sandwich\Sandwich" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.SandWichApplication">
+    <configuration name="SandWichApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.sandwich.SandWich.SandWichApplication" />
+      <module name="SandWich.main" />
+      <selectedOptions>
+        <option name="environmentVariables" visible="false" />
+      </selectedOptions>
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.sandwich.SandWich.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <extension name="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+        </ENTRIES>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SandWichApplicationTests" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/Sandwich" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;com.sandwich.SandWich.SandWichApplicationTests&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>true</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.SandWichApplication" />
+      <item itemvalue="Gradle.SandWichApplicationTests" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.SandWichApplication" />
+        <item itemvalue="Gradle.SandWichApplicationTests" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9600651a-9f0d-4f17-a608-365a7ecf44f2" name="Changes" comment="" />
+      <created>1756629631653</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1756629631653</updated>
+    </task>
+    <servers />
+  </component>
+</project>

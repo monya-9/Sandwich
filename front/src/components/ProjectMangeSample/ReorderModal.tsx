@@ -44,7 +44,8 @@ export default function ReorderModal({ open, blocks, onConfirm, onClose }: Props
 					<p className="text-sm text-gray-600 mb-3">마우스 드래그로 콘텐츠 순서를 변경하거나 삭제할 수 있습니다.</p>
 					<div className={needsScroll ? "flex flex-col gap-2 mb-5 max-h-[50vh] overflow-auto pr-1" : "flex flex-col gap-2 mb-5"}>
 						{order.map(id => {
-							const item = blocks.find(i => i.id === id)!;
+							const item = blocks.find(i => i && i.id === id);
+							if (!item) return null;
 							return (
 								<div key={id}
 									className="flex items-center gap-3 border rounded-lg px-3 py-3 bg-white select-none"

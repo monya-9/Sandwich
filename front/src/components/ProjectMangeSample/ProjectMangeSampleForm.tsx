@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Header from "../Main/Header";
+import Header from "../common/Header/Header";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
@@ -25,7 +25,9 @@ Quill.register(SizeAttributor, true);
 
 // 토큰 유효성 검사 유틸
 function getAccessToken(): string | null {
-	try { return localStorage.getItem('accessToken'); } catch { return null; }
+	try {
+		return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+	} catch { return null; }
 }
 function isJwtExpired(token: string): boolean {
 	try {
@@ -75,6 +77,26 @@ export default function ProjectMangeSampleForm() {
 	const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 	// Re-render tick for tooltip label immediate update
 	const [overlayTick, setOverlayTick] = useState<number>(0);
+	// 문서 전역 포인터 이동 핸들러 보관
+	const docPointerMoveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
+	// 오버레이 드래그/조작 중에는 닫히지 않도록 잠금
+	const overlayDragLockRef = useRef<boolean>(false);
+	// 패딩 변경 배치 적용(rAF)
+	const padRafIdRef = useRef<number | null>(null);
+	const padPendingRef = useRef<{ el: HTMLElement | null; value: number } | null>(null);
+	const schedulePadApply = (el: HTMLElement, value: number) => {
+		padPendingRef.current = { el, value };
+		if (padRafIdRef.current !== null) return;
+		padRafIdRef.current = window.requestAnimationFrame(() => {
+			try {
+				const pending = padPendingRef.current;
+				padRafIdRef.current = null;
+				if (!pending || !pending.el) return;
+				pending.el.classList.add('pm-embed-padded');
+				pending.el.style.setProperty('--pm-pad', `${pending.value}px`);
+			} catch {}
+		});
+	};
 	// 사용자 지정 미디어 패딩(px)
 	const [mediaPaddingPx, setMediaPaddingPx] = useState<number>(40);
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -167,12 +189,114 @@ export default function ProjectMangeSampleForm() {
 					try { quill.root.setAttribute('spellcheck', 'false'); } catch {}
 				}, []);
 
+
+
+				// 콘텐츠 실제 픽셀 영역(패딩/보더 제외) Rect 계산
+				const getContentRect = (el: HTMLElement) => {
+					const r = el.getBoundingClientRect();
+					const style = window.getComputedStyle(el);
+					// 이미지: padding 제외
+					if (el.tagName.toLowerCase() === 'img') {
+						const pl = parseFloat(style.paddingLeft || '0');
+						const pr = parseFloat(style.paddingRight || '0');
+						const pt = parseFloat(style.paddingTop || '0');
+						const pb = parseFloat(style.paddingBottom || '0');
+						return {
+							left: r.left + pl,
+							right: r.right - pr,
+							top: r.top + pt,
+							bottom: r.bottom - pb,
+							width: Math.max(0, r.width - pl - pr),
+							height: Math.max(0, r.height - pt - pb)
+						};
+					}
+					// iframe: border + padding 제외(패딩 영역에는 오버레이 뜨지 않도록)
+					if (el.tagName.toLowerCase() === 'iframe') {
+						const bl = parseFloat(style.borderLeftWidth || '0');
+						const br = parseFloat(style.borderRightWidth || '0');
+						const bt = parseFloat(style.borderTopWidth || '0');
+						const bb = parseFloat(style.borderBottomWidth || '0');
+						const pl = parseFloat(style.paddingLeft || '0');
+						const pr = parseFloat(style.paddingRight || '0');
+						const pt = parseFloat(style.paddingTop || '0');
+						const pb = parseFloat(style.paddingBottom || '0');
+						return {
+							left: r.left + bl + pl,
+							right: r.right - br - pr,
+							top: r.top + bt + pt,
+							bottom: r.bottom - bb - pb,
+							width: Math.max(0, r.width - bl - br - pl - pr),
+							height: Math.max(0, r.height - bt - bb - pt - pb)
+						};
+					}
+					return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+				};
+
+				// 안전 Node 가드
+				const isNode = (v: any): v is Node => !!v && typeof (v as any).nodeType === 'number';
+				const isConnectedNode = (v: any): boolean => !!v && !!(v as any).isConnected;
+				const safeClosest = (el: Element | null, selector: string): HTMLElement | null => {
+					try { return (el?.closest?.(selector) as HTMLElement | null) || null; } catch { return null; }
+				};
+
+				// 미디어 가로폭(실제 또는 렌더링) 구하기
+				const getMediaContentWidth = (el: HTMLElement): number => {
+					try {
+						const r = getContentRect(el);
+						if (el.tagName.toLowerCase() === 'img') {
+							const nat = (el as HTMLImageElement).naturalWidth || 0;
+							return Math.max(nat, r.width);
+						}
+						return r.width;
+					} catch { return 0; }
+				};
+
+				// 어느 방향으로 진입해도 콘텐츠 내부면 즉시 오버레이 표시
+				const ensureOverlayForMedia = (media: HTMLElement, type: 'image' | 'video', ev: PointerEvent) => {
+					const r = getContentRect(media);
+					const x = ev.clientX, y = ev.clientY;
+					if (x < r.left || x > r.right || y < r.top || y > r.bottom) return;
+					/* allow all widths */
+					if (hoverElRef.current !== media) {
+						startOverlayFollow(media, type);
+					} else {
+						// 이미 따라가는 중이면 위치만 갱신
+						positionOverlayTo(media);
+					}
+				};
+
+				// 오버레이 드래그 시작 시 잠금, 포인터 업에서 해제
+				const handleOverlayPointerDown = () => {
+					overlayDragLockRef.current = true;
+					const onUp = (ev: PointerEvent) => {
+						overlayDragLockRef.current = false;
+						const overlay = overlayRef.current;
+						const media = hoverElRef.current as HTMLElement | null;
+						if (!overlay || !media) { stopOverlayFollow(); return; }
+						const x = ev.clientX, y = ev.clientY;
+						const or = overlay.getBoundingClientRect();
+						const cr = getContentRect(media);
+						const inOverlay = x >= or.left && x <= or.right && y >= or.top && y <= or.bottom;
+						const inContent = x >= cr.left && x <= cr.right && y >= cr.top && y <= cr.bottom;
+						if (!inOverlay && !inContent) { stopOverlayFollow(); }
+					};
+					window.addEventListener('pointerup', onUp, { once: true });
+					window.addEventListener('pointercancel', onUp, { once: true });
+				};
+
 				const showOverlayForMedia = (media: HTMLElement) => {
 					try {
 						const rect = media.getBoundingClientRect();
 						if (!isFinite(rect.top) || rect.width <= 1 || rect.height <= 1) return;
-						const top = Math.max(8, rect.top - 12);
-						const left = rect.left + rect.width / 2;
+						const overlayH = (overlayRef.current?.offsetHeight || 44);
+						const overlayW = (overlayRef.current?.offsetWidth || 220);
+						const maxTop = Math.max(8, window.innerHeight - 8 - overlayH);
+						const halfW = overlayW / 2;
+						// 중앙상단에서 절반 겹치게
+						let top = rect.top - overlayH / 2;
+						let left = rect.left + rect.width / 2;
+						top = Math.min(Math.max(8, top), maxTop);
+						left = Math.min(Math.max(halfW + 8, left), window.innerWidth - halfW - 8);
 						if (overlayRef.current) {
 							overlayRef.current.style.top = `${top}px`;
 							overlayRef.current.style.left = `${left}px`;
@@ -195,10 +319,16 @@ export default function ProjectMangeSampleForm() {
 				const followRafRef = useRef<number | null>(null);
 				const positionOverlayTo = (media: HTMLElement): boolean => {
 					try {
-						const rect = media.getBoundingClientRect();
+						const rect = getContentRect(media);
 						if (!isFinite(rect.top) || rect.width <= 1 || rect.height <= 1) return false;
-						const top = Math.max(8, rect.top - 12);
-						const left = rect.left + rect.width / 2;
+						const overlayH = (overlayRef.current?.offsetHeight || 44);
+						const overlayW = (overlayRef.current?.offsetWidth || 220);
+						const maxTop = Math.max(8, window.innerHeight - 8 - overlayH);
+						const halfW = overlayW / 2;
+						let top = rect.top - overlayH / 2;
+						let left = rect.left + rect.width / 2;
+						top = Math.min(Math.max(8, top), maxTop);
+						left = Math.min(Math.max(halfW + 8, left), window.innerWidth - halfW - 8);
 						if (overlayRef.current) {
 							overlayRef.current.style.top = `${top}px`;
 							overlayRef.current.style.left = `${left}px`;
@@ -212,15 +342,42 @@ export default function ProjectMangeSampleForm() {
 					setHoverType(type);
 					hoverElRef.current = media;
 					const tick = () => {
-						if (!hoverElRef.current) { return; }
-						positionOverlayTo(hoverElRef.current);
+						try {
+							if (!hoverElRef.current || !isConnectedNode(hoverElRef.current)) { stopOverlayFollow(); return; }
+							positionOverlayTo(hoverElRef.current);
+						} catch {}
 						followRafRef.current = window.requestAnimationFrame(tick);
 					};
 					if (followRafRef.current !== null) { window.cancelAnimationFrame(followRafRef.current); followRafRef.current = null; }
 					tick();
+					// 전역 포인터 이동으로 콘텐츠(패딩/보더 제외) 또는 오버레이 내부인 동안 유지
+					if (docPointerMoveHandlerRef.current) {
+						window.removeEventListener('pointermove', docPointerMoveHandlerRef.current as any);
+						docPointerMoveHandlerRef.current = null;
+					}
+					const moveHandler = (ev: PointerEvent) => {
+						if (overlayDragLockRef.current) return; // 드래그/조작 중에는 유지
+						const targetEl = hoverElRef.current as HTMLElement | null;
+						if (!targetEl) return;
+						const overlay = overlayRef.current;
+						const cr = getContentRect(targetEl);
+						const x = ev.clientX, y = ev.clientY;
+						const insideContent = x >= cr.left && x <= cr.right && y >= cr.top && y <= cr.bottom;
+						// 오버레이 내부 판정: contains(target) + 사각형 좌표 보강(드래그/포인터 캡처 대비)
+						const or = overlay?.getBoundingClientRect();
+						const insideOverlayRect = !!(or && x >= or.left && x <= or.right && y >= or.top && y <= or.bottom);
+						const inOverlay = !!(overlay && (((overlay === (ev.target as Node)) || (overlay as any).contains?.(ev.target as Node))) || insideOverlayRect);
+						if (!insideContent && !inOverlay) { stopOverlayFollow(); }
+					};
+					docPointerMoveHandlerRef.current = moveHandler;
+					window.addEventListener('pointermove', moveHandler, { passive: true });
 				};
 				const stopOverlayFollow = () => {
 					if (followRafRef.current !== null) { window.cancelAnimationFrame(followRafRef.current); followRafRef.current = null; }
+					if (docPointerMoveHandlerRef.current) {
+						window.removeEventListener('pointermove', docPointerMoveHandlerRef.current as any);
+						docPointerMoveHandlerRef.current = null;
+					}
 					if (overlayRef.current) overlayRef.current.style.display = 'none';
 					setHoverEl(null);
 					setHoverType(null);
@@ -233,51 +390,59 @@ export default function ProjectMangeSampleForm() {
 					const quill = mainQuillRef.current?.getEditor();
 					if (!quill) return;
 					const root = quill.root as HTMLElement;
-					const enhance = (scope: ParentNode) => {
+					const onMove = (ev: PointerEvent) => {
 						try {
-							scope.querySelectorAll('img').forEach(img => {
-								(img as HTMLImageElement).setAttribute('decoding', 'async');
-								(img as HTMLImageElement).setAttribute('loading', 'lazy');
-								img.addEventListener('pointerenter', () => startOverlayFollow(img as HTMLElement, 'image'), { passive: true });
-								img.addEventListener('pointerleave', (ev) => {
-									const rel = (ev as PointerEvent).relatedTarget as Node | null;
-									if (overlayRef.current && rel && overlayRef.current.contains(rel)) return; // moving into overlay
-									stopOverlayFollow();
-								}, { passive: true });
-							});
-							scope.querySelectorAll('iframe').forEach(f => {
-								(f as HTMLIFrameElement).setAttribute('loading', 'lazy');
-								f.addEventListener('pointerenter', () => startOverlayFollow(f as HTMLElement, 'video'), { passive: true });
-								f.addEventListener('pointerleave', (ev) => {
-									const rel = (ev as PointerEvent).relatedTarget as Node | null;
-									if (overlayRef.current && rel && overlayRef.current.contains(rel)) return;
-									stopOverlayFollow();
-								}, { passive: true });
-							});
-						} catch {}
-					};
-					enhance(root);
-					const updateMediaCount = () => {
-						try {
-							const num = root.querySelectorAll('img,iframe').length;
-							if (num !== mediaCount) setMediaCount(num);
-						} catch {}
-					};
-					updateMediaCount();
-					const ob = new MutationObserver((mutations) => {
-						let affected = false;
-						mutations.forEach(m => {
-							if (m.type === 'childList') {
-								m.addedNodes.forEach(n => { if (n instanceof HTMLElement) enhance(n); });
-								if (m.addedNodes.length || m.removedNodes.length) affected = true;
+						const overlay = overlayRef.current;
+						const x = ev.clientX, y = ev.clientY;
+						// 현재 대상 유지 여부 우선 검사
+						const current = hoverElRef.current as HTMLElement | null;
+						if (current) {
+							const cr = getContentRect(current);
+							if (x >= cr.left && x <= cr.right && y >= cr.top && y <= cr.bottom) {
+								positionOverlayTo(current);
+								return;
 							}
-						});
-						if (affected) updateMediaCount();
-					});
-					mediaObserverRef.current = ob;
-					ob.observe(root, { childList: true, subtree: true });
-					return () => { try { ob.disconnect(); } catch {}; mediaObserverRef.current = null; };
-				}, [mediaCount]);
+						}
+						// 새 타깃 탐색: 오버레이가 가려도 찾도록 elementsFromPoint 사용
+						let el: HTMLElement | null = null;
+						try {
+							const stack = (document as any).elementsFromPoint?.(x, y) as Element[] | undefined;
+							if (stack && stack.length) {
+								for (const e of stack) {
+									const candidate = safeClosest(e as Element, 'img,iframe');
+									if (candidate) { el = candidate; break; }
+								}
+							}
+						} catch {}
+						if (!el) {
+							el = safeClosest(ev.target as Element | null, 'img,iframe');
+						}
+						if (el) {
+							const r = getContentRect(el);
+							if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+								const type = el.tagName.toLowerCase() === 'img' ? 'image' : 'video';
+								if (current !== el) startOverlayFollow(el, type); else positionOverlayTo(el);
+								return;
+							}
+						}
+						if (!overlayDragLockRef.current) stopOverlayFollow();
+						} catch {
+							// swallow move-time errors to avoid app crash
+						}
+					};
+					root.addEventListener('pointermove', onMove as any, { passive: true });
+					return () => {
+						try { root.removeEventListener('pointermove', onMove as any); } catch {}
+					};
+				}, []);
+
+				// rAF/리스너 정리
+				useEffect(() => {
+					return () => {
+						if (followRafRef.current !== null) { try { cancelAnimationFrame(followRafRef.current); } catch {} followRafRef.current = null; }
+						if (padRafIdRef.current !== null) { try { cancelAnimationFrame(padRafIdRef.current); } catch {} padRafIdRef.current = null; }
+					};
+				}, []);
 
 	const scrollToEmbedAtIndex = (insertIndex: number) => {
 		const doScroll = (delayMs: number) => {
@@ -322,7 +487,7 @@ export default function ProjectMangeSampleForm() {
 			const pr = parseInt((el.style.paddingRight || cs.paddingRight || '0').replace('px','')) || 0;
 			const pb = parseInt((el.style.paddingBottom || cs.paddingBottom || '0').replace('px','')) || 0;
 			const next = Math.max(pl, pr, pb);
-			setMediaPaddingPx(next > 0 ? next : 40);
+			setMediaPaddingPx(next);
 		} catch {}
 	}, [hoverEl]);
 
@@ -342,15 +507,25 @@ export default function ProjectMangeSampleForm() {
 		return false;
 	};
 
+	// 미디어 래퍼 확보 유틸 (원본 크기 유지용)
+	const ensureMediaWrapper = (mediaEl: HTMLElement): HTMLElement => {
+		const parent = mediaEl.parentElement as HTMLElement | null;
+		if (parent && parent.classList.contains('pm-embed-wrap')) return parent;
+		const wrap = document.createElement('div');
+		wrap.className = 'pm-embed-wrap';
+		try {
+			parent?.insertBefore(wrap, mediaEl);
+			wrap.appendChild(mediaEl);
+		} catch {}
+		return wrap;
+	};
+
 	// 패딩 값을 적용하는 유틸 (콘텐츠 크기 변경 최소화: 좌우/하단 패딩만)
 	const applyPadding = (value: number) => {
 		if (!hoverEl) return;
 		if (!isPaddingEligible(hoverEl)) { notifyNeed1100(); return; }
-		hoverEl.classList.add('pm-embed-padded');
-		(hoverEl as HTMLElement).style.paddingLeft = `${value}px`;
-		(hoverEl as HTMLElement).style.paddingRight = `${value}px`;
-		(hoverEl as HTMLElement).style.paddingBottom = `${value}px`;
-		(hoverEl as HTMLElement).style.marginTop = '0px';
+		schedulePadApply(hoverEl as HTMLElement, value);
+		try { (hoverEl as any).dataset.pmPadLast = String(Math.max(0, Math.floor(value))); } catch {}
 		setOverlayTick(t => t + 1);
 	};
 
@@ -360,16 +535,27 @@ export default function ProjectMangeSampleForm() {
 		if (!isPaddingEligible(hoverEl)) { notifyNeed1100(); return; }
 		const el = hoverEl as HTMLElement;
 		if (el.classList.contains('pm-embed-padded')) {
+			// 저장: 현재 패딩값을 기억해두기 (없으면 현재 슬라이더 값 대입)
+			try {
+				const inlineVar = el.style.getPropertyValue('--pm-pad');
+				const compVar = window.getComputedStyle(el).getPropertyValue('--pm-pad');
+				const cur = parseInt((inlineVar || compVar || '0').toString().replace('px','')) || mediaPaddingPx || 0;
+				(el as any).dataset.pmPadLast = String(cur);
+			} catch {}
 			el.classList.remove('pm-embed-padded');
-			el.style.paddingLeft = '';
-			el.style.paddingRight = '';
-			el.style.paddingBottom = '';
+			el.style.removeProperty('--pm-pad');
+			setMediaPaddingPx(0);
 		} else {
+			// 복원: 이전에 저장한 값이 있으면 사용, 없으면 현재 슬라이더 값, 그것도 없으면 200
+			let restore = 200;
+			try {
+				const saved = parseInt(((el as any).dataset?.pmPadLast || '').toString());
+				if (!isNaN(saved) && saved > 0) restore = saved;
+				else if (mediaPaddingPx > 0) restore = mediaPaddingPx;
+			} catch {}
 			el.classList.add('pm-embed-padded');
-			el.style.paddingLeft = `${mediaPaddingPx}px`;
-			el.style.paddingRight = `${mediaPaddingPx}px`;
-			el.style.paddingBottom = `${mediaPaddingPx}px`;
-			el.style.marginTop = '0px';
+			el.style.setProperty('--pm-pad', `${restore}px`);
+			setMediaPaddingPx(restore);
 		}
 		// force re-render so tooltip text updates immediately
 		setOverlayTick(t => t + 1);
@@ -474,11 +660,32 @@ export default function ProjectMangeSampleForm() {
 	const insertEmbedAsBlock = (type: 'image' | 'video', value: string) => {
 		const quill = mainQuillRef.current?.getEditor();
 		if (!quill) return;
-		const range = quill.getSelection(true);
-		const insertIndex = range ? range.index : quill.getLength();
-		// insert embed inline at current cursor
+		const sel = quill.getSelection(true);
+		let insertIndex = sel ? sel.index : quill.getLength();
+
+		// Ensure embed sits on its own line by inserting a newline before if needed
+		try {
+			const prevChar = insertIndex > 0 ? quill.getText(insertIndex - 1, 1) : '\n';
+			if (prevChar !== '\n') {
+				quill.insertText(insertIndex, '\n', 'user');
+				insertIndex += 1;
+			}
+		} catch {}
+
+		// Insert the embed
 		quill.insertEmbed(insertIndex, type, value, 'user');
-		quill.setSelection(insertIndex + 1, 0, 'user');
+
+		// Ensure there's a newline after the embed as well
+		try {
+			const afterChar = quill.getText(insertIndex + 1, 1);
+			if (afterChar !== '\n') {
+				quill.insertText(insertIndex + 1, '\n', 'user');
+			}
+		} catch {}
+
+		// Place caret after the embed block
+		quill.setSelection(insertIndex + 2, 0, 'user');
+
 		scrollToEmbedAtIndex(insertIndex);
 		recalcCounts();
 		// apply default padded/full style and anchor lock after DOM updates
@@ -495,7 +702,7 @@ export default function ProjectMangeSampleForm() {
 				(el as HTMLElement).style.display = 'block';
 				(el as HTMLElement).style.marginLeft = 'auto';
 				(el as HTMLElement).style.marginRight = 'auto';
-				// lock top anchor by setting margin-top to 0 and using padding for vertical spacing
+				// lock top anchor by setting margin-top to 0 and using container spacing for gaps
 				el.style.marginTop = '0px';
 			} catch {}
 		}, 0);
@@ -613,20 +820,28 @@ export default function ProjectMangeSampleForm() {
 	};
 
 	const openPreview = () => {
-		const imgs = collectImageUrls();
-		setPreviewCoverUrl(imgs[0] || null);
+		// 미리보기에서는 커버 이미지를 강제로 설정하지 않음
+		// (텍스트 에디터의 콘텐츠가 상단에 오도록 하기 위함)
+		setPreviewCoverUrl(null);
 		setPreviewHtml(getEditorHtml());
 		setIsPreviewOpen(true);
 	};
 
 	return (
-		<div className="min-h-screen font-gmarket relative">
+		<div className="min-h-screen font-gmarket relative pt-[76px] md:pt-[92px]">
 			<style>{`
 				.pm-sample-editor { width: 100%; }
 				.pm-sample-editor .ql-toolbar { border-radius: 10px 10px 0 0; }
 				/* Remove fixed height; let page scroll */
 				.pm-sample-editor .ql-container { height: auto; min-height: 800px; border-radius: 0 0 10px 10px; margin-top: 0; border: none; background: transparent; width: 100%; box-sizing: border-box; }
-				.pm-sample-editor .ql-editor { min-height: 800px; height: auto; font-size: 18px; padding: 0; }
+				.pm-sample-editor .ql-editor { min-height: 800px; height: auto; font-size: 18px; padding: 0; overflow-x: hidden; scrollbar-gutter: stable both-edges; }
+				/* Hide scrollbars visually while keeping scroll ability */
+				.pm-sample-editor .ql-editor { scrollbar-width: none; }
+				.pm-sample-editor .ql-editor::-webkit-scrollbar { width: 0; height: 0; display: none; }
+				.pm-editor-frame { scrollbar-width: none; }
+				.pm-editor-frame::-webkit-scrollbar { width: 0; height: 0; display: none; }
+				body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+				body { scrollbar-width: none; }
 				/* editor background color is applied here dynamically via inline style */
 				.pm-toolbar-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; margin-bottom: 0; box-sizing: border-box; background: #FFFFFF; border-radius: 10px 10px 0 0; }
 				.pm-toolbar-left.ql-toolbar { border: none; border-bottom: none; border-radius: 10px 10px 0 0; padding: 6px 10px; min-height: 60px; margin-bottom: 0; display: flex; flex-wrap: nowrap; align-items: center; background: #FFFFFF; }
@@ -645,10 +860,18 @@ export default function ProjectMangeSampleForm() {
 				/* Full width when eligible */
 				.pm-sample-editor .ql-editor img.pm-embed-full { }
 				.pm-sample-editor .ql-editor iframe.pm-embed-full { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
-				/* Padded state for media - keep top anchored; only sides and bottom expand */
-				.pm-sample-editor .ql-editor img.pm-embed-padded, .pm-sample-editor .ql-editor iframe.pm-embed-padded { padding: 0 40px 40px 40px; background: transparent; border-radius: 0; box-sizing: border-box; }
+				/* Visual padding using real padding with negative bottom margin to keep outer gap constant */
+				.pm-sample-editor .ql-editor img.pm-embed-padded,
+				.pm-sample-editor .ql-editor iframe.pm-embed-padded {
+					padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px);
+					margin-bottom: calc(-1 * var(--pm-pad, 0px));
+					background: transparent;
+					box-sizing: border-box;
+				}
+										/* When overall gap is 0, force vertical padding to 0 so contents stick */
+						/* Use :root variable to avoid touching element inline styles when gap changes */
 				/* Editor frame */
-				.pm-editor-frame { width: 1200px; border: none; border-radius: 10px; overflow: visible; background: transparent; box-sizing: border-box; }
+				.pm-editor-frame { width: 1200px; border: none; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
 				/* Overlay toolbar */
 				.pm-embed-toolbar { width: 220px; background: rgba(0,0,0,0.72); color: white; padding: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
 				.pm-embed-toolbar button { display: inline-flex; gap: 6px; align-items: center; background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 8px; border-radius: 6px; font-size: 12px; }
@@ -735,12 +958,13 @@ export default function ProjectMangeSampleForm() {
 									{/* Apply editor inner content spacing; toolbar fixed white; editor follows backgroundColor */}
 									<style>{`
 										.pm-sample-editor .ql-container { background: transparent; }
-										.pm-sample-editor .ql-editor { background: ${backgroundColor}; --pm-gap: ${contentGapPx}px; }
-										/* universal block gap: allow per-block override via --pm-top-gap */
-										.pm-sample-editor .ql-editor > * + * { margin-top: var(--pm-top-gap, var(--pm-gap)) !important; }
-										/* protect gap with same variable to avoid mismatch */
-										.pm-sample-editor .ql-editor > * + *::before { content: ""; display: block; height: var(--pm-top-gap, var(--pm-gap)); margin-top: calc(-1 * var(--pm-top-gap, var(--pm-gap))); }
-										/* direct embeds without wrappers */
+						.pm-sample-editor .ql-editor { background: ${backgroundColor}; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; }
+						:root { --pm-vpad-global: ${contentGapPx === 0 ? '0px' : 'var(--pm-vpad, 40px)'}; }
+						/* universal block gap: allow per-block override via --pm-top-gap */
+						.pm-sample-editor .ql-editor > * + * { margin-top: var(--pm-top-gap, var(--pm-gap)) !important; }
+						/* keep content intrinsic size stable: do not push/pull with pseudo-element */
+						/* removed ::before spacer to avoid layout reflow affecting intrinsic size */
+						/* direct embeds without wrappers */
 										.pm-sample-editor .ql-editor > img,
 										.pm-sample-editor .ql-editor > iframe { display: block; }
 										/* lists: halve the gap between items */
@@ -757,7 +981,8 @@ export default function ProjectMangeSampleForm() {
 											className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative"
 											style={{ position: 'fixed', transform: 'translateX(-50%) translateZ(0)', zIndex: 10000, pointerEvents: 'auto', willChange: 'top,left,transform' }}
 											onMouseEnter={() => { setIsHoveringOverlay(true); }}
-											onMouseLeave={(e) => { setIsHoveringOverlay(false); setHoveredButton(null); const rel = (e as any).relatedTarget as Node | null; if (!(hoverElRef.current && rel && (rel === hoverElRef.current || (hoverElRef.current as any).contains?.(rel)))) { stopOverlayFollow(); } }}
+											onMouseLeave={(e) => { if (overlayDragLockRef.current) return; setIsHoveringOverlay(false); setHoveredButton(null); const rel = (e as any).relatedTarget as any; if (hoverElRef.current && isNode(rel) && (rel === hoverElRef.current || (hoverElRef.current as any).contains?.(rel))) { return; } stopOverlayFollow(); }}
+											onPointerDown={handleOverlayPointerDown}
 										>
 											<div className="relative">
 												<button
@@ -880,10 +1105,7 @@ export default function ProjectMangeSampleForm() {
 				</div>
 				{modal}
 				<ProjectDetailsModal open={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} onCreated={() => setIsDetailsOpen(false)} libraryImages={detailLibraryImages} />
-				<ProjectPreviewModal open={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} projectName="아가리학" ownerName="L" category="UI/UX" coverUrl={previewCoverUrl} backgroundColor={backgroundColor} contentGapPx={contentGapPx}>
-					{/* 미리보기 본문: 편집기 HTML을 그대로 렌더 */}
-					<div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-				</ProjectPreviewModal>
+				<ProjectPreviewModal open={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} projectName={""} category="UI/UX" coverUrl={previewCoverUrl} backgroundColor={backgroundColor} contentGapPx={contentGapPx} rawHtml={previewHtml} />
 			</main>
 		</div>
 	);

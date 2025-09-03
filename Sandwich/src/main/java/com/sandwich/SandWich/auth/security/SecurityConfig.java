@@ -60,6 +60,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/likes/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
 
+                        // 댓글
+                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
+
                         // WebSocket/STOMP
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/topic/**", "/app/**").permitAll()
@@ -87,6 +90,8 @@ public class SecurityConfig {
 
                         // 이모지
                         .requestMatchers("/api/emojis/**").permitAll()
+
+                        
 
                         // 다운로드 보호
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/messages/*/attachments").authenticated()

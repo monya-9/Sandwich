@@ -12,6 +12,7 @@ import JoinPage from "./pages/Auth/JoinPage";
 import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectForm from "./components/ProjectManage/ProjectForm";
+import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
 
 // OAuth 콜백/스텝(레이아웃 없이)
 import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
@@ -42,6 +43,7 @@ function App() {
                         <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
                         <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
                         <Route path="/oauth/profile-step" element={<ProfileStep />} />
+                        <Route path="project/sample" element={<ProjectMangeSampleForm />} />
                     </Routes>
                 </BrowserRouter>
             </AuthProvider>

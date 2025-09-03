@@ -61,7 +61,7 @@ export type ProjectCreateResponse = {
 
 export async function createProject(payload: ProjectRequest, baseUrl: string = ""): Promise<ProjectCreateResponse> {
   const url = `${baseUrl}/api/projects`.replace(/\/+/, "/");
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const token = typeof window !== "undefined" ? (localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken")) : null;
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
@@ -82,7 +82,7 @@ export type ImageUploadResponse = { url: string };
 
 export async function uploadImage(file: File, baseUrl: string = ""): Promise<ImageUploadResponse> {
   const url = `${baseUrl}/api/upload/image`.replace(/\/+/, "/");
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const token = typeof window !== "undefined" ? (localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken")) : null;
   const form = new FormData();
   form.append("file", file);
   const res = await fetch(url, {

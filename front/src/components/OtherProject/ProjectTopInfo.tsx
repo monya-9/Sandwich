@@ -41,7 +41,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token || !ownerId || ownerId <= 0) {
       setIsFollowing(false);
       return;
@@ -83,7 +83,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
   }, [ownerId]);
 
   const handleToggleFollow = async () => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) {
       alert("로그인이 필요합니다.");
       navigate("/login");

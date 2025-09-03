@@ -3,6 +3,7 @@ import { createProject, uploadImage, ProjectRequest } from "../../api/projectApi
 import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
+import CoverCropper from "./CoverCropper";
 
 interface Props {
   open: boolean;
@@ -17,7 +18,7 @@ const Backdrop: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 
 const ModalFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-    <div className="relative bg-white w-[1500px] max-w-[95%] rounded-xl shadow-xl h-[50vh] flex flex-col overflow-hidden font-gmarket text-[#232323] leading-[1.55] text-[16px]">
+    <div className="relative bg-white w-[1500px] max-w-[95%] rounded-xl shadow-xl h-[720px] flex flex-col overflow-hidden font-gmarket text-[#232323] leading-[1.55] text-[16px]">
       {children}
     </div>
   </div>
@@ -42,6 +43,8 @@ const FileButton: React.FC<{ label: string; onPick: (file: File) => void }> = ({
     <button type="button" onClick={onClick} className="h-10 px-4 border rounded">{label}</button>
   );
 };
+
+// CoverCropper extracted to its own file
 
 // 간단한 미디어 라이브러리 모달 (localStorage 기반)
 const MediaPicker: React.FC<{
@@ -125,6 +128,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [pickerOpen, setPickerOpen] = useState(false); // 미디어 피커 상태 (훅은 early return 위)
   const [noImageToast, setNoImageToast] = useState(false); // 콘텐츠 이미지 없음 토스트
 
+  // 크롭 모달 상태
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const coverIsUploaded = useMemo(() => {
     const v = String(coverUrl || "");
@@ -162,19 +169,73 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   if (!open) return null;
 
-  const onPickCover = async (file: File) => {
-    // 미리보기 즉시 표시
-    const objectUrl = URL.createObjectURL(file);
-    setCoverUrl(objectUrl);
-    setPendingCoverFile(file);
-    // 서버 업로드 시도
+  const validateFile = (file: File): string | null => {
+    if (/gif$/i.test(file.type) || file.name.toLowerCase().endsWith('.gif')) {
+      return 'GIF 파일은 업로드할 수 없습니다.';
+    }
+    const max = 5 * 1024 * 1024;
+    if (file.size > max) return '5MB 이상 파일은 업로드할 수 없습니다.';
+    return null;
+  };
+
+  const openCropperWithFile = (file: File) => {
+    const err = validateFile(file);
+    if (err) { alert(err); return; }
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    setCropOpen(true);
+  };
+
+  const openCropperWithUrl = (src: string) => {
+    setCropSrc(src);
+    setCropOpen(true);
+  };
+
+  const onCropDone = async (
+    square: { blob: Blob; url: string },
+    _rect: { blob: Blob; url: string }
+  ) => {
+    // 1) 미리보기 먼저 표시
+    let previewUrl = square.url;
     try {
+      const dataUrl = await new Promise<string>((resolve) => {
+        try {
+          const fr = new FileReader();
+          fr.onload = () => resolve(String(fr.result || square.url));
+          fr.onerror = () => resolve(square.url);
+          fr.readAsDataURL(square.blob);
+        } catch {
+          resolve(square.url);
+        }
+      });
+      previewUrl = dataUrl;
+    } catch {}
+    setCoverUrl(previewUrl);
+    setCropOpen(false);
+
+    // 2) 업로드 파일 준비 + 우선 pendingCoverFile 세팅(버튼 활성화 보장)
+    const file = new File([square.blob], "cover.jpg", { type: "image/jpeg" });
+    setPendingCoverFile(file);
+
+    try {
+      // 3) 업로드 수행
       const res = await uploadImage(file);
+
+      // 4) 접근 가능한 URL인지 확인 (CORS/권한/만료 등)
+      await new Promise<void>((resolve, reject) => {
+        const im = new Image();
+        try { (im as any).crossOrigin = "anonymous"; } catch {}
+        im.onload = () => resolve();
+        im.onerror = () => reject(new Error("이미지 로드 실패"));
+        im.src = res.url;
+      });
+
+      // 5) 접근 OK → 진짜 URL로 교체 + pendingCoverFile 해제
       setCoverUrl(res.url);
       setPendingCoverFile(null);
-    } catch (e: any) {
-      // 서버 오류일 때도 미리보기는 유지하고, 제출 시 재시도
-      console.warn(e?.message ?? '이미지 업로드 실패');
+    } catch (err) {
+      // 업로드 실패 or 접근 실패 → 미리보기 유지 + 재시도 위해 pending 유지
+      console.warn("커버 업로드/검증 실패, 재시도 필요:", (err as any)?.message);
     }
   };
 
@@ -184,7 +245,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     input.accept = 'image/*';
     input.onchange = () => {
       const file = input.files && input.files[0];
-      if (file) onPickCover(file);
+      if (file) openCropperWithFile(file);
     };
     input.click();
   };
@@ -257,7 +318,11 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   return (
     <>
-      <Backdrop onClose={onClose} />
+      {cropOpen ? (
+        <div className="fixed inset-0 z-[9998]" />
+      ) : (
+        <Backdrop onClose={onClose} />
+      )}
       <ModalFrame>
         {noImageToast && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10001]" role="status" aria-live="polite"> 
@@ -271,21 +336,20 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           <div className="text-[22px] font-semibold">세부 정보 설정</div>
           <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center text-[40px] leading-none">×</button>
         </div>
-        <div className="flex-1 min-h-0">
-          <div className="relative grid items-start h-full pt-8 gap-x-20" style={{ gridTemplateColumns: '360px 1fr', gridAutoRows: 'auto' }}>
-            <div className="absolute top-0 bottom-0 left-[420px] w-px bg-[#E5E7EB]" />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="grid items-start h-full pt-0 gap-x-20" style={{ gridTemplateColumns: '420px 1fr', gridAutoRows: 'auto' }}>
           {/* Left column */}
-          <div className="p-6 flex flex-col self-start bg-white h-fit">
-            <div className="text-gray-900 mb-3 font-gmarket">커버 이미지 <span className="text-blue-500">(필수)</span></div>
+          <div className="p-8 flex flex-col self-start bg-white h-fit border-r border-[#E5E7EB]">
+            <div className="text-[16px] font-semibold text-gray-900 mb-3">커버 이미지 <span className="text-blue-500">(필수)</span></div>
             <div className="w-[360px] aspect-square bg-[#EEF3F3] rounded-[10px] flex items-center justify-center overflow-hidden">
               {coverUrl ? (
-                <img src={coverUrl} alt="cover" className="w-full h-full object-contain" />
+                <img src={coverUrl} alt="cover" className="w-full h-full object-contain select-none" draggable={false} />
               ) : (
                 <div className="w-8 h-8 rounded bg-white/60" />
               )}
             </div>
             <div className="w-[360px] mt-6 border border-[#ADADAD] rounded-[8px] overflow-hidden grid grid-cols-2 relative">
-              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-[#ADADAD]" />
+              <div className="absolute top-px bottom-px left-1/2 w-px bg-[#ADADAD]" />
               <button type="button" className="h-[64px] bg-white flex flex-col items-center justify-center gap-1" onClick={openPicker}>
                 <FiImage className="text-[#232323]" />
                 <span className="font-gmarket text-black">콘텐츠에서 선택</span>
@@ -295,12 +359,15 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <span className="font-gmarket text-black">직접 업로드</span>
               </button>
             </div>
+            <div className="w-[360px] mt-2 font-gmarket text-black text-[15px]">
+              커버 이미지 권장 사이즈는 760x760이며, 5MB 이상 파일이나 GIF 파일은 업로드하실 수 없습니다.
+            </div>
 
           </div>
 
           {/* Right column */}
-          <div className="p-8 flex flex-col h-full overflow-y-auto">
-            <div className="flex-1 space-y-10">
+          <div className="p-8 pb-28 flex flex-col h-full overflow-y-auto overscroll-contain">
+            <div className="flex-1 space-y-6">
               {/* 섹션 1: 기본 정보 */}
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 mb-3">제목 <span className="text-blue-500">(필수)</span></div>
@@ -397,7 +464,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               </div>
             </div>
           </div>
-          <div className="px-6 pb-6" />
+          <div className="px-6 pb-10" />
           </div>
         </div>
         <div className="px-6 py-4 border-t flex justify-end gap-2">
@@ -406,10 +473,12 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         </div>
         {pickerOpen && (
           <MediaPicker open={pickerOpen} images={libraryImages || []} onClose={()=>setPickerOpen(false)} onConfirm={(src)=>{
-            setCoverUrl(src);
-            setPendingCoverFile(null);
             setPickerOpen(false);
+            openCropperWithUrl(src);
           }} />
+        )}
+        {cropOpen && (
+          <CoverCropper open={cropOpen} src={cropSrc} onClose={()=>{setCropOpen(false); setCropSrc(null);}} onCropped={onCropDone} />
         )}
       </ModalFrame>
     </>

@@ -13,15 +13,8 @@ type Props = {
   badge?: string;
 };
 
-export default function ProjectStatsBox({
-  likes,
-  views,
-  comments,
-  projectName,
-  date,
-  category,
-  badge,
-}: Props) {
+export default function ProjectStatsBox({ likes, views, comments, projectName, date, category, badge, }: Props) {
+  const displayName = (projectName || "").trim();
   return (
     <div className="-mx-8 bg-black text-white w-auto mb-8">
       <div className="max-w-[1800px] mx-auto py-10 px-6 flex flex-col items-center">
@@ -59,7 +52,7 @@ export default function ProjectStatsBox({
         )}
 
         {/* 프로젝트명, 날짜, 통계 */}
-        <div className="text-2xl font-bold mb-2 text-center">{projectName}</div>
+        {displayName && <div className="text-2xl font-bold mb-2 text-center">{displayName}</div>}
         <div className="mb-6 text-center text-gray-300">
           {date} | {category}
         </div>
