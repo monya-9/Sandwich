@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.springframework.http.HttpStatus.*;
 
 @Service
@@ -49,6 +52,7 @@ public class SubmissionService {
                 .descr(req.getDescr())
                 .repoUrl(req.getRepoUrl())
                 .demoUrl(req.getDemoUrl())
+                .extraJson("{}")
                 .build();
 
         sub = submissionRepo.save(sub);
@@ -72,7 +76,27 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public Page<SubmissionDtos.Item> list(Long challengeId, Pageable pageable) {
-        return submissionRepo.findByChallenge_Id(challengeId, pageable).map(SubmissionDtos.Item::from);
+        var page = submissionRepo.findByChallenge_Id(challengeId, pageable);
+
+        // 1) 이번 페이지의 submissionId 모으기
+        var ids = page.stream().map(Submission::getId).toList();
+        if (ids.isEmpty()) return page.map(SubmissionDtos.Item::from);
+
+        // 2) 에셋 한 번에 로드 후 그룹핑
+        var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(ids);
+        Map<Long, List<SubmissionAsset>> grouped = assets.stream()
+                .collect(java.util.stream.Collectors.groupingBy(a -> a.getSubmission().getId()));
+
+        // 3) 각 제출물에 coverUrl/assetCount 채워서 반환
+        return page.map(s -> {
+            var list = grouped.getOrDefault(s.getId(), java.util.List.of());
+            String cover = list.isEmpty() ? null : list.get(0).getUrl(); // 첫 이미지 = cover
+            int count = list.size();
+            return SubmissionDtos.Item.from(s).toBuilder()
+                    .coverUrl(cover)
+                    .assetCount(count)
+                    .build();
+        });
     }
 
     private Long currentSafeUserId() {
