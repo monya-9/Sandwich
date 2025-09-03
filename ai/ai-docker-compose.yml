@@ -46,6 +46,33 @@ services:
     networks:
       - sandwich-net
 
+# 1) Webdis: Redis <-> HTTP 브릿지
+  webdis:
+    image: nicolas/webdis:latest
+    container_name: ai_webdis
+    restart: always
+    environment:
+
+      REDIS_HOST: sandwich_redis
+      REDIS_PORT: 6379
+    networks:
+      - sandwich-net
+
+
+  # 2) NGINX: 외부 게이트웨이(보안키 검증 + CORS + 읽기전용 제한)
+  ai-redis-gw:
+    image: nginx:alpine
+    container_name: ai_redis_gateway
+    restart: always
+    ports:
+      - "9010:80"
+    volumes:
+      - ./nginx/redis-gateway.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx_secrets/ai_api_key.conf:/etc/nginx/secrets/ai_api_key.conf:ro
+    depends_on:
+      - webdis
+    networks:
+      - sandwich-net
 
 networks:
   sandwich-net:
