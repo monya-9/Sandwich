@@ -5,6 +5,7 @@ import MessageList from "../../components/common/Message/MessageList";
 import MessageDetail from "../../components/common/Message/MessageDetail";
 import { fetchRooms, markRoomRead } from "../../api/messages";
 import type { Message } from "../../types/Message";
+import { onMessagesRefresh } from "../../lib/messageEvents";
 
 const MessagesPage: React.FC = () => {
     const navigate = useNavigate();
@@ -12,7 +13,8 @@ const MessagesPage: React.FC = () => {
     const routeRoomId = id ? Number(id) : undefined;
 
     const [items, setItems] = React.useState<Message[]>([]);
-    const [selectedRoomId, setSelectedRoomId] = React.useState<number | undefined>(routeRoomId);
+    const [selectedRoomId, setSelectedRoomId] =
+        React.useState<number | undefined>(routeRoomId);
     const callReadOnce = React.useRef<Record<number, boolean>>({});
 
     const loadRooms = React.useCallback(async () => {
@@ -20,36 +22,37 @@ const MessagesPage: React.FC = () => {
             const rooms = await fetchRooms();
             const mapped: Message[] = rooms
                 .map((r) => ({
-                    id: r.roomId,          // 리스트 key
+                    id: r.roomId,
                     roomId: r.roomId,
                     title: r.peerName,
-                    sender: r.peerName,
+                    sender: r.peerName, // 리스트에 항상 상대 표시
                     content: r.lastContent,
                     createdAt: r.lastAt,
                     isRead: r.unreadCount === 0,
                     unreadCount: r.unreadCount,
-                    // ✅ 상세에서 상대 id로 사용 (없으면 undefined)
                     receiverId: r.peerId ?? null,
                 }))
                 .sort(
                     (a, b) =>
-                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime()
                 );
-
             setItems(mapped);
-
-            if (!routeRoomId && mapped[0]?.roomId) {
-                setSelectedRoomId(mapped[0].roomId!);
-                navigate(`/messages/${mapped[0].roomId}`);
+            // 자동 이동 X (URL 있을 때만)
+            if (routeRoomId && mapped.some((m) => m.roomId === routeRoomId)) {
+                setSelectedRoomId(routeRoomId);
             }
         } catch (e) {
             console.warn("[rooms] fetchRooms failed:", e);
             setItems([]);
         }
-    }, [navigate, routeRoomId]);
+    }, [routeRoomId]);
 
     React.useEffect(() => { loadRooms(); }, [loadRooms]);
     React.useEffect(() => { setSelectedRoomId(routeRoomId); }, [routeRoomId]);
+
+    // 헤더/드롭다운 등에서 새로고침 이벤트 오면 다시 불러오기
+    React.useEffect(() => onMessagesRefresh(loadRooms), [loadRooms]);
 
     const handleSelect = async (roomId: number) => {
         setSelectedRoomId(roomId);
@@ -57,10 +60,11 @@ const MessagesPage: React.FC = () => {
 
         // 낙관적 읽음 처리
         setItems((prev) =>
-            prev.map((m) => (m.roomId === roomId ? { ...m, isRead: true, unreadCount: 0 } : m))
+            prev.map((m) =>
+                m.roomId === roomId ? { ...m, isRead: true, unreadCount: 0 } : m
+            )
         );
 
-        // 서버 읽음 (중복 방지)
         if (callReadOnce.current[roomId]) return;
         callReadOnce.current[roomId] = true;
         try {
@@ -85,7 +89,7 @@ const MessagesPage: React.FC = () => {
                 />
                 <MessageDetail
                     message={selectedMessage}
-                    onSend={async () => { await loadRooms(); }}  // 전송 뒤 목록 갱신
+                    onSend={async () => { await loadRooms(); }}
                 />
             </section>
         </main>

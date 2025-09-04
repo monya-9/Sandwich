@@ -5,13 +5,24 @@ import { timeAgo } from "../../../utils/time";
 import { Smile, Paperclip, Crop } from "lucide-react";
 import {
     postMessage,
+    uploadFile,
     uploadAttachment,
-    downloadRoomScreenshot,
+    fileUrl,
     fetchRoomMessages,
+    fetchRoomParticipants,
+    downloadRoomScreenshot,
     type ServerMessage,
+    type RoomParticipant,
 } from "../../../api/messages";
 import { getMe } from "../../../api/users";
 import EmojiPicker from "./Emoji/EmojiPicker";
+import {
+    ProjectProposalCard,
+    JobOfferCard,
+    type ProjectPayload,
+    type JobOfferPayload,
+} from "./MessageCards";
+import { emitMessagesRefresh } from "../../../lib/messageEvents";
 
 type Props = {
     message?: Message;
@@ -21,6 +32,28 @@ type Props = {
 const youBubble = "max-w-[520px] bg-gray-100 rounded-2xl px-4 py-3 shadow-sm";
 const meBubble = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
 
+/* ---------- 유틸: 정렬/중복제거 ---------- */
+function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
+    const da = new Date(a.createdAt || 0).getTime();
+    const db = new Date(b.createdAt || 0).getTime();
+    if (da === db) return a.messageId - b.messageId;
+    return da - db;
+}
+function dedupById(list: ServerMessage[]) {
+    const map = new Map<number, ServerMessage>();
+    for (const m of list) map.set(m.messageId, m);
+    return Array.from(map.values());
+}
+function mergeAndSort(prev: ServerMessage[], add: ServerMessage[]) {
+    return dedupById([...prev, ...add]).sort(sortByCreatedAtThenId);
+}
+
+/* 상대(나 제외) */
+function pickDMOpponent(list: RoomParticipant[], myId: number | null) {
+    if (!Array.isArray(list) || myId == null) return undefined;
+    return list.find((p) => p.id !== myId);
+}
+
 const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [text, setText] = React.useState("");
     const [sending, setSending] = React.useState(false);
@@ -29,88 +62,102 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [showEmoji, setShowEmoji] = React.useState(false);
 
     const [myId, setMyId] = React.useState<number | null>(null);
-    const [history, setHistory] = React.useState<ServerMessage[]>([]); // 서버 히스토리
+    const [history, setHistory] = React.useState<ServerMessage[]>([]);
+    const [participants, setParticipants] = React.useState<RoomParticipant[]>([]);
 
     const taRef = React.useRef<HTMLTextAreaElement>(null);
     const endRef = React.useRef<HTMLDivElement>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const firstLoadRef = React.useRef(true);
 
-    // 내 id 로드
     React.useEffect(() => {
         let mounted = true;
-        getMe()
-            .then((u) => mounted && setMyId(u.id))
-            .catch(() => {});
+        getMe().then((u) => mounted && setMyId(u.id)).catch(() => {});
         return () => {
             mounted = false;
         };
     }, []);
 
-    // 목록에서 내려준 메타
     const roomId = (message as any)?.roomId as number | undefined;
-    const peerId = (message as any)?.receiverId as number | undefined; // 상대 id(목록 맵핑 때 넣어둔 값)
 
-    // 히스토리 로드
+    /* 히스토리 로드 */
     const loadHistory = React.useCallback(async () => {
         if (!roomId) return;
         try {
-            const res = await fetchRoomMessages(roomId, undefined, 30);
-            const items = [...(res.items || [])].sort((a, b) => {
-                const da = new Date(a.createdAt || 0).getTime();
-                const db = new Date(b.createdAt || 0).getTime();
-                if (da === db) return a.messageId - b.messageId;
-                return da - db;
+            const res = await fetchRoomMessages(roomId, undefined, 100);
+            const next = (res.items || []).sort(sortByCreatedAtThenId);
+
+            setHistory((prev) => {
+                if (firstLoadRef.current) {
+                    firstLoadRef.current = false;
+                    return dedupById(next); // 최초는 교체
+                }
+                return mergeAndSort(prev, next); // 이후 병합
             });
-            setHistory(items);
-        } catch (e) {
-            console.warn("[history] fetchRoomMessages failed:", e);
-            setHistory([]);
+        } catch {
+            /* ignore */
         }
     }, [roomId]);
 
-    // 방 바뀌면 초기화 + 로드
+    /* 참가자 로드 */
+    const loadParticipants = React.useCallback(async () => {
+        if (!roomId) return;
+        try {
+            const data = await fetchRoomParticipants(roomId);
+            setParticipants(data || []);
+        } catch {
+            setParticipants([]);
+        }
+    }, [roomId]);
+
+    /* 방 바뀌면 초기화 */
     React.useEffect(() => {
         setText("");
         setShowEmoji(false);
         setHistory([]);
+        firstLoadRef.current = true;
         loadHistory();
-    }, [loadHistory]);
+        loadParticipants();
+    }, [loadHistory, loadParticipants]);
 
-    // 간단 폴링 (5초)
+    /* 폴링(WS 붙이기 전) */
     React.useEffect(() => {
         if (!roomId) return;
         const t = setInterval(loadHistory, 5000);
         return () => clearInterval(t);
     }, [roomId, loadHistory]);
 
-    // 입력창 자동 리사이즈
+    /* 입력창 리사이즈 + 끝으로 스크롤 */
     React.useEffect(() => {
         if (taRef.current) {
             taRef.current.style.height = "auto";
             taRef.current.style.height = taRef.current.scrollHeight + "px";
         }
     }, [text]);
-
-    // 항상 아래로 스크롤
     React.useEffect(() => {
         endRef.current?.scrollIntoView({ block: "end" });
     }, [history.length]);
 
-    // 상대 userId 계산 (우선 목록의 receiverId → 없으면 히스토리에서 추정)
-    const targetUserId = React.useMemo(() => {
-        if (peerId) return peerId;
+    /* 상대 userId 추정 */
+    const peerIdFromParticipants = React.useMemo(() => {
+        const opp = pickDMOpponent(participants, myId);
+        return opp?.id;
+    }, [participants, myId]);
+    const peerIdFromMessage = (message as any)?.receiverId as number | undefined;
+    const peerIdFromHistory = React.useMemo(() => {
         if (!myId || history.length === 0) return undefined;
         const h = history[history.length - 1];
         return h.senderId === myId ? h.receiverId : h.senderId;
-    }, [peerId, myId, history]);
+    }, [history, myId]);
+    const targetUserId = peerIdFromParticipants ?? peerIdFromMessage ?? peerIdFromHistory;
 
+    /* 텍스트 전송 */
     const handleSendText = async () => {
         if (!message || !targetUserId) {
             alert("상대 사용자를 알 수 없어 전송할 수 없어요.");
             return;
         }
         if (isComposing) return;
-
         const body = text.trim();
         if (!body || sending) return;
 
@@ -122,18 +169,20 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 content: body,
             });
 
-            // 서버 응답을 바로 히스토리에 반영
             const createdAt = server.createdAt || new Date().toISOString();
             setHistory((prev) =>
-                [...prev, { ...server, createdAt }].sort((a, b) => {
-                    const da = new Date(a.createdAt || 0).getTime();
-                    const db = new Date(b.createdAt || 0).getTime();
-                    if (da === db) return a.messageId - b.messageId;
-                    return da - db;
-                })
+                mergeAndSort(prev, [
+                    {
+                        ...server,
+                        createdAt,
+                        senderId: myId ?? server.senderId,
+                        mine: true,
+                    },
+                ]),
             );
-            setText("");
 
+            setText("");
+            emitMessagesRefresh();
             await onSend?.(server.messageId, body);
         } catch (e) {
             console.error(e);
@@ -152,24 +201,43 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         );
     }
 
-    // 헤더 시간: 목록 기준(없으면 히스토리 최신)
+    /* 헤더(상대 고정) */
     const headerTime =
-        message.createdAt ||
-        history[history.length - 1]?.createdAt ||
-        new Date().toISOString();
+        message.createdAt || history[history.length - 1]?.createdAt || new Date().toISOString();
+    const peer = pickDMOpponent(participants, myId);
+    const displayName = peer?.nickname || message.title;
+
+    /* 첨부 렌더 */
+    const renderAttachment = (m: ServerMessage) => {
+        const p = (m.payload || {}) as { url?: string; path?: string; name?: string };
+        const src = p.url || (p.path ? fileUrl(p.path) : undefined);
+        if (!src) return <div className="text-sm text-gray-500">[파일]</div>;
+        return (
+            <a href={src} target="_blank" rel="noreferrer">
+                <img
+                    src={src}
+                    alt={p.name || "attachment"}
+                    className="max-w-[320px] max-h-[320px] rounded-lg object-contain"
+                />
+            </a>
+        );
+    };
 
     return (
         <div className="flex-1 min-h-0 flex flex-col">
             {/* 헤더 */}
             <div className="px-6 py-4 border-b flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm">
-                    {message.sender?.[0]?.toUpperCase() ?? "?"}
-                </div>
+                {peer?.profileImage ? (
+                    <img src={peer.profileImage} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                    <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
+                        {(displayName?.[0] || "?").toUpperCase()}
+                    </div>
+                )}
                 <div className="flex flex-col">
-                    <span className="font-semibold">{message.sender}</span>
+                    <span className="font-semibold">{displayName}</span>
                     <span className="text-xs text-gray-400">{timeAgo(headerTime)}</span>
                 </div>
-
                 <div className="ml-auto flex items-center gap-2">
                     <button
                         type="button"
@@ -181,11 +249,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             const panel = document.getElementById("chat-panel");
                             const width = Math.floor(panel?.clientWidth || 960);
                             try {
-                                await downloadRoomScreenshot(roomId, {
-                                    width,
-                                    tz: "Asia/Seoul",
-                                    theme: "light",
-                                });
+                                await downloadRoomScreenshot(roomId, { width, tz: "Asia/Seoul", theme: "light" });
                             } catch {
                                 alert("대화 캡처에 실패했어요.");
                             }
@@ -199,27 +263,37 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             {/* 타임라인 */}
             <div id="chat-panel" className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 {history.map((m) => {
-                    // ✅ myId가 아직 없어도 peerId로 임시 판별: 내 메시지는 senderId !== peerId
-                    const mine =
-                        myId != null ? m.senderId === myId : peerId != null ? m.senderId !== peerId : false;
-
                     const when = new Date(m.createdAt || 0);
                     const hhmm = isNaN(when.getTime())
                         ? ""
                         : when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+                    const mine = typeof m.mine === "boolean" ? m.mine : (myId != null ? m.senderId === myId : false);
+
+                    const body =
+                        m.type === "PROJECT_PROPOSAL" || m.type === "PROJECT_OFFER" ? (
+                            <ProjectProposalCard data={(m.payload || {}) as ProjectPayload} />
+                        ) : m.type === "JOB_OFFER" ? (
+                            <JobOfferCard data={(m.payload || {}) as JobOfferPayload} />
+                        ) : m.type === "ATTACHMENT" ? (
+                            renderAttachment(m)
+                        ) : (
+                            <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>
+                        );
 
                     return mine ? (
-                        <div key={m.messageId} className="flex items-end gap-2 self-end max-w-full">
+                        <div
+                            key={`${m.messageId}-${m.createdAt ?? ""}`} // 고유 key
+                            className="flex items-end gap-2 self-end max-w-full"
+                        >
                             <span className="text-[11px] text-gray-400 shrink-0 translate-y-1 order-1">{hhmm}</span>
-                            <div className={`${meBubble} order-2`}>
-                                <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>
-                            </div>
+                            <div className={`${meBubble} order-2`}>{body}</div>
                         </div>
                     ) : (
-                        <div key={m.messageId} className="flex items-end gap-2 max-w-full">
-                            <div className={youBubble}>
-                                <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>
-                            </div>
+                        <div
+                            key={`${m.messageId}-${m.createdAt ?? ""}`}
+                            className="flex items-end gap-2 max-w-full"
+                        >
+                            <div className={youBubble}>{body}</div>
                             <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
                         </div>
                     );
@@ -266,6 +340,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                     >
                         <Smile size={18} />
                     </button>
+
                     {showEmoji && (
                         <div className="absolute bottom-10 left-2 z-30">
                             <EmojiPicker
@@ -282,26 +357,51 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
+                        accept="image/*"
                         onChange={async (e) => {
-                            const f = e.target.files?.[0];
-                            if (!f || !roomId) return;
+                            const inputEl = e.currentTarget;
+                            const f = inputEl.files?.[0];
+                            if (!f || !roomId || !targetUserId) return;
                             setUploading(true);
                             try {
-                                const s = await uploadAttachment(roomId, f);
-                                const createdAt = s.createdAt || new Date().toISOString();
+                                let created: ServerMessage | null = null;
+                                try {
+                                    created = await uploadAttachment(roomId, f);
+                                } catch {
+                                    created = null;
+                                }
+
+                                if (!created) {
+                                    const dto = await uploadFile(f);
+                                    const payload = {
+                                        url: fileUrl(dto.path),
+                                        name: dto.filename,
+                                        mime: dto.mimeType,
+                                        size: dto.size,
+                                    };
+                                    created = await postMessage({
+                                        targetUserId,
+                                        type: "ATTACHMENT",
+                                        content: `[파일] ${dto.filename}`,
+                                        payload,
+                                    });
+                                }
+
+                                if (!created) throw new Error("attachment create failed");
+
+                                const msg: ServerMessage = created;
+                                const createdAt = msg.createdAt || new Date().toISOString();
                                 setHistory((prev) =>
-                                    [...prev, { ...s, createdAt }].sort((a, b) => {
-                                        const da = new Date(a.createdAt || 0).getTime();
-                                        const db = new Date(b.createdAt || 0).getTime();
-                                        if (da === db) return a.messageId - b.messageId;
-                                        return da - db;
-                                    })
+                                    mergeAndSort(prev, [{ ...msg, createdAt, senderId: myId ?? msg.senderId, mine: true }]),
                                 );
-                            } catch {
+                                emitMessagesRefresh();
+                                await onSend?.(msg.messageId, msg.content ?? "[파일]");
+                            } catch (err) {
+                                console.error(err);
                                 alert("파일 업로드에 실패했어요.");
                             } finally {
                                 setUploading(false);
-                                e.currentTarget.value = "";
+                                inputEl.value = "";
                             }
                         }}
                     />
