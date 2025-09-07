@@ -20,4 +20,7 @@ public class GraderProperties {
     // 재시도/백오프(GradeClient가 사용)
     private int maxRetries = 3;
     private long baseBackoffMillis = 300;
+
+    private boolean callbackEnabled = true;
+    private int clockSkewSeconds = 300;
 }
