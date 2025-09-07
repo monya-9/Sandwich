@@ -1,5 +1,7 @@
 package com.sandwich.SandWich.challenge.notify;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
+import com.sandwich.SandWich.challenge.domain.ChallengeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -37,4 +39,22 @@ public class ServiceAccountNotifier {
             ));
         } catch (Exception ignore) { /* 실패해도 본 흐름 막지 않음 */ }
     }
+
+    public void onChallengeLifecycle(Long chId, ChallengeType type, ChallengeStatus prev, ChallengeStatus next) {
+        if (systemUserId == null) return;
+        try {
+            jdbc.update("""
+            insert into service_notification (target_user_id, type, ref_type, ref_id, payload)
+            values (:uid, 'CHALLENGE_LIFECYCLE', 'CHALLENGE', :rid, cast(:payload as jsonb))
+            on conflict (type, ref_type, ref_id) do nothing
+        """, Map.of(
+                    "uid", systemUserId,
+                    "rid", chId,
+                    "payload", om.writeValueAsString(Map.of(
+                            "challengeId", chId, "from", prev.name(), "to", next.name(), "challengeType", type.name()
+                    ))
+            ));
+        } catch (Exception ignore) {}
+    }
+
 }

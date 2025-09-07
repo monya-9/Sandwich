@@ -4,11 +4,15 @@ import org.springframework.data.jpa.domain.Specification;
 
 public class ChallengeSpecifications {
 
+    private ChallengeSpecifications() {}
+
     public static Specification<Challenge> hasType(ChallengeType type) {
-        return (root, query, cb) -> type == null ? cb.conjunction() : cb.equal(root.get("type"), type);
+        if (type == null) return null;
+        return (root, q, cb) -> cb.equal(root.get("type"), type);
     }
 
     public static Specification<Challenge> hasStatus(ChallengeStatus status) {
-        return (root, query, cb) -> status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
+        if (status == null) return null;
+        return (root, q, cb) -> cb.equal(root.get("status"), status);
     }
 }
