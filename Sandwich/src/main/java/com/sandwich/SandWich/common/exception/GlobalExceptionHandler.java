@@ -133,6 +133,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, "CONSTRAINT_VIOLATION", "무결성 제약 위반"));
     }
+    // =========================
+    // 6) 상태/전이 제약 → 400
+    // =========================
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+        String msg = ex.getMessage();
+        if ("voting_not_finished".equals(msg)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(400, "VOTING_NOT_FINISHED", "아직 투표가 종료되지 않았습니다."));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, "BAD_REQUEST", msg != null ? msg : "잘못된 요청입니다."));
+    }
 
     // 413
     @ExceptionHandler(MaxUploadSizeExceededException.class)
