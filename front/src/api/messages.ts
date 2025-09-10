@@ -1,4 +1,3 @@
-// src/api/messages.ts
 import api from "./axiosInstance";
 
 /** ===== 서버 스키마 ===== */
@@ -80,7 +79,19 @@ export type RoomParticipant = {
     profileImage: string | null;
 };
 
-/** ===== 파일 업로드/다운로드 ===== */
+export type RoomMeta = {
+    roomId: number;
+    partnerId: number;
+    partnerName: string;
+    partnerAvatarUrl: string | null;
+    lastMessageId: number | null;
+    lastMessageType: ServerMessageType | null;
+    lastMessagePreview: string | null;
+    lastMessageAt: string | null;
+    unreadCount: number;
+};
+
+/** ===== 파일 다운로드 URL ===== */
 export type FileUploadDTO = {
     path: string;     // uuid.ext
     filename: string; // 원본명
@@ -91,34 +102,34 @@ export type FileUploadDTO = {
 export const fileUrl = (filenameOrPath: string) =>
     `/api/files/${encodeURIComponent(filenameOrPath)}`;
 
-/** 서버 → 프런트 필드 정규화 */
+/** 서버 → 프런트 필드 정규화 (+ payload 문자열 JSON 안전 파싱) */
 function normalizeMessage(raw: any, fallbackRoomId?: number): ServerMessage {
+    const rawPayload = raw.payload ?? null;
+    const payload =
+        typeof rawPayload === "string"
+            ? (() => { try { return JSON.parse(rawPayload); } catch { return rawPayload; } })()
+            : rawPayload;
+
     return {
-        messageId: raw.messageId ?? raw.id,                // ★ 핵심
+        messageId: raw.messageId ?? raw.id,
         roomId: raw.roomId ?? fallbackRoomId ?? 0,
         senderId: raw.senderId,
         receiverId: raw.receiverId,
         type: raw.type,
         content: raw.content ?? null,
-        payload: raw.payload ?? null,
+        payload,
         read: Boolean(raw.read ?? raw.isRead),
         createdAt: raw.createdAt ?? raw.created_at ?? null,
         mine: raw.mine,
     };
 }
 
-/** ⚠️ multipart 헤더 수동 지정 금지 */
-export async function uploadFile(file: File): Promise<FileUploadDTO> {
-    const form = new FormData();
-    form.append("file", file);
-    const { data } = await api.post<FileUploadDTO>("/files", form);
-    return data;
-}
+/** ===== 업로드/메시징 API ===== */
 
-/** 신스펙: 첨부 + ATTACHMENT 메시지 생성 */
+/** 첨부 + ATTACHMENT 메시지 생성 (백엔드 단일 엔드포인트) */
 export async function uploadAttachment(roomId: number, file: File): Promise<ServerMessage> {
     const form = new FormData();
-    form.append("file", file); // 필드명 'file'
+    form.append("file", file); // 필드명 반드시 'file'
     const { data } = await api.post(`/messages/${roomId}/attachments`, form);
     return normalizeMessage(data, roomId);
 }
@@ -171,7 +182,6 @@ export async function fetchRoomMessages(roomId: number, cursorId?: number, size 
         params: { cursorId, size },
     });
 
-    // 서버 응답 유연 대응
     const rawItems: any[] = data.items ?? data.content ?? [];
     const items = rawItems.map((r) => normalizeMessage(r, roomId));
 
@@ -183,12 +193,21 @@ export async function fetchRoomMessages(roomId: number, cursorId?: number, size 
     return resp;
 }
 
-// 참가자
+/** 참가자 */
 export async function fetchRoomParticipants(roomId: number) {
-    const { data } = await api.get<RoomParticipant[]>(
-        `/rooms/${roomId}/participants`
-    );
+    const { data } = await api.get<RoomParticipant[]>(`/rooms/${roomId}/participants`);
     return data ?? [];
+}
+
+/** 메타 (헤더/목록 요약에 사용) */
+export async function fetchRoomMeta(roomId: number) {
+    const { data } = await api.get<RoomMeta>(`/rooms/${roomId}/meta`);
+    return data;
+}
+
+/** (호환용) sendAttachment – 현재는 /attachments 단일 경로만 사용 */
+export async function sendAttachment(roomId: number, file: File): Promise<ServerMessage> {
+    return uploadAttachment(roomId, file);
 }
 
 /** (옵션) 대화 캡처 */

@@ -1,18 +1,18 @@
-// src/components/common/Message/MessageDetail.tsx
 import React from "react";
 import type { Message } from "../../../types/Message";
 import { timeAgo } from "../../../utils/time";
 import { Smile, Paperclip, Crop } from "lucide-react";
 import {
     postMessage,
-    uploadFile,
-    uploadAttachment,
     fileUrl,
     fetchRoomMessages,
     fetchRoomParticipants,
+    fetchRoomMeta,
     downloadRoomScreenshot,
+    sendAttachment,
     type ServerMessage,
     type RoomParticipant,
+    type RoomMeta,
 } from "../../../api/messages";
 import { getMe } from "../../../api/users";
 import EmojiPicker from "./Emoji/EmojiPicker";
@@ -24,13 +24,15 @@ import {
 } from "./MessageCards";
 import { emitMessagesRefresh } from "../../../lib/messageEvents";
 
+/* ---------- props ---------- */
 type Props = {
     message?: Message;
     onSend?: (messageId: number | string, body: string) => Promise<void> | void;
 };
 
+/* ---------- 스타일 ---------- */
 const youBubble = "max-w-[520px] bg-gray-100 rounded-2xl px-4 py-3 shadow-sm";
-const meBubble = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
+const meBubble  = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
 
 /* ---------- 유틸: 정렬/중복제거 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
@@ -54,6 +56,10 @@ function pickDMOpponent(list: RoomParticipant[], myId: number | null) {
     return list.find((p) => p.id !== myId);
 }
 
+/* 프런트 검증(백엔드 정책과 맞춤) */
+const MAX_MB = 10;
+const ALLOWED_EXT = ["jpg", "jpeg", "png", "pdf"];
+
 const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [text, setText] = React.useState("");
     const [sending, setSending] = React.useState(false);
@@ -64,6 +70,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [myId, setMyId] = React.useState<number | null>(null);
     const [history, setHistory] = React.useState<ServerMessage[]>([]);
     const [participants, setParticipants] = React.useState<RoomParticipant[]>([]);
+    const [meta, setMeta] = React.useState<RoomMeta | null>(null);
 
     const taRef = React.useRef<HTMLTextAreaElement>(null);
     const endRef = React.useRef<HTMLDivElement>(null);
@@ -73,9 +80,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     React.useEffect(() => {
         let mounted = true;
         getMe().then((u) => mounted && setMyId(u.id)).catch(() => {});
-        return () => {
-            mounted = false;
-        };
+        return () => { mounted = false; };
     }, []);
 
     const roomId = (message as any)?.roomId as number | undefined;
@@ -86,7 +91,6 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         try {
             const res = await fetchRoomMessages(roomId, undefined, 100);
             const next = (res.items || []).sort(sortByCreatedAtThenId);
-
             setHistory((prev) => {
                 if (firstLoadRef.current) {
                     firstLoadRef.current = false;
@@ -110,6 +114,17 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         }
     }, [roomId]);
 
+    /* 메타 로드 */
+    const loadMeta = React.useCallback(async () => {
+        if (!roomId) return;
+        try {
+            const m = await fetchRoomMeta(roomId);
+            setMeta(m);
+        } catch {
+            setMeta(null);
+        }
+    }, [roomId]);
+
     /* 방 바뀌면 초기화 */
     React.useEffect(() => {
         setText("");
@@ -118,7 +133,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         firstLoadRef.current = true;
         loadHistory();
         loadParticipants();
-    }, [loadHistory, loadParticipants]);
+        loadMeta();
+    }, [loadHistory, loadParticipants, loadMeta]);
 
     /* 폴링(WS 붙이기 전) */
     React.useEffect(() => {
@@ -172,12 +188,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             const createdAt = server.createdAt || new Date().toISOString();
             setHistory((prev) =>
                 mergeAndSort(prev, [
-                    {
-                        ...server,
-                        createdAt,
-                        senderId: myId ?? server.senderId,
-                        mine: true,
-                    },
+                    { ...server, createdAt, senderId: myId ?? server.senderId, mine: true },
                 ]),
             );
 
@@ -203,22 +214,37 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
     /* 헤더(상대 고정) */
     const headerTime =
-        message.createdAt || history[history.length - 1]?.createdAt || new Date().toISOString();
+        meta?.lastMessageAt ||
+        message.createdAt ||
+        history[history.length - 1]?.createdAt ||
+        new Date().toISOString();
+
     const peer = pickDMOpponent(participants, myId);
-    const displayName = peer?.nickname || message.title;
+    const displayName = meta?.partnerName || peer?.nickname || message.title;
+    const avatar = meta?.partnerAvatarUrl || peer?.profileImage || null;
 
     /* 첨부 렌더 */
     const renderAttachment = (m: ServerMessage) => {
-        const p = (m.payload || {}) as { url?: string; path?: string; name?: string };
+        const p = (m.payload || {}) as { url?: string; path?: string; name?: string; mime?: string };
         const src = p.url || (p.path ? fileUrl(p.path) : undefined);
         if (!src) return <div className="text-sm text-gray-500">[파일]</div>;
+
+        const isImage = (p.mime || "").startsWith("image/") || /\.(png|jpe?g)$/i.test(p.name || "");
+        if (isImage) {
+            return (
+                <a href={src} target="_blank" rel="noreferrer">
+                    <img
+                        src={src}
+                        alt={p.name || "attachment"}
+                        className="max-w-[320px] max-h-[320px] rounded-lg object-contain"
+                    />
+                </a>
+            );
+        }
+        // 이미지가 아니면 링크만
         return (
-            <a href={src} target="_blank" rel="noreferrer">
-                <img
-                    src={src}
-                    alt={p.name || "attachment"}
-                    className="max-w-[320px] max-h-[320px] rounded-lg object-contain"
-                />
+            <a href={src} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
+                {p.name || "첨부파일 다운로드"}
             </a>
         );
     };
@@ -227,8 +253,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         <div className="flex-1 min-h-0 flex flex-col">
             {/* 헤더 */}
             <div className="px-6 py-4 border-b flex items-center gap-3">
-                {peer?.profileImage ? (
-                    <img src={peer.profileImage} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
+                {avatar ? (
+                    <img src={avatar} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
                 ) : (
                     <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
                         {(displayName?.[0] || "?").toUpperCase()}
@@ -267,7 +293,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                     const hhmm = isNaN(when.getTime())
                         ? ""
                         : when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-                    const mine = typeof m.mine === "boolean" ? m.mine : (myId != null ? m.senderId === myId : false);
+                    const mine =
+                        typeof m.mine === "boolean" ? m.mine : (myId != null ? m.senderId === myId : false);
 
                     const body =
                         m.type === "PROJECT_PROPOSAL" || m.type === "PROJECT_OFFER" ? (
@@ -282,7 +309,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
                     return mine ? (
                         <div
-                            key={`${m.messageId}-${m.createdAt ?? ""}`} // 고유 key
+                            key={`${m.messageId}-${m.createdAt ?? ""}`}
                             className="flex items-end gap-2 self-end max-w-full"
                         >
                             <span className="text-[11px] text-gray-400 shrink-0 translate-y-1 order-1">{hhmm}</span>
@@ -357,48 +384,43 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
-                        accept="image/*"
+                        accept="image/*,application/pdf"
                         onChange={async (e) => {
                             const inputEl = e.currentTarget;
                             const f = inputEl.files?.[0];
                             if (!f || !roomId || !targetUserId) return;
+
+                            // 프런트 선검증(백엔드 정책과 맞춤)
+                            const ext = (f.name.split(".").pop() || "").toLowerCase();
+                            if (!ALLOWED_EXT.includes(ext)) {
+                                alert("허용되지 않은 파일 형식이에요. (jpg, jpeg, png, pdf)");
+                                inputEl.value = "";
+                                return;
+                            }
+                            if (f.size > MAX_MB * 1024 * 1024) {
+                                alert(`파일이 너무 커요. 최대 ${MAX_MB}MB까지 업로드 가능합니다.`);
+                                inputEl.value = "";
+                                return;
+                            }
+
                             setUploading(true);
                             try {
-                                let created: ServerMessage | null = null;
-                                try {
-                                    created = await uploadAttachment(roomId, f);
-                                } catch {
-                                    created = null;
-                                }
-
-                                if (!created) {
-                                    const dto = await uploadFile(f);
-                                    const payload = {
-                                        url: fileUrl(dto.path),
-                                        name: dto.filename,
-                                        mime: dto.mimeType,
-                                        size: dto.size,
-                                    };
-                                    created = await postMessage({
-                                        targetUserId,
-                                        type: "ATTACHMENT",
-                                        content: `[파일] ${dto.filename}`,
-                                        payload,
-                                    });
-                                }
-
-                                if (!created) throw new Error("attachment create failed");
-
-                                const msg: ServerMessage = created;
-                                const createdAt = msg.createdAt || new Date().toISOString();
+                                const created = await sendAttachment(roomId, f);
+                                const createdAt = created.createdAt || new Date().toISOString();
                                 setHistory((prev) =>
-                                    mergeAndSort(prev, [{ ...msg, createdAt, senderId: myId ?? msg.senderId, mine: true }]),
+                                    mergeAndSort(prev, [
+                                        { ...created, createdAt, senderId: myId ?? created.senderId, mine: true },
+                                    ]),
                                 );
                                 emitMessagesRefresh();
-                                await onSend?.(msg.messageId, msg.content ?? "[파일]");
-                            } catch (err) {
+                                await onSend?.(created.messageId, created.content ?? "[파일]");
+                            } catch (err: any) {
                                 console.error(err);
-                                alert("파일 업로드에 실패했어요.");
+                                const status = err?.response?.status;
+                                if (status === 403) alert("채팅방 참여자만 첨부를 보낼 수 있어요.");
+                                else if (status === 413) alert("파일이 너무 큽니다.");
+                                else if (status === 415) alert("허용되지 않은 파일 형식입니다.");
+                                else alert("파일 업로드에 실패했어요.");
                             } finally {
                                 setUploading(false);
                                 inputEl.value = "";
