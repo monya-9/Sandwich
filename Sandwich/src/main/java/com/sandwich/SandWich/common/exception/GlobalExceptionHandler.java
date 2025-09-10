@@ -108,7 +108,8 @@ public class GlobalExceptionHandler {
     /* =========================
        5) DB 무결성 위반 → 409/400
        ========================= */
-    private static final String UQ_VOTE_CH_VOTER = "uq_vote_ch_voter";          // 실제 제약 이름
+    private static final String UQ_VOTE_CH_VOTER = "uq_vote_ch_voter";
+    private static final String CK_VOTE_SCORE_RANGE = "chk_vote_score_range";// 실제 제약 이름
     private static final String SQLSTATE_UNIQUE  = "23505";
     private static final String SQLSTATE_CHECK   = "23514";
 
