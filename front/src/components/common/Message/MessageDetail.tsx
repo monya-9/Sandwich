@@ -11,7 +11,7 @@ import {
     fetchRoomMeta,
     downloadRoomScreenshot,
     sendAttachment,
-    getMessage, // ✅ 상세 하이드레이트
+    getMessage,
     type ServerMessage,
     type RoomParticipant,
     type RoomMeta,
@@ -112,8 +112,9 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const firstLoadRef = React.useRef(true);
 
-    // ✅ 이미 시도한 하이드레이트는 중복 호출 방지
-    const triedHydrate = React.useRef<Set<number>>(new Set());
+    // ✅ 하이드레이트 제어: 성공 완료/진행중 분리
+    const hydratedDone = React.useRef<Set<number>>(new Set());
+    const hydrating = React.useRef<Set<number>>(new Set());
 
     React.useEffect(() => {
         let mounted = true;
@@ -132,7 +133,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             const res = await fetchRoomMessages(roomId, undefined, 100);
             let next = (res.items || []).sort(sortByCreatedAtThenId);
 
-            // payload 없는 ATTACHMENT는 상세로 보강
+            // payload 없는 ATTACHMENT는 상세로 보강 (여기서는 완료/진행중 마킹 X)
             const toHydrate = next.filter(
                 (m) =>
                     m.type === "ATTACHMENT" &&
@@ -146,7 +147,6 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                     targets.map((m) => getMessage(m.messageId).catch(() => null))
                 );
                 next = mergeAndSort(next, hydrated.filter(Boolean) as ServerMessage[]);
-                targets.forEach((m) => triedHydrate.current.add(m.messageId));
             }
 
             setHistory((prev) => {
@@ -188,7 +188,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         setText("");
         setShowEmoji(false);
         setHistory([]);
-        triedHydrate.current.clear();
+        hydratedDone.current.clear();
+        hydrating.current.clear();
         firstLoadRef.current = true;
         loadHistory();
         loadParticipants();
@@ -213,11 +214,13 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         endRef.current?.scrollIntoView({ block: "end" });
     }, [history.length]);
 
-    /* ✅ 화면에 '빈 첨부'가 보이면 즉시 보강 (2차 안전망) */
+    /* ✅ 화면에 '빈 첨부'가 보이면 즉시 보강 (성공 시에만 완료 마킹, 실패는 자동 재시도) */
     React.useEffect(() => {
         const missing = history.filter((m) => {
             if (m.type !== "ATTACHMENT") return false;
-            if (triedHydrate.current.has(m.messageId)) return false;
+            if (hydratedDone.current.has(m.messageId)) return false;
+            if (hydrating.current.has(m.messageId)) return false;
+
             const p = parsePayload<any>(m.payload);
             const hasSrc = !!(p && (p.url || p.path));
             return !hasSrc;
@@ -225,15 +228,35 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
         if (!missing.length) return;
 
-        missing.forEach((m) => triedHydrate.current.add(m.messageId));
-        const targets = missing.slice(0, 16);
+        const limit = 16; // 동시 요청 상한
+        const targets = missing.slice(0, limit);
+
+        // 진행중 마킹
+        targets.forEach((m) => hydrating.current.add(m.messageId));
 
         (async () => {
-            const hydrated = await Promise.all(
-                targets.map((m) => getMessage(m.messageId).catch(() => null))
+            const results = await Promise.all(
+                targets.map((m) =>
+                    getMessage(m.messageId)
+                        .then((full) => ({ ok: true as const, full, id: m.messageId }))
+                        .catch(() => ({ ok: false as const, full: null, id: m.messageId }))
+                )
             );
-            const ok = hydrated.filter(Boolean) as ServerMessage[];
-            if (ok.length) setHistory((prev) => mergeAndSort(prev, ok));
+
+            const oks = results.filter((r) => r.ok && r.full) as {
+                ok: true;
+                full: ServerMessage;
+                id: number;
+            }[];
+
+            if (oks.length) {
+                setHistory((prev) => mergeAndSort(prev, oks.map((r) => r.full)));
+                oks.forEach((r) => hydratedDone.current.add(r.id)); // ✅ 성공에만 완료 마킹
+            }
+
+            // 진행중 해제 (성공/실패 모두)
+            results.forEach((r) => hydrating.current.delete(r.id));
+            // 실패건은 완료 마킹을 안 했으므로 다음 렌더/폴링에서 재시도됨
         })();
     }, [history]);
 
