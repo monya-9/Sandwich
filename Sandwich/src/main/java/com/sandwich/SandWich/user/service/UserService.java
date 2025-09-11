@@ -6,9 +6,9 @@ import com.sandwich.SandWich.comment.domain.Comment;
 import com.sandwich.SandWich.post.domain.Post;
 import com.sandwich.SandWich.comment.repository.CommentRepository;
 import com.sandwich.SandWich.post.repository.PostRepository;
-import com.sandwich.SandWich.global.exception.exceptiontype.InterestNotFoundException;
-import com.sandwich.SandWich.global.exception.exceptiontype.PositionNotFoundException;
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.InterestNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.PositionNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.user.domain.*;
@@ -110,6 +110,7 @@ public class UserService {
         return new UserProfileResponse(
                 user.getUsername(),
                 user.getEmail(),
+                profile != null ? profile.getNickname()   : null,
                 profile != null ? profile.getBio() : null,
                 profile != null ? profile.getSkills() : null,
                 profile != null ? profile.getGithub() : null,
@@ -229,13 +230,13 @@ public class UserService {
         profile.setNickname(nickname);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public PositionResponse getUserPosition(User user) {
         UserPosition userPosition = userPositionRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("작업 분야가 설정되지 않았습니다."));
 
-        String positionName = userPosition.getPosition().getName();
-        return new PositionResponse(positionName);
+        Position p = userPosition.getPosition();
+        return new PositionResponse(p.getId(), p.getName());
     }
 
     @Transactional
@@ -278,23 +279,21 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public InterestResponse getGeneralInterests(User user) {
-        List<String> names = userInterestRepository.findByUser(user).stream()
-                .filter(ui -> ui.getInterest().getType() == InterestType.GENERAL)
-                .map(ui -> ui.getInterest().getName())
+    public List<InterestResponse> getGeneralInterests(User user) {
+        return userInterestRepository.findByUser(user).stream()
+                .map(UserInterest::getInterest)
+                .filter(i -> i.getType() == InterestType.GENERAL)
+                .map(i -> new InterestResponse(i.getId(), i.getName()))
                 .toList();
-
-        return new InterestResponse(names);
     }
 
     @Transactional(readOnly = true)
-    public InterestResponse getTechInterests(User user) {
-        List<String> names = userInterestRepository.findByUser(user).stream()
-                .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
-                .map(ui -> ui.getInterest().getName())
+    public List<InterestResponse> getTechInterests(User user) {
+        return userInterestRepository.findByUser(user).stream()
+                .map(UserInterest::getInterest)
+                .filter(i -> i.getType() == InterestType.TECH)
+                .map(i -> new InterestResponse(i.getId(), i.getName()))
                 .toList();
-
-        return new InterestResponse(names);
     }
 
     @Transactional

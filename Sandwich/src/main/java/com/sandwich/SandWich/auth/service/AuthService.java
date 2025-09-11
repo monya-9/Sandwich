@@ -4,8 +4,8 @@ import com.sandwich.SandWich.auth.dto.LoginRequest;
 import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.auth.dto.TokenResponse;
 import com.sandwich.SandWich.auth.security.JwtUtil;
+import com.sandwich.SandWich.common.exception.exceptiontype.*;
 import com.sandwich.SandWich.common.util.RedisUtil;
-import com.sandwich.SandWich.global.exception.exceptiontype.*;
 import com.sandwich.SandWich.user.domain.Role;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -82,34 +82,35 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest req) {
-        User user = userRepository.findByEmailAndIsDeletedFalse(req.getEmail())
-                .orElseThrow(UserNotFoundException::new); // 존재하지 않는 이메일
+        // 1) 존재 여부 (탈퇴 여부와 무관하게 일단 로드)
+        User user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(UserNotFoundException::new);
 
+        // 2) provider 체크 (소셜 가입자는 로컬 로그인 불가)
         if (user.getProvider() == null || !"local".equalsIgnoreCase(user.getProvider())) {
             throw new IllegalArgumentException("소셜 로그인으로 가입된 계정입니다. 소셜 로그인을 이용해주세요.");
         }
 
-        // 탈퇴한 계정
+        // 3) 계정 상태 체크
         if (user.isDeleted()) {
+            // 탈퇴 계정
             throw new UserDeletedException();
         }
+        if (!Boolean.TRUE.equals(user.getIsVerified())) {
+            // 미인증 계정
+            throw new UnverifiedUserException();
+        }
 
-
-        log.debug("새로 인코딩한 값: {}", passwordEncoder.encode("1234"));
-        log.debug("입력 비번: {}", req.getPassword());
-        log.debug("저장된 해시: {}", user.getPassword());
-        log.debug("matches 결과: {}", passwordEncoder.matches(req.getPassword(), user.getPassword()));
-
-
-        // 비밀번호 불일치
+        // 4) 비밀번호 확인 (로그 제거!)
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new InvalidPasswordException();
         }
 
+        // 5) 토큰 발급
         String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
 
-        String redisKey = "refresh:userId:" + user.getId();
+        // 6) 리프레시 토큰 저장 (네 유틸 정책대로)
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
         return new TokenResponse(accessToken, refreshToken, "local");

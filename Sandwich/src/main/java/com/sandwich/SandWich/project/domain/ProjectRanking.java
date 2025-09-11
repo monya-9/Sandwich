@@ -3,7 +3,7 @@ package com.sandwich.SandWich.project.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
@@ -16,6 +16,6 @@ public class ProjectRanking extends BaseEntity {
     private Project project;
 
     private int rankType;
-    private LocalDateTime rankDate;
+    private OffsetDateTime rankDate;
     private int rank;
 }

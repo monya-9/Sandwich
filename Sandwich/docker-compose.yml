@@ -12,13 +12,19 @@ services:
       - redis
     env_file: .env
     environment:
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=UTC"
       SPRING_DATASOURCE_URL: jdbc:postgresql://sandwich_postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SANDWICH_USER_AWS_ACCESS_KEY_ID: ${SANDWICH_USER_AWS_ACCESS_KEY_ID}
       SANDWICH_USER_AWS_SECRET_ACCESS_KEY: ${SANDWICH_USER_AWS_SECRET_ACCESS_KEY}
+      PUSH_FCM_ENABLED: "true"
+      FIREBASE_CREDENTIALS_PATH: /app/creds/firebase-service-account.json
+      APP_WEB_BASE_URL: http://localhost
+    volumes:
+      - ./firebase-service-account.json:/app/creds/firebase-service-account.json:ro
     networks:
       - sandwich-net
 
@@ -64,7 +70,7 @@ services:
       - sandwich-net
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.25
     container_name: sandwich_nginx
     ports:
       - "80:80"
@@ -74,6 +80,16 @@ services:
       - ./public:/app/public   # 사용자 프로젝트 정적파일 저장소 들어갈 곳
     depends_on:
       - app
+    environment:
+      FIREBASE_VAPID_KEY: ${FIREBASE_VAPID_KEY}
+    command: >
+      /bin/sh -lc '
+      if [ -f /app/public/ws-test.html ]; then
+        # ${FIREBASE_VAPID_KEY} 플레이스홀더 → 실제 값으로 치환
+        sed -i "s|\\\${FIREBASE_VAPID_KEY}|$FIREBASE_VAPID_KEY|g" /app/public/ws-test.html;
+      fi;
+      exec nginx -g "daemon off;"
+      '
     networks:
       - sandwich-net
 

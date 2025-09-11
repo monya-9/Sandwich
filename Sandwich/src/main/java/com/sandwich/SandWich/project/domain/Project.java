@@ -1,8 +1,6 @@
 package com.sandwich.SandWich.project.domain;
 
 import com.sandwich.SandWich.common.domain.BaseEntity;
-import com.sandwich.SandWich.challenge.domain.ChallengeOption;
-import com.sandwich.SandWich.social.domain.Like;
 import com.sandwich.SandWich.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -75,11 +73,6 @@ public class Project extends BaseEntity {
     // 인기 프로젝트 순위 집계용
     @OneToMany(mappedBy = "project")
     private List<ProjectRanking> rankings = new ArrayList<>();
-
-    // 챌린지 모드 연결
-    @OneToMany(mappedBy = "project")
-    private List<ChallengeOption> challengeOptions = new ArrayList<>();
-
     // [에디터 콘텐츠] - 이미지/텍스트/영상 순서 저장
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectContent> contents = new ArrayList<>();

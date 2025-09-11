@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.user.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.ProfileRepository;
@@ -92,7 +92,7 @@ public class UserController {
     }
 
     @GetMapping("/interests/general")
-    public ResponseEntity<InterestResponse> getGeneralInterests(
+    public ResponseEntity<java.util.List<InterestResponse>> getGeneralInterests(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(userService.getGeneralInterests(userDetails.getUser()));
     }
@@ -106,7 +106,7 @@ public class UserController {
     }
 
     @GetMapping("/interests/tech")
-    public ResponseEntity<InterestResponse> getTechInterests(
+    public ResponseEntity<java.util.List<InterestResponse>> getTechInterests(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(userService.getTechInterests(userDetails.getUser()));
     }

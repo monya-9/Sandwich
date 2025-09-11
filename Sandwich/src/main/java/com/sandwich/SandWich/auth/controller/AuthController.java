@@ -5,8 +5,8 @@ import com.sandwich.SandWich.auth.dto.RefreshRequest;
 import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.auth.dto.TokenResponse;
 import com.sandwich.SandWich.common.util.RedisUtil;
-import com.sandwich.SandWich.global.exception.exceptiontype.InvalidRefreshTokenException;
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.InvalidRefreshTokenException;
+import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -16,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.sandwich.SandWich.auth.service.AuthService;
+import java.util.concurrent.TimeUnit;
+import org.springframework.data.redis.core.RedisTemplate;
+
 
 import java.util.Map;
 
@@ -29,6 +32,7 @@ public class AuthController {
     private final ProfileRepository profileRepository;
     private final JwtUtil jwtUtil;
     private final AuthService authService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody @Valid SignupRequest req) {
@@ -55,12 +59,21 @@ public class AuthController {
             throw new InvalidRefreshTokenException();
         }
 
-        String newAccessToken = jwtUtil.createAccessToken(user.getUsername(), user.getRole().name());
-        String newRefreshToken = jwtUtil.createRefreshToken(email);
-        redisUtil.saveRefreshToken(String.valueOf(user.getId()), newRefreshToken);
+        String newAccessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
+        String newRefreshToken = jwtUtil.createRefreshToken(user.getEmail());
 
-        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, "local"));
+        // ✅ 7일 TTL 적용
+        redisTemplate.opsForValue().set(
+                "refresh:userId:" + user.getId(),
+                newRefreshToken,
+                7,
+                TimeUnit.DAYS
+        );
+
+        return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken, user.getProvider()));
     }
+
+
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {

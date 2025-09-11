@@ -44,7 +44,12 @@ dependencies {
 	implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.4")
 	implementation("org.json:json:20230227")
 	implementation("com.goterl:lazysodium-java:5.1.4")
-
+	implementation("com.vladmihalcea:hibernate-types-60:2.21.1")
+	implementation ("com.microsoft.playwright:playwright:1.46.0")
+	implementation("software.amazon.awssdk:s3:2.25.61")
+	implementation ("org.springframework.boot:spring-boot-starter-websocket")
+	implementation ("org.springframework:spring-messaging")
+	implementation ("org.apache.httpcomponents.client5:httpclient5:5.2.1")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	runtimeOnly("org.postgresql:postgresql")
