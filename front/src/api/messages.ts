@@ -110,6 +110,22 @@ function normalizeMessage(raw: any, fallbackRoomId?: number): ServerMessage {
             ? (() => { try { return JSON.parse(rawPayload); } catch { return rawPayload; } })()
             : rawPayload;
 
+    // 🔧 첨부 payload 정규화: 항상 url을 고정 생성 (캐시 키 안정화)
+    if (payload && typeof payload === "object") {
+        const p: any = payload;
+        // path만 있을 때 url 생성
+        if (typeof p.url !== "string" && typeof p.path === "string" && p.path) {
+            p.url = fileUrl(p.path);
+        }
+        // url이 /api/files/.. 형식이 아닐 경우만 보정 (이미 올바르면 손대지 않음)
+        if (typeof p.url === "string" && !/^https?:\/\//i.test(p.url)) {
+            // 이미 '/api/files/'로 시작하면 그대로 유지
+            if (!p.url.startsWith("/api/files/")) {
+                p.url = `/api/files/${encodeURIComponent(p.url)}`;
+            }
+        }
+    }
+
     return {
         messageId: raw.messageId ?? raw.id,
         roomId: raw.roomId ?? fallbackRoomId ?? 0,
@@ -129,8 +145,26 @@ function normalizeMessage(raw: any, fallbackRoomId?: number): ServerMessage {
 /** 첨부 + ATTACHMENT 메시지 생성 (백엔드 단일 엔드포인트) */
 export async function uploadAttachment(roomId: number, file: File): Promise<ServerMessage> {
     const form = new FormData();
-    form.append("file", file); // 필드명 반드시 'file'
-    const { data } = await api.post(`/messages/${roomId}/attachments`, form);
+    form.append("file", file); // 필드명은 반드시 'file'
+
+    const token =
+        localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+
+    const res = await fetch(`/api/messages/${roomId}/attachments`, {
+        method: "POST",
+        body: form,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        // 중요: Content-Type 설정하지 말 것! (브라우저가 boundary 포함하여 자동 설정)
+        credentials: "include",
+    });
+
+    // JSON 파싱 시도
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        // 백엔드 에러 메시지 그대로 보여주기
+        const msg = (data && (data.message || data.error || data.code)) || `HTTP ${res.status}`;
+        throw new Error(msg);
+    }
     return normalizeMessage(data, roomId);
 }
 

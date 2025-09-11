@@ -5,7 +5,7 @@ import MessageList from "../../components/common/Message/MessageList";
 import MessageDetail from "../../components/common/Message/MessageDetail";
 import { fetchRooms, markRoomRead } from "../../api/messages";
 import type { Message } from "../../types/Message";
-import { onMessagesRefresh } from "../../lib/messageEvents";
+import { onMessagesRefresh, emitMessageRead } from "../../lib/messageEvents";
 
 const MessagesPage: React.FC = () => {
     const navigate = useNavigate();
@@ -65,6 +65,8 @@ const MessagesPage: React.FC = () => {
             )
         );
 
+        emitMessageRead(roomId);
+
         if (callReadOnce.current[roomId]) return;
         callReadOnce.current[roomId] = true;
         try {
@@ -81,7 +83,7 @@ const MessagesPage: React.FC = () => {
 
     return (
         <main className="mx-auto max-w-6xl px-4 mt-4">
-            <section className="bg-white rounded-lg border overflow-hidden flex h-[600px] md:h-[680px] min-h-0">
+            <section className="bg-white rounded-lg border overflow-hidden flex h-[530px] md:h-[600px] min-h-0">
                 <MessageList
                     messages={items}
                     selectedId={selectedRoomId}

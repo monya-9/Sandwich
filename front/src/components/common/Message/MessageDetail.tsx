@@ -1,3 +1,4 @@
+// src/components/common/Message/MessageDetail.tsx
 import React from "react";
 import type { Message } from "../../../types/Message";
 import { timeAgo } from "../../../utils/time";
@@ -10,6 +11,7 @@ import {
     fetchRoomMeta,
     downloadRoomScreenshot,
     sendAttachment,
+    getMessage, // ✅ 상세 하이드레이트
     type ServerMessage,
     type RoomParticipant,
     type RoomMeta,
@@ -23,6 +25,7 @@ import {
     type JobOfferPayload,
 } from "./MessageCards";
 import { emitMessagesRefresh } from "../../../lib/messageEvents";
+import AuthImage from "./AuthImage";
 
 /* ---------- props ---------- */
 type Props = {
@@ -32,28 +35,60 @@ type Props = {
 
 /* ---------- 스타일 ---------- */
 const youBubble = "max-w-[520px] bg-gray-100 rounded-2xl px-4 py-3 shadow-sm";
-const meBubble  = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
+const meBubble = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
 
-/* ---------- 유틸: 정렬/중복제거 ---------- */
+/* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
     const da = new Date(a.createdAt || 0).getTime();
     const db = new Date(b.createdAt || 0).getTime();
     if (da === db) return a.messageId - b.messageId;
     return da - db;
 }
+
+/** 동일 메시지 병합: 새 응답에 결측치(null/undefined)가 있으면 이전 값을 유지 */
+function mergeMessage(oldM: ServerMessage, newM: ServerMessage): ServerMessage {
+    return {
+        ...oldM,
+        ...newM,
+        payload: newM.payload ?? oldM.payload,
+        content: newM.content ?? oldM.content,
+        createdAt: newM.createdAt ?? oldM.createdAt,
+    };
+}
+
+function mergeAndSort(prev: ServerMessage[], add: ServerMessage[]) {
+    const byId = new Map<number, ServerMessage>();
+    for (const m of prev) byId.set(m.messageId, m);
+    for (const n of add) {
+        const existed = byId.get(n.messageId);
+        byId.set(n.messageId, existed ? mergeMessage(existed, n) : n);
+    }
+    return Array.from(byId.values()).sort(sortByCreatedAtThenId);
+}
+
 function dedupById(list: ServerMessage[]) {
     const map = new Map<number, ServerMessage>();
     for (const m of list) map.set(m.messageId, m);
     return Array.from(map.values());
-}
-function mergeAndSort(prev: ServerMessage[], add: ServerMessage[]) {
-    return dedupById([...prev, ...add]).sort(sortByCreatedAtThenId);
 }
 
 /* 상대(나 제외) */
 function pickDMOpponent(list: RoomParticipant[], myId: number | null) {
     if (!Array.isArray(list) || myId == null) return undefined;
     return list.find((p) => p.id !== myId);
+}
+
+/* ---------- 안전 파서: payload가 string | object 모두 처리 ---------- */
+function parsePayload<T = any>(raw: unknown): T | null {
+    if (!raw) return null as any;
+    if (typeof raw === "string") {
+        try {
+            return JSON.parse(raw) as T;
+        } catch {
+            return null;
+        }
+    }
+    return raw as T;
 }
 
 /* 프런트 검증(백엔드 정책과 맞춤) */
@@ -77,20 +112,43 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const firstLoadRef = React.useRef(true);
 
+    // ✅ 이미 시도한 하이드레이트는 중복 호출 방지
+    const triedHydrate = React.useRef<Set<number>>(new Set());
+
     React.useEffect(() => {
         let mounted = true;
         getMe().then((u) => mounted && setMyId(u.id)).catch(() => {});
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     const roomId = (message as any)?.roomId as number | undefined;
 
-    /* 히스토리 로드 */
+    /* 히스토리 로드 (+ 첨부 하이드레이트 1차) */
     const loadHistory = React.useCallback(async () => {
         if (!roomId) return;
         try {
             const res = await fetchRoomMessages(roomId, undefined, 100);
-            const next = (res.items || []).sort(sortByCreatedAtThenId);
+            let next = (res.items || []).sort(sortByCreatedAtThenId);
+
+            // payload 없는 ATTACHMENT는 상세로 보강
+            const toHydrate = next.filter(
+                (m) =>
+                    m.type === "ATTACHMENT" &&
+                    !(m?.payload && (m.payload.url || m.payload.path))
+            );
+
+            if (toHydrate.length) {
+                const max = 12;
+                const targets = toHydrate.slice(0, max);
+                const hydrated = await Promise.all(
+                    targets.map((m) => getMessage(m.messageId).catch(() => null))
+                );
+                next = mergeAndSort(next, hydrated.filter(Boolean) as ServerMessage[]);
+                targets.forEach((m) => triedHydrate.current.add(m.messageId));
+            }
+
             setHistory((prev) => {
                 if (firstLoadRef.current) {
                     firstLoadRef.current = false;
@@ -130,6 +188,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         setText("");
         setShowEmoji(false);
         setHistory([]);
+        triedHydrate.current.clear();
         firstLoadRef.current = true;
         loadHistory();
         loadParticipants();
@@ -154,6 +213,30 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         endRef.current?.scrollIntoView({ block: "end" });
     }, [history.length]);
 
+    /* ✅ 화면에 '빈 첨부'가 보이면 즉시 보강 (2차 안전망) */
+    React.useEffect(() => {
+        const missing = history.filter((m) => {
+            if (m.type !== "ATTACHMENT") return false;
+            if (triedHydrate.current.has(m.messageId)) return false;
+            const p = parsePayload<any>(m.payload);
+            const hasSrc = !!(p && (p.url || p.path));
+            return !hasSrc;
+        });
+
+        if (!missing.length) return;
+
+        missing.forEach((m) => triedHydrate.current.add(m.messageId));
+        const targets = missing.slice(0, 16);
+
+        (async () => {
+            const hydrated = await Promise.all(
+                targets.map((m) => getMessage(m.messageId).catch(() => null))
+            );
+            const ok = hydrated.filter(Boolean) as ServerMessage[];
+            if (ok.length) setHistory((prev) => mergeAndSort(prev, ok));
+        })();
+    }, [history]);
+
     /* 상대 userId 추정 */
     const peerIdFromParticipants = React.useMemo(() => {
         const opp = pickDMOpponent(participants, myId);
@@ -165,7 +248,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         const h = history[history.length - 1];
         return h.senderId === myId ? h.receiverId : h.senderId;
     }, [history, myId]);
-    const targetUserId = peerIdFromParticipants ?? peerIdFromMessage ?? peerIdFromHistory;
+    const targetUserId =
+        peerIdFromParticipants ?? peerIdFromMessage ?? peerIdFromHistory;
 
     /* 텍스트 전송 */
     const handleSendText = async () => {
@@ -188,7 +272,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             const createdAt = server.createdAt || new Date().toISOString();
             setHistory((prev) =>
                 mergeAndSort(prev, [
-                    { ...server, createdAt, senderId: myId ?? server.senderId, mine: true },
+                    {
+                        ...server,
+                        createdAt,
+                        senderId: myId ?? server.senderId,
+                        mine: true,
+                    },
                 ]),
             );
 
@@ -225,26 +314,42 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
     /* 첨부 렌더 */
     const renderAttachment = (m: ServerMessage) => {
-        const p = (m.payload || {}) as { url?: string; path?: string; name?: string; mime?: string };
-        const src = p.url || (p.path ? fileUrl(p.path) : undefined);
-        if (!src) return <div className="text-sm text-gray-500">[파일]</div>;
+        type Att = { url?: string; path?: string; name?: string; mime?: string };
+        const p = parsePayload<Att>(m.payload);
 
-        const isImage = (p.mime || "").startsWith("image/") || /\.(png|jpe?g)$/i.test(p.name || "");
-        if (isImage) {
+        if (!p) {
+            return <div className="text-sm text-gray-500">[첨부파일] 정보가 없습니다</div>;
+        }
+
+        const src = p.url || (p.path ? fileUrl(p.path) : undefined);
+        if (!src) {
+            return <div className="text-sm text-gray-500">[첨부파일] 정보가 없습니다</div>;
+        }
+
+        const isImageByMime = typeof p.mime === "string" && p.mime.startsWith("image/");
+        const isImageByName =
+            typeof p.name === "string" && /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(p.name);
+
+        if (isImageByMime || isImageByName) {
             return (
-                <a href={src} target="_blank" rel="noreferrer">
-                    <img
-                        src={src}
-                        alt={p.name || "attachment"}
-                        className="max-w-[320px] max-h-[320px] rounded-lg object-contain"
-                    />
-                </a>
+                <AuthImage
+                    src={src}
+                    fileName={p.name}
+                    alt={p.name || "attachment"}
+                    className="block max-w-[320px] max-h-[320px] rounded-lg object-contain"
+                />
             );
         }
-        // 이미지가 아니면 링크만
+
+        // 이미지가 아닌 일반 첨부
         return (
-            <a href={src} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-                {p.name || "첨부파일 다운로드"}
+            <a
+                href={src}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-blue-600 underline"
+            >
+                [첨부파일] {p.name || "다운로드"}
             </a>
         );
     };
@@ -254,7 +359,11 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             {/* 헤더 */}
             <div className="px-6 py-4 border-b flex items-center gap-3">
                 {avatar ? (
-                    <img src={avatar} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
+                    <img
+                        src={avatar}
+                        alt={displayName}
+                        className="w-9 h-9 rounded-full object-cover"
+                    />
                 ) : (
                     <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
                         {(displayName?.[0] || "?").toUpperCase()}
@@ -275,7 +384,11 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             const panel = document.getElementById("chat-panel");
                             const width = Math.floor(panel?.clientWidth || 960);
                             try {
-                                await downloadRoomScreenshot(roomId, { width, tz: "Asia/Seoul", theme: "light" });
+                                await downloadRoomScreenshot(roomId, {
+                                    width,
+                                    tz: "Asia/Seoul",
+                                    theme: "light",
+                                });
                             } catch {
                                 alert("대화 캡처에 실패했어요.");
                             }
@@ -286,7 +399,6 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 </div>
             </div>
 
-            {/* 타임라인 */}
             <div id="chat-panel" className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 {history.map((m) => {
                     const when = new Date(m.createdAt || 0);
@@ -294,32 +406,26 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                         ? ""
                         : when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
                     const mine =
-                        typeof m.mine === "boolean" ? m.mine : (myId != null ? m.senderId === myId : false);
+                        typeof m.mine === "boolean"
+                            ? m.mine
+                            : (myId != null ? m.senderId === myId : false);
 
                     const body =
-                        m.type === "PROJECT_PROPOSAL" || m.type === "PROJECT_OFFER" ? (
-                            <ProjectProposalCard data={(m.payload || {}) as ProjectPayload} />
-                        ) : m.type === "JOB_OFFER" ? (
-                            <JobOfferCard data={(m.payload || {}) as JobOfferPayload} />
-                        ) : m.type === "ATTACHMENT" ? (
-                            renderAttachment(m)
-                        ) : (
-                            <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>
-                        );
+                        m.type === "PROJECT_PROPOSAL" || m.type === "PROJECT_OFFER"
+                            ? <ProjectProposalCard data={parsePayload<ProjectPayload>(m.payload) || {}} />
+                            : m.type === "JOB_OFFER"
+                                ? <JobOfferCard data={parsePayload<JobOfferPayload>(m.payload) || {}} />
+                                : m.type === "ATTACHMENT"
+                                    ? renderAttachment(m)
+                                    : <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>;
 
                     return mine ? (
-                        <div
-                            key={`${m.messageId}-${m.createdAt ?? ""}`}
-                            className="flex items-end gap-2 self-end max-w-full"
-                        >
+                        <div key={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
                             <span className="text-[11px] text-gray-400 shrink-0 translate-y-1 order-1">{hhmm}</span>
                             <div className={`${meBubble} order-2`}>{body}</div>
                         </div>
                     ) : (
-                        <div
-                            key={`${m.messageId}-${m.createdAt ?? ""}`}
-                            className="flex items-end gap-2 max-w-full"
-                        >
+                        <div key={m.messageId} className="flex items-end gap-2 max-w-full">
                             <div className={youBubble}>{body}</div>
                             <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
                         </div>
@@ -406,10 +512,16 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             setUploading(true);
                             try {
                                 const created = await sendAttachment(roomId, f);
-                                const createdAt = created.createdAt || new Date().toISOString();
+                                const createdAt =
+                                    created.createdAt || new Date().toISOString();
                                 setHistory((prev) =>
                                     mergeAndSort(prev, [
-                                        { ...created, createdAt, senderId: myId ?? created.senderId, mine: true },
+                                        {
+                                            ...created,
+                                            createdAt,
+                                            senderId: myId ?? created.senderId,
+                                            mine: true,
+                                        },
                                     ]),
                                 );
                                 emitMessagesRefresh();
