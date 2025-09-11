@@ -28,6 +28,9 @@ class FeatureDeepRec(nn.Module):
             nn.Linear(256, embed_dim)
         )
 
+        # Pre-MLP normalization to stabilize deeper networks
+        self.pre_mlp_norm = nn.LayerNorm(embed_dim * 4)
+
         layers = []
         in_dim = embed_dim * 4
         for d in mlp_dims:
@@ -46,11 +49,16 @@ class FeatureDeepRec(nn.Module):
         return F.normalize(z, dim=1, eps=1e-8)
 
     def forward(self, u_ids: torch.Tensor, i_ids: torch.Tensor,
-                u_feat: torch.Tensor, i_feat: torch.Tensor) -> torch.Tensor:
+                u_feat: torch.Tensor, i_feat: torch.Tensor,
+                return_logits: bool = False) -> torch.Tensor:
+
         u_id_emb = self.user_id_emb(u_ids)
         i_id_emb = self.item_id_emb(i_ids)
         u_feat_emb = self.user_feat_fc(u_feat)
         i_feat_emb = self.item_feat_fc(i_feat)
         x = torch.cat([u_id_emb, i_id_emb, u_feat_emb, i_feat_emb], dim=1)
-        out = self.mlp(x)
-        return torch.sigmoid(out).squeeze(1)
+        x = self.pre_mlp_norm(x)
+        out = self.mlp(x).squeeze(1)
+        if return_logits:
+            return out
+        return torch.sigmoid(out)
