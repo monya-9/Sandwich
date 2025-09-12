@@ -2,6 +2,7 @@ package com.sandwich.SandWich.challenge.service;
 
 import com.sandwich.SandWich.challenge.domain.*;
 import com.sandwich.SandWich.challenge.dto.SubmissionDtos;
+import com.sandwich.SandWich.challenge.event.CodeSubmissionCreatedEvent;
 import com.sandwich.SandWich.challenge.repository.*;
 import com.sandwich.SandWich.challenge.event.SubmissionCreatedEvent;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
@@ -130,10 +131,13 @@ public class SubmissionService {
                 .build();
         codeRepo.save(cs);
 
-        // (선택) 포트폴리오와 동일 이벤트로 운영 알림 연결
+        // 포트폴리오와 동일 이벤트로 운영 알림 연결
         publisher.publishEvent(new SubmissionCreatedEvent(
                 sub.getId(), ch.getId(), userId, sub.getTitle(), sub.getRepoUrl(), sub.getDemoUrl()
         ));
+
+        // 채점 요청 이벤트 (AFTER_COMMIT에 전송)
+        publisher.publishEvent(new CodeSubmissionCreatedEvent(sub.getId()));
 
         return sub.getId();
     }

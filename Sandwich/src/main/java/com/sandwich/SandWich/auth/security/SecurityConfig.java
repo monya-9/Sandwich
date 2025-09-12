@@ -81,7 +81,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()  // 상세(/{id}) 및 확장 대비
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/votes/summary").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/leaderboard").permitAll()
-
+                        .requestMatchers(HttpMethod.POST, "/internal/ai/**").permitAll()
                         // ===== 사용자 공개 정보 =====
                         .requestMatchers("/api/users/*/following").permitAll()
                         .requestMatchers("/api/users/*/followers").permitAll()
