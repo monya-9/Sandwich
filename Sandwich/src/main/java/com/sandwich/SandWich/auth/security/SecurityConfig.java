@@ -6,6 +6,7 @@ import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
 import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,9 +30,10 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     // OAuth2 (구글/깃허브) 연동
-    private final CustomOAuth2UserService customOAuth2UserService;
-    private final OAuth2SuccessHandler oAuth2SuccessHandler;
-    private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final ObjectProvider<ClientRegistrationRepository> repoProvider;
+    private final ObjectProvider<CustomOAuth2UserService> customOAuth2UserServiceProvider;
+    private final ObjectProvider<OAuth2SuccessHandler> oAuth2SuccessHandlerProvider;
+    private final ObjectProvider<OAuth2FailureHandler> oAuth2FailureHandlerProvider;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -44,7 +46,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ObjectProvider<ClientRegistrationRepository> repoProvider) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -120,18 +122,22 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(customAuthenticationEntryPoint) // 401: 토큰 없음/무효
                         .accessDeniedHandler(restAccessDeniedHandler())           // 403: 권한 부족 → JSON 응답
-                )
-
-                // OAuth2 로그인
-                .oauth2Login(oauth -> oauth
-                        .authorizationEndpoint(endpoint -> endpoint
-                                .baseUri("/oauth2/authorization") // ✅ 커스텀 리졸버 제거
-                        )
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .successHandler(oAuth2SuccessHandler)
-                        .failureHandler(oAuth2FailureHandler)
                 );
 
+        // OAuth2는 등록 정보가 있을 때만 활성화
+        ClientRegistrationRepository repo = repoProvider.getIfAvailable();
+        var userService = customOAuth2UserServiceProvider.getIfAvailable();
+        var successHandler = oAuth2SuccessHandlerProvider.getIfAvailable();
+        var failureHandler = oAuth2FailureHandlerProvider.getIfAvailable();
+
+        if (repo != null && userService != null && successHandler != null && failureHandler != null) {
+            http.oauth2Login(oauth -> oauth
+                    .authorizationEndpoint(endpoint -> endpoint.baseUri("/oauth2/authorization"))
+                    .userInfoEndpoint(userInfo -> userInfo.userService(userService))
+                    .successHandler(successHandler)
+                    .failureHandler(failureHandler)
+            );
+        }
         return http.build();
     }
 }

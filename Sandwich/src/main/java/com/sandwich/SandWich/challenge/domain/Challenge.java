@@ -5,6 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Check;
 import jakarta.persistence.Index;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.time.OffsetDateTime;
 
 @Getter @Setter
@@ -38,8 +42,9 @@ public class Challenge extends BaseEntity {
     private String title;
 
     /** DB는 jsonb, 여기서는 raw JSON string 으로 보관 */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "rule_json", columnDefinition = "jsonb")
-    private String ruleJson;
+    private JsonNode ruleJson;
 
     @Column(name = "start_at", nullable = false)
     private OffsetDateTime startAt;

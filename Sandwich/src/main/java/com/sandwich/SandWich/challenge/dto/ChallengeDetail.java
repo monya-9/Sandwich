@@ -24,7 +24,7 @@ public class ChallengeDetail {
                 .id(c.getId())
                 .type(c.getType())
                 .title(c.getTitle())
-                .ruleJson(c.getRuleJson())
+                .ruleJson(c.getRuleJson() == null ? "{}" : c.getRuleJson().toString())
                 .startAt(c.getStartAt())
                 .endAt(c.getEndAt())
                 .voteStartAt(c.getVoteStartAt())

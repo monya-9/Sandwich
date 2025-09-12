@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/admin/challenges")
+@RequestMapping(value = "/admin/rewards", produces = "application/json")
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "reward.enabled", havingValue = "true", matchIfMissing = true)
 public class RewardAdminController {
@@ -20,7 +20,7 @@ public class RewardAdminController {
 
     public record PublishReq(List<Long> top, Long participant) {}
 
-    @PostMapping("/{id}/publish-results")
+    @PostMapping(value = "/{id}/publish-results", consumes = "application/json")
     @PreAuthorize("hasRole('ADMIN')")
     public Map<String,Object> publish(@PathVariable long id, @RequestBody PublishReq req) {
         var rule = new RewardRule(req.top() == null ? List.of() : req.top(), req.participant());
@@ -30,5 +30,14 @@ public class RewardAdminController {
                 "top", rule.top(),
                 "participant", rule.participant()
         );
+    }
+
+    // 기본 보상표: Top [10000,5000,3000], 참가 500
+    @PostMapping("/{id}/publish-results/default")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String,Object> publishDefault(@PathVariable long id) {
+        var rule = new RewardRule(List.of(10000L, 5000L, 3000L), 500L);
+        int inserted = service.publishPortfolioResults(id, rule);
+        return Map.of("inserted", inserted, "default", true);
     }
 }
