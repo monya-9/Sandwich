@@ -59,6 +59,13 @@ public class SecurityConfig {
                                 "/swagger-ui.html", "/webjars/**", "/api/upload/image",
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
+                        // 하네스/정적 html 허용
+                        .requestMatchers(
+                                "/", "/recaptcha-v2.html", "/recaptcha-v3.html", "/favicon.ico"
+                        ).permitAll()
+                        // 필요시 정적 폴더 패턴도 추가
+                        .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
