@@ -27,14 +27,15 @@ import CareerSettingPage from "./components/MyPageSetting/CareerSettingPage";
 import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
 import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
+// ✅ 모든 import를 최상단으로
+import { initFCM } from "./lib/fcm";
+
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {
     const { id } = useParams();
     const to = id ? `/messages/${id}` : "/messages";
     return <Navigate to={to} replace />;
 }
-
-import { initFCM } from "./lib/fcm";
 
 function App() {
     useEffect(() => {
@@ -44,33 +45,27 @@ function App() {
     return (
         <GoogleOAuthProvider clientId="1009231740163-6ccfojs5atbc5g7dqjsevl1m5uolrhhb.apps.googleusercontent.com">
             <AuthProvider>
-                {/* 전역 메시지 상태 공유 */}
                 <MessagesProvider>
                     <BrowserRouter>
                         <Routes>
-                            {/* 공통 레이아웃 */}
                             <Route element={<AppLayout />}>
                                 <Route index element={<MainPage />} />
                                 <Route path="other-project" element={<OtherProjectPage />} />
                                 <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
                                 <Route path="project/new" element={<ProjectForm />} />
 
-                                {/* 메시지 */}
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
 
-                                {/* 구경로 호환 + FCM 딥링크 대응 */}
                                 <Route path="/rooms/:id" element={<RoomToMessagesRedirect />} />
                                 <Route path="/rooms" element={<Navigate to="/messages" replace />} />
 
-                                {/* 마이페이지 */}
                                 <Route path="/mypage" element={<MyPageSettingPage />} />
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
                             </Route>
 
-                            {/* 레이아웃 없이 단독 라우트 */}
                             <Route path="join" element={<JoinPage />} />
                             <Route path="login" element={<LoginPage />} />
                             <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
@@ -78,7 +73,6 @@ function App() {
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />
                             <Route path="project/sample" element={<ProjectMangeSampleForm />} />
 
-                            {/* 404 */}
                             <Route path="*" element={<Navigate to="/messages" replace />} />
                         </Routes>
                     </BrowserRouter>
