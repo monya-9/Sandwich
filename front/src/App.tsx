@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { AuthProvider } from "./context/AuthContext";
-import { MessagesProvider } from "./context/MessagesContext"; // ★ 전역 메시지 상태 공유
+import { MessagesProvider } from "./context/MessagesContext";
 import AppLayout from "./layouts/AppLayout";
 
 // 페이지
@@ -44,7 +44,7 @@ function App() {
     return (
         <GoogleOAuthProvider clientId="1009231740163-6ccfojs5atbc5g7dqjsevl1m5uolrhhb.apps.googleusercontent.com">
             <AuthProvider>
-                {/* ★ 헤더/드롭다운/페이지가 같은 메시지 상태 공유 */}
+                {/* 전역 메시지 상태 공유 */}
                 <MessagesProvider>
                     <BrowserRouter>
                         <Routes>
@@ -59,8 +59,9 @@ function App() {
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
 
-                                {/* 구경로 호환 */}
+                                {/* 구경로 호환 + FCM 딥링크 대응 */}
                                 <Route path="/rooms/:id" element={<RoomToMessagesRedirect />} />
+                                <Route path="/rooms" element={<Navigate to="/messages" replace />} />
 
                                 {/* 마이페이지 */}
                                 <Route path="/mypage" element={<MyPageSettingPage />} />
@@ -76,6 +77,9 @@ function App() {
                             <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />
                             <Route path="project/sample" element={<ProjectMangeSampleForm />} />
+
+                            {/* 404 */}
+                            <Route path="*" element={<Navigate to="/messages" replace />} />
                         </Routes>
                     </BrowserRouter>
                 </MessagesProvider>

@@ -29,8 +29,7 @@ function setAuthHeader(headers: AxiosRequestConfig["headers"], token: string) {
 
 api.interceptors.request.use((config) => {
     // 1) 토큰 자동 부착
-    const token =
-        localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (token) config.headers = setAuthHeader(config.headers, token);
 
     // 2) 업로드(FormData)일 때는 Content-Type을 **절대 수동 지정하지 않도록 제거**
@@ -60,19 +59,8 @@ function isRefreshable401(error: AxiosError) {
     // 인증/리프레시 자체는 제외
     if (/\/auth\/(login|signin|register|refresh)/.test(url)) return false;
 
-    const headers = (error.response?.headers || {}) as Record<string, string>;
-    const www = headers["www-authenticate"] || headers["WWW-Authenticate"];
-    if (typeof www === "string" && /invalid_token|expired/i.test(www)) return true;
-
-    const data: any = error.response?.data;
-    const code = (data?.code || data?.error || data?.errorCode || "").toString();
-    const msg = (data?.message || "").toString().toLowerCase();
-
-    // 서버 힌트
-    if (/token.*expired|expired.*token|jwt.*expired/.test(msg)) return true;
-    if (/TOKEN_?EXPIRED|INVALID_?TOKEN/.test(code)) return true;
-
-    return false;
+    // 👉 힌트가 없어도 시도 (쿠키 기반 RT 지원을 위해 완화)
+    return true;
 }
 
 /* ---------------- 401 처리: refresh 단일 진행 + 대기열 ---------------- */
@@ -127,29 +115,27 @@ api.interceptors.response.use(
             const storedRefresh =
                 localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
 
-            if (!storedRefresh) {
-                resolveQueue(null);
-                isRefreshing = false;
-                return Promise.reject(error);
-            }
+            // 👉 로컬에 refreshToken이 없어도(쿠키만 있어도) 시도하도록 변경
+            const refreshBody = storedRefresh ? { refreshToken: storedRefresh } : {};
 
             // 주의: refresh 는 전역 axios 사용 → api 인터셉터(Authorization 등) 회피
-            const r = await axios.post(
-                REFRESH_ENDPOINT,
-                { refreshToken: storedRefresh }, // 쿠키 기반이면 {} 로 변경
-                { withCredentials: true }
-            );
+            const r = await axios.post(REFRESH_ENDPOINT, refreshBody, { withCredentials: true });
 
             const { accessToken, refreshToken: newRefreshToken } = (r as any).data || {};
             if (!accessToken) throw new Error("No accessToken from refresh");
 
+            // keep 기준: RT가 localStorage에 있던 경우 그대로 유지
             const keep = !!localStorage.getItem("refreshToken");
             if (keep) {
                 localStorage.setItem("accessToken", accessToken);
-                if (newRefreshToken) localStorage.setItem("refreshToken", newRefreshToken);
+                if (newRefreshToken !== undefined && newRefreshToken !== null) {
+                    localStorage.setItem("refreshToken", newRefreshToken);
+                }
             } else {
                 sessionStorage.setItem("accessToken", accessToken);
-                if (newRefreshToken) sessionStorage.setItem("refreshToken", newRefreshToken);
+                if (newRefreshToken !== undefined && newRefreshToken !== null) {
+                    sessionStorage.setItem("refreshToken", newRefreshToken);
+                }
             }
 
             resolveQueue(accessToken);
@@ -158,8 +144,16 @@ api.interceptors.response.use(
             original.headers = setAuthHeader(original.headers, accessToken);
             return api(original);
         } catch (e) {
-            // 리프레시 실패 → 대기열에 실패 알림, 토큰 제거는 여기서 하지 않음(루프 방지)
+            // 리프레시 실패 → 대기열에 실패 알림
             resolveQueue(null);
+
+            // (선택) 토큰 정리 및 리다이렉트
+            // localStorage.removeItem("accessToken");
+            // sessionStorage.removeItem("accessToken");
+            // localStorage.removeItem("refreshToken");
+            // sessionStorage.removeItem("refreshToken");
+            // window.location.assign("/login");
+
             return Promise.reject(e);
         } finally {
             isRefreshing = false;
