@@ -1,6 +1,7 @@
-package com.sandwich.SandWich.reward;
+package com.sandwich.SandWich.reward.service;
 
 
+import com.sandwich.SandWich.reward.RewardProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

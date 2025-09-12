@@ -1,7 +1,7 @@
 package com.sandwich.SandWich.reward.web;
 
-import com.sandwich.SandWich.reward.RewardPayoutService;
-import com.sandwich.SandWich.reward.RewardRule;
+import com.sandwich.SandWich.reward.service.RewardPayoutService;
+import com.sandwich.SandWich.reward.service.RewardRule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.access.prepost.PreAuthorize;
