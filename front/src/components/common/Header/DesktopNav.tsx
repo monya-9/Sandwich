@@ -27,6 +27,14 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         return looksLikeJwt ? "" : email;
     }, [email]);
 
+    // 닉네임 변경 이벤트 수신용 리비전
+    const [nickRevision, setNickRevision] = useState(0);
+    useEffect(() => {
+        const onNickUpdate = () => setNickRevision((v) => v + 1);
+        window.addEventListener("user-nickname-updated", onNickUpdate as any);
+        return () => window.removeEventListener("user-nickname-updated", onNickUpdate as any);
+    }, []);
+
     const displayName = useMemo(() => {
         const getItem = (k: string) =>
             (typeof window !== "undefined" &&
@@ -38,7 +46,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail]);
+    }, [safeEmail, nickRevision]);
 
     // ▼ 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);

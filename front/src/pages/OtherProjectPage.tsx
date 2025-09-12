@@ -43,13 +43,17 @@ export default function OtherProjectPage() {
         }
     }, [ownerId, projectId]);
 
+    // 스토리지의 닉네임 우선 사용
+    const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
+    const finalOwnerName = storedNickname || "사용자 이름";
+
     // ✅ 실제 프로젝트 API 응답이라고 가정 (데모 기본값 + 파라미터 우선 적용)
     const project = {
         qrImageUrl: projectDetail?.qrImageUrl ?? "https://your-bucket.s3.amazonaws.com/qr/sample.png",
         username: "sampleuser", // 실제 서비스에서는 동적으로!
         id: projectId ?? 123, // 파라미터 없으면 데모 값
         name: projectDetail?.title ?? "프로젝트 이름",
-        owner: "사용자 이름",
+        owner: finalOwnerName,
         category: "UI·UX",
         ownerId: ownerId ?? 0, // 파라미터 없으면 0 (팔로우 대상 없음)
         shareUrl: projectDetail?.shareUrl,
@@ -90,10 +94,9 @@ export default function OtherProjectPage() {
                             <TagList tags={["포트폴리오", "프론트엔드", "백엔드", "알고리즘", "디자인"]} />
                             <div className="mb-8">
                                 <ProjectStatsBox
-                                    likes={286}
-                                    collections={5}
-                                    views={286}
-                                    comments={12}
+                                    likes={0}
+                                    views={0}
+                                    comments={0}
                                     projectName={project.name}
                                     date="2025.5.11"
                                     category={project.category}

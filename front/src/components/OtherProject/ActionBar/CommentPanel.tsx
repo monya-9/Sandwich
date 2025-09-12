@@ -33,8 +33,13 @@ export default function CommentPanel({
     try {
       const res = await fetchComments(username, projectId);
       setComments(res.data);
-    } catch {
-      alert("댓글을 불러올 수 없습니다");
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 401 || status === 404) {
+        setComments([]);
+      } else {
+        alert("댓글을 불러올 수 없습니다");
+      }
     }
     setLoading(false);
   }, [username, projectId]);

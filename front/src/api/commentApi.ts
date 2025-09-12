@@ -1,5 +1,5 @@
 // src/api/commentApi.ts
-import axios from "axios";
+import api from "./axiosInstance";
 
 // 타입 정의 (동일)
 export interface CommentResponse {
@@ -19,13 +19,13 @@ export interface CommentPostPayload {
 
 // LikeAction과 동일한 방식으로 토큰을 헤더에 추가하는 함수
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 // 댓글 목록 조회
 export async function fetchComments(username: string, projectId: number) {
-  return axios.get<CommentResponse[]>("http://localhost:8080/api/comments", {
+  return api.get<CommentResponse[]>("/comments", {
     params: { type: "Project", username, id: projectId },
     withCredentials: true,
     headers: getAuthHeaders(),
@@ -36,7 +36,7 @@ export async function fetchComments(username: string, projectId: number) {
 export async function postComment({
   username, projectId, comment, parentCommentId
 }: CommentPostPayload) {
-  return axios.post("http://localhost:8080/api/comments", {
+  return api.post("/comments", {
     commentableType: "Project",
     commentableUsername: username,
     commentableId: projectId,
@@ -50,7 +50,7 @@ export async function postComment({
 
 // 댓글 수정
 export async function updateComment({ commentId, comment }: { commentId: number, comment: string }) {
-  return axios.put(`http://localhost:8080/api/comments/${commentId}`, { comment }, {
+  return api.put(`/comments/${commentId}`, { comment }, {
     withCredentials: true,
     headers: getAuthHeaders(),
   });
@@ -58,7 +58,7 @@ export async function updateComment({ commentId, comment }: { commentId: number,
 
 // 댓글 삭제
 export async function deleteComment(commentId: number) {
-  return axios.delete(`http://localhost:8080/api/comments/${commentId}`, {
+  return api.delete(`/comments/${commentId}`, {
     withCredentials: true,
     headers: getAuthHeaders(),
   });

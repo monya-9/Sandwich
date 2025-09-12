@@ -70,6 +70,9 @@ public class SecurityConfig {
                         .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
                         .requestMatchers("/api/emojis/**").permitAll()
 
+                        // ===== 댓글 공개 GET =====
+                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
+
                         // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)

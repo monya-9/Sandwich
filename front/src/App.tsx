@@ -12,12 +12,17 @@ import JoinPage from "./pages/Auth/JoinPage";
 import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectForm from "./components/ProjectManage/ProjectForm";
+import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
 
 // OAuth 콜백/스텝(레이아웃 없이)
 import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
 import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
 import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 import MessagesPage from "./pages/Messages/MessagesPage";
+import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
+import CareerSettingPage from "./components/MyPageSetting/CareerSettingPage";
+import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
+import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
 function App() {
     return (
@@ -34,6 +39,10 @@ function App() {
                             <Route path="project/new" element={<ProjectForm />} />
                             <Route path="/messages" element={<MessagesPage />} />
                             <Route path="/messages/:id" element={<MessagesPage />} />
+                            <Route path="/mypage" element={<MyPageSettingPage />} />
+                            <Route path="/mypage/career" element={<CareerSettingPage />} />
+                            <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
+                            <Route path="/mypage/push" element={<PushSettingPage />} />
                         </Route>
 
                         {/* ✅ 레이아웃 없이 단독 라우트 */}
@@ -42,6 +51,7 @@ function App() {
                         <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
                         <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
                         <Route path="/oauth/profile-step" element={<ProfileStep />} />
+                        <Route path="project/sample" element={<ProjectMangeSampleForm />} />
                     </Routes>
                 </BrowserRouter>
             </AuthProvider>

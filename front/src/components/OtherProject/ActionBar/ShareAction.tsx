@@ -45,10 +45,10 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title }: ShareActi
         className="flex flex-col items-center gap-1 group"
         onClick={() => setOpen(true)}
       >
-        <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-          <FaShareAlt className="w-6 h-6" />
-        </div>
-        <span className="text-xs text-gray-800 font-semibold text-center">공유하기</span>
+        		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
+			<FaShareAlt className="w-6 h-6" />
+		</div>
+		<span className="text-xs text-white font-semibold text-center">공유하기</span>
       </button>
 
       {/* 모달 */}

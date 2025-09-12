@@ -48,7 +48,7 @@ export default function UserProfileBox({
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token || !ownerId || ownerId <= 0) {
       setIsFollowing(false);
       return;
@@ -88,7 +88,7 @@ export default function UserProfileBox({
   }, [toast]);
 
   const handleToggle = async () => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) {
       alert("로그인이 필요합니다.");
       navigate("/login");
@@ -139,11 +139,20 @@ export default function UserProfileBox({
     document.body
   );
 
+  // 표시 이름/이니셜 계산
+  const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
+  const storedEmail = (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "").trim();
+  const displayName = storedNickname || userName;
+  const emailInitial = storedEmail ? storedEmail[0].toUpperCase() : "";
+  const avatarInitial = emailInitial || (displayName?.[0] || "").toUpperCase();
+
   return (
     <div className="flex flex-col items-center mb-16">
       {renderToast}
-      <div className="w-24 h-24 bg-green-600 rounded-full mb-4" />
-      <div className="text-2xl font-bold mb-3">{userName}</div>
+      <div className="w-14 h-14 rounded-full mb-4 bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
+        {avatarInitial}
+      </div>
+      <div className="text-2xl font-bold mb-3">{displayName}</div>
       <div className="flex gap-6">
         <button
           ref={followBtnRef}

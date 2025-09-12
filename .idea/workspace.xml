@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9600651a-9f0d-4f17-a608-365a7ecf44f2" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/CurrentUserProvider.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/SecurityCurrentUserProvider.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/controller/ChallengeController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/controller/LeaderboardController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/controller/PortfolioVoteController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/controller/SubmissionController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/Challenge.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/ChallengeStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/ChallengeType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/CodeSubmission.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/PortfolioSubmission.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/PortfolioVote.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/Submission.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/SubmissionAsset.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/SubmissionStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/dto/ChallengeDetail.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/dto/ChallengeListItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/dto/LeaderboardDtos.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/dto/SubmissionDtos.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/dto/VoteDtos.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/event/SubmissionCreatedEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/notify/PortfolioNotifyListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/notify/ServiceAccountNotifier.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/notify/SubmissionEventListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/ChallengeRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/ChallengeSpecifications.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/CodeSubmissionRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/PortfolioVoteRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/SubmissionAssetRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/SubmissionRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/projection/VoteSummaryRow.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/service/ChallengeQueryService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/service/PortfolioLeaderboardCache.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/service/PortfolioVoteService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/service/SubmissionService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/config/RedisConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/config/TimeConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/BadRequestException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/controller/ProjectRelatedController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/dto/ProjectCarouselItemResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/repository/ProjectSpecs.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/service/ProjectRelatedService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/support/UploadWindow.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/support/UploadWindowConverter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/controller/RecentSearchController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/domain/RecentSearch.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/domain/RecentSearchType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/dto/RecentSearchItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/dto/RecentSearchRequest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/repository/RecentSearchRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/search/service/RecentSearchService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/controller/AccountSearchController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/dto/AccountSearchItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/repository/UserSearchRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/service/AccountSearchService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/controller/AuthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/security/JwtUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/security/JwtUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/security/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/service/CustomUserDetailsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/auth/service/CustomUserDetailsService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/ChallengeOption.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/ChallengeQuestion.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/domain/ChallengeVote.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/challenge/repository/ChallengeQuestionRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/collection/service/CollectionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/collection/service/CollectionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/comment/support/CommentTargetResolverImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/comment/support/CommentTargetResolverImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/util/RedisUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/util/RedisUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/config/AppConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/config/AppConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/config/EncryptionConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/config/EncryptionConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/config/PlaywrightConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/config/PlaywrightConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/config/RedisConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/email/service/EmailVerificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/email/service/EmailVerificationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/CustomException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/CustomException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/ErrorResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/ErrorResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/GlobalExceptionHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/BadRequestException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/CollectionFolderNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/CollectionFolderNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/ConflictException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/ConflictException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/EmailAlreadyExistsException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/EmailAlreadyExistsException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/EmailVerificationExpiredException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/EmailVerificationExpiredException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/ForbiddenAccessException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/ForbiddenAccessException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/ForbiddenException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/ForbiddenException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/InterestNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/InterestNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/InternalServerErrorException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/InternalServerErrorException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/InvalidPasswordException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/InvalidPasswordException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/InvalidRefreshTokenException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/InvalidRefreshTokenException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/InvalidVerificationCodeException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/InvalidVerificationCodeException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/JwtInvalidException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/JwtInvalidException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/MessageNotAllowedException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/MessageNotAllowedException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/MessageNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/MessageNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/MessageRoomForbiddenException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/MessageRoomForbiddenException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/MessageRoomNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/MessageRoomNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/MissingFieldException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/MissingFieldException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/PayloadTooLargeException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/PayloadTooLargeException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/PositionNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/PositionNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/ProfileAlreadyExistsException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/ProfileAlreadyExistsException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/ProjectNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/ProjectNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/RefreshTokenNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/RefreshTokenNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/TokenExpiredException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/TokenExpiredException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/UnverifiedUserException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/UnverifiedUserException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/UserDeletedException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/UserDeletedException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/global/exception/exceptiontype/UserNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/common/exception/exceptiontype/UserNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/attach/util/AttachmentValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/attach/util/AttachmentValidator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/domain/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/domain/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/service/MessageScreenshotService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/service/MessageScreenshotService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/service/MessageService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/service/MessageService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/ws/JwtHandshakeInterceptor.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/message/ws/JwtHandshakeInterceptor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/notification/domain/NotificationPreference.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/notification/domain/NotificationPreference.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/oauth/service/CustomOAuth2UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/oauth/service/CustomOAuth2UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/controller/ProjectController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/controller/ProjectController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/domain/Project.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/domain/Project.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/repository/ProjectRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/repository/ProjectRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/service/ProjectService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/project/service/ProjectService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/social/repository/FollowRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/social/repository/FollowRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/social/service/FollowService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/social/service/FollowService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/java/com/sandwich/SandWich/user/service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/auth/JwtUtilTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/auth/JwtUtilTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/auth/RedisUtilTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/auth/RedisUtilTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/email/EmailVerificationServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/email/EmailVerificationServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/user/UserServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Sandwich/src/test/java/com/sandwich/SandWich/user/UserServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/front/src/layouts/AppLayout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/layouts/AppLayout.tsx" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$/Sandwich">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$/Sandwich">
+          <activation />
+        </task>
+        <projects_view>
+          <tree_state>
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="SandWich" type="f1a62948:ProjectNode" />
+              </path>
+            </expand>
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="322rh6Vm9oBnMs4DP8QQDORYJv9" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Gradle.SandWichApplicationTests.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.Sandwich [:SandWichApplication.main()].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Merging SCRUM-116-프로젝트-등록-페이지-피드백-적용-전&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/leejeongju/Sandwich&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\leejeongju\Sandwich\Sandwich" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.SandWichApplication">
+    <configuration name="SandWichApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.sandwich.SandWich.SandWichApplication" />
+      <module name="SandWich.main" />
+      <selectedOptions>
+        <option name="environmentVariables" visible="false" />
+      </selectedOptions>
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.sandwich.SandWich.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <extension name="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+        </ENTRIES>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SandWichApplicationTests" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/Sandwich" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;com.sandwich.SandWich.SandWichApplicationTests&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>true</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.SandWichApplication" />
+      <item itemvalue="Gradle.SandWichApplicationTests" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.SandWichApplication" />
+        <item itemvalue="Gradle.SandWichApplicationTests" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9600651a-9f0d-4f17-a608-365a7ecf44f2" name="Changes" comment="" />
+      <created>1756629631653</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1756629631653</updated>
+    </task>
+    <servers />
+  </component>
+</project>
