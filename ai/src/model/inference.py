@@ -48,9 +48,29 @@ def load_model_and_feats(dev):
     num_items, Fi = I.shape
 
     ckpt = torch.load(str(CKPT_PATH), map_location="cpu")
-    embed_dim = ckpt.get("embed_dim", 64)
+    # Determine embed_dim if available in checkpoint metadata (optional)
+    embed_dim = 64
+    if isinstance(ckpt, dict):
+        embed_dim = ckpt.get("embed_dim", embed_dim)
     model = FeatureDeepRec(num_users, num_items, Fu, Fi, embed_dim=embed_dim).to(dev)
-    model.load_state_dict(ckpt["state_dict"] if "state_dict" in ckpt else ckpt)
+
+    # Support multiple checkpoint formats: raw state_dict, {'state_dict': ...}, {'model_state_dict': ...}
+    if isinstance(ckpt, dict):
+        if "state_dict" in ckpt:
+            state_dict = ckpt["state_dict"]
+        elif "model_state_dict" in ckpt:
+            state_dict = ckpt["model_state_dict"]
+        else:
+            # Heuristic: if looks like a plain state_dict (has at least one known key)
+            if any(k.startswith("user_id_emb") or k.startswith("item_id_emb") for k in ckpt.keys()):
+                state_dict = ckpt
+            else:
+                raise RuntimeError("Unsupported checkpoint format: expected 'state_dict' or 'model_state_dict' or raw state_dict.")
+    else:
+        # Fallback: assume it's already a state_dict-like mapping
+        state_dict = ckpt
+
+    model.load_state_dict(state_dict)
     model.eval()
 
     U_t = torch.from_numpy(U).float().to(dev)

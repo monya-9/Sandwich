@@ -127,3 +127,48 @@
 2025-08-16 18:44:38,126 | INFO | ✔ 추론 → Redis 캐시 업데이트 완료 (0.30s)
 2025-08-16 18:44:38,133 | INFO | Redis 샘플 키 'recs:0' zcard=12
 2025-08-16 18:44:38,133 | INFO | 종료
+2025-09-12 04:54:37,536 | INFO | DB/Redis 연결 점검...
+2025-09-12 04:54:37,809 | INFO | DB/Redis OK
+2025-09-12 04:54:37,809 | INFO | ▶ 메인 DB → AI DB 적재 시작
+2025-09-12 04:54:38,375 | INFO | ✔ 메인 DB → AI DB 적재 완료 (0.57s)
+2025-09-12 04:54:38,375 | INFO | ▶ interactions.csv 생성 시작
+2025-09-12 04:54:38,417 | INFO | ✔ interactions.csv 생성 완료 (0.04s)
+2025-09-12 04:54:38,417 | INFO | ▶ 유저 피처 인코딩 시작
+2025-09-12 04:54:38,472 | INFO | ✔ 유저 피처 인코딩 완료 (0.06s)
+2025-09-12 04:54:38,473 | INFO | ▶ 프로젝트 피처 인코딩 시작
+2025-09-12 04:54:38,521 | INFO | ✔ 프로젝트 피처 인코딩 완료 (0.05s)
+2025-09-12 04:54:38,521 | INFO | ▶ 모델 학습 시작
+2025-09-12 04:54:41,874 | INFO | ✔ 모델 학습 완료 (3.35s)
+2025-09-12 04:54:41,874 | INFO | ▶ 추론 → Redis 캐시 업데이트 시작
+2025-09-12 04:54:41,887 | ERROR | ✖ 추론 → Redis 캐시 업데이트 실패: Error(s) in loading state_dict for FeatureDeepRec:
+	Missing key(s) in state_dict: "user_id_emb.weight", "item_id_emb.weight", "user_feat_fc.0.weight", "user_feat_fc.0.bias", "user_feat_fc.2.weight", "user_feat_fc.2.bias", "user_feat_fc.2.running_mean", "user_feat_fc.2.running_var", "user_feat_fc.4.weight", "user_feat_fc.4.bias", "item_feat_fc.0.weight", "item_feat_fc.0.bias", "item_feat_fc.2.weight", "item_feat_fc.2.bias", "item_feat_fc.2.running_mean", "item_feat_fc.2.running_var", "item_feat_fc.4.weight", "item_feat_fc.4.bias", "pre_mlp_norm.weight", "pre_mlp_norm.bias", "mlp.0.weight", "mlp.0.bias", "mlp.2.weight", "mlp.2.bias", "mlp.2.running_mean", "mlp.2.running_var", "mlp.4.weight", "mlp.4.bias", "mlp.6.weight", "mlp.6.bias", "mlp.6.running_mean", "mlp.6.running_var", "mlp.8.weight", "mlp.8.bias". 
+	Unexpected key(s) in state_dict: "model_state_dict", "optimizer_state_dict", "scaler_state_dict", "epoch", "val_loss". 
+Traceback (most recent call last):
+  File "E:\pycharm\Sandwich_git\Sandwich\ai\src\pipeline\run_once.py", line 87, in run_step
+    fn()
+  File "E:\pycharm\Sandwich_git\Sandwich\ai\src\model\inference.py", line 172, in main
+    _, Ue, Ie, U_sum = load_model_and_feats(dev)
+  File "E:\pycharm\Sandwich_git\Sandwich\ai\src\model\inference.py", line 53, in load_model_and_feats
+    model.load_state_dict(ckpt["state_dict"] if "state_dict" in ckpt else ckpt)
+  File "E:\pycharm\Sandwich_git\Sandwich\ai\.venv\lib\site-packages\torch\nn\modules\module.py", line 2593, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for FeatureDeepRec:
+	Missing key(s) in state_dict: "user_id_emb.weight", "item_id_emb.weight", "user_feat_fc.0.weight", "user_feat_fc.0.bias", "user_feat_fc.2.weight", "user_feat_fc.2.bias", "user_feat_fc.2.running_mean", "user_feat_fc.2.running_var", "user_feat_fc.4.weight", "user_feat_fc.4.bias", "item_feat_fc.0.weight", "item_feat_fc.0.bias", "item_feat_fc.2.weight", "item_feat_fc.2.bias", "item_feat_fc.2.running_mean", "item_feat_fc.2.running_var", "item_feat_fc.4.weight", "item_feat_fc.4.bias", "pre_mlp_norm.weight", "pre_mlp_norm.bias", "mlp.0.weight", "mlp.0.bias", "mlp.2.weight", "mlp.2.bias", "mlp.2.running_mean", "mlp.2.running_var", "mlp.4.weight", "mlp.4.bias", "mlp.6.weight", "mlp.6.bias", "mlp.6.running_mean", "mlp.6.running_var", "mlp.8.weight", "mlp.8.bias". 
+	Unexpected key(s) in state_dict: "model_state_dict", "optimizer_state_dict", "scaler_state_dict", "epoch", "val_loss". 
+2025-09-12 04:56:58,859 | INFO | DB/Redis 연결 점검...
+2025-09-12 04:56:58,987 | INFO | DB/Redis OK
+2025-09-12 04:56:58,988 | INFO | ▶ 메인 DB → AI DB 적재 시작
+2025-09-12 04:56:59,626 | INFO | ✔ 메인 DB → AI DB 적재 완료 (0.64s)
+2025-09-12 04:56:59,626 | INFO | ▶ interactions.csv 생성 시작
+2025-09-12 04:56:59,666 | INFO | ✔ interactions.csv 생성 완료 (0.04s)
+2025-09-12 04:56:59,666 | INFO | ▶ 유저 피처 인코딩 시작
+2025-09-12 04:56:59,721 | INFO | ✔ 유저 피처 인코딩 완료 (0.06s)
+2025-09-12 04:56:59,721 | INFO | ▶ 프로젝트 피처 인코딩 시작
+2025-09-12 04:56:59,756 | INFO | ✔ 프로젝트 피처 인코딩 완료 (0.04s)
+2025-09-12 04:56:59,757 | INFO | ▶ 모델 학습 시작
+2025-09-12 04:57:02,767 | INFO | ✔ 모델 학습 완료 (3.01s)
+2025-09-12 04:57:02,767 | INFO | ▶ 추론 → Redis 캐시 업데이트 시작
+2025-09-12 04:57:03,066 | INFO | ✔ 추론 → Redis 캐시 업데이트 완료 (0.30s)
+2025-09-12 04:57:03,071 | INFO | Redis 샘플 키 'recs:0' zcard=17
+2025-09-12 04:57:03,071 | INFO | 종료
+2025-09-12 13:22:34,379 | INFO | [TRAIN] data_root=E:\pycharm\Sandwich_git\Sandwich\ai\data\apps epochs=2 batch_size=64 ctx=512

@@ -3,3 +3,4 @@
 .env
 .venv
 ./nginx_secrets/ai_api_key.conf
+.data/apps
