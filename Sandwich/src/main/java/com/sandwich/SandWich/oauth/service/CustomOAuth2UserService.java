@@ -1,6 +1,6 @@
 package com.sandwich.SandWich.oauth.service;
 
-import com.sandwich.SandWich.global.exception.exceptiontype.EmailAlreadyExistsException;
+import com.sandwich.SandWich.common.exception.exceptiontype.EmailAlreadyExistsException;
 import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;

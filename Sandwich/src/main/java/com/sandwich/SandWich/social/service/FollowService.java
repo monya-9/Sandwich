@@ -10,7 +10,7 @@ import com.sandwich.SandWich.social.repository.FollowRepository;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.dto.SimpleUserResponse;
 import com.sandwich.SandWich.user.repository.UserRepository;
-import com.sandwich.SandWich.global.exception.exceptiontype.UserNotFoundException;
+import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;

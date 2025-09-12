@@ -2,7 +2,6 @@ package com.sandwich.SandWich.comment.support;
 
 import com.sandwich.SandWich.post.repository.PostRepository;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
-import com.sandwich.SandWich.challenge.repository.ChallengeQuestionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,7 +17,6 @@ public class CommentTargetResolverImpl implements CommentTargetResolver {
 
     private final ProjectRepository projectRepo;
     private final PostRepository postRepo;
-    private final ChallengeQuestionRepository challengeQuestionRepo;
 
     @Value("${app.system.user-id}")
     private Long systemUserId;
@@ -37,16 +35,9 @@ public class CommentTargetResolverImpl implements CommentTargetResolver {
                     return postRepo.findAuthorIdById(commentableId);
                 }
                 case "challenge": {
-                    // ⚠ChallengeQuestion에 user 필드(작성자)가 실제로 있을 때만 사용
-                    var q = challengeQuestionRepo.findById(commentableId).orElse(null);
-                    if (q == null || q.getUser() == null) {
-                        return Optional.empty();
-                    }
-                    Long authorId = q.getUser().getId();
-                    if (authorId.equals(systemUserId)) {
-                        return Optional.empty(); // 시스템 계정이면 개인 알림 없음
-                    }
-                    return Optional.of(authorId);
+                    // PR1에서는 챌린지 댓글 대상 미지원: 의존 제거 및 안전한 no-op
+                    log.warn("[COMMENT][RESOLVE] challenge target not supported in PR1 (id={})", commentableId);
+                    return Optional.empty();
                 }
                 default: {
                     log.warn("[COMMENT][RESOLVE] unsupported type={} id={}", commentableType, commentableId);
