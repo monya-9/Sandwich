@@ -1,0 +1,6 @@
+# JetBrains IDE 설정 제외
+.idea
+.env
+.venv
+./nginx_secrets/ai_api_key.conf
+.data/apps
