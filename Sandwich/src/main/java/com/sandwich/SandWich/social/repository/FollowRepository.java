@@ -2,12 +2,15 @@ package com.sandwich.SandWich.social.repository;
 
 import com.sandwich.SandWich.social.domain.Follow;
 import com.sandwich.SandWich.user.domain.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface FollowRepository extends JpaRepository<Follow, Long> {
 
@@ -25,14 +28,20 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
 
     // 팔로워 수
     @Query("SELECT COUNT(f) FROM Follow f WHERE f.following = :user")
-    long countByFollowing(User user);
+    long countByFollowing(@Param("user") User user);
 
     // 팔로잉 수
     @Query("SELECT COUNT(f) FROM Follow f WHERE f.follower = :user")
-    long countByFollower(User user);
+    long countByFollower(@Param("user") User user);
 
-    @Query("SELECT f.follower FROM Follow f " +
-            "WHERE f.following.id = :userId AND f.follower.isDeleted = false")
+    @Query("SELECT f.follower FROM Follow f WHERE f.following.id = :userId AND f.follower.isDeleted = false")
     List<User> findFollowersByUserId(@Param("userId") Long userId);
+
+    // 팔로우 "하는" 사람 = follower, "당하는" 사람 = following
+    @Query("select f.following.id from Follow f where f.follower.id = :uid")
+    Set<Long> findFollowingUserIds(@Param("uid") Long userId);
+
+    Page<Follow> findAllByFollower(User follower, Pageable pageable);
+    Page<Follow> findAllByFollowing(User following, Pageable pageable);
 
 }

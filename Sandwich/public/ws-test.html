@@ -93,6 +93,8 @@
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
     let stomp, roomSub, presenceSub, notifySub;
+    let notifyDest = null;
+
     const el = id => document.getElementById(id);
     const log = (...a) => { el('log').textContent += a.join(' ') + "\n"; el('log').scrollTop = el('log').scrollHeight; };
 
@@ -106,13 +108,27 @@
       stomp = Stomp.over(socket);
       stomp.debug = null;
 
+      // 자동 재연결(구 stompjs) — 필요시 사용
+      stomp.reconnect_delay = 3000;
+
+
       stomp.connect({}, () => {
         log('[WS] connected');
         setConnected(true);
+        // 연결되면 이전 notify 구독을 자동 복구
+        if (notifyDest) {
+          resubscribeNotify();
+        }
       }, (err) => {
         log('[WS] error', err);
         setConnected(false);
       });
+
+      // 소켓이 서버쪽에서 끊겼을 때도 로그 확인
+      socket.onclose = () => {
+        log('[WS] disconnected');
+        setConnected(false);
+      };
     }
 
     function disconnect() {
@@ -120,7 +136,17 @@
       if (presenceSub) { presenceSub.unsubscribe(); presenceSub = null; }
       if (notifySub) { notifySub.unsubscribe(); notifySub = null; }
       if (stomp) stomp.disconnect(() => log('[WS] disconnected'));
+      notifyDest = null;
       setConnected(false);
+    }
+
+    function unsubscribeNotify() {
+      if (notifySub) {
+        notifySub.unsubscribe(); notifySub = null;
+        notifyDest = null; // ← 추가
+        el('notifySubInfo').textContent = 'unsubscribed';
+        log('[UNSUB][NOTIFY]');
+      }
     }
 
     function setConnected(on) {
@@ -206,24 +232,31 @@
       }
     }
 
-    // Notify
+
+    // 기존 subscribeNotify()를 이걸로 교체
     function subscribeNotify() {
       const uid = el('notifyUserId').value.trim();
       if (!uid) return alert('userId 입력');
-      if (notifySub) notifySub.unsubscribe();
-      const dest = '/topic/users/' + uid + '/notifications';
-      notifySub = stomp.subscribe(dest, msg => {
-        log('[RECV][NOTIFY ' + uid + ']', msg.body);
-      });
-      el('notifySubInfo').textContent = 'sub: ' + dest;
-      log('[SUB][NOTIFY] ' + dest);
+      // 경로 기억 → 재연결되면 자동 재구독에 사용
+      notifyDest = '/topic/users/' + uid + '/notifications';
+      resubscribeNotify(); // 안전 재구독
     }
-    function unsubscribeNotify() {
-      if (notifySub) {
-        notifySub.unsubscribe(); notifySub = null;
-        el('notifySubInfo').textContent = 'unsubscribed';
-        log('[UNSUB][NOTIFY]');
-      }
+
+    function resubscribeNotify() {
+      if (!stomp || !stomp.connected || !notifyDest) return;
+
+      // 이전 구독 정리
+      if (notifySub) { try { notifySub.unsubscribe(); } catch(e) {} notifySub = null; }
+
+      // 유니크한 subscribe id로 충돌/묵살 방지
+      const subId = 'notify-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+      notifySub = stomp.subscribe(notifyDest, (msg) => {
+        log('[RECV][NOTIFY ' + notifyDest + ']', msg.body);
+      }, { id: subId });
+
+      el('notifySubInfo').textContent = 'sub: ' + notifyDest + ' (id=' + subId + ')';
+      log('[SUB][NOTIFY] ' + notifyDest + ' id=' + subId);
     }
 
     // bind

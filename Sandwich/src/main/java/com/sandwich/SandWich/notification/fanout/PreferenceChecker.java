@@ -36,6 +36,7 @@ public class PreferenceChecker {
             case COMMENT     -> p.isPushComment();
             case LIKE        -> p.isPushLike();
             case FOLLOW      -> p.isPushFollow();
+            case COLLECTION  -> p.isPushCollection();
             case EVENT       -> p.isPushEvent();
             case WORK_DIGEST -> p.isPushWorkDigest();
         };
@@ -47,6 +48,7 @@ public class PreferenceChecker {
             case COMMENT     -> p.isEmailComment();
             case LIKE        -> p.isEmailLike();
             case FOLLOW      -> p.isEmailFollow();
+            case COLLECTION  -> p.isPushCollection();
             case EVENT       -> p.isEmailEvent();
             case WORK_DIGEST -> p.isEmailWorkDigest();
         };
@@ -57,6 +59,7 @@ public class PreferenceChecker {
         return NotificationPreference.builder()
                 .pushMessage(true).pushComment(true).pushLike(false)
                 .pushFollow(true).pushEvent(false).pushWorkDigest(false)
+                .pushCollection(false)
                 .emailMessage(false).emailComment(false).emailLike(false)
                 .emailFollow(false).emailEvent(false).emailWorkDigest(false)
                 .build();

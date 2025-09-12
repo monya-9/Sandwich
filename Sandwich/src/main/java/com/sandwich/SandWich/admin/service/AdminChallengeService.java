@@ -1,0 +1,123 @@
+package com.sandwich.SandWich.admin.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.CreateReq;
+import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.PatchReq;
+import com.sandwich.SandWich.challenge.domain.Challenge;
+import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
+import com.sandwich.SandWich.challenge.repository.ChallengeRepository;
+import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.reward.service.RewardPayoutService;
+import com.sandwich.SandWich.reward.service.RewardRule;
+import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
+import com.sandwich.SandWich.auth.CurrentUserProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+
+
+@Service
+@RequiredArgsConstructor
+public class AdminChallengeService {
+
+    private final ObjectMapper om;
+    private final ChallengeRepository repo;
+    private final RewardPayoutService reward;
+    private final PortfolioLeaderboardCache leaderboard; // 네 구현 클래스
+    private final CurrentUserProvider current;           // 감사로그
+    private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository auditRepo;
+
+    @Transactional
+    public Long create(CreateReq req) {
+        Challenge c = new Challenge();
+        c.setType(req.getType());
+        c.setTitle(req.getTitle());
+        c.setRuleJson(parseRule(req.getRuleJson()));
+        c.setStartAt(req.getStartAt());
+        c.setEndAt(req.getEndAt());
+        c.setVoteStartAt(req.getVoteStartAt());
+        c.setVoteEndAt(req.getVoteEndAt());
+        c.setStatus(req.getStatus() == null ? ChallengeStatus.DRAFT : req.getStatus());
+
+        validateWindow(c);
+        c = repo.save(c);
+        audit("CREATE_CHALLENGE", "CHALLENGE", c.getId(), req); // no-op
+        return c.getId();
+    }
+
+    @Transactional
+    public void patch(Long id, PatchReq req) {
+        Challenge c = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+
+        if (req.getType() != null) c.setType(req.getType());
+        if (req.getTitle() != null) c.setTitle(req.getTitle());
+        if (req.getRuleJson() != null) c.setRuleJson(parseRule(req.getRuleJson()));
+        if (req.getStartAt() != null) c.setStartAt(req.getStartAt());
+        if (req.getEndAt() != null) c.setEndAt(req.getEndAt());
+        if (req.getVoteStartAt() != null) c.setVoteStartAt(req.getVoteStartAt());
+        if (req.getVoteEndAt() != null) c.setVoteEndAt(req.getVoteEndAt());
+        if (req.getStatus() != null) c.setStatus(req.getStatus());
+
+        validateWindow(c);
+        audit("PATCH_CHALLENGE", "CHALLENGE", id, req); // no-op
+    }
+
+    @Transactional
+    public int publishResults(Long challengeId, RewardRule rule) {
+        int inserted = reward.publishPortfolioResults(challengeId, rule);
+        audit("PUBLISH_RESULTS", "CHALLENGE", challengeId, rule); // no-op
+        return inserted;
+    }
+
+    @Transactional
+    public void rebuildLeaderboard(Long challengeId) {
+        if (leaderboard != null) {
+            leaderboard.rebuild(challengeId); // 네 구현: void
+            audit("REBUILD_LEADERBOARD", "CHALLENGE", challengeId, "rebuilt"); // no-op
+        }
+    }
+
+    /** DB CHECK와 동일: start<end && ((vs,ve 둘다 null) || (둘다 not null && end<=vs && vs<ve)) */
+    private void validateWindow(Challenge c) {
+        var start = c.getStartAt();
+        var end   = c.getEndAt();
+        var vs    = c.getVoteStartAt();
+        var ve    = c.getVoteEndAt();
+
+        boolean base = start != null && end != null && start.isBefore(end);
+        boolean noVote = (vs == null && ve == null);
+        boolean hasVote = (vs != null && ve != null) && !vs.isBefore(end) && vs.isBefore(ve);
+
+        if (!(base && (noVote || hasVote))) {
+            throw new BadRequestException("TIME_WINDOW_INVALID", "시간 파라미터 제약에 맞지 않습니다.");
+        }
+    }
+
+    private void audit(String action, String targetType, Long targetId, Object payload) {
+        if (auditRepo == null) return;
+        try {
+            Long adminId = current.currentUserId();
+            auditRepo.save(com.sandwich.SandWich.admin.store.AdminAuditLog.of(adminId, action, targetType, targetId, payload));
+        } catch (Exception ignored) {}
+    }
+
+    private JsonNode parseRule(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return om.createObjectNode(); // 빈 JSON {}
+        }
+        try {
+            return om.readTree(raw);      // 문자열 → JsonNode
+        } catch (JsonProcessingException e) {
+            // 잘못된 JSON이면 400으로
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_RULE_JSON");
+        }
+    }
+
+
+}

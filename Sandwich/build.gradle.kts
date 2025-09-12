@@ -49,7 +49,7 @@ dependencies {
 	implementation("software.amazon.awssdk:s3:2.25.61")
 	implementation ("org.springframework.boot:spring-boot-starter-websocket")
 	implementation ("org.springframework:spring-messaging")
-
+	implementation ("org.apache.httpcomponents.client5:httpclient5:5.2.1")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	runtimeOnly("org.postgresql:postgresql")

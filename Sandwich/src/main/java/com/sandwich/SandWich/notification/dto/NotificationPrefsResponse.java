@@ -10,6 +10,7 @@ public class NotificationPrefsResponse {
     private boolean pushLike;
     private boolean pushFollow;
     private boolean pushEvent;
+    private Boolean pushCollection;
     private boolean pushWorkDigest;
 
     // email
