@@ -1,3 +1,4 @@
+// src/components/common/Header/dropdowns/NotificationDropdown.tsx
 import React from "react";
 import { toRelativeTime } from "../../../../utils/time";
 import DropdownWrapper from "./DropdownWrapper";
@@ -13,10 +14,7 @@ type Props = {
     onClickItem: (id: number) => void;
     onLoadMore?: () => void;
     hasMore?: boolean;
-
-    /** 최초 로딩 중인지 (초기화 이전) */
     initializing?: boolean;
-    /** 네트워크 로딩 상태(더보기 등) */
     loading?: boolean;
 };
 
@@ -53,51 +51,82 @@ const NotificationDropdown: React.FC<Props> = ({
         <DropdownWrapper width="w-96">
             <div className="flex justify-between items-center mb-2 -mx-2 text-sm font-medium">
                 <span className="text-black">읽지 않은 알림 ({unreadCount})</span>
-                <button type="button" onClick={onMarkAllAsRead} className="text-green-600 hover:underline text-xs">
+                <button
+                    type="button"
+                    onClick={onMarkAllAsRead}
+                    className="text-green-600 hover:underline text-xs"
+                >
                     모두 읽음
                 </button>
             </div>
             <hr className="border-gray-200 mb-3 -mx-6" />
 
-            {/* 초기 로딩 중에는 EmptyState 대신 스켈레톤 */}
             {initializing ? (
                 <Skeleton />
             ) : items.length === 0 ? (
                 <EmptyState text="새로운 알림이 없어요" />
             ) : (
                 <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
-                    {items.map((n) => (
-                        <li key={n.id} className="relative">
-                            <button
-                                type="button"
-                                className="w-full text-left p-2 rounded-lg text-sm hover:bg-gray-50 cursor-pointer focus:outline-none"
-                                onClick={() => {
-                                    onClickItem(n.id);
-                                    const to = n.deepLink || "/";
-                                    nav(to);
-                                }}
-                            >
-                                <UnreadBadge show={!n.read} radius="lg" colorClass="bg-green-500/10" />
-                                <div className="relative z-[1] flex items-start gap-2">
-                                    {n.thumbnail ? (
-                                        <img src={n.thumbnail} alt="" className="w-8 h-8 rounded-full shrink-0 object-cover" />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                                            {(n.title?.[0] || "?").toUpperCase()}
-                                        </div>
-                                    )}
+                    {items.map((n) => {
+                        const actorName = n.extra?.actorName;
+                        const profileUrl = n.thumbnail || n.extra?.profileImageUrl || null;
 
-                                    <div className="min-w-0">
-                                        <p className="font-medium truncate">{n.title}</p>
-                                        <p className="text-gray-500 text-xs line-clamp-2 whitespace-pre-line">
-                                            {n.body || n.extra?.snippet || ""}
-                                        </p>
-                                        <span className="text-gray-400 text-xs">{toRelativeTime(n.createdAt)}</span>
+                        // 배우 미확정: '누군가' 또는 비어있거나 숫자만
+                        const unknown =
+                            !actorName || actorName === "누군가" || /^\d+$/.test(actorName);
+
+                        const initialSource =
+                            n.extra?.actorEmail?.split("@")?.[0] || actorName || n.title;
+                        const initial = (initialSource?.[0] || "?").toUpperCase();
+
+                        return (
+                            <li key={String(n.id)} className="relative">
+                                <button
+                                    type="button"
+                                    className="w-full text-left p-2 rounded-lg text-sm hover:bg-gray-50 cursor-pointer focus:outline-none"
+                                    onClick={() => {
+                                        onClickItem(n.id);
+                                        nav(n.deepLink || "/");
+                                    }}
+                                >
+                                    <UnreadBadge
+                                        show={!n.read}
+                                        radius="lg"
+                                        colorClass="bg-green-500/10"
+                                    />
+
+                                    <div className="relative z-[1] flex items-start gap-2">
+                                        {/* 배우 정보가 있을 때만 아바타 렌더링 */}
+                                        {!unknown && (
+                                            profileUrl ? (
+                                                <img
+                                                    src={profileUrl}
+                                                    alt=""
+                                                    className="w-8 h-8 rounded-full shrink-0 object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                                                    {initial}
+                                                </div>
+                                            )
+                                        )}
+
+                                        <div className="min-w-0">
+                                            <p className="font-medium truncate">{n.title}</p>
+                                            {n.body ? (
+                                                <p className="text-gray-500 text-xs line-clamp-2 whitespace-pre-line">
+                                                    {n.body}
+                                                </p>
+                                            ) : null}
+                                            <span className="text-gray-400 text-xs">
+                        {toRelativeTime(n.createdAt)}
+                      </span>
+                                        </div>
                                     </div>
-                                </div>
-                            </button>
-                        </li>
-                    ))}
+                                </button>
+                            </li>
+                        );
+                    })}
 
                     {hasMore && (
                         <li className="pt-1">
