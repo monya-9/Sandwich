@@ -104,9 +104,9 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
     // ▼ 알림 스트림(WS + API)
     const noti = useNotificationStream({
-        enabled: notiWsEnabled, // WS는 userId 있을 때만 연결
+        enabled: notiReady && showNotification,// ★ 드롭다운 열렸을 때만 REST/WS 모두 동작
         userId: myId || 0,
-        wsUrl: "/stomp", // 프록시가 /stomp → /ws 로 업그레이드
+        wsUrl: "/stomp",
         topicBase: "/topic/users",
         pageSize: 20,
         getToken: () =>

@@ -1,4 +1,3 @@
-// src/hooks/useNotificationStream.ts
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     fetchUnreadCount,
@@ -10,7 +9,7 @@ import type { NotifyItem } from "../types/Notification";
 import { useNotifyWS } from "../lib/ws/useNotifyWS";
 
 type Options = {
-    /** WS 연결 on/off (보통 userId 확보되면 true) */
+    /** 드롭다운이 열렸을 때만 true 로 넘겨줘야 함 */
     enabled: boolean;
 
     /** WS 구독용 사용자 식별자 */
@@ -44,7 +43,7 @@ async function resolveToken(getToken?: Options["getToken"]): Promise<string | nu
 
 export function useNotificationStream(opt: Options) {
     const {
-        enabled,
+        enabled,                 // ★ 드롭다운 열림 여부
         userId,
         wsUrl,
         topicBase = "/topic/users",
@@ -63,8 +62,7 @@ export function useNotificationStream(opt: Options) {
     const idSet = useRef<Set<number>>(new Set());
 
     /* --------------------------------
-     * 상태 초기화: WS 비활성화 시 목록 초기화
-     * (API 호출 조건은 토큰 유무로 따로 분기)
+     * 상태 초기화: 비활성화 시 목록/상태 초기화
      * -------------------------------- */
     useEffect(() => {
         if (!enabled) {
@@ -78,11 +76,13 @@ export function useNotificationStream(opt: Options) {
     }, [enabled]);
 
     /* --------------------------------
-     * 배지(미읽음 수) 첫 조회: "토큰만" 있으면 호출
+     * 배지(미읽음 수) 첫 조회
+     *  - ✅ enabled 일 때만 호출하도록 수정
      * -------------------------------- */
     useEffect(() => {
         let alive = true;
         (async () => {
+            if (!enabled) return;
             const token = await resolveToken(getToken);
             if (!token) return;
             try {
@@ -92,15 +92,14 @@ export function useNotificationStream(opt: Options) {
                 /* ignore */
             }
         })();
-        return () => {
-            alive = false;
-        };
-    }, [getToken]);
+        return () => { alive = false; };
+    }, [enabled, getToken]);
 
     /* --------------------------------
-     * 첫 페이지 로드: "토큰만" 있으면 가능
+     * 첫 페이지 로드: "enabled && token" 일 때만
      * -------------------------------- */
     const loadFirst = useCallback(async () => {
+        if (!enabled) return;
         const token = await resolveToken(getToken);
         if (!token) return;
 
@@ -113,17 +112,17 @@ export function useNotificationStream(opt: Options) {
             setCursor(page.nextCursor ?? undefined);
             setHasMore(Boolean(page.nextCursor));
         } catch {
-            // 네트워크 에러는 조용히 무시 (오버레이 방지)
+            // 조용히 무시
         } finally {
             setLoading(false);
         }
-    }, [getToken, pageSize]);
+    }, [enabled, getToken, pageSize]);
 
     /* --------------------------------
-     * 더 불러오기: "토큰만" 있으면 가능
+     * 더 불러오기: "enabled && token" 일 때만
      * -------------------------------- */
     const loadMore = useCallback(async () => {
-        if (!hasMore || !cursor) return;
+        if (!enabled || !hasMore || !cursor) return;
         const token = await resolveToken(getToken);
         if (!token) return;
 
@@ -140,13 +139,14 @@ export function useNotificationStream(opt: Options) {
         } finally {
             setLoading(false);
         }
-    }, [getToken, cursor, hasMore, pageSize]);
+    }, [enabled, getToken, cursor, hasMore, pageSize]);
 
     /* --------------------------------
-     * 개별 읽음 처리: "토큰만" 있으면 가능
+     * 개별 읽음 처리: enabled && token 일 때만
      * -------------------------------- */
     const markOneRead = useCallback(
         async (id: number) => {
+            if (!enabled) return;
             const token = await resolveToken(getToken);
             if (!token) return;
 
@@ -159,13 +159,14 @@ export function useNotificationStream(opt: Options) {
                 /* ignore */
             }
         },
-        [getToken]
+        [enabled, getToken]
     );
 
     /* --------------------------------
-     * 모두 읽음: "토큰만" 있으면 가능
+     * 모두 읽음: enabled && token 일 때만
      * -------------------------------- */
     const markAll = useCallback(async () => {
+        if (!enabled) return;
         const token = await resolveToken(getToken);
         if (!token) return;
 
@@ -176,13 +177,15 @@ export function useNotificationStream(opt: Options) {
         } catch {
             /* ignore */
         }
-    }, [getToken]);
+    }, [enabled, getToken]);
 
     /* --------------------------------
-     * WebSocket(STOMP) 구독: enabled 일 때만
+     * WebSocket(STOMP) 구독
+     *  - ✅ enabled 일 때만
+     *  - ✅ userId 없으면(0/''/null) WS 스킵
      * -------------------------------- */
     useNotifyWS({
-        enabled,
+        enabled: Boolean(enabled && userId), // ★
         userId: userId ?? 0,
         getToken: getToken ?? (() => null),
         wsPath: wsUrl, // "/stomp"
