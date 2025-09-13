@@ -18,9 +18,7 @@ function emitAccessTokenChange(token: string | null) {
 export const getToken = (): string | null =>
     localStorage.getItem(ACCESS_KEY) || sessionStorage.getItem(ACCESS_KEY);
 
-/** keep=true면 localStorage, false면 sessionStorage에 저장 */
 export const setToken = (accessToken: string | null, keep: boolean) => {
-    // 먼저 모두 제거
     localStorage.removeItem(ACCESS_KEY);
     sessionStorage.removeItem(ACCESS_KEY);
 
@@ -31,11 +29,10 @@ export const setToken = (accessToken: string | null, keep: boolean) => {
     emitAccessTokenChange(accessToken ?? null);
 };
 
-/* ---------- Refresh Token (쿠키 기반이면 사용 안 할 수도 있음) ---------- */
+/* ---------- Refresh Token ---------- */
 export const getRefreshToken = (): string | null =>
     localStorage.getItem(REFRESH_KEY) || sessionStorage.getItem(REFRESH_KEY);
 
-/** keep=true면 localStorage, false면 sessionStorage에 저장 */
 export const setRefreshToken = (refreshToken: string | null, keep: boolean) => {
     localStorage.removeItem(REFRESH_KEY);
     sessionStorage.removeItem(REFRESH_KEY);

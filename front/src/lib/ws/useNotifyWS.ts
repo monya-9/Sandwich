@@ -4,27 +4,36 @@ import SockJS from "sockjs-client";
 import { onAccessTokenChange } from "../../utils/tokenStorage";
 
 type Opts = {
-    roomId: number;
-    /** 최신 accessToken 반환 */
+    /** 연결 켜기/끄기 (로그인 등 준비 완료 시 true) */
+    enabled?: boolean;
+    /** 구독할 유저 ID */
+    userId: number | string;
+
+    /** 최신 accessToken을 동기/비동기로 반환 */
     getToken: () => Promise<string | null> | string | null;
-    onRecv: (payload: any) => void;
-    onReadAll?: (payload: any) => void;
 
-    /** 로그인/토큰 확보 후 true */
-    enabled: boolean;
+    /** 프론트에서 접속할 SockJS 엔드포인트(프록시가 /stomp -> /ws 로 리라이트) */
+    wsPath?: string;
 
-    /** 베이스 경로(기본 /stomp) → 프록시가 /ws 로 rewrite */
-    wsBasePath?: string; // 채팅은 보통 /ws/chat 이라서 /stomp/chat 로 붙임
+    /** STOMP topic 베이스 (기본: /topic/users) */
+    topicBase?: string;
+
+    /** 서버에서 새 알림을 받았을 때 */
+    onNotify: (payload: any) => void;
+
+    /** 디버그 로그 */
+    debug?: boolean;
 };
 
-export function useChatWS({
-                              roomId,
-                              getToken,
-                              onRecv,
-                              onReadAll,
-                              enabled,
-                              wsBasePath = "/stomp",
-                          }: Opts) {
+export function useNotifyWS({
+                                enabled = true,
+                                userId,
+                                getToken,
+                                onNotify,
+                                wsPath = "/stomp",            // 프록시가 /ws 로 바꿔줌
+                                topicBase = "/topic/users",
+                                debug = false,
+                            }: Opts) {
     const clientRef = useRef<Client | null>(null);
     const stoppedRef = useRef(false);
     const reconRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,6 +49,7 @@ export function useChatWS({
     const connect = async (retry: number = 0) => {
         if (stoppedRef.current || !enabled) return;
 
+        // 재시도 스케줄러 (선선언)
         const schedule = (r: number) => {
             if (stoppedRef.current || !enabled) return;
             const next = Math.min(1000 * 2 ** r, 15000);
@@ -51,26 +61,29 @@ export function useChatWS({
             const token = await Promise.resolve(getToken());
             if (!token) {
                 schedule(retry);
-                return;
+                return; // 토큰 없으면 조금 뒤에 재시도
             }
 
-            // 백엔드가 /ws/chat 를 사용한다면 프런트에선 /stomp/chat 로 접속
-            const url = `${wsBasePath}/chat`;
+            // 일부 프록시/서버 환경에서 핸드셰이크에 헤더 인식이 어려우면
+            // 쿼리로 토큰을 같이 넘기는 방식도 가능 (백엔드가 지원할 때)
+            const url = `${wsPath}`; // 필요시 `${wsPath}?token=${encodeURIComponent(token)}`
             const client = new Client({
                 webSocketFactory: () => new SockJS(url),
                 connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
                 heartbeatIncoming: 10000,
                 heartbeatOutgoing: 10000,
-                reconnectDelay: 0,
-                debug: () => {},
+                reconnectDelay: 0, // 우리가 직접 재시도
+                debug: debug ? (m) => console.log("[NOTI][WS]", m) : () => {},
             });
 
             client.onConnect = () => {
-                client.subscribe(`/topic/rooms/${roomId}`, (msg: IMessage) => {
+                const topic = `${topicBase}/${userId}/notifications`;
+                if (debug) console.log("[NOTI][WS] connected, subscribe:", topic);
+
+                client.subscribe(topic, (msg: IMessage) => {
                     try {
                         const body = JSON.parse(msg.body);
-                        if (body?.event === "READ_ALL") onReadAll?.(body);
-                        else onRecv(body);
+                        onNotify(body);
                     } catch {
                         /* ignore */
                     }
@@ -94,17 +107,29 @@ export function useChatWS({
         } finally {
             clientRef.current = null;
             clearTimer();
+            // 토큰 바뀌면 200ms 뒤 재연결
             reconRef.current = setTimeout(() => void connect(0), 200);
         }
     };
 
     useEffect(() => {
-        stoppedRef.current = false;
-        if (enabled) void connect(0);
+        if (!enabled) {
+            // 끊고 초기화
+            stoppedRef.current = true;
+            clearTimer();
+            tokenUnsubRef.current?.();
+            tokenUnsubRef.current = null;
+            const c = clientRef.current;
+            clientRef.current = null;
+            c?.deactivate();
+            return;
+        }
 
-        tokenUnsubRef.current = onAccessTokenChange(() => {
-            if (enabled) reconnectWithLatestToken();
-        });
+        stoppedRef.current = false;
+        void connect(0);
+
+        // accessToken 변경되면 최신 토큰으로 재연결
+        tokenUnsubRef.current = onAccessTokenChange(() => reconnectWithLatestToken());
 
         return () => {
             stoppedRef.current = true;
@@ -116,5 +141,5 @@ export function useChatWS({
             c?.deactivate();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, roomId, getToken, onRecv, onReadAll, wsBasePath]);
+    }, [enabled, userId, wsPath, topicBase, onNotify, getToken, debug]);
 }
