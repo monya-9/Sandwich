@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sandwich.SandWich.notification.domain.Notification;
 import com.sandwich.SandWich.notification.dto.*;
 import com.sandwich.SandWich.notification.repository.NotificationLedgerRepository;
+import com.sandwich.SandWich.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,9 @@ public class NotificationLedgerService {
 
     private final NotificationLedgerRepository repo;
     private final ObjectMapper om;
+
+    // 목록용 배우 조회 배치
+    private final UserRepository userRepo;
 
     // 팬아웃에서 항상 호출 (푸시/이메일 선호도와 무관)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -46,6 +50,7 @@ public class NotificationLedgerService {
 
         Notification e = Notification.builder()
                 .userId(p.getTargetUserId())
+                .actorId(p.getActorId())
                 .event(Objects.toString(p.getEvent(), "EVENT"))
                 .resourceType(rType)
                 .resourceId(rId)
@@ -93,19 +98,37 @@ public class NotificationLedgerService {
             nextCursor = String.valueOf(nextEpoch);
         }
 
-        var items = rows.stream().map(n ->
-                NotificationItemDTO.builder()
-                        .id(n.getId())
-                        .event(n.getEvent())
-                        .title(n.getTitle())
-                        .body(n.getBody())
-                        .resource(new NotificationItemDTO.Resource(n.getResourceType(), n.getResourceId()))
-                        .deepLink(n.getDeepLink())
-                        .extra(n.getExtra())
-                        .read(n.isRead())
-                        .createdAt(n.getCreatedAt())
-                        .build()
-        ).collect(Collectors.toList());
+        // 배우 배치 조회
+        Set<Long> actorIds = rows.stream()
+                .map(Notification::getActorId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, UserRepository.ActorView> actorMap = actorIds.isEmpty()
+                ? Collections.emptyMap()
+                : userRepo.findActorViewsByIds(actorIds).stream()
+                .collect(Collectors.toMap(UserRepository.ActorView::getId, v -> v));
+
+
+        var items = rows.stream().map(n -> {
+            var av = (n.getActorId() != null) ? actorMap.get(n.getActorId()) : null;
+
+            return NotificationItemDTO.builder()
+                    .id(n.getId())
+                    .event(n.getEvent())
+                    .title(n.getTitle())
+                    .body(n.getBody())
+                    .resource(new NotificationItemDTO.Resource(n.getResourceType(), n.getResourceId()))
+                    .deepLink(n.getDeepLink())
+                    .actorId(n.getActorId())
+                    .actorNickname(av != null ? av.getNickname() : null)
+                    .actorEmail(av != null ? av.getEmail() : null)
+                    .actorProfileUrl(av != null ? av.getProfileImage() : null)
+                    .extra(n.getExtra())
+                    .read(n.isRead())
+                    .createdAt(n.getCreatedAt())
+                    .build();
+        }).collect(Collectors.toList());
 
         return new NotificationListResponse(items, nextCursor);
     }

@@ -17,6 +17,9 @@ public class NotifyPayload {
     private String title;
     private String body;
 
+    private String actorNickname;    // 최우선
+    private String actorEmail;       // optional
+    private String actorProfileUrl;  // optional
 
     @Getter @Builder
     @AllArgsConstructor @NoArgsConstructor

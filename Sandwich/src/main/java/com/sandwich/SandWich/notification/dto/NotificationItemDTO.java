@@ -19,6 +19,12 @@ public class NotificationItemDTO {
     private boolean read;
     private OffsetDateTime createdAt;
 
+    // ★ 배우(행위자)
+    private Long actorId;
+    private String actorNickname;    // 최우선
+    private String actorEmail;       // optional
+    private String actorProfileUrl;  // optional
+
     @Getter
     @Builder
     @AllArgsConstructor
