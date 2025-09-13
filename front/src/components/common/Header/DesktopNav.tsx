@@ -14,7 +14,10 @@ import NotificationIcon from "./icons/NotificationIcon";
 
 import type { Message } from "../../../types/Message";
 import type { Notification } from "../../../types/Notification";
-import { dummyMessages } from "../../../data/dummyMessages";
+import { fetchRooms } from "../../../api/messages";
+import { onMessagesRefresh } from "../../../lib/messageEvents";
+
+// 알림 API 아직 없으면 임시 더미 유지
 import { dummyNotifications } from "../../../data/dummyNotifications";
 
 const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
@@ -53,15 +56,39 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const [showNotification, setShowNotification] = useState(false);
     const [showMessage, setShowMessage] = useState(false);
 
-    // ▼ 데이터 상태(더미)
+    // ▼ 데이터 상태
     const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
-    const [messages, setMessages] = useState<Message[]>(dummyMessages);
+    const [messages, setMessages] = useState<Message[]>([]);
 
     const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
-    const unreadMessagesCount = messages.filter((m) => !m.isRead).length;
+    const unreadMessagesCount = messages.filter((m) => !m.isRead && (m.unreadCount ?? 0) > 0).length
+        || messages.reduce((acc, m) => acc + (m.unreadCount ?? 0), 0);
 
     const handleMarkAllNotiAsRead = () =>
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+
+    // 헤더 메시지 로더(최신 5개)
+    const loadHeaderMessages = React.useCallback(async () => {
+        try {
+            const rooms = await fetchRooms(0, 5);
+            const mapped: Message[] = rooms.map((r) => ({
+                id: r.roomId,
+                roomId: r.roomId,
+                title: r.peerName,
+                sender: r.peerName,
+                content: r.lastContent,
+                createdAt: r.lastAt,
+                isRead: r.unreadCount === 0,
+                unreadCount: r.unreadCount,
+            }));
+            setMessages(mapped);
+        } catch {
+            setMessages([]);
+        }
+    }, []);
+
+    useEffect(() => { loadHeaderMessages(); }, [loadHeaderMessages]);
+    useEffect(() => onMessagesRefresh(loadHeaderMessages), [loadHeaderMessages]);
 
     // 드롭다운 닫기 이벤트 동기화
     useEffect(() => {
@@ -81,7 +108,6 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         );
     };
 
-    // NavLink 클래스
     const navCls = ({ isActive }: { isActive: boolean }) =>
         `text-black ${isActive ? "font-semibold" : "font-medium"}`;
 
@@ -93,14 +119,9 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     <img src={logo} alt="Sandwich" className="w-[120px] h-auto" />
                 </Link>
 
-                {/* ✅ 커뮤니티 복구 */}
                 <nav className="flex gap-6 text-[18px] ml-6">
-                    <NavLink to="/" className={navCls} end>
-                        둘러보기
-                    </NavLink>
-                    <NavLink to="/community" className={navCls}>
-                        커뮤니티
-                    </NavLink>
+                    <NavLink to="/" className={navCls} end>둘러보기</NavLink>
+                    <NavLink to="/community" className={navCls}>커뮤니티</NavLink>
                 </nav>
             </div>
 
@@ -117,12 +138,13 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                     setShowMessage((prev) => !prev);
                                     setShowNotification(false);
                                     setShowProfile(false);
+                                    if (!showMessage) loadHeaderMessages(); // 열 때 갱신
                                 }}
                                 aria-haspopup="menu"
                                 aria-expanded={showMessage}
                                 aria-label="메시지 열기"
                             >
-                                <MessageIcon hasNew={unreadMessagesCount > 0} />
+                                <MessageIcon hasNew={(messages.reduce((a,m)=>a+(m.unreadCount??0),0)) > 0} />
                             </button>
 
                             {showMessage && (
@@ -171,7 +193,6 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                 className="flex items-center gap-2 max-w-[180px]"
                             >
                                 <ProfileCircle email={safeEmail} size={32} />
-                                {/* <span className="text-sm max-w-[120px] truncate">{displayName}</span> */}
                             </button>
 
                             {showProfile && (
@@ -183,12 +204,8 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     </div>
                 ) : (
                     <div className="flex gap-3 text-[14px] text-black">
-                        <Link to="/login" className="hover:underline">
-                            로그인
-                        </Link>
-                        <Link to="/join" className="hover:underline">
-                            회원가입
-                        </Link>
+                        <Link to="/login" className="hover:underline">로그인</Link>
+                        <Link to="/join" className="hover:underline">회원가입</Link>
                     </div>
                 )}
             </div>
