@@ -11,9 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -23,26 +21,34 @@ public class RecaptchaFilter extends OncePerRequestFilter {
     private final RecaptchaProperties props;
     private final RecaptchaVerifier verifier;
 
-    private Set<String> pathSet() {
-        return Arrays.stream((props.getPaths()==null?"":props.getPaths()).split(","))
-                .map(String::trim).filter(s -> !s.isBlank()).collect(Collectors.toSet());
-    }
+    private Set<String> v3Paths() { return props.getV3().pathSet(); }
+    private Set<String> v2Paths() { return props.getV2().pathSet(); }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         if (!props.isEnabled()) return true;
         String path = request.getRequestURI();
-        for (String p : pathSet()) {
-            if (path.equals(p)) return false; // 대상 경로면 필터링 수행
-        }
-        return true; // 대상 경로 아니면 스킵
+        // v2 / v3 둘 다 아닌 경로면 필터 안탐
+        return !(v2Paths().contains(path) || v3Paths().contains(path));
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
+
+        String path = req.getRequestURI();
         String token = req.getHeader("X-Recaptcha-Token");
-        if (!verifier.verify(token)) {
+
+        boolean ok;
+        if (v2Paths().contains(path)) {
+            ok = verifier.verifyV2(token, props.getV2().getSecret());
+        } else if (v3Paths().contains(path)) {
+            ok = verifier.verifyV3(token, props.getV3().getSecret(), props.getV3().getThreshold());
+        } else {
+            ok = true; // 방어적
+        }
+
+        if (!ok) {
             throw new BadRequestException("RECAPTCHA_FAIL", "reCAPTCHA 검증 실패");
         }
         chain.doFilter(req, res);

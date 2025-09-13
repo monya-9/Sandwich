@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.email.controller;
 
+import com.sandwich.SandWich.common.captcha.RecaptchaV2Service;
 import com.sandwich.SandWich.email.dto.EmailSendRequest;
 import com.sandwich.SandWich.email.dto.EmailVerifyRequest;
 import com.sandwich.SandWich.email.service.EmailVerificationService;
@@ -17,10 +18,14 @@ public class EmailVerificationController {
 
 
     private final EmailVerificationService emailService;
+    private final RecaptchaV2Service recaptchaV2;
 
     @PostMapping("/send")
-    public ResponseEntity<Void> sendCode(@RequestBody EmailSendRequest request) {
-        System.out.println("sendCode 실행됨!");
+    public ResponseEntity<Void> sendCode(
+            @RequestHeader(name = "X-Recaptcha-Token", required = false) String token,
+            @RequestBody EmailSendRequest request
+    ) {
+        recaptchaV2.verifyOrThrow(token); // v2 검증
         emailService.sendVerificationCode(request.getEmail());
         return ResponseEntity.ok().build();
     }
