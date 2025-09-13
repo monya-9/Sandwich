@@ -113,6 +113,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             localStorage.getItem("accessToken") ||
             sessionStorage.getItem("accessToken") ||
             null,
+        resetOnDisable: false,
         debug: false,
     });
 
@@ -120,7 +121,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     useEffect(() => {
         if (!notiReady || USE_DUMMY_NOTI) return;
         if (!showNotification) return;
-        if (noti.items.length === 0) void noti.loadFirst();
+        if (!noti.initialized) void noti.loadFirst();
     }, [notiReady, showNotification]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 드롭다운 데이터 원천
@@ -198,6 +199,8 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                     <NotificationDropdown
                                         items={notiItems}
                                         unreadCount={notiUnread}
+                                        initializing={!noti.initialized}
+                                        loading={noti.loading}
                                         onMarkAllAsRead={() => { if (!USE_DUMMY_NOTI) void noti.markAll(); }}
                                         onClickItem={(id) => { if (!USE_DUMMY_NOTI) void noti.markOneRead(id); }}
                                         hasMore={!USE_DUMMY_NOTI && noti.hasMore}

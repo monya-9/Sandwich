@@ -1,4 +1,3 @@
-// src/components/common/Header/dropdowns/NotificationDropdown.tsx
 import React from "react";
 import { toRelativeTime } from "../../../../utils/time";
 import DropdownWrapper from "./DropdownWrapper";
@@ -14,7 +13,29 @@ type Props = {
     onClickItem: (id: number) => void;
     onLoadMore?: () => void;
     hasMore?: boolean;
+
+    /** 최초 로딩 중인지 (초기화 이전) */
+    initializing?: boolean;
+    /** 네트워크 로딩 상태(더보기 등) */
+    loading?: boolean;
 };
+
+const Skeleton: React.FC = () => (
+    <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
+        {Array.from({ length: 4 }).map((_, i) => (
+            <li key={i} className="p-2 rounded-lg">
+                <div className="flex items-start gap-2 animate-pulse">
+                    <div className="w-8 h-8 rounded-full bg-gray-200" />
+                    <div className="flex-1 min-w-0">
+                        <div className="h-3 bg-gray-200 rounded w-2/3 mb-2" />
+                        <div className="h-3 bg-gray-100 rounded w-full mb-1" />
+                        <div className="h-3 bg-gray-100 rounded w-5/6" />
+                    </div>
+                </div>
+            </li>
+        ))}
+    </ul>
+);
 
 const NotificationDropdown: React.FC<Props> = ({
                                                    items,
@@ -23,6 +44,8 @@ const NotificationDropdown: React.FC<Props> = ({
                                                    onClickItem,
                                                    onLoadMore,
                                                    hasMore,
+                                                   initializing = false,
+                                                   loading = false,
                                                }) => {
     const nav = useNavigate();
 
@@ -36,7 +59,10 @@ const NotificationDropdown: React.FC<Props> = ({
             </div>
             <hr className="border-gray-200 mb-3 -mx-6" />
 
-            {items.length === 0 ? (
+            {/* 초기 로딩 중에는 EmptyState 대신 스켈레톤 */}
+            {initializing ? (
+                <Skeleton />
+            ) : items.length === 0 ? (
                 <EmptyState text="새로운 알림이 없어요" />
             ) : (
                 <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -77,10 +103,11 @@ const NotificationDropdown: React.FC<Props> = ({
                         <li className="pt-1">
                             <button
                                 type="button"
-                                className="w-full text-center text-xs text-gray-600 hover:underline py-1"
+                                className="w-full text-center text-xs text-gray-600 hover:underline py-1 disabled:opacity-60"
                                 onClick={onLoadMore}
+                                disabled={loading}
                             >
-                                더 보기
+                                {loading ? "불러오는 중..." : "더 보기"}
                             </button>
                         </li>
                     )}

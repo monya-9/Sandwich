@@ -9,29 +9,25 @@ import type { NotifyItem } from "../types/Notification";
 import { useNotifyWS } from "../lib/ws/useNotifyWS";
 
 type Options = {
-    /** 드롭다운이 열렸을 때만 true 로 넘겨줘야 함 */
+    /** 드롭다운 열렸을 때 true */
     enabled: boolean;
-
-    /** WS 구독용 사용자 식별자 */
+    /** WS 구독용 사용자 ID (없으면 WS 스킵) */
     userId: number | string | null | undefined;
-
-    /** 프론트에서 접속할 SockJS 경로 (ex. "/stomp") */
+    /** SockJS 경로 */
     wsUrl: string;
-
-    /** STOMP topic base (기본 "/topic/users") */
+    /** STOMP topic base */
     topicBase?: string;
-
-    /** 페이지 크기 (기본 20) */
+    /** 페이지 크기 */
     pageSize?: number;
-
-    /** 최신 accessToken 반환자 (string 또는 Promise<string|null>) */
+    /** 최신 토큰 제공자 */
     getToken?: () => Promise<string | null> | string | null;
-
     /** 콘솔 디버그 */
     debug?: boolean;
+    /** 닫힐 때 캐시를 비울지 여부(기본 false = 유지) */
+    resetOnDisable?: boolean;
 };
 
-/** string | null | Promise<string|null> 를 항상 Promise<string|null> 로 */
+/** string | null | Promise<string|null> -> Promise<string|null> */
 async function resolveToken(getToken?: Options["getToken"]): Promise<string | null> {
     try {
         if (!getToken) return null;
@@ -43,42 +39,42 @@ async function resolveToken(getToken?: Options["getToken"]): Promise<string | nu
 
 export function useNotificationStream(opt: Options) {
     const {
-        enabled,                 // ★ 드롭다운 열림 여부
+        enabled,
         userId,
         wsUrl,
         topicBase = "/topic/users",
         pageSize = 20,
         getToken,
         debug = false,
+        resetOnDisable = false,
     } = opt;
 
     const [items, setItems] = useState<NotifyItem[]>([]);
     const [unread, setUnread] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [initialized, setInitialized] = useState(false); // ★ 첫 로딩 완료 여부
     const [cursor, setCursor] = useState<string | undefined>(undefined);
     const [hasMore, setHasMore] = useState(true);
 
     // 중복 방지
     const idSet = useRef<Set<number>>(new Set());
 
-    /* --------------------------------
-     * 상태 초기화: 비활성화 시 목록/상태 초기화
-     * -------------------------------- */
+    /* ---------------- 비활성화 시: WS만 끊고 캐시는 기본 유지 ---------------- */
     useEffect(() => {
         if (!enabled) {
-            setItems([]);
-            setUnread(0);
             setLoading(false);
-            setCursor(undefined);
-            setHasMore(true);
-            idSet.current.clear();
+            if (resetOnDisable) {
+                setItems([]);
+                setUnread(0);
+                setCursor(undefined);
+                setHasMore(true);
+                setInitialized(false);
+                idSet.current.clear();
+            }
         }
-    }, [enabled]);
+    }, [enabled, resetOnDisable]);
 
-    /* --------------------------------
-     * 배지(미읽음 수) 첫 조회
-     *  - ✅ enabled 일 때만 호출하도록 수정
-     * -------------------------------- */
+    /* ---------------- 배지(미읽음 수): enabled && token ---------------- */
     useEffect(() => {
         let alive = true;
         (async () => {
@@ -92,12 +88,12 @@ export function useNotificationStream(opt: Options) {
                 /* ignore */
             }
         })();
-        return () => { alive = false; };
+        return () => {
+            alive = false;
+        };
     }, [enabled, getToken]);
 
-    /* --------------------------------
-     * 첫 페이지 로드: "enabled && token" 일 때만
-     * -------------------------------- */
+    /* ---------------- 첫 페이지 로드 ---------------- */
     const loadFirst = useCallback(async () => {
         if (!enabled) return;
         const token = await resolveToken(getToken);
@@ -112,15 +108,14 @@ export function useNotificationStream(opt: Options) {
             setCursor(page.nextCursor ?? undefined);
             setHasMore(Boolean(page.nextCursor));
         } catch {
-            // 조용히 무시
+            /* ignore */
         } finally {
+            setInitialized(true); // ★ 초기 로딩 종료 표시
             setLoading(false);
         }
     }, [enabled, getToken, pageSize]);
 
-    /* --------------------------------
-     * 더 불러오기: "enabled && token" 일 때만
-     * -------------------------------- */
+    /* ---------------- 더 불러오기 ---------------- */
     const loadMore = useCallback(async () => {
         if (!enabled || !hasMore || !cursor) return;
         const token = await resolveToken(getToken);
@@ -141,16 +136,13 @@ export function useNotificationStream(opt: Options) {
         }
     }, [enabled, getToken, cursor, hasMore, pageSize]);
 
-    /* --------------------------------
-     * 개별 읽음 처리: enabled && token 일 때만
-     * -------------------------------- */
+    /* ---------------- 개별 읽음/전체 읽음 ---------------- */
     const markOneRead = useCallback(
         async (id: number) => {
             if (!enabled) return;
             const token = await resolveToken(getToken);
             if (!token) return;
 
-            // UI 즉시 반영(낙관적)
             setItems((prev) => prev.map((x) => (x.id === id ? { ...x, read: true } : x)));
             try {
                 const res = await markRead([id]);
@@ -162,9 +154,6 @@ export function useNotificationStream(opt: Options) {
         [enabled, getToken]
     );
 
-    /* --------------------------------
-     * 모두 읽음: enabled && token 일 때만
-     * -------------------------------- */
     const markAll = useCallback(async () => {
         if (!enabled) return;
         const token = await resolveToken(getToken);
@@ -179,16 +168,12 @@ export function useNotificationStream(opt: Options) {
         }
     }, [enabled, getToken]);
 
-    /* --------------------------------
-     * WebSocket(STOMP) 구독
-     *  - ✅ enabled 일 때만
-     *  - ✅ userId 없으면(0/''/null) WS 스킵
-     * -------------------------------- */
+    /* ---------------- WS 구독: enabled && userId ---------------- */
     useNotifyWS({
-        enabled: Boolean(enabled && userId), // ★
+        enabled: Boolean(enabled && userId),
         userId: userId ?? 0,
         getToken: getToken ?? (() => null),
-        wsPath: wsUrl, // "/stomp"
+        wsPath: wsUrl,
         topicBase,
         debug,
         onNotify: (payload: any) => {
@@ -205,6 +190,7 @@ export function useNotificationStream(opt: Options) {
         items,
         unread,
         loading,
+        initialized, // ★ 추가
         hasMore,
         loadFirst,
         loadMore,
