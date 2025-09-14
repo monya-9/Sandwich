@@ -14,11 +14,6 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectForm from "./components/ProjectManage/ProjectForm";
 import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
-
-// OAuth 콜백/스텝(레이아웃 없이)
-import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
-import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
-import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 import MessagesPage from "./pages/Messages/MessagesPage";
 
 // 마이페이지
@@ -26,6 +21,14 @@ import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
 import CareerSettingPage from "./components/MyPageSetting/CareerSettingPage";
 import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
 import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
+
+// 챌린지
+import ChallengeListPage from "./pages/challenge/ChallengeListPage";
+
+// OAuth 콜백/스텝
+import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
+import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
+import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
@@ -64,6 +67,9 @@ function App() {
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
+
+                                {/* ✅ 챌린지 라우트 */}
+                                <Route path="/challenge" element={<ChallengeListPage />} />
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />
