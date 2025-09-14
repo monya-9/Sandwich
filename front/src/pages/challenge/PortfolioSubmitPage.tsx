@@ -5,8 +5,8 @@ import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal
 import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
-import { challengeApi } from "../../api/challengeApi";
 import { ChevronLeft } from "lucide-react";
+import { addPortfolioProject } from "../../data/Challenge/submissionsDummy";
 
 type PortfolioSubmitPayload = {
     title: string;
@@ -36,9 +36,7 @@ export default function PortfolioSubmitPage() {
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
 
-    useEffect(() => {
-        if (!isLoggedIn) setLoginOpen(true);
-    }, [isLoggedIn]);
+    useEffect(() => { if (!isLoggedIn) setLoginOpen(true); }, [isLoggedIn]);
 
     const [tab, setTab] = useState<"edit" | "preview">("edit");
     const [form, setForm] = useState<PortfolioSubmitPayload>({
@@ -51,37 +49,29 @@ export default function PortfolioSubmitPage() {
         membersText: "",
     });
 
-    const canSubmit = !!form.title.trim() && (!!form.repoUrl || !!form.demoUrl || !!form.desc);
+    // ✅ 제목 또는 설명만 있어도 제출 가능
+    const canSubmit = !!form.title.trim() || !!form.desc?.trim();
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         if (!canSubmit) return;
-
-        const payload = {
-            type: "PORTFOLIO" as const,
+        addPortfolioProject(id, {
             title: form.title.trim(),
-            repoUrl: form.repoUrl?.trim() || undefined,
-            demoUrl: form.demoUrl?.trim() || undefined,
-            desc: [
-                form.desc?.trim() || "",
-                form.teamType ? `\n[참여 형태] ${form.teamType === "SOLO" ? "개인" : "팀"}` : "",
-                form.teamName ? `\n[팀명] ${form.teamName}` : "",
-                form.membersText ? `\n[구성원]\n${form.membersText}` : "",
-            ]
-                .filter(Boolean)
-                .join(""),
-        };
-
-        await challengeApi.createSubmission(id, payload as any);
+            summary: form.desc?.trim() || "설명 미입력",
+            demoUrl: form.demoUrl?.trim(),
+            repoUrl: form.repoUrl?.trim(),
+            authorInitial: "P",
+            authorName: "허은진",
+            teamName: form.teamName?.trim() || undefined,
+            authorRole: "포트폴리오",
+        });
         alert("제출이 접수되었습니다.");
-        nav(`/challenge/portfolio/${id}`);
+        nav(`/challenge/portfolio/${id}/vote`, { replace: true });
     };
 
     return (
         <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
             <LoginRequiredModal open={loginOpen && !isLoggedIn} onClose={() => setLoginOpen(false)} />
-
-            {/* 헤더 */}
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-4 flex items(center) gap-2">
                 <button
                     onClick={() => nav(`/challenge/portfolio/${id}`)}
                     aria-label="뒤로가기"
@@ -94,7 +84,6 @@ export default function PortfolioSubmitPage() {
                 </h1>
             </div>
 
-            {/* 설명/가이드 */}
             <SectionCard className="!px-5 !py-5 mb-4">
                 <div className="text-[13.5px] leading-7 text-neutral-800 whitespace-pre-line">{data.description}</div>
                 <ul className="mt-3 list-disc pl-5 text-[13.5px] leading-7 text-neutral-800">
@@ -105,7 +94,6 @@ export default function PortfolioSubmitPage() {
                 </ul>
             </SectionCard>
 
-            {/* 탭 */}
             <div className="mb-3 flex gap-2">
                 <button
                     onClick={() => setTab("edit")}
@@ -248,7 +236,6 @@ export default function PortfolioSubmitPage() {
                     </SectionCard>
                 )}
 
-                {/* 우측 고정 가이드 */}
                 <SectionCard className="!px-5 !py-5">
                     <h3 className="mb-3 text-[15px] font-bold">📌 제출 가이드</h3>
                     <GreenBox>

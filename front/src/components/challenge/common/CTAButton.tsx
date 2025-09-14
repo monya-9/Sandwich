@@ -2,20 +2,21 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 
+/** string 태그("button" | "a") 또는 React 컴포넌트(Link 등) 모두 허용 */
+type AsProp = "button" | "a" | React.ElementType;
+
 type Props = {
     children: React.ReactNode;
-    as?: "button" | "a";
+    as?: AsProp;
+    /** a 태그 전용 */
     href?: string;
+    /** Link 전용 */
+    to?: string;
 
-    /** React 표준 핸들러로 바꿔서 () => Promise<void> 도 허용되게 */
-    onClick?: React.MouseEventHandler<HTMLButtonElement | HTMLAnchorElement>;
-
-    /** 버튼 비활성화 */
+    onClick?: React.MouseEventHandler<any>;
     disabled?: boolean;
-
-    /** button 일 때만 의미 있음 (기본: button) */
+    /** button일 때만 의미 있음 */
     type?: "button" | "submit" | "reset";
-
     className?: string;
 };
 
@@ -24,6 +25,7 @@ export default function CTAButton({
                                       onClick,
                                       as = "button",
                                       href,
+                                      to,
                                       disabled = false,
                                       type = "button",
                                       className = "",
@@ -33,7 +35,8 @@ export default function CTAButton({
         "border-neutral-300 text-neutral-900 hover:border-neutral-400 hover:bg-neutral-50 " +
         (disabled ? "opacity-50 pointer-events-none" : "");
 
-    if (as === "a" && href) {
+    // 1) a 태그
+    if (as === "a") {
         return (
             <a
                 className={`${base} ${className}`}
@@ -47,6 +50,23 @@ export default function CTAButton({
         );
     }
 
+    // 2) Link 같은 커스텀 컴포넌트
+    if (typeof as !== "string") {
+        const Comp = as as React.ElementType;
+        return (
+            <Comp
+                className={`${base} ${className}`}
+                to={to}
+                onClick={disabled ? undefined : onClick}
+                aria-disabled={disabled || undefined}
+            >
+                {children}
+                <ArrowRight className="ml-0.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Comp>
+        );
+    }
+
+    // 3) 기본 button
     return (
         <button
             type={type}

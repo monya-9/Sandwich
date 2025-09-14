@@ -37,6 +37,10 @@ import { initFCM } from "./lib/fcm";
 import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
 import PortfolioSubmitPage from "./pages/challenge/PortfolioSubmitPage";
 import CodeEditPage from "./pages/challenge/CodeEditPage";
+import CodeSubmissionListPage from "./pages/challenge/CodeSubmissionListPage";
+import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
+import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
+import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {
@@ -82,9 +86,12 @@ function App() {
                                 <Route path="/challenge/code/:id/submit" element={<CodeSubmitPage />} />
                                 <Route path="/challenge/portfolio/:id/submit" element={<PortfolioSubmitPage />} />
 
-                                {/* (선택) 리스트/투표 등 세부 라우트
+                                {/* 리스트/투표 등 세부 라우트 */}
                                 <Route path="/challenge/code/:id/submissions" element={<CodeSubmissionListPage />} />
-                                <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />*/}
+                                <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />
+                                <Route path="/challenge/portfolio/:id/vote/:projectId" element={<PortfolioProjectDetailPage />} />
+                                <Route path="/challenge/code/:id/submissions/:submissionId" element={<CodeSubmissionDetailPage />} />
+
 
                                 {/* (예시) 코드 제출 수정 */}
                                 <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
