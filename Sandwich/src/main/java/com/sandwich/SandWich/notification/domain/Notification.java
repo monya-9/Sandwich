@@ -25,6 +25,15 @@ public class Notification extends BaseEntity {
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
+    /** ★ 배우(행위자) */
+    @Column(name = "actor_id")
+    private Long actorId;
+
+    /** 쓰지는 않지만 쿼리 최적화 시 사용할 수도 있음 */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actor_id", insertable = false, updatable = false)
+    private User actor;
+
     /** 기존 type → event */
     @Column(name = "event", nullable = false, length = 64)
     private String event;

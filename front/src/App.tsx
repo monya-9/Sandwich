@@ -87,7 +87,7 @@ function App() {
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />
                             <Route path="project/sample" element={<ProjectMangeSampleForm />} />
 
-                            <Route path="*" element={<Navigate to="/messages" replace />} />
+                            <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
                     </BrowserRouter>
                 </MessagesProvider>

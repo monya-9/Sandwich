@@ -1,0 +1,370 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>WS Chat Quick Tester</title>
+    <style>
+        body {font-family: ui-monospace, SFMono-Regular, Menlo, monospace}
+        .grid {display:grid;gap:8px;max-width:720px}
+        .row {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        pre {background:#111;color:#0f0;padding:12px;min-height:220px;overflow:auto}
+        input,select,button{padding:6px 8px}
+        button:disabled{opacity:.5}
+        label {display:block}
+    </style>
+</head>
+<body>
+<h3>WS Chat Quick Tester</h3>
+
+<div class="grid">
+    <label>Base URL (예: http://localhost:8080)
+        <input id="baseUrl" value="http://localhost:8080" style="width:100%">
+    </label>
+
+    <label>JWT Access Token (Bearer 없이 생토큰만)
+        <input id="token" placeholder="eyJhbGciOi..." style="width:100%">
+    </label>
+
+    <div class="row">
+        <label>Room ID
+            <input id="roomId" type="number" placeholder="123">
+        </label>
+        <button id="btnConnect">Connect</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+    </div>
+
+    <div class="row">
+        <button id="btnSubscribeRoom" disabled>Subscribe Room</button>
+        <button id="btnUnsubRoom" disabled>Unsubscribe Room</button>
+        <span id="roomSubInfo" style="opacity:.8"></span>
+    </div>
+
+    <label>Type
+        <select id="type">
+            <option>GENERAL</option>
+            <option>EMOJI</option>
+            <option>JOB_OFFER</option>
+            <option>PROJECT_OFFER</option>
+        </select>
+    </label>
+
+    <label>Content / 카드 설명
+        <input id="content" placeholder="안녕! 또는 😊" style="width:100%">
+    </label>
+
+    <div class="row">
+        <button id="btnSend" disabled>Send</button>
+        <button id="btnRead" disabled>Mark Read</button>
+        <button id="btnTypingStart" disabled>Typing Start</button>
+        <button id="btnTypingStop" disabled>Typing Stop</button>
+    </div>
+
+    <!-- Presence -->
+    <div class="row">
+        <label>Presence User ID
+            <input id="presenceUserId" type="number" placeholder="상대 userId">
+        </label>
+        <button id="btnPresenceSub" disabled>Subscribe Presence</button>
+        <button id="btnPresenceUnsub" disabled>Unsubscribe Presence</button>
+        <span id="presenceSubInfo" style="opacity:.8"></span>
+    </div>
+
+    <!-- Notify (개인 알림) -->
+    <div class="row">
+        <label>Notify User ID
+            <input id="notifyUserId" type="number" placeholder="내 userId">
+        </label>
+        <button id="btnNotifySub" disabled>Subscribe Notifications</button>
+        <button id="btnNotifyUnsub" disabled>Unsubscribe</button>
+        <span id="notifySubInfo" style="opacity:.8"></span>
+    </div>
+
+    <!-- Web Push (FCM) -->
+    <div class="row">
+        <button id="btnPushRegister" disabled>Register Web Push</button>
+        <button id="btnPushUnregister" disabled>Unregister</button>
+        <span id="pushInfo" style="opacity:.8"></span>
+    </div>
+
+    <pre id="log"></pre>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script>
+    let stomp, roomSub, presenceSub, notifySub;
+    let notifyDest = null;
+
+    const el = id => document.getElementById(id);
+    const log = (...a) => { el('log').textContent += a.join(' ') + "\n"; el('log').scrollTop = el('log').scrollHeight; };
+
+    function connect() {
+      const base = el('baseUrl').value.replace(/\/$/, '');
+      const token = el('token').value.trim();
+      if (!token) return alert('토큰을 입력하세요');
+
+      const url = base + '/ws/chat?token=' + encodeURIComponent('Bearer ' + token);
+      const socket = new SockJS(url);
+      stomp = Stomp.over(socket);
+      stomp.debug = null;
+
+      // 자동 재연결(구 stompjs) — 필요시 사용
+      stomp.reconnect_delay = 3000;
+
+
+      stomp.connect({}, () => {
+        log('[WS] connected');
+        setConnected(true);
+        // 연결되면 이전 notify 구독을 자동 복구
+        if (notifyDest) {
+          resubscribeNotify();
+        }
+      }, (err) => {
+        log('[WS] error', err);
+        setConnected(false);
+      });
+
+      // 소켓이 서버쪽에서 끊겼을 때도 로그 확인
+      socket.onclose = () => {
+        log('[WS] disconnected');
+        setConnected(false);
+      };
+    }
+
+    function disconnect() {
+      if (roomSub) { roomSub.unsubscribe(); roomSub = null; }
+      if (presenceSub) { presenceSub.unsubscribe(); presenceSub = null; }
+      if (notifySub) { notifySub.unsubscribe(); notifySub = null; }
+      if (stomp) stomp.disconnect(() => log('[WS] disconnected'));
+      notifyDest = null;
+      setConnected(false);
+    }
+
+    function unsubscribeNotify() {
+      if (notifySub) {
+        notifySub.unsubscribe(); notifySub = null;
+        notifyDest = null; // ← 추가
+        el('notifySubInfo').textContent = 'unsubscribed';
+        log('[UNSUB][NOTIFY]');
+      }
+    }
+
+    function setConnected(on) {
+      el('btnDisconnect').disabled = !on;
+      el('btnSubscribeRoom').disabled = !on;
+      el('btnUnsubRoom').disabled = !on;
+      el('btnSend').disabled = !on;
+      el('btnRead').disabled = !on;
+      el('btnTypingStart').disabled = !on;
+      el('btnTypingStop').disabled = !on;
+      el('btnPresenceSub').disabled = !on;
+      el('btnPresenceUnsub').disabled = !on;
+      el('btnNotifySub').disabled = !on;
+      el('btnNotifyUnsub').disabled = !on;
+      el('btnPushRegister').disabled = !on;
+      el('btnPushUnregister').disabled = !on;
+    }
+
+    // Room subscribe
+    function subscribeRoom() {
+      const roomId = el('roomId').value.trim();
+      if (!roomId) return alert('roomId 입력');
+      if (roomSub) roomSub.unsubscribe();
+      roomSub = stomp.subscribe('/topic/rooms/' + roomId, msg => {
+        log('[RECV][ROOM ' + roomId + ']', msg.body);
+      });
+      el('roomSubInfo').textContent = 'sub: /topic/rooms/' + roomId;
+      log('[SUB][ROOM] /topic/rooms/' + roomId);
+    }
+    function unsubscribeRoom() {
+      if (roomSub) {
+        roomSub.unsubscribe(); roomSub = null;
+        el('roomSubInfo').textContent = 'unsubscribed';
+        log('[UNSUB][ROOM]');
+      }
+    }
+
+    // Send/Read/Typing
+    function sendMsg() {
+      const roomId = el('roomId').value.trim();
+      const type = el('type').value;
+      const content = el('content').value;
+      if (!roomId) return alert('roomId 입력');
+      const payload = { roomId: Number(roomId), type, content };
+      stomp.send('/app/messages.send.' + roomId, {}, JSON.stringify(payload));
+      log('[SEND]', JSON.stringify(payload));
+    }
+    function markRead() {
+      const roomId = el('roomId').value.trim();
+      if (!roomId) return alert('roomId 입력');
+      stomp.send('/app/messages.read.' + roomId, {}, '{}');
+      log('[READ] room ' + roomId);
+    }
+    function typingStart() {
+      const roomId = el('roomId').value.trim();
+      if (!roomId) return alert('roomId 입력');
+      stomp.send('/app/typing.start.' + roomId, {}, '{}');
+      log('[TYPING_START] room ' + roomId);
+    }
+    function typingStop() {
+      const roomId = el('roomId').value.trim();
+      if (!roomId) return alert('roomId 입력');
+      stomp.send('/app/typing.stop.' + roomId, {}, '{}');
+      log('[TYPING_STOP] room ' + roomId);
+    }
+
+    // Presence
+    function subscribePresence() {
+      const uid = el('presenceUserId').value.trim();
+      if (!uid) return alert('Presence userId 입력');
+      if (presenceSub) presenceSub.unsubscribe();
+      presenceSub = stomp.subscribe('/topic/presence/' + uid, msg => {
+        log('[RECV][PRESENCE ' + uid + ']', msg.body);
+      });
+      el('presenceSubInfo').textContent = 'sub: /topic/presence/' + uid;
+      log('[SUB][PRESENCE] /topic/presence/' + uid);
+    }
+    function unsubscribePresence() {
+      if (presenceSub) {
+        presenceSub.unsubscribe(); presenceSub = null;
+        el('presenceSubInfo').textContent = 'unsubscribed';
+        log('[UNSUB][PRESENCE]');
+      }
+    }
+
+
+    // 기존 subscribeNotify()를 이걸로 교체
+    function subscribeNotify() {
+      const uid = el('notifyUserId').value.trim();
+      if (!uid) return alert('userId 입력');
+      // 경로 기억 → 재연결되면 자동 재구독에 사용
+      notifyDest = '/topic/users/' + uid + '/notifications';
+      resubscribeNotify(); // 안전 재구독
+    }
+
+    function resubscribeNotify() {
+      if (!stomp || !stomp.connected || !notifyDest) return;
+
+      // 이전 구독 정리
+      if (notifySub) { try { notifySub.unsubscribe(); } catch(e) {} notifySub = null; }
+
+      // 유니크한 subscribe id로 충돌/묵살 방지
+      const subId = 'notify-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+      notifySub = stomp.subscribe(notifyDest, (msg) => {
+        log('[RECV][NOTIFY ' + notifyDest + ']', msg.body);
+      }, { id: subId });
+
+      el('notifySubInfo').textContent = 'sub: ' + notifyDest + ' (id=' + subId + ')';
+      log('[SUB][NOTIFY] ' + notifyDest + ' id=' + subId);
+    }
+
+    // bind
+    el('btnConnect').onclick = connect;
+    el('btnDisconnect').onclick = disconnect;
+    el('btnSubscribeRoom').onclick = subscribeRoom;
+    el('btnUnsubRoom').onclick = unsubscribeRoom;
+    el('btnSend').onclick = sendMsg;
+    el('btnRead').onclick = markRead;
+    el('btnTypingStart').onclick = typingStart;
+    el('btnTypingStop').onclick = typingStop;
+    el('btnPresenceSub').onclick = subscribePresence;
+    el('btnPresenceUnsub').onclick = unsubscribePresence;
+    el('btnNotifySub').onclick = subscribeNotify;
+    el('btnNotifyUnsub').onclick = unsubscribeNotify;
+</script>
+
+<!-- Firebase v12 모듈: Web Push 등록/해제 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDEu2qTgKqvnPm0c9LU8u69xi-lELSWpp8",
+      authDomain: "sandwich-b3e09.firebaseapp.com",
+      projectId: "sandwich-b3e09",
+      storageBucket: "sandwich-b3e09.firebasestorage.app",
+      messagingSenderId: "1097062424285",
+      appId: "1:1097062424285:web:67ea70c23d90de8ba0c534"
+    };
+
+    const VAPID_PUBLIC_KEY = "BPfv2mducX32XZ2U3xb_DSkGCY_TRU-SwHpmRjTn43NjA1CRmhU6lKNpPWG5XbMdX5XeaxjgKEQUjTllnNake4E";
+
+    const appFB = initializeApp(firebaseConfig);
+    const messaging = getMessaging(appFB);
+    let pushToken = null;
+
+    async function registerPush() {
+      try {
+        const jwtRaw = document.getElementById('token').value.trim();
+        if (!jwtRaw) return alert('Access Token 먼저 입력');
+
+        // SW 등록 (루트에 /firebase-messaging-sw.js 필요)
+        const swUrl = '/firebase-messaging-sw.js?v=' + Date.now();
+        const reg = await navigator.serviceWorker.register(swUrl);
+
+        // 권한 요청
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          console.warn('[PUSH] permission=', perm);
+          return;
+        }
+
+        // 토큰 발급 (VAPID 필수)
+        pushToken = await getToken(messaging, { vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+        console.log('[FCM] token', pushToken);
+
+        // 서버 등록
+        const res = await fetch('/api/push/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwtRaw },
+          body: JSON.stringify({ platform: 'WEB', token: pushToken })
+        });
+        const js = await res.json().catch(()=>({}));
+        document.getElementById('pushInfo').textContent = 'registered: ...' + (pushToken?.slice(-8) || '');
+        console.log('[REGISTER]', res.status, js);
+      } catch (e) {
+        console.error('[PUSH][ERR]', e);
+        alert('Push 등록 실패: ' + (e?.message || e));
+      }
+    }
+
+    async function unregisterPush() {
+      try {
+        const jwtRaw = document.getElementById('token').value.trim();
+        if (!jwtRaw) return alert('Access Token 먼저 입력');
+        if (!pushToken) return alert('먼저 Register로 토큰을 발급하세요');
+
+        const res = await fetch('/api/push/register?token=' + encodeURIComponent(pushToken), {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + jwtRaw }
+        });
+        const js = await res.json().catch(()=>({}));
+        document.getElementById('pushInfo').textContent = 'unregistered';
+        console.log('[UNREGISTER]', res.status, js);
+      } catch (e) {
+        console.error('[PUSH][ERR]', e);
+      }
+    }
+
+    // WS 연결되면 버튼 활성화(기존 setConnected 훅킹)
+    const origSetConnected = window.setConnected;
+    window.setConnected = function(on){
+      origSetConnected(on);
+      document.getElementById('btnPushRegister').disabled = !on;
+      document.getElementById('btnPushUnregister').disabled = !on;
+    };
+
+    document.getElementById('btnPushRegister').onclick = registerPush;
+    document.getElementById('btnPushUnregister').onclick = unregisterPush;
+
+    // 포그라운드 메시지 수신 (탭 열려있을 때도 표시)
+    onMessage(messaging, (payload) => {
+      console.log('[FCM][FOREGROUND]', payload);
+      const data = payload.data || {};
+      const text = (data.senderName ? `${data.senderName}: ` : '') + (data.preview || '');
+      alert(text || '새 메시지');  // 간단 알림
+    });
+</script>
+</body>
+</html>

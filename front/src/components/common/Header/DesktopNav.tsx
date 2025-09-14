@@ -1,5 +1,6 @@
+// src/components/common/Header/DesktopNav.tsx
 import React, { useContext, useState, useMemo, useEffect } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import logo from "../../../assets/logo.png";
 import { AuthContext } from "../../../context/AuthContext";
@@ -13,15 +14,18 @@ import MessageIcon from "./icons/MessageIcon";
 import NotificationIcon from "./icons/NotificationIcon";
 
 import type { Message } from "../../../types/Message";
-import type { Notification } from "../../../types/Notification";
+import type { NotifyItem } from "../../../types/Notification";
 import { fetchRooms } from "../../../api/messages";
 import { onMessagesRefresh } from "../../../lib/messageEvents";
+import { useNotificationStream } from "../../../hooks/useNotificationStream";
 
-// 알림 API 아직 없으면 임시 더미 유지
-import { dummyNotifications } from "../../../data/dummyNotifications";
+// (옵션) 더미 확인용
+// import { dummyNotifications } from "../../../data/dummyNotifications";
+// const USE_DUMMY_NOTI = true;
+
+const USE_DUMMY_NOTI = false;
 
 const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
-    const location = useLocation();
     const { isLoggedIn, email } = useContext(AuthContext);
 
     const safeEmail = useMemo(() => {
@@ -30,45 +34,44 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         return looksLikeJwt ? "" : email;
     }, [email]);
 
-    // 닉네임 변경 이벤트 수신용 리비전
-    const [nickRevision, setNickRevision] = useState(0);
-    useEffect(() => {
-        const onNickUpdate = () => setNickRevision((v) => v + 1);
-        window.addEventListener("user-nickname-updated", onNickUpdate as any);
-        return () => window.removeEventListener("user-nickname-updated", onNickUpdate as any);
-    }, []);
-
     const displayName = useMemo(() => {
         const getItem = (k: string) =>
             (typeof window !== "undefined" &&
-                (localStorage.getItem(k) || sessionStorage.getItem(k))) ||
-            "";
+                (localStorage.getItem(k) || sessionStorage.getItem(k))) || "";
         const nick = getItem("userNickname")?.trim();
         const user = getItem("userUsername")?.trim();
         if (nick) return nick;
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail, nickRevision]);
+    }, [safeEmail]);
+
+    const myId = Number(
+        localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"
+    );
+
+    const accessToken =
+        localStorage.getItem("accessToken") ||
+        sessionStorage.getItem("accessToken") ||
+        "";
+
+    // 버튼/드롭다운 표시 여부(로그인 & 토큰)
+    const notiReady = isLoggedIn && !!accessToken;
+    // WS 연결 여부(= userId가 확보된 뒤)
+    const notiWsEnabled = notiReady && myId > 0 && !USE_DUMMY_NOTI;
 
     // ▼ 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
     const [showMessage, setShowMessage] = useState(false);
 
-    // ▼ 데이터 상태
-    const [notifications, setNotifications] = useState<Notification[]>(dummyNotifications);
+    // ▼ 메시지 상단 5개
     const [messages, setMessages] = useState<Message[]>([]);
-
-    const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
-    const unreadMessagesCount = messages.filter((m) => !m.isRead && (m.unreadCount ?? 0) > 0).length
-        || messages.reduce((acc, m) => acc + (m.unreadCount ?? 0), 0);
-
-    const handleMarkAllNotiAsRead = () =>
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-
-    // 헤더 메시지 로더(최신 5개)
     const loadHeaderMessages = React.useCallback(async () => {
+        if (!notiReady) {
+            setMessages([]);
+            return;
+        }
         try {
             const rooms = await fetchRooms(0, 5);
             const mapped: Message[] = rooms.map((r) => ({
@@ -85,47 +88,65 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         } catch {
             setMessages([]);
         }
-    }, []);
+    }, [notiReady]);
 
-    useEffect(() => { loadHeaderMessages(); }, [loadHeaderMessages]);
+    useEffect(() => {
+        if (notiReady) loadHeaderMessages();
+    }, [notiReady, loadHeaderMessages]);
+
     useEffect(() => onMessagesRefresh(loadHeaderMessages), [loadHeaderMessages]);
 
-    // 드롭다운 닫기 이벤트 동기화
-    useEffect(() => {
-        const closeAll = () => {
-            setShowMessage(false);
-            setShowNotification(false);
-            setShowProfile(false);
-        };
-        window.addEventListener("hide-dropdowns", closeAll);
-        return () => window.removeEventListener("hide-dropdowns", closeAll);
-    }, []);
-
-    // 드롭다운에서 읽음 처리
     const markMessageRead = (id: number | string) => {
         setMessages((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, isRead: true, unreadCount: 0 } : m)),
+            prev.map((m) => (m.id === id ? { ...m, isRead: true, unreadCount: 0 } : m))
         );
     };
+
+    // ▼ 알림 스트림(WS + API)
+    const noti = useNotificationStream({
+        enabled: notiReady && showNotification,// ★ 드롭다운 열렸을 때만 REST/WS 모두 동작
+        userId: myId || 0,
+        wsUrl: "/stomp",
+        topicBase: "/topic/users",
+        pageSize: 20,
+        getToken: () =>
+            localStorage.getItem("accessToken") ||
+            sessionStorage.getItem("accessToken") ||
+            null,
+        resetOnDisable: false,
+        debug: false,
+    });
+
+    // 열릴 때 첫 페이지 로드
+    useEffect(() => {
+        if (!notiReady || USE_DUMMY_NOTI) return;
+        if (!showNotification) return;
+        if (!noti.initialized) void noti.loadFirst();
+    }, [notiReady, showNotification]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // 드롭다운 데이터 원천
+    const notiItems: NotifyItem[] = USE_DUMMY_NOTI
+        ? [] // dummyNotifications
+        : (noti.items as NotifyItem[]);
+    const notiUnread = USE_DUMMY_NOTI
+        ? 0 // dummyNotifications.filter((x) => !x.read).length
+        : noti.unread;
 
     const navCls = ({ isActive }: { isActive: boolean }) =>
         `text-black ${isActive ? "font-semibold" : "font-medium"}`;
 
     return (
         <div className="flex items-center justify-between w-full relative">
-            {/* 왼쪽: 로고 + 네비게이션 */}
             <div className="flex items-center gap-3 min-w-0">
                 <Link to="/" className="shrink-0">
                     <img src={logo} alt="Sandwich" className="w-[120px] h-auto" />
                 </Link>
-
                 <nav className="flex gap-6 text-[18px] ml-6">
                     <NavLink to="/" className={navCls} end>둘러보기</NavLink>
                     <NavLink to="/community" className={navCls}>커뮤니티</NavLink>
                 </nav>
             </div>
 
-            {/* 오른쪽: 검색 + 아이콘들 */}
             <div className="flex items-center gap-5 ml-auto relative">
                 <SearchBar />
 
@@ -138,15 +159,18 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                     setShowMessage((prev) => !prev);
                                     setShowNotification(false);
                                     setShowProfile(false);
-                                    if (!showMessage) loadHeaderMessages(); // 열 때 갱신
+                                    if (!showMessage) void loadHeaderMessages();
                                 }}
                                 aria-haspopup="menu"
                                 aria-expanded={showMessage}
                                 aria-label="메시지 열기"
                             >
-                                <MessageIcon hasNew={(messages.reduce((a,m)=>a+(m.unreadCount??0),0)) > 0} />
+                                <MessageIcon
+                                    hasNew={
+                                        messages.reduce((a, m) => a + (m.unreadCount ?? 0), 0) > 0
+                                    }
+                                />
                             </button>
-
                             {showMessage && (
                                 <div className="absolute right-0 z-50">
                                     <MessageDropdown messages={messages} onRead={markMessageRead} />
@@ -165,15 +189,22 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                 aria-haspopup="menu"
                                 aria-expanded={showNotification}
                                 aria-label="알림 열기"
+                                disabled={!notiReady && !USE_DUMMY_NOTI}
                             >
-                                <NotificationIcon hasNew={unreadNotificationsCount > 0} />
+                                <NotificationIcon hasNew={notiUnread > 0} />
                             </button>
 
                             {showNotification && (
                                 <div className="absolute right-0 z-50">
                                     <NotificationDropdown
-                                        notifications={notifications}
-                                        onMarkAllAsRead={handleMarkAllNotiAsRead}
+                                        items={notiItems}
+                                        unreadCount={notiUnread}
+                                        initializing={!noti.initialized}
+                                        loading={noti.loading}
+                                        onMarkAllAsRead={() => { if (!USE_DUMMY_NOTI) void noti.markAll(); }}
+                                        onClickItem={(id) => { if (!USE_DUMMY_NOTI) void noti.markOneRead(id); }}
+                                        hasMore={!USE_DUMMY_NOTI && noti.hasMore}
+                                        onLoadMore={() => { if (!USE_DUMMY_NOTI) void noti.loadMore(); }}
                                     />
                                 </div>
                             )}
@@ -194,7 +225,6 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                             >
                                 <ProfileCircle email={safeEmail} size={32} />
                             </button>
-
                             {showProfile && (
                                 <div className="absolute right-0 z-50">
                                     <ProfileDropdown email={safeEmail} username={displayName} onLogout={onLogout} />

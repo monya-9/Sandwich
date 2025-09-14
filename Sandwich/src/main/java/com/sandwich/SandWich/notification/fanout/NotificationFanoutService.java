@@ -3,14 +3,16 @@ package com.sandwich.SandWich.notification.fanout;
 import com.sandwich.SandWich.notification.NotificationPublisher;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.repository.DeviceTokenRepository;
+import com.sandwich.SandWich.notification.service.NotificationLedgerService;
+import com.sandwich.SandWich.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -24,21 +26,20 @@ public class NotificationFanoutService {
     private final DeviceTokenRepository tokenRepo;
     private final PushSender pushSender;
     private final EmailSender emailSender; // 현재는 No-op
-    private final com.sandwich.SandWich.notification.service.NotificationLedgerService ledgerService;
+    private final NotificationLedgerService ledgerService;
 
+    // ★ 배우 조회용
+    private final UserRepository userRepo;
 
-    // 테스트/운영 토글 (application-*.properties에서 조절)
     @Value("${push.skip.online-gate:false}")
-    private boolean skipOnlineGate;            // true면 online/subscribed 체크 무시
+    private boolean skipOnlineGate;
 
     @Value("${push.debounce.seconds:30}")
-    private int debounceSeconds;               // 테스트 시 3~5로 낮추기
+    private int debounceSeconds;
 
     @Value("${push.quiet-hours.enabled:true}")
-    private boolean quietHoursEnabled;         // 테스트 시 false로
+    private boolean quietHoursEnabled;
 
-
-    /** 이벤트 문자열 -> NotifyKind 매핑 (한 군데에서) */
     public NotifyKind mapEventToKind(String event) {
         if (event == null) return NotifyKind.EVENT;
         switch (event) {
@@ -48,7 +49,7 @@ public class NotificationFanoutService {
             case "LIKE_CREATED":     return NotifyKind.LIKE;
             case "FOLLOW_CREATED":   return NotifyKind.FOLLOW;
             case "WORK_DIGEST_READY":return NotifyKind.WORK_DIGEST;
-            case "COLLECTION_SAVED":  return NotifyKind.COLLECTION;
+            case "COLLECTION_SAVED": return NotifyKind.COLLECTION;
             case "SYSTEM_EVENT":
             case "SYSTEM_BROADCAST":
             default:
@@ -59,34 +60,55 @@ public class NotificationFanoutService {
 
     /** 공통 팬아웃 엔트리 포인트 */
     public void fanout(NotifyPayload payload) {
-        Long targetUserId = payload.getTargetUserId();
-        NotifyKind kind = mapEventToKind(payload.getEvent());
+        // ★ 배우 필드 enrich (가능하면)
+        payload = enrichActor(payload);
 
-        log.info("[LEDGER] fanout -> save target={} event={}",
-                payload.getTargetUserId(), payload.getEvent());
-        // 0) 레저 저장: 항상
+        // 0) 레저 저장
         ledgerService.saveFromPayload(payload);
 
-
-        // 1) WS: 항상 전송
+        // 1) WS
         publisher.sendToUser(payload);
 
-        // 2) PUSH: 정책에 맞게 조건 체크 후 전송
-        maybeSendPush(targetUserId, kind, payload);
+        // 2) PUSH
+        Long targetUserId = payload.getTargetUserId();
+        maybeSendPush(targetUserId, mapEventToKind(payload.getEvent()), payload);
 
-        // 3) EMAIL: 선호도 허용 시 전송
-        if (preferenceChecker.isAllowed(targetUserId, kind, NotifyChannel.EMAIL)) {
-            emailSender.sendTemplate(targetUserId, selectTemplate(kind), toEmailModel(payload));
+        // 3) EMAIL (옵션)
+        if (preferenceChecker.isAllowed(targetUserId, mapEventToKind(payload.getEvent()), NotifyChannel.EMAIL)) {
+            emailSender.sendTemplate(targetUserId, selectTemplate(mapEventToKind(payload.getEvent())), toEmailModel(payload));
         }
     }
+
+    /** 배우(행위자) 정보를 payload에 채워넣는다. */
+    private NotifyPayload enrichActor(NotifyPayload p) {
+        if (p.getActorId() == null) return p;
+
+        var views = userRepo.findActorViewsByIds(Set.of(p.getActorId()));
+        if (views.isEmpty()) return p;
+
+        var av = views.get(0);
+        return NotifyPayload.builder()
+                .event(p.getEvent())
+                .actorId(p.getActorId())
+                .targetUserId(p.getTargetUserId())
+                .resource(p.getResource())
+                .extra(p.getExtra())
+                .createdAt(p.getCreatedAt())
+                .deepLink(p.getDeepLink())
+                .title(p.getTitle())
+                .body(p.getBody())
+                // ★ 배우 필드
+                .actorNickname(av.getNickname())
+                .actorEmail(av.getEmail())
+                .actorProfileUrl(av.getProfileImage())
+                .build();
+    }
+
     private void maybeSendPush(Long userId, NotifyKind kind, NotifyPayload p) {
         final String topic = "/topic/users/" + userId + "/notifications";
 
-        // online + 해당 토픽 구독 중이면 스킵
         boolean online = onlineGate.isOnline(userId);
         boolean subbed = onlineGate.isSubscribed(userId, topic);
-
-        // 테스트 토글: online/subbed 강제 무시
         if (skipOnlineGate) { online = false; subbed = false; }
 
         log.info("[NOTIFY][PUSH][CHK] user={} online={} subbed={} event={}", userId, online, subbed, p.getEvent());
@@ -95,20 +117,13 @@ public class NotificationFanoutService {
             return;
         }
 
-        // 디바운스 키에 resourceId 포함 → 연속 댓글 테스트가 덜 막힘
-        String rid = (p.getResource() != null && p.getResource().getId() != null)
-                ? String.valueOf(p.getResource().getId()) : "0";
-        // 디바운스(같은 사용자/이벤트 30초)
         String debKey = "notify:" + userId + ":" + p.getEvent();
-        if (p.getResource()!=null) {
-            debKey += ":" + p.getResource().getType() + ":" + p.getResource().getId();
-        }
-        if (!debouncer.allow(debKey, Duration.ofSeconds(30))) {
+        if (p.getResource()!=null) debKey += ":" + p.getResource().getType() + ":" + p.getResource().getId();
+        if (!debouncer.allow(debKey, Duration.ofSeconds(debounceSeconds))) {
             log.debug("[NOTIFY][PUSH][SKIP] debounce key={}", debKey);
             return;
         }
 
-        // Quiet Hours (KST 23~08)
         if (quietHoursEnabled) {
             ZonedDateTime nowKst = ZonedDateTime.now(com.sandwich.SandWich.common.util.TimeUtil.Z_KST);
             int h = nowKst.getHour();
@@ -120,26 +135,27 @@ public class NotificationFanoutService {
             }
         }
 
-        // 선호도
         if (!preferenceChecker.isAllowed(userId, kind, NotifyChannel.PUSH)) {
             log.info("[NOTIFY][PUSH][SKIP] preference disallow user={} kind={}", userId, kind);
             return;
         }
 
-        // 활성 토큰 조회
         var tokens = tokenRepo.findAllByUserIdAndIsActiveTrue(userId);
         if (tokens.isEmpty()) {
             log.info("[NOTIFY][PUSH][SKIP] no-active-tokens user={}", userId);
             return;
         }
 
-        // FCM data-only 전송 (FcmPushSender가 _token을 사용함)
         for (var dt : tokens) {
             Map<String, String> data = new LinkedHashMap<>();
             data.put("event", safe(p.getEvent()));
             data.put("actorId", String.valueOf(p.getActorId()));
-            data.put("targetUserId", String.valueOf(p.getTargetUserId()));
+            // ★ 배우 필드 추가
+            if (p.getActorNickname() != null)   data.put("actorNickname", p.getActorNickname());
+            if (p.getActorEmail() != null)      data.put("actorEmail", p.getActorEmail());
+            if (p.getActorProfileUrl() != null) data.put("actorProfileUrl", p.getActorProfileUrl());
 
+            data.put("targetUserId", String.valueOf(p.getTargetUserId()));
             if (p.getResource() != null) {
                 data.put("resource.type", safe(p.getResource().getType()));
                 data.put("resource.id", String.valueOf(p.getResource().getId()));
@@ -147,14 +163,10 @@ public class NotificationFanoutService {
             if (p.getExtra() != null && p.getExtra().get("snippet") != null) {
                 data.put("extra.snippet", String.valueOf(p.getExtra().get("snippet")));
             }
-
-            // Comment 쪽에서 이미 title/body 세팅해 주므로 그대로 활용
             data.put("title", safe(p.getTitle()));
             data.put("body",  safe(p.getBody()));
             data.put("deepLink", safe(p.getDeepLink()));
             data.put("createdAt", safe(String.valueOf(p.getCreatedAt())));
-
-            // 내부 전달용: FcmPushSender가 이 토큰으로 보내요
             data.put("_token", dt.getToken());
 
             log.info("[NOTIFY][PUSH][SEND] user={} tokenTail={} event={} resource={}:{}",
@@ -167,35 +179,20 @@ public class NotificationFanoutService {
         }
     }
 
-    private Map<String,String> toPushData(NotifyPayload p) {
-        // FCM data payload 규격: String-String
-        Map<String, String> m = new LinkedHashMap<>();
-        m.put("event", safe(p.getEvent()));
-        m.put("actorId", String.valueOf(p.getActorId()));
-        m.put("targetUserId", String.valueOf(p.getTargetUserId()));
-        if (p.getResource()!=null) {
-            m.put("resource.type", safe(p.getResource().getType()));
-            m.put("resource.id", String.valueOf(p.getResource().getId()));
-        }
-        if (p.getExtra()!=null) {
-            // 필요한 키만 선별해서 넣기(예시는 message/snippet)
-            Object msg = p.getExtra().get("message");
-            Object sn  = p.getExtra().get("snippet");
-            if (msg!=null) m.put("extra.message", String.valueOf(msg));
-            if (sn!=null)  m.put("extra.snippet", String.valueOf(sn));
-        }
-        m.put("createdAt", safe(String.valueOf(p.getCreatedAt())));
-        return m;
-    }
-
     private Map<String,Object> toEmailModel(NotifyPayload p) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("event", p.getEvent());
         m.put("actorId", p.getActorId());
+        m.put("actorNickname", p.getActorNickname());
+        m.put("actorEmail", p.getActorEmail());
+        m.put("actorProfileUrl", p.getActorProfileUrl());
         m.put("targetUserId", p.getTargetUserId());
         m.put("resource", p.getResource());
         m.put("extra", p.getExtra());
         m.put("createdAt", p.getCreatedAt());
+        m.put("title", p.getTitle());
+        m.put("body", p.getBody());
+        m.put("deepLink", p.getDeepLink());
         return m;
     }
 
@@ -215,6 +212,5 @@ public class NotificationFanoutService {
         int n = Math.max(0, t.length() - 8);
         return t.substring(n);
     }
-
     private String safe(String s) { return s == null ? "" : s; }
 }
