@@ -1,6 +1,6 @@
 // src/pages/challenge/ChallengeListPage.tsx
 import React from "react";
-import { dummyChallenges } from "../../data/dummyChallenges";
+import { dummyChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 

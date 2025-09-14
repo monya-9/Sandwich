@@ -24,6 +24,8 @@ import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
 // 챌린지
 import ChallengeListPage from "./pages/challenge/ChallengeListPage";
+import ChallengeDetailPage from "./pages/challenge/ChallengeDetailPage";
+
 
 // OAuth 콜백/스텝
 import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
@@ -70,6 +72,7 @@ function App() {
 
                                 {/* ✅ 챌린지 라우트 */}
                                 <Route path="/challenge" element={<ChallengeListPage />} />
+                                <Route path="/challenge/:id" element={<ChallengeDetailPage />} />
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />
