@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
-import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare } from "lucide-react";
+import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, X } from "lucide-react";
 import {
     getPortfolioProjects,
     getPortfolioComments,
@@ -11,14 +11,20 @@ import {
 } from "../../data/Challenge/submissionsDummy";
 
 function Stars({
-                   value, onChange, label,
-               }: { value: number; onChange: (v:number)=>void; label: string }) {
+                   value,
+                   onChange,
+                   label,
+               }: {
+    value: number;
+    onChange: (v: number) => void;
+    label: string;
+}) {
     return (
         <div className="flex items-center gap-2">
             <span className="w-16 text-[13px]">{label}</span>
-            {[1,2,3,4,5].map(n=>(
-                <button key={n} onClick={()=>onChange(n)} aria-label={`${label} ${n}점`}>
-                    <Star className={`h-5 w-5 ${n<=value ? "fill-yellow-400 stroke-yellow-400" : ""}`} />
+            {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => onChange(n)} aria-label={`${label} ${n}점`}>
+                    <Star className={`h-5 w-5 ${n <= value ? "fill-yellow-400 stroke-yellow-400" : ""}`} />
                 </button>
             ))}
         </div>
@@ -27,31 +33,43 @@ function Stars({
 
 export default function PortfolioProjectDetailPage() {
     const { id: idStr, projectId: pidStr } = useParams();
-    const id = Number(idStr), pid = Number(pidStr);
+    const id = Number(idStr);
+    const pid = Number(pidStr);
     const nav = useNavigate();
 
-    const [item, setItem] = useState(() => getPortfolioProjects(id).find(p=>p.id===pid));
+    const [item, setItem] = useState(() => getPortfolioProjects(id).find((p) => p.id === pid));
     const [comments, setComments] = useState(() => getPortfolioComments(pid));
     const [cText, setCText] = useState("");
     const [liked, setLiked] = useState(false);
-    const [ux, setUx] = useState(0), [tech, setTech] = useState(0);
-    const [cre, setCre] = useState(0), [plan, setPlan] = useState(0);
+
+    // 별점
+    const [ux, setUx] = useState(0);
+    const [tech, setTech] = useState(0);
+    const [cre, setCre] = useState(0);
+    const [plan, setPlan] = useState(0);
+
+    // 간단 토스트
+    const [toast, setToast] = useState<string>("");
 
     useEffect(() => {
         incViewPortfolio(id, pid);
-        setItem(getPortfolioProjects(id).find(p=>p.id===pid));
+        setItem(getPortfolioProjects(id).find((p) => p.id === pid));
     }, [id, pid]);
 
     if (!item) return <div className="p-6 text-[13.5px]">프로젝트를 찾을 수 없습니다.</div>;
 
-    const votedKey = `voted_ch_${id}`;
-    const canVote = ux && tech && cre && plan && !localStorage.getItem(votedKey);
+    // ✅ 중복 제한 제거: 별점 모두 채웠는지만 체크
+    const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0;
 
     const handleVote = () => {
-        if (!canVote) return alert("모든 항목에 별점을 주세요. (이미 투표했을 수도 있어요)");
-        localStorage.setItem(votedKey, String(pid));
-        alert(`투표 완료!\nUI/UX:${ux} / 기술력:${tech} / 창의성:${cre} / 기획력:${plan}`);
-        nav(`/challenge/portfolio/${id}/vote`, { replace:true });
+        if (!canVote) {
+            setToast("모든 항목에 별점을 주세요.");
+            return;
+        }
+        // 서버 연동 전이므로 단순 성공 토스트만
+        setToast(`투표 완료! (UI/UX:${ux} · 기술력:${tech} · 창의성:${cre} · 기획력:${plan})`);
+        // 필요 시 목록으로 이동하려면 아래 주석 해제
+        // nav(`/challenge/portfolio/${id}/vote`, { replace: true });
     };
 
     const submitComment = () => {
@@ -59,15 +77,15 @@ export default function PortfolioProjectDetailPage() {
         if (!v) return;
         addPortfolioComment(pid, v);
         setComments(getPortfolioComments(pid));
-        // 댓글 수 갱신
-        setItem(getPortfolioProjects(id).find(p=>p.id===pid));
+        setItem(getPortfolioProjects(id).find((p) => p.id === pid)); // 댓글 수 갱신
         setCText("");
+        setToast("댓글이 등록됐어요.");
     };
 
     const toggleLike = () => {
         setLiked((cur) => {
             toggleLikePortfolio(id, pid, !cur);
-            const updated = getPortfolioProjects(id).find(p=>p.id===pid);
+            const updated = getPortfolioProjects(id).find((p) => p.id === pid);
             setItem(updated);
             return !cur;
         });
@@ -75,6 +93,19 @@ export default function PortfolioProjectDetailPage() {
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
+            {/* 토스트 */}
+            {toast && (
+                <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-neutral-900/90 px-4 py-2 text-[12.5px] font-semibold text-white shadow-lg">
+                    <div className="flex items-center gap-3">
+                        <span>{toast}</span>
+                        <button className="opacity-80 hover:opacity-100" onClick={() => setToast("")} aria-label="닫기">
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* 헤더 */}
             <div className="mb-4 flex items-center gap-2">
                 <button
                     onClick={() => nav(`/challenge/portfolio/${id}/vote`)}
@@ -89,10 +120,13 @@ export default function PortfolioProjectDetailPage() {
             <SectionCard className="!px-5 !py-5">
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">{item.authorInitial}</div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
+                        {item.authorInitial}
+                    </div>
                     <div className="leading-tight">
                         <div className="text-[13px] font-semibold text-neutral-900">
-                            {item.authorName}{item.teamName ? ` · ${item.teamName}` : ""}
+                            {item.authorName}
+                            {item.teamName ? ` · ${item.teamName}` : ""}
                         </div>
                         <div className="text-[12.5px] text-neutral-600">{item.authorRole}</div>
                     </div>
@@ -102,23 +136,42 @@ export default function PortfolioProjectDetailPage() {
 
                 <div className="mt-4 flex gap-2">
                     {item.demoUrl && (
-                        <a className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
-                           href={item.demoUrl} target="_blank" rel="noreferrer">데모 <ExternalLink className="h-4 w-4"/></a>
+                        <a
+                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                            href={item.demoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            데모 <ExternalLink className="h-4 w-4" />
+                        </a>
                     )}
                     {item.repoUrl && (
-                        <a className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
-                           href={item.repoUrl} target="_blank" rel="noreferrer">GitHub <ExternalLink className="h-4 w-4"/></a>
+                        <a
+                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                            href={item.repoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            GitHub <ExternalLink className="h-4 w-4" />
+                        </a>
                     )}
                 </div>
 
                 {/* 메트릭 */}
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
-                    <button onClick={toggleLike} className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}>
+                    <button
+                        onClick={toggleLike}
+                        className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                    >
                         <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
                         {item.likes}
                     </button>
-                    <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> {item.views}</span>
-                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {item.comments}</span>
+                    <span className="inline-flex items-center gap-1">
+            <Eye className="h-4 w-4" /> {item.views}
+          </span>
+                    <span className="inline-flex items-center gap-1">
+            <MessageSquare className="h-4 w-4" /> {item.comments}
+          </span>
                 </div>
 
                 {/* 투표 */}
@@ -127,7 +180,9 @@ export default function PortfolioProjectDetailPage() {
                     <Stars label="기술력" value={tech} onChange={setTech} />
                     <Stars label="창의성" value={cre} onChange={setCre} />
                     <Stars label="기획력" value={plan} onChange={setPlan} />
-                    <div className="text-[12px] text-neutral-500">※ 챌린지당 1팀만 투표 가능합니다. (본인 팀 투표 금지는 서버에서 최종 검증)</div>
+                    <div className="text-[12px] text-neutral-500">
+                        ※ 데모용으로 중복 투표 제한을 적용하지 않았습니다. (실서비스는 서버에서 검증)
+                    </div>
                 </div>
 
                 <div className="mt-4 flex justify-end">
@@ -164,7 +219,7 @@ export default function PortfolioProjectDetailPage() {
               className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
               placeholder="댓글을 작성해보세요."
               value={cText}
-              onChange={(e)=>setCText(e.target.value)}
+              onChange={(e) => setCText(e.target.value)}
           />
                     <div className="mt-2 flex justify-end">
                         <button

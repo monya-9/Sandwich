@@ -2,7 +2,6 @@
 import React, { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
-import SubmissionTopTabs from "../../components/challenge/SubmissionTopTabs";
 import { Heart, Eye, MessageSquare, ChevronLeft } from "lucide-react";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { getCodeSubmissions, toggleLikeCode } from "../../data/Challenge/submissionsDummy";
@@ -30,7 +29,7 @@ export default function CodeSubmissionListPage() {
         if (target) toggleLikeCode(id, sid, !target.liked);
     };
 
-    const headerText = `샌드위치 코드 챌린지 투표: 🧮 ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
+    const headerText = `샌드위치 코드 챌린지 투표: ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
 
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
@@ -53,12 +52,6 @@ export default function CodeSubmissionListPage() {
                     코드 제출하기
                 </CTAButton>
             </div>
-
-            <SubmissionTopTabs
-                active="code"
-                codeHref={`/challenge/code/${id}/submissions`}
-                portfolioHref={`/challenge/portfolio/${id}/vote`}
-            />
 
             <div className="grid gap-5 md:grid-cols-3">
                 {cards.map((c) => (

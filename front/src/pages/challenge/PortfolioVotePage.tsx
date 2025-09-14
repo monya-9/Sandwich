@@ -40,7 +40,7 @@ export default function PortfolioVotePage() {
                         <ChevronLeft className="h-5 w-5" />
                     </button>
                     <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">
-                        샌드위치 챌린지 투표: 🎨 {detail.title.replace(/^포트폴리오 챌린지:\s*/, "")}
+                        샌드위치 챌린지 투표: {detail.title.replace(/^포트폴리오 챌린지:\s*/, "")}
                     </h1>
                 </div>
                 <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
