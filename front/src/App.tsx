@@ -29,6 +29,12 @@ import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
+import ProfilePage from "./components/Profile/ProfilePage";
+import WorkTab from "./components/Profile/WorkTab";
+import LikesTab from "./components/Profile/LikesTab";
+import CollectionsTab from "./components/Profile/CollectionsTab";
+import DraftsTab from "./components/Profile/DraftsTab";
+import CareerDetailsPage from "./components/Profile/CareerDetailsPage";
 
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {
@@ -64,6 +70,14 @@ function App() {
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
+
+                                {/* 프로필 페이지 */}
+                                <Route path="/profile" element={<ProfilePage />} />
+                                <Route path="/profile/work" element={<ProfilePage />} />
+                                <Route path="/profile/likes" element={<ProfilePage />} />
+                                <Route path="/profile/collections" element={<ProfilePage />} />
+                                <Route path="/profile/drafts" element={<ProfilePage />} />
+                                <Route path="/profile/careers" element={<CareerDetailsPage />} />
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />
