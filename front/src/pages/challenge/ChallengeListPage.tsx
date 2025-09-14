@@ -3,6 +3,8 @@ import React from "react";
 import { dummyChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
+import WinnersSection from "../../components/challenge/WinnersSection";
+
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -13,17 +15,19 @@ export default function ChallengeListPage() {
             <div>
                 <div className="mx-auto max-w-screen-xl px-4 py-4 md:px-6">
                     <div className="rounded-xl bg-[#FFA31A] px-5 py-4 text-white md:px-6 md:py-5">
-                        <p className="text-[14px] font-semibold">매주 주어질 주제로 코드 / 포트폴리오 챌린지!</p>
+                        <p className="text-[14px] font-semibold">매주 주어질 주제로 코드 / 매달 주어지는 포트폴리오 챌린지!</p>
                         <p className="mt-1 text-[13px] leading-6 opacity-95">
                             개발자라면 누구나 참여 가능, 개인/팀 모두 환영해요.<br className="hidden md:block" />
-                            코드 챌린지는 AI 자동 채점으로 공정하게, 포폴 챌린지는 커뮤니티 투표로 결정!<br className="hidden md:block" />
-                            1~3등은 크레딧 보상과 전용 뱃지, 참가자 전원도 크레딧 지급.<br className="hidden md:block" />
-                            중복 제출·수정 가능, 마감 후에는 투표 기간이 바로 열립니다.<br className="hidden md:block" />
-                            이번 주 주제 확인하고 지금 바로 참여해 보세요!
+                            코드 챌린지는 AI 자동 채점으로 공정하게, 포트폴리오 챌린지는 투표로 결정! 1~3등은 크레딧 보상과 전용 뱃지, 참가자 전원도 크레딧 지급!<br className="hidden md:block" />
+                            코드 챌린지는 중복 제출·수정 가능, 포트폴리오 챌린지는 팀 or 개인으로 1회 출전 가능!<br className="hidden md:block" />
+                            이번 주제 확인하고 지금 바로 참여해 보세요!
                         </p>
                     </div>
                 </div>
             </div>
+
+            {/* WinnersSection */}
+            <WinnersSection />
 
             <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
                 {dummyChallenges.map((item) => (
