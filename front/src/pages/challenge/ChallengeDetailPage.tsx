@@ -210,8 +210,7 @@ export default function ChallengeDetailPage() {
     };
 
     const onBack = () => {
-        if (window.history.length > 1) navigate(-1);
-        else navigate("/challenge");
+        navigate("/challenge");
     };
 
     return (
