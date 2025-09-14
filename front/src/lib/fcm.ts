@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { onAccessTokenChange } from "../utils/tokenStorage";
 
-/** 서버에서 쓰는 동일한 웹앱 설정 */
+/** 서버와 동일한 웹앱 설정 */
 const firebaseConfig = {
     apiKey: "AIzaSyDEu2qTgKqvnPm0c9LU8u69xi-lELSWpp8",
     authDomain: "sandwich-b3e09.firebaseapp.com",
@@ -13,7 +13,6 @@ const firebaseConfig = {
     appId: "1:1097062424285:web:67ea70c23d90de8ba0c534",
 };
 
-/** FCM VAPID 공개키 */
 const VAPID_KEY =
     "BPfv2mducX32XZ2U3xb_DSkGCY_TRU-SwHpmRjTn43NjA1CRmhU6lKNpPWG5XbMdX5XeaxjgKEQUjTllnNake4E";
 
@@ -53,7 +52,7 @@ export async function initFCM() {
         // SW 등록
         const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
 
-        // Firebase init + Messaging
+        // Firebase/Messaging
         const app = initializeApp(firebaseConfig);
         const messaging = getMessaging(app);
 
@@ -63,34 +62,41 @@ export async function initFCM() {
             serviceWorkerRegistration: reg,
         });
         if (!cachedFcmToken) return;
-        console.log("[FCM] token:", cachedFcmToken);
-        (window as any).__FCM_TOKEN__ = cachedFcmToken; // 디버그용
+        (window as any).__FCM_TOKEN__ = cachedFcmToken;
 
-        // 현재 accessToken 있으면 즉시 등록, 없으면 로그인되면 등록
+        // 현재 AccessToken 있으면 즉시 등록, 없으면 로그인되면 등록
         const access =
             localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken") || "";
 
         if (access) {
-            try { await registerWebPush(cachedFcmToken, access); }
-            catch (e) { console.warn("[FCM] initial register fail:", e); }
+            try {
+                await registerWebPush(cachedFcmToken, access);
+            } catch (e) {
+                console.warn("[FCM] initial register fail:", e);
+            }
         } else {
             onAccessTokenChange(async (newAccess) => {
                 if (newAccess && cachedFcmToken) {
-                    try { await registerWebPush(cachedFcmToken, newAccess); }
-                    catch (e) { console.warn("[FCM] deferred register fail:", e); }
+                    try {
+                        await registerWebPush(cachedFcmToken, newAccess);
+                    } catch (e) {
+                        console.warn("[FCM] deferred register fail:", e);
+                    }
                 }
             });
         }
 
-        // 포그라운드에서도 OS 토스트 띄우기(원치 않으면 이 블록 제거)
+        // 포그라운드 => OS 토스트 (원치 않으면 제거)
         onMessage(messaging, async (payload) => {
             const d: any = payload.data || {};
             const reg2 = await navigator.serviceWorker.getRegistration();
-            // 상대경로 → 절대경로 보정
             const url = (() => {
                 const raw = d.deepLink || (d.roomId ? `/messages/${d.roomId}` : "/");
-                try { return new URL(raw, window.location.origin).toString(); }
-                catch { return raw; }
+                try {
+                    return new URL(raw, window.location.origin).toString();
+                } catch {
+                    return raw;
+                }
             })();
 
             await reg2?.showNotification(d.title || d.senderName || "Sandwich", {
