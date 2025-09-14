@@ -5,6 +5,7 @@ import {
     getChallengeDetail,
     type AnyChallengeDetail,
     type PortfolioChallengeDetail,
+    type CodeChallengeDetail,
 } from "../../data/Challenge/challengeDetailDummy";
 import { SectionCard, CTAButton, StatusBadge } from "../../components/challenge/common";
 import { ChevronDown, ChevronLeft, CheckCircle2, Copy, Check } from "lucide-react";
@@ -17,6 +18,14 @@ function GreenBox({ children }: { children: React.ReactNode }) {
     return (
         <div className="rounded-2xl border-2 border-emerald-400/70 bg-white p-4 md:p-5 text-[13.5px] leading-6 text-neutral-800">
             {children}
+        </div>
+    );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="mb-2 flex items-center gap-2">
+            <span className="text-[15px] font-bold">{children}</span>
         </div>
     );
 }
@@ -45,6 +54,124 @@ function Copyable({ title, value }: { title: string; value: string }) {
             <GreenBox>
                 <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-6">{value}</pre>
             </GreenBox>
+        </div>
+    );
+}
+
+/* ---------- Reusable blocks (간단 공용 블록들) ---------- */
+
+function ScheduleList({ items }: { items: { label: string; date: string }[] }) {
+    if (!items?.length) return null;
+    return (
+        <div className="mb-6">
+            <SectionTitle>📅 진행 일정</SectionTitle>
+            <GreenBox>
+                <ul className="space-y-1">
+                    {items.map((s, i) => (
+                        <li key={i} className="flex items-center justify-between">
+                            <span className="font-medium">{s.label}</span>
+                            <span className="text-neutral-700">{s.date}</span>
+                        </li>
+                    ))}
+                </ul>
+            </GreenBox>
+        </div>
+    );
+}
+
+function RewardsTable({
+                          rewards,
+                          title = "🏆 보상",
+                      }: {
+    rewards?: { rank: string; credit: string; krw: string; note: string }[];
+    title?: string;
+}) {
+    if (!rewards?.length) return null;
+    return (
+        <div className="mb-6">
+            <SectionTitle>{title}</SectionTitle>
+            <GreenBox>
+                <div className="grid grid-cols-4 gap-2 text-[13px]">
+                    <div className="font-semibold">순위</div>
+                    <div className="font-semibold">크레딧</div>
+                    <div className="font-semibold">환산</div>
+                    <div className="font-semibold">의미</div>
+                    {rewards.map((r, i) => (
+                        <React.Fragment key={i}>
+                            <div>{r.rank}</div>
+                            <div>{r.credit}</div>
+                            <div>{r.krw}</div>
+                            <div>{r.note}</div>
+                        </React.Fragment>
+                    ))}
+                </div>
+            </GreenBox>
+        </div>
+    );
+}
+
+function SubmitExampleBox({
+                              repoUrl,
+                              demoUrl,
+                              desc,
+                              language,
+                              entrypoint,
+                          }: {
+    repoUrl?: string;
+    demoUrl?: string;
+    desc?: string;
+    language?: string;
+    entrypoint?: string;
+}) {
+    if (!repoUrl && !demoUrl && !desc && !language && !entrypoint) return null;
+    return (
+        <div className="mb-6">
+            <SectionTitle>📦 제출 예시</SectionTitle>
+            <GreenBox>
+                <div className="space-y-1 text-[13.5px] leading-7">
+                    {repoUrl && (
+                        <div>
+                            <span className="font-semibold">GitHub: </span>
+                            {repoUrl}
+                        </div>
+                    )}
+                    {demoUrl && (
+                        <div>
+                            <span className="font-semibold">데모 URL: </span>
+                            {demoUrl}
+                        </div>
+                    )}
+                    {language && (
+                        <div>
+                            <span className="font-semibold">언어: </span>
+                            {language}
+                        </div>
+                    )}
+                    {entrypoint && (
+                        <div>
+                            <span className="font-semibold">엔트리포인트: </span>
+                            {entrypoint}
+                        </div>
+                    )}
+                    {desc && <div className="whitespace-pre-line">{desc}</div>}
+                </div>
+            </GreenBox>
+        </div>
+    );
+}
+
+function AIScoringList({ items }: { items?: { label: string; weight: number }[] }) {
+    if (!items?.length) return null;
+    return (
+        <div className="mb-6">
+            <SectionTitle>🤖 AI 자동 채점 기준</SectionTitle>
+            <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                {items.map((i, idx) => (
+                    <li key={idx}>
+                        {i.label}: <span className="font-medium">{i.weight}점</span>
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 }
@@ -150,9 +277,7 @@ export default function ChallengeDetailPage() {
                 <SectionCard className="!px-6 !py-5 md:!px-8 md:!py-6" outerClassName="mt-2">
                     {/* 공통: 문제/주제 설명 */}
                     <div className="mb-6">
-                        <div className="mb-2 flex items-center gap-2">
-                            <span className="text-[15px] font-bold">{data.type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</span>
-                        </div>
+                        <SectionTitle>{data.type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
                         <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
                     </div>
 
@@ -162,22 +287,18 @@ export default function ChallengeDetailPage() {
                             {/* 입력/출력 */}
                             <div className="mb-6 grid gap-6 md:grid-cols-2">
                                 <div>
-                                    <div className="mb-2 flex items-center gap-2">
-                                        <span className="text-[15px] font-bold">🔶 입력 형식</span>
-                                    </div>
+                                    <SectionTitle>🔶 입력 형식</SectionTitle>
                                     <GreenBox>
                     <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-6">
-                      {data.inputSpec}
+                      {(data as CodeChallengeDetail).inputSpec}
                     </pre>
                                     </GreenBox>
                                 </div>
                                 <div>
-                                    <div className="mb-2 flex items-center gap-2">
-                                        <span className="text-[15px] font-bold">🔶 출력 형식</span>
-                                    </div>
+                                    <SectionTitle>🔶 출력 형식</SectionTitle>
                                     <GreenBox>
                     <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-6">
-                      {data.outputSpec}
+                      {(data as CodeChallengeDetail).outputSpec}
                     </pre>
                                     </GreenBox>
                                 </div>
@@ -191,7 +312,7 @@ export default function ChallengeDetailPage() {
                                 </div>
 
                                 <div className="grid gap-6 md:grid-cols-2">
-                                    {data.examples.map((ex, idx) => (
+                                    {(data as CodeChallengeDetail).examples.map((ex, idx) => (
                                         <div key={idx} className="rounded-2xl border border-emerald-200/70 bg-emerald-50/30 p-4">
                                             <div className="mb-3 flex items-center gap-2">
                                                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -205,32 +326,21 @@ export default function ChallengeDetailPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* 코드형 전용: 일정/보상/제출예시/AI 채점 */}
+                            <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
+                            <RewardsTable rewards={(data as CodeChallengeDetail).rewards} />
+                            <SubmitExampleBox {...((data as CodeChallengeDetail).submitExample || {})} />
+                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring} />
                         </>
                     ) : (
                         // === PORTFOLIO ===
                         <>
-                            {/* 일정 */}
-                            <div className="mb-6">
-                                <div className="mb-2 flex items-center gap-2">
-                                    <span className="text-[15px] font-bold">📅 진행 일정</span>
-                                </div>
-                                <GreenBox>
-                                    <ul className="space-y-1">
-                                        {(data as PortfolioChallengeDetail).schedule.map((s, i) => (
-                                            <li key={i} className="flex items-center justify-between">
-                                                <span className="font-medium">{s.label}</span>
-                                                <span className="text-neutral-700">{s.date}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </GreenBox>
-                            </div>
+                            <ScheduleList items={(data as PortfolioChallengeDetail).schedule} />
 
                             {/* 투표 기준 */}
                             <div className="mb-6">
-                                <div className="mb-2 flex items-center gap-2">
-                                    <span className="text-[15px] font-bold">🗳️ 투표 기준</span>
-                                </div>
+                                <SectionTitle>🗳️ 투표 기준</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     {(data as PortfolioChallengeDetail).votingCriteria.map((t, i) => (
                                         <li key={i}>{t} (1~5점)</li>
@@ -238,58 +348,14 @@ export default function ChallengeDetailPage() {
                                 </ul>
                             </div>
 
-                            {/* 보상 */}
-                            <div className="mb-6">
-                                <div className="mb-2 flex items-center gap-2">
-                                    <span className="text-[15px] font-bold">🏆 보상</span>
-                                </div>
-                                <GreenBox>
-                                    <div className="grid grid-cols-4 gap-2 text-[13px]">
-                                        <div className="font-semibold">순위</div>
-                                        <div className="font-semibold">크레딧</div>
-                                        <div className="font-semibold">환산</div>
-                                        <div className="font-semibold">의미</div>
-                                        {(data as PortfolioChallengeDetail).rewards.map((r, i) => (
-                                            <React.Fragment key={i}>
-                                                <div>{r.rank}</div>
-                                                <div>{r.credit}</div>
-                                                <div>{r.krw}</div>
-                                                <div>{r.note}</div>
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
-                                </GreenBox>
-                            </div>
+                            <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards} />
 
                             {/* 제출/팀 예시 */}
-                            {(data as PortfolioChallengeDetail).submitExample && (
-                                <div className="mb-6">
-                                    <div className="mb-2 flex items-center gap-2">
-                                        <span className="text-[15px] font-bold">📦 제출 예시</span>
-                                    </div>
-                                    <GreenBox>
-                                        <div className="space-y-1 text-[13.5px] leading-7">
-                                            <div>
-                                                <span className="font-semibold">GitHub: </span>
-                                                {(data as PortfolioChallengeDetail).submitExample?.repoUrl}
-                                            </div>
-                                            <div>
-                                                <span className="font-semibold">데모 URL: </span>
-                                                {(data as PortfolioChallengeDetail).submitExample?.demoUrl}
-                                            </div>
-                                            <div className="whitespace-pre-line">
-                                                {(data as PortfolioChallengeDetail).submitExample?.desc}
-                                            </div>
-                                        </div>
-                                    </GreenBox>
-                                </div>
-                            )}
+                            <SubmitExampleBox {...((data as PortfolioChallengeDetail).submitExample || {})} />
 
                             {(data as PortfolioChallengeDetail).teamExample && (
                                 <div className="mb-6">
-                                    <div className="mb-2 flex items-center gap-2">
-                                        <span className="text-[15px] font-bold">👥 팀 정보 예시</span>
-                                    </div>
+                                    <SectionTitle>👥 팀 정보 예시</SectionTitle>
                                     <GreenBox>
                                         <div className="text-[13.5px] leading-7">
                                             <div>
@@ -315,9 +381,7 @@ export default function ChallengeDetailPage() {
 
                     {/* 심사/운영(공통) */}
                     <div className="mb-6">
-                        <div className="mb-2 flex items-center gap-2">
-                            <span className="text-[15px] font-bold">{data.type === "CODE" ? "💡 심사 기준" : "🛡 운영/공정성"}</span>
-                        </div>
+                        <SectionTitle>{data.type === "CODE" ? "💡 심사 기준" : "🛡 운영/공정성"}</SectionTitle>
                         <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                             {data.judgeNotes.map((t, i) => (
                                 <li key={i}>{t}</li>
@@ -327,9 +391,7 @@ export default function ChallengeDetailPage() {
 
                     {/* 제출 안내(공통) */}
                     <div>
-                        <div className="mb-2 flex items-center gap-2">
-                            <span className="text-[15px] font-bold">📣 안내</span>
-                        </div>
+                        <SectionTitle>📣 안내</SectionTitle>
                         <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                             {data.submitGuide.map((t, i) => (
                                 <li key={i}>{t}</li>
