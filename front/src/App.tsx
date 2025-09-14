@@ -34,6 +34,9 @@ import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
+import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
+import PortfolioSubmitPage from "./pages/challenge/PortfolioSubmitPage";
+import CodeEditPage from "./pages/challenge/CodeEditPage";
 
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {
@@ -70,9 +73,22 @@ function App() {
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
 
-                                {/* ✅ 챌린지 라우트 */}
+                                {/* ✅ 챌린지 라우팅 */}
                                 <Route path="/challenge" element={<ChallengeListPage />} />
-                                <Route path="/challenge/:id" element={<ChallengeDetailPage />} />
+                                <Route path="/challenge/code/:id" element={<ChallengeDetailPage />} />
+                                <Route path="/challenge/portfolio/:id" element={<ChallengeDetailPage />} />
+
+                                {/* 제출 */}
+                                <Route path="/challenge/code/:id/submit" element={<CodeSubmitPage />} />
+                                <Route path="/challenge/portfolio/:id/submit" element={<PortfolioSubmitPage />} />
+
+                                {/* (선택) 리스트/투표 등 세부 라우트
+                                <Route path="/challenge/code/:id/submissions" element={<CodeSubmissionListPage />} />
+                                <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />*/}
+
+                                {/* (예시) 코드 제출 수정 */}
+                                <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
+
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />

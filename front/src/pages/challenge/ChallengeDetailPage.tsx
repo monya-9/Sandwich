@@ -1,4 +1,3 @@
-// src/pages/challenge/ChallengeDetailPage.tsx
 import React, { useMemo, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -13,7 +12,6 @@ import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 
 /* ---------- Small UI ---------- */
-
 function GreenBox({ children }: { children: React.ReactNode }) {
     return (
         <div className="rounded-2xl border-2 border-emerald-400/70 bg-white p-4 md:p-5 text-[13.5px] leading-6 text-neutral-800">
@@ -21,7 +19,6 @@ function GreenBox({ children }: { children: React.ReactNode }) {
         </div>
     );
 }
-
 function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
         <div className="mb-2 flex items-center gap-2">
@@ -29,7 +26,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
         </div>
     );
 }
-
 function Copyable({ title, value }: { title: string; value: string }) {
     const [copied, setCopied] = useState(false);
     const onCopy = async () => {
@@ -58,8 +54,7 @@ function Copyable({ title, value }: { title: string; value: string }) {
     );
 }
 
-/* ---------- Reusable blocks (간단 공용 블록들) ---------- */
-
+/* ---------- Reusable blocks ---------- */
 function ScheduleList({ items }: { items: { label: string; date: string }[] }) {
     if (!items?.length) return null;
     return (
@@ -176,24 +171,25 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
     );
 }
 
-/* ---------- Helpers ---------- */
-
-function resolveDefaultHref(actionType: string | undefined, id: number, type: "CODE" | "PORTFOLIO") {
-    if (actionType === "SUBMIT") {
-        return type === "CODE" ? `/challenge/${id}/submit` : `/challenge/${id}/submit-portfolio`;
-    }
-    if (actionType === "VOTE") {
-        return type === "CODE" ? `/challenge/${id}/vote` : `/challenge/${id}/vote`;
-    }
-    return "#";
+/* ---------- Helpers: 라벨/경로 ---------- */
+function primaryHref(type: "CODE" | "PORTFOLIO", id: number) {
+    return type === "CODE" ? `/challenge/code/${id}/submit` : `/challenge/portfolio/${id}/submit`;
+}
+function secondaryHref(type: "CODE" | "PORTFOLIO", id: number) {
+    return type === "CODE" ? `/challenge/code/${id}/submissions` : `/challenge/portfolio/${id}/vote`;
+}
+function primaryLabel(type: "CODE" | "PORTFOLIO") {
+    return type === "CODE" ? "코드 제출하기" : "프로젝트 제출하기";
+}
+function secondaryLabel(type: "CODE" | "PORTFOLIO") {
+    return type === "CODE" ? "제출물 보기" : "작품 투표하러 가기";
 }
 
 /* ---------- Page ---------- */
-
 export default function ChallengeDetailPage() {
     const params = useParams();
     const id = Number(params.id || 1);
-    const data: AnyChallengeDetail = useMemo(() => getChallengeDetail(id), [id]);
+    const data: AnyChallengeDetail = useMemo(() => getChallengeDetail(id), [id]); // type은 더미/서버가 판단
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -201,26 +197,18 @@ export default function ChallengeDetailPage() {
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
 
-    // 상단/하단 CTA 공통 동작
-    const goOrAskLogin = (href: string) => {
-        if (!isLoggedIn) {
-            setLoginModalOpen(true);
-            return;
-        }
-        if (href && href !== "#") navigate(href);
+    const goPrimary = () => {
+        const href = primaryHref(data.type, id);
+        if (!isLoggedIn) return setLoginModalOpen(true);
+        navigate(href);
+    };
+    const goSecondary = () => {
+        const href = secondaryHref(data.type, id);
+        const needsLogin = data.type === "PORTFOLIO";
+        if (needsLogin && !isLoggedIn) return setLoginModalOpen(true);
+        navigate(href);
     };
 
-    const onSubmitClick = () => {
-        const href = resolveDefaultHref("SUBMIT", id, data.type);
-        goOrAskLogin(href);
-    };
-
-    const onVoteClick = () => {
-        const href = resolveDefaultHref("VOTE", id, data.type);
-        goOrAskLogin(href);
-    };
-
-    // 뒤로가기
     const onBack = () => {
         if (window.history.length > 1) navigate(-1);
         else navigate("/challenge");
@@ -228,7 +216,6 @@ export default function ChallengeDetailPage() {
 
     return (
         <div className="mx-auto w-full max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-            {/* 로그인 요구 모달 */}
             <LoginRequiredModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
 
             {/* 헤더 */}
@@ -254,37 +241,35 @@ export default function ChallengeDetailPage() {
                 </button>
             </div>
 
-            {/* 상단 액션 버튼들 (로그인 가드 + 기본 라우트 보정) */}
+            {/* 상단 CTA */}
             <div className="mb-4 flex flex-wrap gap-2">
-                {data.actions.map((a, i) => {
-                    const fallbackHref = resolveDefaultHref((a as any).type, id, data.type);
-                    const href = a.href || fallbackHref || "#";
-                    const onClick = () => goOrAskLogin(href);
-                    return (
-                        <button
-                            key={i}
-                            onClick={onClick}
-                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
-                        >
-                            <span>{a.emoji ?? "➡️"}</span> {a.label} →
-                        </button>
-                    );
-                })}
+                <button
+                    onClick={goPrimary}
+                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                >
+                    <span>{data.type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(data.type)} →
+                </button>
+
+                <button
+                    onClick={goSecondary}
+                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                >
+                    <span>{data.type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(data.type)} →
+                </button>
             </div>
 
             {/* 본문 */}
             {open && (
                 <SectionCard className="!px-6 !py-5 md:!px-8 md:!py-6" outerClassName="mt-2">
-                    {/* 공통: 문제/주제 설명 */}
+                    {/* 설명 */}
                     <div className="mb-6">
                         <SectionTitle>{data.type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
                         <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
                     </div>
 
-                    {/* 유형별 섹션 */}
+                    {/* 유형별 */}
                     {data.type === "CODE" ? (
                         <>
-                            {/* 입력/출력 */}
                             <div className="mb-6 grid gap-6 md:grid-cols-2">
                                 <div>
                                     <SectionTitle>🔶 입력 형식</SectionTitle>
@@ -327,18 +312,14 @@ export default function ChallengeDetailPage() {
                                 </div>
                             </div>
 
-                            {/* 코드형 전용: 일정/보상/제출예시/AI 채점 */}
                             <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards} />
                             <SubmitExampleBox {...((data as CodeChallengeDetail).submitExample || {})} />
                             <AIScoringList items={(data as CodeChallengeDetail).aiScoring} />
                         </>
                     ) : (
-                        // === PORTFOLIO ===
                         <>
                             <ScheduleList items={(data as PortfolioChallengeDetail).schedule} />
-
-                            {/* 투표 기준 */}
                             <div className="mb-6">
                                 <SectionTitle>🗳️ 투표 기준</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
@@ -347,12 +328,8 @@ export default function ChallengeDetailPage() {
                                     ))}
                                 </ul>
                             </div>
-
                             <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards} />
-
-                            {/* 제출/팀 예시 */}
                             <SubmitExampleBox {...((data as PortfolioChallengeDetail).submitExample || {})} />
-
                             {(data as PortfolioChallengeDetail).teamExample && (
                                 <div className="mb-6">
                                     <SectionTitle>👥 팀 정보 예시</SectionTitle>
@@ -379,7 +356,7 @@ export default function ChallengeDetailPage() {
                         </>
                     )}
 
-                    {/* 심사/운영(공통) */}
+                    {/* 공통 */}
                     <div className="mb-6">
                         <SectionTitle>{data.type === "CODE" ? "💡 심사 기준" : "🛡 운영/공정성"}</SectionTitle>
                         <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
@@ -389,7 +366,6 @@ export default function ChallengeDetailPage() {
                         </ul>
                     </div>
 
-                    {/* 제출 안내(공통) */}
                     <div>
                         <SectionTitle>📣 안내</SectionTitle>
                         <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
@@ -404,11 +380,11 @@ export default function ChallengeDetailPage() {
             {/* 하단 고정 CTA */}
             <div className="sticky bottom-4 mt-6 flex justify-end">
                 <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
-                    <CTAButton as="button" onClick={onSubmitClick}>
-                        {data.type === "CODE" ? "코드 제출하기" : "프로젝트 제출하기"}
+                    <CTAButton as="button" onClick={goPrimary}>
+                        {primaryLabel(data.type)}
                     </CTAButton>
-                    <CTAButton as="button" onClick={onVoteClick}>
-                        투표 참여하기
+                    <CTAButton as="button" onClick={goSecondary}>
+                        {secondaryLabel(data.type)}
                     </CTAButton>
                 </div>
             </div>

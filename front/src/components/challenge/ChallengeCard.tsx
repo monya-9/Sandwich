@@ -9,12 +9,15 @@ export type ChallengeCardData = {
     subtitle: string;
     description: React.ReactNode;
     ctaLabel: string;
-    /** 선택: 명시하면 이 링크 우선, 없으면 /challenge/:id 로 이동 */
+    /** 선택: 명시하면 이 링크 우선, 없으면 타입별 디테일 경로로 이동 */
     ctaHref?: string;
 };
 
+const detailHref = (type: "CODE" | "PORTFOLIO", id: number) =>
+    type === "CODE" ? `/challenge/code/${id}` : `/challenge/portfolio/${id}`;
+
 export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
-    const href = item.ctaHref ?? `/challenge/${item.id}`;
+    const href = item.ctaHref ?? detailHref(item.type, item.id);
 
     return (
         <section className="mb-8">
