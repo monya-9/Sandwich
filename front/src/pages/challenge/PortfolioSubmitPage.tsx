@@ -121,7 +121,7 @@ export default function PortfolioSubmitPage() {
                 </button>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div>
                 {tab === "edit" ? (
                     <SectionCard className="!px-5 !py-5">
                         <div className="space-y-4">
@@ -171,7 +171,7 @@ export default function PortfolioSubmitPage() {
                             </div>
 
                             <Row>
-                                <Label>구성원/역할 (선택)</Label>
+                                <Label>구성원/역할</Label>
                                 <textarea
                                     rows={4}
                                     className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
@@ -182,7 +182,7 @@ export default function PortfolioSubmitPage() {
                             </Row>
 
                             <Row>
-                                <Label>GitHub (선택)</Label>
+                                <Label>GitHub 링크</Label>
                                 <input
                                     className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
                                     value={form.repoUrl}
@@ -192,7 +192,7 @@ export default function PortfolioSubmitPage() {
                             </Row>
 
                             <Row>
-                                <Label>데모 URL (선택)</Label>
+                                <Label>데모 URL</Label>
                                 <input
                                     className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
                                     value={form.demoUrl}
@@ -202,7 +202,7 @@ export default function PortfolioSubmitPage() {
                             </Row>
 
                             <Row>
-                                <Label>프로젝트 설명 (선택)</Label>
+                                <Label>프로젝트 설명</Label>
                                 <textarea
                                     rows={6}
                                     className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
@@ -210,7 +210,6 @@ export default function PortfolioSubmitPage() {
                                     onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))}
                                     placeholder="기술 스택, 구현 포인트, 스크린샷/영상 링크 등을 적어주세요."
                                 />
-                                <Help>이미지/영상은 운영에서 S3 Presigned 업로드 → s3Key만 서버로 전달 권장.</Help>
                             </Row>
 
                             <div className="flex justify-end">
