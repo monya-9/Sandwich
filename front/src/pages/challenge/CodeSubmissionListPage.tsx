@@ -1,6 +1,8 @@
+// src/pages/challenge/CodeSubmissionListPage.tsx
 import React, { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
+import SubmissionTopTabs from "../../components/challenge/SubmissionTopTabs";
 import { Heart, Eye, MessageSquare, ChevronLeft } from "lucide-react";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { getCodeSubmissions, toggleLikeCode } from "../../data/Challenge/submissionsDummy";
@@ -17,7 +19,8 @@ export default function CodeSubmissionListPage() {
     );
 
     const toggleLike = (e: React.MouseEvent, sid: number) => {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
         setCards((arr) =>
             arr.map((c) =>
                 c.id === sid ? { ...c, liked: !c.liked, likes: c.liked ? c.likes - 1 : c.likes + 1 } : c
@@ -44,16 +47,25 @@ export default function CodeSubmissionListPage() {
                         {headerText}
                     </h1>
                 </div>
-                <CTAButton as={Link} href={`/challenge/code/${id}/submit`}>
+
+                {/* Link 대신 onClick navigate로 확실하게 이동 */}
+                <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>
                     코드 제출하기
                 </CTAButton>
             </div>
 
+            <SubmissionTopTabs
+                active="code"
+                codeHref={`/challenge/code/${id}/submissions`}
+                portfolioHref={`/challenge/portfolio/${id}/vote`}
+            />
+
             <div className="grid gap-5 md:grid-cols-3">
                 {cards.map((c) => (
                     <Link key={c.id} to={`/challenge/code/${id}/submissions/${c.id}`} className="block">
-                        <SectionCard bordered className="!p-0 hover:shadow-md transition-shadow">
+                        <SectionCard bordered className="!p-0 transition-shadow hover:shadow-md">
                             <div className="p-5">
+                                {/* 헤더 */}
                                 <div className="mb-2 flex items-center gap-2">
                                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
                                         {c.authorInitial}
@@ -67,17 +79,26 @@ export default function CodeSubmissionListPage() {
                                 <div className="mb-1 text-[14px] font-semibold">{c.title}</div>
                                 <p className="min-h-[72px] text-[13px] leading-6 text-neutral-800">{c.desc}</p>
 
+                                {/* 푸터 */}
                                 <div className="mt-2 flex items-center justify-between text-[12.5px] text-neutral-700">
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={(e) => toggleLike(e, c.id)}
-                                            className={`inline-flex items-center gap-1 ${c.liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                                            className={`inline-flex items-center gap-1 ${
+                                                c.liked ? "text-rose-600" : "hover:text-neutral-900"
+                                            }`}
                                         >
                                             <Heart className="h-4 w-4" fill={c.liked ? "currentColor" : "none"} />
                                             {c.likes}
                                         </button>
-                                        <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" />{c.views}</span>
-                                        <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" />{c.comments}</span>
+                                        <span className="inline-flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                                            {c.views}
+                    </span>
+                                        <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="h-4 w-4" />
+                                            {c.comments}
+                    </span>
                                     </div>
                                     <span className="text-[12.5px] font-semibold">전체보기</span>
                                 </div>

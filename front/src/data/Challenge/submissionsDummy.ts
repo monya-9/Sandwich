@@ -134,7 +134,7 @@ const portfolioCommentsByProject: Record<number, CommentItem[]> = {
     202: [],
 };
 
-/* ---------- 헬퍼 ---------- */
+/* ---------- 기본 조회 헬퍼 ---------- */
 export const getCodeSubmissions = (challengeId: number) =>
     codeSubmissionsByChallenge[challengeId] ?? [];
 export const getPortfolioProjects = (challengeId: number) =>
@@ -144,7 +144,7 @@ export const getCodeComments = (submissionId: number) =>
 export const getPortfolioComments = (projectId: number) =>
     portfolioCommentsByProject[projectId] ?? [];
 
-/* 목록 즉시 반영 */
+/* ---------- 추가/갱신 (목록 즉시 반영) ---------- */
 export function addCodeSubmission(
     challengeId: number,
     payload: {
@@ -208,17 +208,27 @@ export function addPortfolioProject(
     return item;
 }
 
-/* 좋아요/조회수/댓글 더미 동작 */
+/* ---------- 좋아요/조회수/댓글 더미 동작 ---------- */
 export function toggleLikeCode(challengeId: number, sId: number, inc: boolean) {
     const list = codeSubmissionsByChallenge[challengeId];
     const t = list?.find((x) => x.id === sId);
-    if (t) t.likes += inc ? 1 : -1;
+    if (t) {
+        t.likes += inc ? 1 : -1;
+        if (t.likes < 0) t.likes = 0;
+    }
 }
 
-export function toggleLikePortfolio(challengeId: number, pId: number, inc: boolean) {
+export function toggleLikePortfolio(
+    challengeId: number,
+    pId: number,
+    inc: boolean
+) {
     const list = portfolioProjectsByChallenge[challengeId];
     const t = list?.find((x) => x.id === pId);
-    if (t) t.likes += inc ? 1 : -1;
+    if (t) {
+        t.likes += inc ? 1 : -1;
+        if (t.likes < 0) t.likes = 0;
+    }
 }
 
 export function incViewCode(challengeId: number, sId: number) {
@@ -244,7 +254,10 @@ export function addCodeComment(sId: number, content: string) {
     // 댓글 수 합산
     for (const cid of Object.keys(codeSubmissionsByChallenge)) {
         const hit = codeSubmissionsByChallenge[+cid].find((x) => x.id === sId);
-        if (hit) { hit.comments += 1; break; }
+        if (hit) {
+            hit.comments += 1;
+            break;
+        }
     }
     return next;
 }
@@ -263,7 +276,24 @@ export function addPortfolioComment(pId: number, content: string) {
     // 댓글 수 합산
     for (const cid of Object.keys(portfolioProjectsByChallenge)) {
         const hit = portfolioProjectsByChallenge[+cid].find((x) => x.id === pId);
-        if (hit) { hit.comments += 1; break; }
+        if (hit) {
+            hit.comments += 1;
+            break;
+        }
     }
     return next;
+}
+
+/* ---------- (데모용) 포트폴리오 투표: 중복 허용 ---------- */
+// 서버가 없으니 그냥 성공만 반환. 저장/중복제한 없음.
+export type PortfolioVotePayload = {
+    projectId: number;
+    ux: number;
+    tech: number;
+    creativity: number;
+    planning: number;
+};
+export function submitPortfolioVoteDemo(_challengeId: number, _payload: PortfolioVotePayload) {
+    // no-op (중복 허용)
+    return { ok: true };
 }

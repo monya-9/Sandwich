@@ -1,3 +1,4 @@
+// src/pages/challenge/CodeSubmissionDetailPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../components/challenge/common";
@@ -8,6 +9,7 @@ import {
     getCodeComments,
     addCodeComment,
     incViewCode,
+    toggleLikeCode,
 } from "../../data/Challenge/submissionsDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 
@@ -21,23 +23,34 @@ export default function CodeSubmissionDetailPage() {
     const [item, setItem] = useState(() => getCodeSubmissions(id).find((x) => x.id === sid));
     const [comments, setComments] = useState(() => getCodeComments(sid));
     const [text, setText] = useState("");
+    const [liked, setLiked] = useState(false);
+    const [likes, setLikes] = useState(item?.likes ?? 0);
 
     useEffect(() => {
-        // 조회수 증가
         incViewCode(id, sid);
-        setItem(getCodeSubmissions(id).find((x) => x.id === sid));
+        const next = getCodeSubmissions(id).find((x) => x.id === sid);
+        setItem(next);
+        setLikes(next?.likes ?? 0);
     }, [id, sid]);
 
     if (!item) return <div className="p-6 text-[13.5px]">제출물을 찾을 수 없습니다.</div>;
 
     const headerText = `샌드위치 코드 챌린지: 🧮 ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
 
+    const onToggleLike = () => {
+        setLiked((v) => !v);
+        setLikes((n) => (liked ? n - 1 : n + 1));
+        toggleLikeCode(id, sid, !liked);
+    };
+
     const submitComment = () => {
         const v = text.trim();
         if (!v) return;
         addCodeComment(sid, v);
         setComments(getCodeComments(sid));
-        setItem(getCodeSubmissions(id).find((x) => x.id === sid)); // 댓글 수 갱신
+        // 댓글 수 갱신 포함
+        const next = getCodeSubmissions(id).find((x) => x.id === sid);
+        setItem(next);
         setText("");
     };
 
@@ -51,7 +64,9 @@ export default function CodeSubmissionDetailPage() {
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{headerText}</h1>
+                <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">
+                    {headerText}
+                </h1>
             </div>
 
             <SectionCard className="!px-5 !py-5">
@@ -66,16 +81,24 @@ export default function CodeSubmissionDetailPage() {
                     </div>
                 </div>
 
+                {/* 제목 */}
                 <div className="mb-2 text-[16px] font-bold">{item.title}</div>
 
-                <p className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-5 text-[13.5px] leading-7 whitespace-pre-wrap">
+                {/* 본문 */}
+                <p className="whitespace-pre-wrap rounded-xl border border-neutral-200 bg-neutral-50/60 p-5 text-[13.5px] leading-7">
                     {item.desc}
                     {item.snippet ? `\n\n--- 코드 참고 ---\n${item.snippet}` : ""}
                 </p>
 
                 {/* 메트릭 */}
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
-                    <span className="inline-flex items-center gap-1"><Heart className="h-4 w-4" /> {item.likes}</span>
+                    <button
+                        onClick={onToggleLike}
+                        className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                    >
+                        <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
+                        {likes}
+                    </button>
                     <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> {item.views}</span>
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {item.comments}</span>
                 </div>
