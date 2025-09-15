@@ -3,6 +3,8 @@ import ReactDOM from "react-dom";
 import { FaHeart } from "react-icons/fa";
 import axios from "axios";
 import LikedUsersModal from "./LikedUsersModal";
+import LoginPrompt from "../LoginPrompt";
+import { useNavigate } from "react-router-dom";
 
 interface LikeActionProps {
   targetType: "PROJECT" | "BOARD" | "COMMENT";
@@ -15,6 +17,8 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   const [toast, setToast] = useState<null | "like" | "unlike">(null);
   const [loading, setLoading] = useState(false);
   const [showLikedUsers, setShowLikedUsers] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const navigate = useNavigate();
 
   // ✅ 로그인 상태 판단 (localStorage || sessionStorage 둘 다 확인)
   const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
@@ -52,7 +56,7 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
 
   const handleLike = async () => {
     if (!isLoggedIn) {
-      alert("로그인이 필요합니다.");
+      setShowLoginPrompt(true);
       return;
     }
     if (loading) return;
@@ -61,7 +65,7 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     try {
       const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) {
-        alert("로그인이 필요합니다.");
+        setShowLoginPrompt(true);
         return;
       }
 
@@ -81,7 +85,7 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     } catch (e: any) {
       console.error("좋아요 처리 실패:", e);
       if (e.response?.status === 401) {
-        alert("로그인이 필요합니다.");
+        setShowLoginPrompt(true);
       } else {
         alert("좋아요 처리 중 오류가 발생했습니다.");
       }
@@ -144,6 +148,19 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   return (
     <>
       {renderToast}
+      {showLoginPrompt && (
+        <LoginPrompt
+          onLoginClick={() => {
+            setShowLoginPrompt(false);
+            navigate("/login");
+          }}
+          onSignupClick={() => {
+            setShowLoginPrompt(false);
+            navigate("/join");
+          }}
+          onClose={() => setShowLoginPrompt(false)}
+        />
+      )}
       <LikedUsersModal
         isOpen={showLikedUsers}
         onClose={() => setShowLikedUsers(false)}

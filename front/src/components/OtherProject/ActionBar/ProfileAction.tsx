@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import { FaUser } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
+import LoginPrompt from "../LoginPrompt";
 
 interface ProfileActionProps {
   targetUserId?: number;
@@ -22,6 +23,7 @@ export default function ProfileAction({
   const [isFollowing, setIsFollowing] = useState(false);
   const [followBtnHover, setFollowBtnHover] = useState(false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const btnRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -122,8 +124,7 @@ export default function ProfileAction({
   }, [targetUserId]);
 
   const requireLogin = () => {
-    alert("로그인이 필요합니다.");
-    navigate("/login");
+    setShowLoginPrompt(true);
   };
 
   const requireTarget = () => {
@@ -198,6 +199,15 @@ export default function ProfileAction({
     <div className="relative">
       {/* 토스트 */}
       {renderToast}
+
+      {/* 로그인 프롬프트 */}
+      {showLoginPrompt && (
+        <LoginPrompt
+          onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
+          onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
+          onClose={() => setShowLoginPrompt(false)}
+        />
+      )}
 
       {/* 액션 버튼 */}
       <button
