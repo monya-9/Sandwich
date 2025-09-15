@@ -5,8 +5,10 @@ import PasswordInput from "./PasswordInput";
 import StepButtonGroup from "../StepButtonGroup";
 import TermsAgreement from "./TermsAgreement";
 import logo from "../../../../assets/logo.png";
-import axios from "axios";
 import { Link } from "react-router-dom";
+
+import api from "../../../../api/axiosInstance";
+import RecaptchaV2 from "../../RecaptchaV2";
 
 interface Props {
     onNext: () => void;
@@ -26,6 +28,11 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
     const [emailSentMessage, setEmailSentMessage] = useState("");
     const [showVerifyMessage, setShowVerifyMessage] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+    // v2
+    const [captcha, setCaptcha] = useState<string | null>(null);
+    const [captchaMsg, setCaptchaMsg] = useState<string>(""); // 안내문구
+    const [sending, setSending] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem("joinStep1");
@@ -48,7 +55,7 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
 
     const handleVerifyCode = async () => {
         try {
-            const res = await axios.post("/api/email/verify", { email, code });
+            const res = await api.post("/email/verify", { email, code });
             if (res.data?.success === true) {
                 setIsVerified(true);
                 setVerifyStatus("success");
@@ -65,19 +72,34 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
     };
 
     const handleSendCode = async () => {
+        // 토큰 없으면 인라인 안내
+        if (!captcha) {
+            setCaptchaMsg("이 체크박스를 완료해야 이메일 인증이 가능합니다.");
+            return;
+        }
         try {
-            await axios.post("/api/email/send", { email });
+            setSending(true);
+            await api.post(
+                "/email/send",
+                { email },
+                { headers: { "X-Recaptcha-Token": captcha } }
+            );
             setEmailSent(true);
             setTimeLeft(300);
             setIsVerified(false);
             setCode("");
             setVerifyStatus("default");
             setEmailSentMessage("✔ 인증번호가 발송되었습니다.");
+            setCaptchaMsg(""); // 성공했으니 안내 지움
         } catch {
-            alert("이메일 인증번호 전송 실패");
+            // 서버/네트워크 오류
+            setCaptchaMsg("이메일 전송에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        } finally {
+            setSending(false);
         }
     };
 
+    // 타이머
     useEffect(() => {
         let timer: NodeJS.Timeout;
         if (emailSent && !isVerified && timeLeft > 0) {
@@ -98,11 +120,7 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = String(timeLeft % 60).padStart(2, "0");
 
-    const derivedStatus = isVerified
-        ? "success"
-        : timeLeft <= 0
-            ? "timeout"
-            : verifyStatus;
+    const derivedStatus = isVerified ? "success" : timeLeft <= 0 ? "timeout" : verifyStatus;
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
@@ -111,11 +129,32 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
             </Link>
 
             <div className="w-full max-w-sm space-y-6">
+                {/* ⬇️ reCAPTCHA를 이메일 입력 위로 이동 */}
+                <div className="space-y-1">
+                    <RecaptchaV2
+                        onVerify={(t) => {
+                            setCaptcha(t);
+                            setCaptchaMsg("");
+                        }}
+                        onExpire={() => {
+                            setCaptcha(null);
+                            setCaptchaMsg("체크가 만료되었어요. 다시 체크해 주세요.");
+                        }}
+                        onError={() => {
+                            setCaptcha(null);
+                            setCaptchaMsg("reCAPTCHA 로딩에 실패했습니다. 새로고침하거나 잠시 후 다시 시도해 주세요.");
+                        }}
+                    />
+                    {captchaMsg && (
+                        <p className="text-xs text-gray-500 text-left">{captchaMsg}</p>
+                    )}
+                </div>
+
                 <EmailInput
                     email={email}
                     onChange={setEmail}
                     onSend={handleSendCode}
-                    disabled={isVerified}
+                    disabled={isVerified || sending}
                     sent={emailSent}
                     verified={isVerified}
                     message={emailSentMessage}
