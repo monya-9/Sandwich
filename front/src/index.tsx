@@ -5,7 +5,6 @@ import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 
-// ✅ dev에서만 reCAPTCHA 노이즈 오버레이 무음
 if (process.env.NODE_ENV !== "production") {
     import("./dev/silenceRecaptchaDevOverlay");
 }
