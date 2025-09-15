@@ -14,11 +14,6 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectForm from "./components/ProjectManage/ProjectForm";
 import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
-
-// OAuth 콜백/스텝(레이아웃 없이)
-import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
-import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
-import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 import MessagesPage from "./pages/Messages/MessagesPage";
 
 // 마이페이지
@@ -27,8 +22,31 @@ import CareerSettingPage from "./components/MyPageSetting/CareerSettingPage";
 import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
 import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
+// 챌린지
+import ChallengeListPage from "./pages/challenge/ChallengeListPage";
+import ChallengeDetailPage from "./pages/challenge/ChallengeDetailPage";
+
+
+// OAuth 콜백/스텝
+import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
+import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
+import ProfileStep from "./components/Auth/OAuth/ProfileStep";
+
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
+import ProfilePage from "./components/Profile/ProfilePage";
+import WorkTab from "./components/Profile/WorkTab";
+import LikesTab from "./components/Profile/LikesTab";
+import CollectionsTab from "./components/Profile/CollectionsTab";
+import DraftsTab from "./components/Profile/DraftsTab";
+import CareerDetailsPage from "./components/Profile/CareerDetailsPage";
+import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
+import PortfolioSubmitPage from "./pages/challenge/PortfolioSubmitPage";
+import CodeEditPage from "./pages/challenge/CodeEditPage";
+import CodeSubmissionListPage from "./pages/challenge/CodeSubmissionListPage";
+import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
+import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
+import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {
@@ -64,6 +82,32 @@ function App() {
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
+
+                                {/* 프로필 페이지 */}
+                                <Route path="/profile" element={<ProfilePage />} />
+                                <Route path="/profile/work" element={<ProfilePage />} />
+                                <Route path="/profile/likes" element={<ProfilePage />} />
+                                <Route path="/profile/collections" element={<ProfilePage />} />
+                                <Route path="/profile/drafts" element={<ProfilePage />} />
+                                <Route path="/profile/careers" element={<CareerDetailsPage />} />
+                                {/* ✅ 챌린지 라우팅 */}
+                                <Route path="/challenge" element={<ChallengeListPage />} />
+                                <Route path="/challenge/code/:id" element={<ChallengeDetailPage />} />
+                                <Route path="/challenge/portfolio/:id" element={<ChallengeDetailPage />} />
+
+                                {/* 제출 */}
+                                <Route path="/challenge/code/:id/submit" element={<CodeSubmitPage />} />
+                                <Route path="/challenge/portfolio/:id/submit" element={<PortfolioSubmitPage />} />
+
+                                {/* 리스트/투표 등 세부 라우트 */}
+                                <Route path="/challenge/code/:id/submissions" element={<CodeSubmissionListPage />} />
+                                <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />
+                                <Route path="/challenge/portfolio/:id/vote/:projectId" element={<PortfolioProjectDetailPage />} />
+                                <Route path="/challenge/code/:id/submissions/:submissionId" element={<CodeSubmissionDetailPage />} />
+
+
+                                {/* (예시) 코드 제출 수정 */}
+                                <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />
