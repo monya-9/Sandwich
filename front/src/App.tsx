@@ -52,7 +52,7 @@ import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
     "/auth/signup": "signup",
-    // 필요하면 닉네임 중복 같은 경로도: "/users/check-nickname": "check_nickname"
+
 });
 
 
