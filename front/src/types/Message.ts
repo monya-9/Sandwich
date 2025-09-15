@@ -1,15 +1,20 @@
-export interface Message {
+export type MessageType = "GENERAL" | "EMOJI" | "PROJECT_PROPOSAL" | "JOB_OFFER" | "SYSTEM";
+
+export type Message = {
     id: number;
     title: string;
-    /** 목록/상세에 쓰는 실제 메시지 본문 */
     content: string;
     createdAt: string;
     sender: string;
     isRead: boolean;
-
-    /** 안읽은 개수 (옵션) — 표시용 배지 숫자 */
     unreadCount?: number;
 
-    /** (옵션) 아바타 이미지 경로 */
-    avatarUrl?: string;
-}
+    /** 서버 연동 메타 */
+    roomId?: number | null;
+    senderId?: number | null;
+    receiverId?: number | null;
+
+    /** 확장 */
+    type?: MessageType;
+    payload?: string | null; // 서버는 json 문자열, 프런트는 JSON.parse해서 씀
+};

@@ -15,13 +15,13 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
   const [showLikedUsers, setShowLikedUsers] = useState(false);
 
   // 로그인 상태 판단
-  const isLoggedIn = !!localStorage.getItem("accessToken");
+  const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
 
   // 좋아요 상태 불러오기
   useEffect(() => {
     const fetchLike = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
         
         const res = await axios.get(`/api/likes`, {
           params: { targetType: "COMMENT", targetId: commentId },
@@ -58,7 +58,7 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
     setLoading(true);
     
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) {
         alert("로그인이 필요합니다.");
         return;

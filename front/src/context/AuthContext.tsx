@@ -1,88 +1,89 @@
-import React, { createContext, useState, useEffect, ReactNode } from "react";
+// context/AuthContext.tsx
+import React, { createContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { ensureNicknameInStorage } from "../utils/profile"; // 네 함수 경로
+// 토큰 저장/조회 유틸이 따로 있으면 써도 OK
 
-interface AuthContextType {
+type AuthContextType = {
     isLoggedIn: boolean;
-    email: string | null;          // 화면에 보여줄 이메일
-    login: (email?: string) => void; // 로그인 시 이메일 주입
+    email: string | null;
+    nickname: string | null;
+    login: (hintEmail?: string) => Promise<void>; // 로그인 직후 호출
     logout: () => void;
-}
+    refreshProfile: () => Promise<void>;          // 앱 부팅/프로필 저장 후 호출
+};
 
 export const AuthContext = createContext<AuthContextType>({
     isLoggedIn: false,
     email: null,
-    login: () => {},
+    nickname: null,
+    login: async () => {},
     logout: () => {},
+    refreshProfile: async () => {},
 });
 
 interface Props { children: ReactNode }
 
+const readToken = () =>
+    localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+
+const pickStorage = () =>
+    localStorage.getItem("accessToken") ? localStorage :
+        sessionStorage.getItem("accessToken") ? sessionStorage : localStorage;
+
 export const AuthProvider = ({ children }: Props) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [email, setEmail] = useState<string | null>(null);
+    const [nickname, setNickname] = useState<string | null>(null);
 
-    // 부팅 시 복원 + 잘못 저장된 이메일(JWT) 정리
-    useEffect(() => {
-        const token =
-            localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    const refreshFromStorage = () => {
+        const s = pickStorage();
+        const e = s.getItem("userEmail");
+        const n = s.getItem("userNickname");
+        setEmail(e);
+        setNickname(n);
+    };
 
-        let storedEmail =
-            localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail");
+    const refreshProfile = useCallback(async () => {
+        const token = readToken();
+        const s = pickStorage();
 
-        const looksLikeJwt =
-            !!storedEmail && storedEmail.split(".").length === 3 && storedEmail.length > 50;
-        if (looksLikeJwt) {
-            localStorage.removeItem("userEmail");
-            sessionStorage.removeItem("userEmail");
-            storedEmail = null;
+        if (!token) {
+            setIsLoggedIn(false);
+            setEmail(null);
+            setNickname(null);
+            return;
         }
 
-        setIsLoggedIn(!!token);
-        setEmail(storedEmail);
-    }, []);
+        // fallbackEmail은 일단 저장된 값이나 빈 문자열
+        const fallbackEmail = s.getItem("userEmail") || "";
+        await ensureNicknameInStorage(token, fallbackEmail, s);
 
-    // 다른 탭/창과 동기화
-    useEffect(() => {
-        const handleStorageChange = () => {
-            const token =
-                localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-            let storedEmail =
-                localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail");
-
-            const looksLikeJwt =
-                !!storedEmail && storedEmail.split(".").length === 3 && storedEmail.length > 50;
-            if (looksLikeJwt) {
-                localStorage.removeItem("userEmail");
-                sessionStorage.removeItem("userEmail");
-                storedEmail = null;
-            }
-
-            setIsLoggedIn(!!token);
-            setEmail(storedEmail);
-        };
-
-        window.addEventListener("storage", handleStorageChange);
-        return () => window.removeEventListener("storage", handleStorageChange);
-    }, []);
-
-    const login = (userEmail?: string) => {
         setIsLoggedIn(true);
-        if (userEmail) {
-            setEmail(userEmail);
+        refreshFromStorage();
+    }, []);
 
-            // 토큰이 저장된 쪽에 이메일도 맞춰 저장
-            const tokenInLocal = !!localStorage.getItem("accessToken");
-            if (tokenInLocal) localStorage.setItem("userEmail", userEmail);
-            else sessionStorage.setItem("userEmail", userEmail);
+    // 앱 부팅 시 1회
+    useEffect(() => { refreshProfile(); }, [refreshProfile]);
+
+    const login = async (hintEmail?: string) => {
+        // OAuthSuccessHandler가 토큰을 이미 저장한 상태라고 가정
+        if (hintEmail) {
+            const s = pickStorage();
+            s.setItem("userEmail", hintEmail);
         }
+        await refreshProfile();
     };
 
     const logout = () => {
         setIsLoggedIn(false);
         setEmail(null);
+        setNickname(null);
+
         localStorage.removeItem("accessToken");
         sessionStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        sessionStorage.removeItem("refreshToken"); // ✅ 추가
+        sessionStorage.removeItem("refreshToken");
+
         localStorage.removeItem("userEmail");
         sessionStorage.removeItem("userEmail");
         localStorage.removeItem("userNickname");
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }: Props) => {
     };
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, email, login, logout }}>
+        <AuthContext.Provider value={{ isLoggedIn, email, nickname, login, logout, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );

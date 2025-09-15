@@ -14,6 +14,8 @@ interface VideoUploadSectionProps {
   onUploadedChange: (uploaded: boolean) => void;
   removePadding: boolean;
   setRemovePadding: (updater: (prev: boolean) => boolean) => void;
+  // NEW: 원본 크기 모드 (직접 영상은 intrinsic, 임베드는 기본 560x315)
+  useOriginalSize?: boolean;
 }
 
 function getYouTubeId(url: string): string | null {
@@ -58,7 +60,7 @@ function getEmbedUrl(url: string): { provider: "youtube" | "vimeo" | null; embed
 }
 
 const VideoUploadSection = forwardRef<VideoUploadSectionHandle, VideoUploadSectionProps>(
-  ({ onBack, onComplete, setImgSize, imgSize, onUploadedChange, removePadding, setRemovePadding }, ref) => {
+  ({ onBack, onComplete, setImgSize, imgSize, onUploadedChange, removePadding, setRemovePadding, useOriginalSize = false }, ref) => {
     const [videoUrl, setVideoUrl] = useState("https://");
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -76,11 +78,11 @@ const VideoUploadSection = forwardRef<VideoUploadSectionHandle, VideoUploadSecti
       }
     }), [videoUrl]);
 
-    const isDirectVideo = useMemo(() => /\.(mp4|webm|ogg)$/i.test(videoUrl), [videoUrl]);
+    const isDirectVideo = useMemo(() => /\.(mp4|webm|ogg)$/i.test(videoUrl) || (previewUrl ? /\.(mp4|webm|ogg)$/i.test(previewUrl) : false), [videoUrl, previewUrl]);
 
-    // 프리뷰가 생기거나 리사이즈될 때 실제 크기를 측정해 상위 컨테이너 크기와 동기화
+    // 프리뷰가 생기거나 리사이즈될 때 실제 크기를 측정해 상위 컨테이너 크기와 동기화 (원본 크기 모드가 아닐 때만 의미 있음)
     useEffect(() => {
-      if (!previewUrl) return;
+      if (!previewUrl || useOriginalSize) return;
       const update = () => {
         const el = previewBoxRef.current;
         if (!el) return;
@@ -92,7 +94,7 @@ const VideoUploadSection = forwardRef<VideoUploadSectionHandle, VideoUploadSecti
       update();
       window.addEventListener("resize", update);
       return () => window.removeEventListener("resize", update);
-    }, [previewUrl, setImgSize, onUploadedChange]);
+    }, [previewUrl, setImgSize, onUploadedChange, useOriginalSize]);
 
     // 모달 열릴 때 포커스 및 스크롤 락
     useEffect(() => {
@@ -143,7 +145,7 @@ const VideoUploadSection = forwardRef<VideoUploadSectionHandle, VideoUploadSecti
 
     return (
       <div className="flex flex-col items-center w-full">
-        <div className="w-full max-w-[820px] px-0">
+        <div className={`w-full ${removePadding ? 'max-w-none' : 'max-w-[820px]'} px-0`}>
           {!previewUrl && (
             <>
               <div className="w-[96px] h-[96px] rounded-full bg-[#e6f9fa] flex items-center justify-center mb-6 mx-auto">
@@ -175,17 +177,22 @@ const VideoUploadSection = forwardRef<VideoUploadSectionHandle, VideoUploadSecti
 
           {previewUrl && (
             <div className="mt-0 w-full">
-              <div ref={previewBoxRef} className="relative w-full" style={{ paddingTop: "56.25%" }}>
+              {/* removePadding: 꽉참, 아니면 패딩 프레임 */}
+              <div
+                ref={previewBoxRef}
+                className={`w-full ${removePadding ? '' : 'relative'}`}
+                style={removePadding ? { width: '100%', height: 'auto' } : { position: 'relative', paddingTop: "56.25%", padding: 40, boxSizing: 'border-box' }}
+              >
                 {previewUrl.includes("youtube.com/embed") || previewUrl.includes("player.vimeo.com/video") ? (
                   <iframe
                     src={previewUrl}
-                    className="absolute top-0 left-0 w-full h-full rounded-lg"
+                    className={`${removePadding ? 'w-full h-auto aspect-video block' : 'absolute top-0 left-0 w-full h-full'} rounded-lg`}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                     title="video preview"
                   />
                 ) : (
-                  <video src={previewUrl} controls className={`absolute top-0 left-0 w-full h-full rounded-lg ${removePadding ? 'object-cover' : 'object-contain'}`} />
+                  <video src={previewUrl} controls className={`${removePadding ? 'w-full h-auto aspect-video block object-contain' : 'absolute top-0 left-0 w-full h-full object-contain'} rounded-lg`} />
                 )}
               </div>
             </div>

@@ -3,6 +3,7 @@ package com.sandwich.SandWich.challenge.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Check;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(callSuper = true)
@@ -13,6 +14,13 @@ import lombok.*;
                 @Index(name="idx_vote_challenge", columnList = "challenge_id"),
                 @Index(name="idx_vote_submission", columnList = "submission_id")
         }
+)
+@Check( // 점수 1~5 범위 가드
+        name = "chk_vote_score_range",
+        constraints = "ui_ux BETWEEN 1 AND 5 " +
+                "AND creativity BETWEEN 1 AND 5 " +
+                "AND code_quality BETWEEN 1 AND 5 " +
+                "AND difficulty BETWEEN 1 AND 5"
 )
 public class PortfolioVote extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

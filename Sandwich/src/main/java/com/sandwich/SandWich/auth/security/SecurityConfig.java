@@ -59,6 +59,13 @@ public class SecurityConfig {
                                 "/swagger-ui.html", "/webjars/**", "/api/upload/image",
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
+                        // 하네스/정적 html 허용
+                        .requestMatchers(
+                                "/", "/recaptcha-v2.html", "/recaptcha-v3.html", "/favicon.ico"
+                        ).permitAll()
+                        // 필요시 정적 폴더 패턴도 추가
+                        .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
@@ -69,6 +76,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
                         .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
                         .requestMatchers("/api/emojis/**").permitAll()
+
+                        // ===== 댓글 공개 GET =====
+                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
 
                         // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트

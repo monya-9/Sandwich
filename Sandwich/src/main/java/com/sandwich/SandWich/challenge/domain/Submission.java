@@ -6,13 +6,16 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.OffsetDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(callSuper = true)
-@Entity @Table(name="submission",
+@Entity
+@Table(name="submission",
         uniqueConstraints = @UniqueConstraint(name="uq_submission_challenge_owner", columnNames={"challenge_id","owner_id"}),
-        indexes = @Index(name="idx_submission_challenge", columnList="challenge_id")
+        indexes = {
+                @Index(name="idx_submission_challenge", columnList="challenge_id"),
+                @Index(name="idx_submission_ch_owner", columnList="challenge_id, owner_id") // ← 추가
+        }
 )
 public class Submission extends BaseEntity {
 

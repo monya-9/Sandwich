@@ -26,7 +26,7 @@ export default function ProfileAction({
   const btnRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const isLoggedIn = !!localStorage.getItem("accessToken");
+  const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
   const navigate = useNavigate();
   const { ownerId: ownerIdParam } = useParams<{ ownerId?: string }>();
   const targetUserId = targetUserIdProp ?? (ownerIdParam ? Number(ownerIdParam) : undefined);
@@ -64,7 +64,7 @@ export default function ProfileAction({
   useEffect(() => {
     const fetchFollowStatus = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
         if (!token || !targetUserId || targetUserId <= 0) {
           setIsFollowing(false);
           return;
@@ -136,7 +136,7 @@ export default function ProfileAction({
     if (!targetUserId || targetUserId <= 0) return requireTarget();
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) return requireLogin();
 
       await axios.post(
@@ -163,7 +163,7 @@ export default function ProfileAction({
     if (!targetUserId || targetUserId <= 0) return requireTarget();
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) return requireLogin();
 
       await axios.delete(`/api/users/${targetUserId}/unfollow`, {
@@ -206,10 +206,10 @@ export default function ProfileAction({
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
-        <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-          <FaUser className="w-6 h-6" />
-        </div>
-        <span className="text-xs text-gray-800 font-semibold text-center">프로필</span>
+        		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
+			<FaUser className="w-6 h-6" />
+		</div>
+		<span className="text-xs text-white font-semibold text-center">프로필</span>
       </button>
 
       {/* 툴팁+꼬리 */}

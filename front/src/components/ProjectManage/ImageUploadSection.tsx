@@ -1,5 +1,6 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { FaImage } from "react-icons/fa6";
+import { createPortal } from "react-dom";
 
 interface ImageUploadSectionProps {
   showImageUpload: boolean;
@@ -18,6 +19,10 @@ interface ImageUploadSectionProps {
   replaceIndex: number | null;
   setFileSelectMode: (mode: "add" | "replace") => void;
   setReplaceIndex: (index: number | null) => void;
+  // NEW: 원본 가로폭 전달 콜백 (패딩 제거 가능 여부 판단용)
+  onDetectNaturalWidth?: (width: number) => void;
+  // NEW: 원본 크기 모드
+  useOriginalSize?: boolean;
 }
 
 const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
@@ -36,6 +41,8 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   replaceIndex,
   setFileSelectMode,
   setReplaceIndex,
+  onDetectNaturalWidth,
+  useOriginalSize = false,
 }) => {
   // 파일 변경 핸들러 (ProjectForm에서 분리)
   const handleFileInputClick = () => {
@@ -44,61 +51,99 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_EXT = ["jpg", "jpeg", "png", "webp"];
+  const isValidImage = (file: File) => {
+    const name = file.name.toLowerCase();
+    const ext = name.split(".").pop() || "";
+    if (!ALLOWED_EXT.includes(ext)) return false;
+    if (file.size > MAX_SIZE) return false;
+    return true;
+  };
 
-    // 교체 모드: 단일 파일만 받아 해당 인덱스의 이미지를 교체
-    if (fileSelectMode === "replace" && replaceIndex !== null && files.length > 0) {
+  const anyOversized = (files: FileList | File[]) => Array.from(files).some(f => f.size > MAX_SIZE);
+
+  // 상단 고정 토스트
+  const [showOversizeToast, setShowOversizeToast] = useState(false);
+  const notifyOversize = () => {
+    setShowOversizeToast(true);
+    window.setTimeout(() => setShowOversizeToast(false), 2000);
+  };
+
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        if (typeof ev.target?.result === "string") {
-          const next = [...imagePreviews];
-          next[replaceIndex] = ev.target.result;
-          setImagePreviews(next);
-          // 교체 후 모드 초기화
-          setFileSelectMode("add");
-          setReplaceIndex(null);
-        }
+        if (typeof ev.target?.result === "string") resolve(ev.target.result);
+        else reject(new Error("failed to read file"));
       };
-      reader.readAsDataURL(files[0]);
-      return;
-    }
-
-    // 추가 모드: 다중 파일을 모두 미리보기로 생성
-    const previews: string[] = [];
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (typeof ev.target?.result === "string") {
-          previews.push(ev.target.result);
-          if (previews.length === files.length) {
-            setImagePreviews(previews);
-          }
-        }
-      };
+      reader.onerror = reject;
       reader.readAsDataURL(file);
     });
   };
 
-  // 드래그&드롭 핸들러 추가
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    // 10MB 초과 파일이 하나라도 있으면 전면 차단
+    if (anyOversized(files)) {
+      notifyOversize();
+      return;
+    }
+
+    // 교체 모드: 단일 파일만 받아 해당 인덱스의 이미지를 교체
+    if (fileSelectMode === "replace" && replaceIndex !== null && files.length > 0) {
+      const file = files[0];
+      if (!isValidImage(file)) {
+        notifyOversize();
+        return;
+      }
+      const dataUrl = await readFileAsDataUrl(file);
+      const next = [...imagePreviews];
+      next[replaceIndex] = dataUrl;
+      setImagePreviews(next);
+      // 교체 후 모드 초기화
+      setFileSelectMode("add");
+      setReplaceIndex(null);
+      return;
+    }
+
+    // 추가 모드: 다중 파일을 모두 미리보기로 생성 (검증 통과 파일만)
+    const previews: string[] = [];
+    const fileArr = Array.from(files);
+    for (const file of fileArr) {
+      if (!isValidImage(file)) {
+        notifyOversize();
+        return; // 전면 차단
+      }
+      const dataUrl = await readFileAsDataUrl(file);
+      previews.push(dataUrl);
+    }
+    if (previews.length > 0) setImagePreviews(previews);
+  };
+
+  // 드래그&드롭 핸들러 추가 (검증 포함)
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (!files) return;
+
+    if (anyOversized(files)) {
+      notifyOversize();
+      return;
+    }
+
     const previews: string[] = [];
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (typeof ev.target?.result === "string") {
-          previews.push(ev.target.result);
-          if (previews.length === files.length) {
-            setImagePreviews(previews);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of Array.from(files)) {
+      if (!isValidImage(file)) {
+        notifyOversize();
+        return; // 전면 차단
+      }
+      const dataUrl = await readFileAsDataUrl(file);
+      previews.push(dataUrl);
+    }
+    if (previews.length > 0) setImagePreviews(previews);
   };
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -106,8 +151,43 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
 
   const previewRef = useRef<HTMLDivElement>(null);
 
+  const oversizeToastEl = showOversizeToast ? (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000]" onClick={() => setShowOversizeToast(false)}>
+      <div className="bg-[#111] text-white rounded-[10px] px-4 py-2 shadow-lg flex items-center gap-3">
+        <span className="w-6 h-6 rounded-full bg-[#F04438] flex items-center justify-center text-[10px] font-bold">!</span>
+        <span className="text-[14px]">10MB가 넘는 이미지가 있습니다</span>
+      </div>
+    </div>
+  ) : null;
+
+  // 컨테이너/이미지 스타일 결정: removePadding이 최우선
+  const getContainerStyle = () => {
+    if (removePadding) {
+      return { width: '100%', height: 'auto' } as React.CSSProperties;
+    }
+    if (useOriginalSize) {
+      return undefined; // 원본 크기
+    }
+    return { width: `${imgSize.width}px`, maxWidth: '100%', height: `${imgSize.height}px`, maxHeight: '800px' } as React.CSSProperties;
+  };
+
+  const getImageClass = () => {
+    if (removePadding) return 'block mx-auto w-full h-auto';
+    if (useOriginalSize) return 'block mx-auto max-w-full h-auto';
+    return `w-full h-full block mx-auto ${removePadding ? 'object-contain' : 'object-contain'}`;
+  };
+
+  const getWrapperClass = () => {
+    return removePadding ? 'relative flex flex-col items-center justify-center text-center overflow-hidden mx-auto w-full' : 'relative flex flex-col items-center justify-center text-center overflow-hidden mx-auto w-full';
+  };
+
+  const getWrapperStyle = () => {
+    return removePadding ? getContainerStyle() : { ...(getContainerStyle() || {}), padding: 40, boxSizing: 'border-box' } as React.CSSProperties;
+  };
+
   return (
     <div className="flex flex-col items-center">
+      {typeof document !== 'undefined' ? createPortal(oversizeToastEl, document.body) : oversizeToastEl}
       {showImageUpload && (
         <div
           className="flex flex-col items-center w-full"
@@ -132,7 +212,7 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
           <input
             type="file"
             multiple
-            accept="image/*"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
             ref={fileInputRef}
             style={{ display: 'none' }}
             onChange={handleFileChange}
@@ -141,21 +221,27 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
           {imagePreviews.length > 0 && (
             <div
               ref={previewRef}
-              className="relative flex flex-col items-center justify-center text-center overflow-hidden mx-auto"
-              style={{ width: `${imgSize.width}px`, maxWidth: '600px', height: `${imgSize.height}px`, maxHeight: '800px' }}
+              className={getWrapperClass()}
+              style={getWrapperStyle()}
             >
               {imagePreviews.map((src, idx) => (
                 <img
                   key={idx}
                   src={src}
                   alt={`preview-${idx}`}
-                  className={`w-full h-full block mx-auto ${removePadding ? 'object-cover' : 'object-contain'}`}
-                  style={{ objectPosition:'top' }}
+                  className={getImageClass()}
                   onLoad={e => {
                     const target = e.target as HTMLImageElement;
                     const naturalW = target.naturalWidth;
                     const naturalH = target.naturalHeight;
-                    const maxW = 600;
+                    // 원본 가로폭 전달 (패딩 제거 가능 여부 판단용)
+                    onDetectNaturalWidth?.(naturalW);
+                    if (removePadding || useOriginalSize) {
+                      // removePadding: 폭 100% 처리, useOriginalSize: 컨테이너 강제 지정 불필요
+                      return;
+                    }
+                    // 화면 미리보기용으로는 최대 폭/높이를 기준으로 스케일링
+                    const maxW = 1000; // 에디터 폭 대응
                     const maxH = 800;
                     const scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
                     const width = Math.floor(naturalW * scale);

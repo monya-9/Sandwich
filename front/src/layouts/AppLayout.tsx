@@ -23,7 +23,7 @@ export default function AppLayout() {
     }, []);
 
     return (
-        <div className="min-h-dvh bg-white">
+        <div className="min-h-dvh">
             <Header />
             <div className="h-20 md:h-20" />
             <main className="mx-auto w-full">

@@ -8,6 +8,10 @@ build/
 **/node_modules/
 **/src/main/resources/application.yml
 **/src/main/resources/application.properties
+.DS_Store
+**/.DS_Store
+.DS_Store\n**
+
 
 
 ### STS ###
@@ -23,7 +27,7 @@ bin/
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr

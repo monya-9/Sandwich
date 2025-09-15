@@ -147,10 +147,10 @@ export default function SuggestAction() {
         onMouseLeave={() => setHover(false)}
         onClick={() => setIsModalOpen(true)}
       >
-        <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-          <FaCommentDots className="w-6 h-6" />
-        </div>
-        <span className="text-xs text-gray-800 font-semibold text-center">제안하기</span>
+        		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
+			<FaCommentDots className="w-6 h-6" />
+		</div>
+		<span className="text-xs text-white font-semibold text-center">제안하기</span>
       </button>
 
       {/* 툴팁(팝업+꼬리, 셋 다 위에 올릴 때만 유지) */}
