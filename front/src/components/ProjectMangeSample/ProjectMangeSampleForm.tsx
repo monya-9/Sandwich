@@ -605,6 +605,7 @@ export default function ProjectMangeSampleForm() {
 	const MAX_INSERT_WIDTH = 1600; // clamp long edge in pixels
 	const TARGET_MIME = 'image/webp';
 	const TARGET_QUALITY = 0.85;
+	const DEFAULT_INIT_PAD = 200; // default pad applied for wide media on first insert
 
 	const downscaleImage = (file: File, maxWidth = MAX_INSERT_WIDTH): Promise<string> => {
 		return new Promise((resolve, reject) => {
@@ -735,6 +736,12 @@ export default function ProjectMangeSampleForm() {
 				(el as HTMLElement).style.marginRight = 'auto';
 				// lock top anchor by setting margin-top to 0 and using container spacing for gaps
 				el.style.marginTop = '0px';
+				// default padding for wide media (>=1100px)
+				try {
+					if (isPaddingEligible(el)) {
+						el.style.setProperty('--pm-pad', `${DEFAULT_INIT_PAD}px`);
+					}
+				} catch {}
 			} catch {}
 		}, 0);
 	};
@@ -794,11 +801,17 @@ export default function ProjectMangeSampleForm() {
 			const hasImage = tag === 'img' || !!el.querySelector('img');
 			const plain = el.innerText.replace(/\s+/g, ' ').trim();
 			if (hasIframe) {
-				result.push({ id: Math.random().toString(36).slice(2), type: 'video', html: el.outerHTML });
+				const id = Math.random().toString(36).slice(2);
+				try { el.setAttribute('data-pm-id', id); } catch {}
+				result.push({ id, type: 'video', html: el.outerHTML });
 			} else if (hasImage) {
-				result.push({ id: Math.random().toString(36).slice(2), type: 'image', html: el.outerHTML });
+				const id = Math.random().toString(36).slice(2);
+				try { el.setAttribute('data-pm-id', id); } catch {}
+				result.push({ id, type: 'image', html: el.outerHTML });
 			} else if (plain.length > 0) {
-				result.push({ id: Math.random().toString(36).slice(2), type: 'text', html: el.outerHTML, text: plain });
+				const id = Math.random().toString(36).slice(2);
+				try { el.setAttribute('data-pm-id', id); } catch {}
+				result.push({ id, type: 'text', html: el.outerHTML, text: plain });
 			}
 		});
 		return result;
@@ -819,11 +832,28 @@ export default function ProjectMangeSampleForm() {
 	const applyNewOrder = (orderedIds: string[]) => {
 		const quill = mainQuillRef.current?.getEditor();
 		if (!quill) return;
-		const idToBlock = Object.fromEntries(reorderBlocks.map(b => [b.id, b]));
-		const newHtml = orderedIds.map(id => idToBlock[id]).filter(Boolean).map(b => (b as ModalBlock).html).join('');
-		quill.clipboard.dangerouslyPasteHTML(newHtml, 'user');
-		setIsReorderOpen(false);
-		recalcCounts();
+		const root = quill.root as HTMLElement;
+		try {
+			// 수집: 현재 루트에서 id 순서대로 노드 찾기
+			const orderedNodes: HTMLElement[] = [];
+			for (const id of orderedIds) {
+				const node = root.querySelector(`[data-pm-id="${id}"]`) as HTMLElement | null;
+				if (node) orderedNodes.push(node);
+			}
+			if (orderedNodes.length === 0) { setIsReorderOpen(false); return; }
+
+			// 기존 자식 제거 전에 참조 확보 후 모두 제거
+			const fragment = document.createDocumentFragment();
+			for (const node of orderedNodes) { fragment.appendChild(node); }
+			while (root.firstChild) { root.removeChild(root.firstChild); }
+			root.appendChild(fragment);
+
+			// Quill 커서 정리 및 카운트 동기화
+			try { quill.setSelection(quill.getLength(), 0, 'silent'); } catch {}
+		} catch {} finally {
+			setIsReorderOpen(false);
+			recalcCounts();
+		}
 	};
 
 	const modal = (
@@ -870,6 +900,11 @@ export default function ProjectMangeSampleForm() {
 				/* Hide scrollbars visually while keeping scroll ability */
 				.pm-sample-editor .ql-editor { scrollbar-width: none; }
 				.pm-sample-editor .ql-editor::-webkit-scrollbar { width: 0; height: 0; display: none; }
+				/* Collapse empty paragraphs Quill inserts between embeds so gap is applied once */
+				.pm-sample-editor .ql-editor p:has(> br:only-child) { margin: 0 !important; height: 0; line-height: 0; padding: 0; }
+				/* Remove line box extra space when a paragraph wraps only an embed */
+				.pm-sample-editor .ql-editor p:has(> iframe:only-child),
+				.pm-sample-editor .ql-editor p:has(> img:only-child) { line-height: 0; font-size: 0; }
 				.pm-editor-frame { scrollbar-width: none; }
 				.pm-editor-frame::-webkit-scrollbar { width: 0; height: 0; display: none; }
 				body::-webkit-scrollbar { width: 0; height: 0; display: none; }
@@ -902,7 +937,10 @@ export default function ProjectMangeSampleForm() {
 												background: transparent;
 												box-sizing: border-box;
 											}
-										/* When overall gap is 0, force vertical padding to 0 so contents stick */
+				/* Keep overall outer gap constant when previous block is padded media */
+				.pm-sample-editor .ql-editor img.pm-embed-padded + *,
+				.pm-sample-editor .ql-editor iframe.pm-embed-padded + * { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
+				/* When overall gap is 0, force vertical padding to 0 so contents stick */
 						/* Use :root variable to avoid touching element inline styles when gap changes */
 				/* Editor frame */
 				.pm-editor-frame { width: 1200px; border: none; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
@@ -1020,7 +1058,12 @@ export default function ProjectMangeSampleForm() {
 										.pm-sample-editor .ql-editor img + iframe,
 										.pm-sample-editor .ql-editor iframe + img,
 										.pm-sample-editor .ql-editor iframe + iframe { margin-top: var(--pm-gap) !important; display: block; }
-									`}</style>
+															/* if previous embed is padded, add pad back to keep exact outer gap */
+															.pm-sample-editor .ql-editor img.pm-embed-padded + img,
+															.pm-sample-editor .ql-editor img.pm-embed-padded + iframe,
+															.pm-sample-editor .ql-editor iframe.pm-embed-padded + img,
+															.pm-sample-editor .ql-editor iframe.pm-embed-padded + iframe { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
+				`}</style>
 									{hoverEl && hoverType && (
 										<div
 											ref={overlayRef}

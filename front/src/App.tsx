@@ -35,10 +35,6 @@ import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
 import ProfilePage from "./components/Profile/ProfilePage";
-import WorkTab from "./components/Profile/WorkTab";
-import LikesTab from "./components/Profile/LikesTab";
-import CollectionsTab from "./components/Profile/CollectionsTab";
-import DraftsTab from "./components/Profile/DraftsTab";
 import CareerDetailsPage from "./components/Profile/CareerDetailsPage";
 import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
 import PortfolioSubmitPage from "./pages/challenge/PortfolioSubmitPage";
