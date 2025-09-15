@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, MoreHorizontal, Pencil, X } from "lucide-react";
 import { EducationApi } from "../../api/educationApi";
 
@@ -43,9 +43,17 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const descCls = `mt-4 text-[16px] ${isPrivate ? textMuted : "text-[#111827]"} whitespace-pre-wrap break-words`;
 	const starCls = isPrivate ? textMuted : (item.isRepresentative ? "text-[#21B284] fill-[#21B284]" : "text-[#6B7280]");
 
+	useEffect(() => {
+		try {
+			const v = localStorage.getItem(`privacy:education:${item.id}`);
+			setIsPrivate(v === "1");
+		} catch {}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [item.id]);
+
 	// description 메타 파싱
 	const parseMeta = (d?: string): { major?: string; status?: string; rest?: string } => {
-		if (!d) return {};
+		if (!d) return {} as any;
 		const lines = d.split("\n");
 		let major: string | undefined;
 		let status: string | undefined;
@@ -55,7 +63,7 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 			else if (line.startsWith(STATUS_PREFIX)) status = line.slice(STATUS_PREFIX.length);
 			else body.push(line);
 		}
-		return { major, status, rest: body.join("\n").trim() };
+		return { major, status, rest: body.join("\n").trim() } as any;
 	};
 	const meta = parseMeta(item.description);
 
@@ -84,6 +92,18 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		}
 	};
 
+	const onTogglePrivate = () => {
+		setIsPrivate((prev) => {
+			const next = !prev;
+			try {
+				if (next) localStorage.setItem(`privacy:education:${item.id}`, "1");
+				else localStorage.removeItem(`privacy:education:${item.id}`);
+				window.dispatchEvent(new CustomEvent("privacy-changed", { detail: { type: "EDUCATION", id: item.id, isPrivate: next } }));
+			} catch {}
+			return next;
+		});
+	};
+
 	return (
 		<div className="w-full py-6">
 			<div className="min-w-0">
@@ -96,7 +116,7 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 							</button>
 						</Tooltip>
 						<Tooltip label={isPrivate ? "학력 공개하기" : "학력 비공개하기"}>
-							<button type="button" className="p-1 hover:opacity-80" onClick={()=>setIsPrivate(!isPrivate)}>
+							<button type="button" className="p-1 hover:opacity-80" onClick={onTogglePrivate}>
 								{isPrivate ? <Eye size={22} className={textMuted} /> : <EyeOff size={22} className="text-[#6B7280]" />}
 							</button>
 						</Tooltip>

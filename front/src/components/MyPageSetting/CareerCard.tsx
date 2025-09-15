@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, MoreHorizontal, Pencil, X } from "lucide-react";
 import { CareerApi, CareerPayload } from "../../api/careerApi";
 
@@ -28,6 +28,15 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const start = `${item.startYear}.${item.startMonth}`;
 	const end = item.isWorking ? "재직중" : `${item.endYear ?? ""}.${item.endMonth ?? ""}`.replace(/\.$/, "");
 
+	const storageKey = `privacy:career:${item.id}`;
+	useEffect(() => {
+		try {
+			const v = localStorage.getItem(storageKey);
+			setIsPrivate(v === "1");
+		} catch {}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [item.id]);
+
 	const onToggleRepresentative = async () => {
 		if (isPrivate) return; // 비공개 시 비활성화
 		try {
@@ -46,6 +55,18 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		} catch (e) {
 			alert("삭제에 실패했습니다.");
 		}
+	};
+
+	const onTogglePrivate = () => {
+		setIsPrivate((prev) => {
+			const next = !prev;
+			try {
+				if (next) localStorage.setItem(storageKey, "1");
+				else localStorage.removeItem(storageKey);
+				window.dispatchEvent(new CustomEvent("privacy-changed", { detail: { type: "CAREER", id: item.id, isPrivate: next } }));
+			} catch {}
+			return next;
+		});
 	};
 
 	const textMuted = "text-[#9CA3AF]"; // 비공개 텍스트 색상
@@ -67,7 +88,7 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 							</button>
 						</Tooltip>
 						<Tooltip label={isPrivate ? "커리어 공개하기" : "커리어 비공개하기"}>
-							<button type="button" className="p-1 hover:opacity-80" onClick={()=>setIsPrivate(!isPrivate)}>
+							<button type="button" className="p-1 hover:opacity-80" onClick={onTogglePrivate}>
 								{isPrivate ? <Eye size={22} className={textMuted} /> : <EyeOff size={22} className="text-[#6B7280]" />}
 							</button>
 						</Tooltip>

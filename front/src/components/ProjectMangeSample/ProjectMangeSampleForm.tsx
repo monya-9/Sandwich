@@ -8,7 +8,7 @@ import { normalizeVideoUrl } from "./VideoUploadSection";
 import ReorderModal from "./ReorderModal";
 import { FaImage, FaTrash } from "react-icons/fa";
 import { IoMdVideocam } from "react-icons/io";
-import { FiMaximize2, FiImage } from "react-icons/fi";
+import { FiMaximize2, FiImage, FiMonitor } from "react-icons/fi";
 import { createProject, ProjectRequest } from "../../api/projectApi";
 import { useNavigate } from "react-router-dom";
 import ProjectDetailsModal from "./ProjectDetailsModal";
@@ -113,19 +113,24 @@ export default function ProjectMangeSampleForm() {
 					window.setTimeout(() => setShowWidthToast(false), 2000);
 				};
 
-				// Lightweight content presence tracking to avoid heavy HTML parsing on every keystroke
+								// Lightweight content presence tracking to avoid heavy HTML parsing on every keystroke
 				const [hasText, setHasText] = useState<boolean>(false);
 				const [mediaCount, setMediaCount] = useState<number>(0);
 				const [detailLibraryImages, setDetailLibraryImages] = useState<string[]>([]);
 				const [previewCoverUrl, setPreviewCoverUrl] = useState<string | null>(null);
-
+				
 				const recalcCounts = () => {
 					const quill = mainQuillRef.current?.getEditor();
 					if (!quill) return;
-					const nextHasText = (quill.getLength() || 0) > 1;
-					if (nextHasText !== hasText) setHasText(nextHasText);
+					try {
+						const nextHasText = (quill.getLength() || 0) > 1;
+						const root = quill.root as HTMLElement;
+						const nextMediaCount = (root.querySelectorAll('img,iframe')?.length || 0);
+						setHasText(prev => (prev !== nextHasText ? nextHasText : prev));
+						setMediaCount(prev => (prev !== nextMediaCount ? nextMediaCount : prev));
+					} catch {}
 				};
-
+				
 				const collectImageUrls = (): string[] => {
 					try {
 						const quill = mainQuillRef.current?.getEditor();
@@ -135,7 +140,7 @@ export default function ProjectMangeSampleForm() {
 							.filter(Boolean) as string[];
 					} catch { return []; }
 				};
-
+				
 				const getEditorHtml = (): string => {
 					try {
 						const quill = mainQuillRef.current?.getEditor();
@@ -153,15 +158,17 @@ export default function ProjectMangeSampleForm() {
 						if (overlayRef.current) overlayRef.current.style.display = 'none';
 						if (textChangeTimerRef.current) window.clearTimeout(textChangeTimerRef.current);
 						textChangeTimerRef.current = window.setTimeout(() => {
-							// update only hasText cheaply
+							// update only hasText cheaply + sync media count
 							try {
 								const len = quill.getLength();
 								const nextHasText = (len || 0) > 1;
-								if (nextHasText !== hasText) setHasText(nextHasText);
+								const root = quill.root as HTMLElement;
+								const nextMediaCount = (root.querySelectorAll('img,iframe')?.length || 0);
+								setHasText(prev => (prev !== nextHasText ? nextHasText : prev));
+								setMediaCount(prev => (prev !== nextMediaCount ? nextMediaCount : prev));
 								// when text is cleared, move first media to top if not already
 								if (!nextHasText) {
 									try {
-										const root = quill.root as HTMLElement;
 										const firstMedia = root.querySelector('img,iframe') as HTMLElement | null;
 										if (firstMedia && firstMedia.previousElementSibling) {
 											// move media node to start
@@ -434,6 +441,30 @@ export default function ProjectMangeSampleForm() {
 					return () => {
 						try { root.removeEventListener('pointermove', onMove as any); } catch {}
 					};
+				}, []);
+
+				// Observe editor DOM mutations to keep counts in sync (images/videos/text)
+				useEffect(() => {
+					const quill = mainQuillRef.current?.getEditor();
+					if (!quill) return;
+					const root = quill.root as HTMLElement;
+					try {
+						const obs = new MutationObserver(() => { recalcCounts(); });
+						obs.observe(root, { childList: true, subtree: true });
+						mediaObserverRef.current = obs;
+						// initial sync
+						recalcCounts();
+						return () => { try { obs.disconnect(); } catch {}; mediaObserverRef.current = null; };
+					} catch {}
+				}, []);
+
+				// Also listen to Quill editor-change to catch non-text mutations
+				useEffect(() => {
+					const quill = mainQuillRef.current?.getEditor();
+					if (!quill) return;
+					const handler = () => { recalcCounts(); };
+					try { quill.on('editor-change', handler); } catch {}
+					return () => { try { quill.off('editor-change', handler); } catch {}; };
 				}, []);
 
 				// rAF/리스너 정리
@@ -819,6 +850,7 @@ export default function ProjectMangeSampleForm() {
 		setIsDetailsOpen(true);
 	};
 
+	const handleSaveDraft = () => {};
 	const openPreview = () => {
 		// 미리보기에서는 커버 이미지를 강제로 설정하지 않음
 		// (텍스트 에디터의 콘텐츠가 상단에 오도록 하기 위함)
@@ -856,18 +888,20 @@ export default function ProjectMangeSampleForm() {
 				.pm-sample-editor .ql-editor img, .pm-sample-editor .ql-editor iframe { display: block; margin-left: auto; margin-right: auto; }
 				/* Media should by default not exceed editor width */
 				.pm-sample-editor .ql-editor img { max-width: 100%; height: auto; content-visibility: auto; contain: content; }
-				.pm-sample-editor .ql-editor iframe { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+																	.pm-sample-editor .ql-editor iframe { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+													/* 강제: 동영상은 항상 컨테이너 폭에 맞춤 */
+													.pm-sample-editor .ql-editor iframe.ql-video { width: 100% !important; max-width: none !important; height: auto !important; aspect-ratio: 16 / 9; display: block; }
 				/* Full width when eligible */
 				.pm-sample-editor .ql-editor img.pm-embed-full { }
 				.pm-sample-editor .ql-editor iframe.pm-embed-full { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
 				/* Visual padding using real padding with negative bottom margin to keep outer gap constant */
-				.pm-sample-editor .ql-editor img.pm-embed-padded,
-				.pm-sample-editor .ql-editor iframe.pm-embed-padded {
-					padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px);
-					margin-bottom: calc(-1 * var(--pm-pad, 0px));
-					background: transparent;
-					box-sizing: border-box;
-				}
+															.pm-sample-editor .ql-editor img.pm-embed-padded,
+											.pm-sample-editor .ql-editor iframe.pm-embed-padded {
+												padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px);
+												margin-bottom: calc(-1 * var(--pm-pad, 0px));
+												background: transparent;
+												box-sizing: border-box;
+											}
 										/* When overall gap is 0, force vertical padding to 0 so contents stick */
 						/* Use :root variable to avoid touching element inline styles when gap changes */
 				/* Editor frame */
@@ -947,27 +981,39 @@ export default function ProjectMangeSampleForm() {
 						</div>
 
 								<div ref={editorContainerRef}>
-																				<ReactQuill
-												ref={mainQuillRef}
-												className="pm-sample-editor"
-												theme="snow"
-												defaultValue=""
-												modules={getStableModules()}
-												formats={quillFormats}
-											/>
+																																						<ReactQuill
+																			ref={mainQuillRef}
+																			className={`pm-sample-editor ${contentGapPx === 0 ? 'pm-gap-0' : ''}`}
+																			theme="snow"
+																			defaultValue=""
+																			modules={getStableModules()}
+																			formats={quillFormats}
+																		/>
 									{/* Apply editor inner content spacing; toolbar fixed white; editor follows backgroundColor */}
 									<style>{`
 										.pm-sample-editor .ql-container { background: transparent; }
 						.pm-sample-editor .ql-editor { background: ${backgroundColor}; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; }
-						:root { --pm-vpad-global: ${contentGapPx === 0 ? '0px' : 'var(--pm-vpad, 40px)'}; }
-						/* universal block gap: allow per-block override via --pm-top-gap */
-						.pm-sample-editor .ql-editor > * + * { margin-top: var(--pm-top-gap, var(--pm-gap)) !important; }
-						/* keep content intrinsic size stable: do not push/pull with pseudo-element */
+																	/* removed pm-vpad-factor to preserve user padding at gap 0 */
+																								/* universal block gap: allow per-block override via --pm-top-gap */
+																		.pm-sample-editor .ql-editor > * + * { margin-top: var(--pm-top-gap, var(--pm-gap)) !important; }
+																		.pm-gap-0 .ql-editor > * + * { margin-top: 0 !important; }
+																		/* keep content intrinsic size stable: do not push/pull with pseudo-element */
 						/* removed ::before spacer to avoid layout reflow affecting intrinsic size */
 						/* direct embeds without wrappers */
-										.pm-sample-editor .ql-editor > img,
-										.pm-sample-editor .ql-editor > iframe { display: block; }
-										/* lists: halve the gap between items */
+																												.pm-sample-editor .ql-editor > img,
+																		.pm-sample-editor .ql-editor > iframe { display: block; }
+																		/* text start offset w/o affecting media size */
+																		.pm-sample-editor .ql-editor > p,
+																		.pm-sample-editor .ql-editor > h1,
+																		.pm-sample-editor .ql-editor > h2,
+																		.pm-sample-editor .ql-editor > h3,
+																		.pm-sample-editor .ql-editor > h4,
+																		.pm-sample-editor .ql-editor > h5,
+																		.pm-sample-editor .ql-editor > h6,
+																		.pm-sample-editor .ql-editor > blockquote,
+																		.pm-sample-editor .ql-editor > pre { text-indent: 40px; }
+																		/* keep user media padding even when gap=0 */
+																		/* lists: halve the gap between items */
 										.pm-sample-editor .ql-editor li + li { margin-top: calc(var(--pm-gap) / 2) !important; }
 										/* when embeds are consecutive inside the same block */
 										.pm-sample-editor .ql-editor img + img,
@@ -1084,21 +1130,21 @@ export default function ProjectMangeSampleForm() {
 					<aside className="w-[357px] flex flex-col gap-[16px] mt-[0px] sticky top-[24px] self-start col-start-3">
 						<RightPanelActions onImageAdd={triggerImageAdd} onVideoAdd={triggerVideoAdd} onReorder={openReorder} />
 						<SettingsPanel backgroundColor={backgroundColor} onBackgroundColorChange={setBackgroundColor} contentGapPx={contentGapPx} onContentGapChange={setContentGapPx} />
-						<div className="flex flex-col gap-[12px]">
+												<div className="flex flex-col gap-[12px]">
 							<button
-								className={`rounded-[30px] w-[357px] h-[56px] text-white text-[18px] transition-colors duration-200 ${hasContent ? 'bg-[#10B9B5] hover:bg-[#0ea7a3]' : 'bg-[#9CA3AF]'}`}
-								type="button"
-								onClick={openPreview}
-							>
-								화면 미리보기
-							</button>
-							<button
-								className={`${hasContent ? 'bg-[#D1D5DB] hover:bg-gray-300' : 'bg-[#E5E7EB] cursor-not-allowed'} rounded-[30px] w-[357px] h-[82px] text-black text-[24px] transition-colors duration-200`}
+								className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] cursor-not-allowed'} rounded-[30px] w-[357px] h-[82px] text-black text-[24px] transition-colors duration-200`}
 								type="button"
 								onClick={handleSubmit}
 								disabled={!hasContent}
 							>
 								다음
+							</button>
+							<button
+								className="w-[357px] h-[45px] text-[#6B7280] text-[20px] inline-flex items-center justify-center gap-2 hover:text-black"
+								type="button"
+								onClick={openPreview}
+							>
+								<FiMonitor className="w-7 h-7" /><span className="leading-none">화면 미리보기</span>
 							</button>
 						</div>
 					</aside>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, MoreHorizontal, Pencil, X } from "lucide-react";
 import { AwardApi } from "../../api/awardApi";
 
@@ -37,6 +37,14 @@ const AwardCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const starCls = isPrivate ? textMuted : (item.isRepresentative ? "text-[#21B284] fill-[#21B284]" : "text-[#6B7280]");
 	const period = `${item.year}년 ${parseInt(String(item.month), 10)}월 수상`;
 
+	useEffect(() => {
+		try {
+			const v = localStorage.getItem(`privacy:award:${item.id}`);
+			setIsPrivate(v === "1");
+		} catch {}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [item.id]);
+
 	const toggleRepresentative = async () => {
 		if (isPrivate) return;
 		try {
@@ -57,6 +65,18 @@ const AwardCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		}
 	};
 
+	const onTogglePrivate = () => {
+		setIsPrivate((prev) => {
+			const next = !prev;
+			try {
+				if (next) localStorage.setItem(`privacy:award:${item.id}`, "1");
+				else localStorage.removeItem(`privacy:award:${item.id}`);
+				window.dispatchEvent(new CustomEvent("privacy-changed", { detail: { type: "AWARD", id: item.id, isPrivate: next } }));
+			} catch {}
+			return next;
+		});
+	};
+
 	return (
 		<div className="w-full py-6">
 			<div className="min-w-0">
@@ -69,7 +89,7 @@ const AwardCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 							</button>
 						</Tooltip>
 						<Tooltip label={isPrivate ? "수상 공개하기" : "수상 비공개하기"}>
-							<button type="button" className="p-1 hover:opacity-80" onClick={()=>setIsPrivate(!isPrivate)}>
+							<button type="button" className="p-1 hover:opacity-80" onClick={onTogglePrivate}>
 								{isPrivate ? <Eye size={22} className={textMuted} /> : <EyeOff size={22} className="text-[#6B7280]" />}
 							</button>
 						</Tooltip>
