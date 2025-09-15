@@ -143,7 +143,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 </Link>
                 <nav className="flex gap-6 text-[18px] ml-6">
                     <NavLink to="/" className={navCls} end>둘러보기</NavLink>
-                    <NavLink to="/community" className={navCls}>커뮤니티</NavLink>
+                    <NavLink to="/challenge" className={navCls}>챌린지</NavLink>
                 </nav>
             </div>
 
