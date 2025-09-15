@@ -6,8 +6,7 @@ import { resolveCover, swapJpgPng } from '../../utils/getProjectCover';
 
 type Props = {
     project: Project;
-    /** 같은 리스트 안에서의 위치(0-based). 넣어주면 중복 없이 다양하게 매핑 */
-    indexInList?: number;
+    indexInList?: number; // 중복 방지용
 };
 
 const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
@@ -29,34 +28,35 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
     };
 
     return (
-        <div className="relative w-full h-[240px] flex flex-col items-center mb-5">
-            {/* 이미지 영역 */}
+        <div className="relative w-full flex flex-col items-center mb-5">
+            {/* 이미지 영역(비율 고정) */}
             <div
-                className="w-full h-[300px] bg-gray-200 rounded-[20px] overflow-hidden relative cursor-pointer"
+                className="relative w-full rounded-[20px] overflow-hidden cursor-pointer"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                {imgErr ? (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                        <span className="text-sm text-gray-500">{project.title.slice(0, 14)}</span>
-                    </div>
-                ) : (
-                    <img
-                        src={src}
-                        alt={project.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={handleError}
-                    />
-                )}
+                {/* 핵심: 비율 고정 */}
+                <div className="relative w-full aspect-[4/3] bg-gray-200">
+                    {imgErr ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                            <span className="text-sm text-gray-500">{project.title.slice(0, 14)}</span>
+                        </div>
+                    ) : (
+                        <img
+                            src={src}
+                            alt={project.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                            onError={handleError}
+                        />
+                    )}
 
-                {isHovered && (
-                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end justify-start p-4 transition-opacity duration-300">
-                        <p className="text-white text-sm font-medium truncate text-left w-full">
-                            {project.title}
-                        </p>
-                    </div>
-                )}
+                    {isHovered && (
+                        <div className="absolute inset-0 bg-black/40 flex items-end justify-start p-4 transition-opacity duration-300">
+                            <p className="text-white text-sm font-medium truncate w-full">{project.title}</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* 작성자 + 정보 영역 */}
