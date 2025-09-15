@@ -10,5 +10,7 @@ export type Project = {
     comments: number;
     categories: string[];
     uploadDate: string;
-  };
+    cover?: string;
+
+};
   
