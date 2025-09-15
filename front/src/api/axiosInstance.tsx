@@ -1,5 +1,6 @@
 // src/api/axiosInstance.ts
 import axios, { AxiosError, AxiosHeaders, AxiosRequestConfig } from "axios";
+import { getV3Token } from "../lib/recaptchaV3";
 
 const api = axios.create({
     baseURL: "/api",
@@ -17,26 +18,55 @@ function setAuthHeader(headers: AxiosRequestConfig["headers"], token: string) {
     return headers;
 }
 
-/* -------- Request 인터셉터 -------- */
-api.interceptors.request.use((config) => {
-    // 1) 토큰 자동 부착
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (token) config.headers = setAuthHeader(config.headers, token);
+/* -------- reCAPTCHA v3 자동 부착 활성화 -------- */
+let recaptchaInstalled = false;
+/** 특정 경로에 요청 보낼 때 v3 토큰을 X-Recaptcha-Token 으로 자동 부착 */
+export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
+    if (recaptchaInstalled) return;
+    recaptchaInstalled = true;
 
-    // 2) FormData면 Content-Type 제거(브라우저가 자동 설정)
-    const data = config.data as any;
-    if (data instanceof FormData) {
-        const h: any = config.headers;
-        if (h?.get && h?.delete) {
-            if (h.get("Content-Type")) h.delete("Content-Type");
-            if (h.get("content-type")) h.delete("content-type");
-        } else if (h) {
-            if (h["Content-Type"]) delete h["Content-Type"];
-            if ((h as any)["content-type"]) delete (h as any)["content-type"];
+    api.interceptors.request.use(async (config) => {
+        // 1) 토큰 자동 부착(기존 로직 유지)
+        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+        if (token) config.headers = setAuthHeader(config.headers, token);
+
+        // 2) FormData면 Content-Type 제거(브라우저가 자동 설정)
+        const data = config.data as any;
+        if (data instanceof FormData) {
+            const h: any = config.headers;
+            if (h?.get && h?.delete) {
+                if (h.get("Content-Type")) h.delete("Content-Type");
+                if (h.get("content-type")) h.delete("content-type");
+            } else if (h) {
+                if (h["Content-Type"]) delete h["Content-Type"];
+                if ((h as any)["content-type"]) delete (h as any)["content-type"];
+            }
         }
-    }
-    return config;
-});
+
+        // 3) reCAPTCHA v3: 지정 경로에만 헤더 자동 부착
+        try {
+            if (typeof window !== "undefined") {
+                const url = String(config.url || "");
+                const match = Object.entries(actionMap).find(([path]) => url.startsWith(path));
+                if (match) {
+                    const [, action] = match;
+                    const v3token = await getV3Token(action);
+                    const headers: any = config.headers || {};
+                    if (headers instanceof AxiosHeaders || typeof headers.set === "function") {
+                        headers.set("X-Recaptcha-Token", v3token);
+                    } else {
+                        headers["X-Recaptcha-Token"] = v3token;
+                    }
+                    config.headers = headers;
+                }
+            }
+        } catch {
+            // v3 토큰 발급 실패해도 서버에서 RECAPTCHA_FAIL 로 처리되므로 요청은 그대로 진행
+        }
+
+        return config;
+    });
+}
 
 /* -------- 401 리프레시 가능 여부 -------- */
 function isRefreshable401(error: AxiosError) {

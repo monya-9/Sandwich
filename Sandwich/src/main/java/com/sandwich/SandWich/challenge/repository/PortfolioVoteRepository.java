@@ -51,5 +51,9 @@ public interface PortfolioVoteRepository extends JpaRepository<PortfolioVote, Lo
     boolean existsByChallenge_IdAndVoterId(Long challengeId, Long voterId);
 
     Optional<PortfolioVote> findByChallenge_IdAndVoterId(Long challengeId, Long voterId);
-
+    // 챌린지별 투표 수
+    @Query("select v.challenge.id as chId, count(v.id) as cnt " +
+            "from PortfolioVote v where v.challenge.id in :ids group by v.challenge.id")
+    List<com.sandwich.SandWich.admin.service.AdminChallengeQueryService.CountRow>
+    countByChallengeIds(@Param("ids") List<Long> ids);
 }

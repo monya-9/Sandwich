@@ -34,6 +34,7 @@ import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
+import { enableRecaptchaV3OnPaths } from "./api/axiosInstance";
 import ProfilePage from "./components/Profile/ProfilePage";
 import CareerDetailsPage from "./components/Profile/CareerDetailsPage";
 import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
@@ -43,6 +44,13 @@ import CodeSubmissionListPage from "./pages/challenge/CodeSubmissionListPage";
 import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
 import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
+
+// ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
+enableRecaptchaV3OnPaths({
+    "/auth/signup": "signup",
+
+});
+
 
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {

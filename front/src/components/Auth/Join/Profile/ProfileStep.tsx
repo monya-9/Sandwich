@@ -31,8 +31,8 @@ const ProfileStep = ({ onPrev }: Props) => {
 
   useEffect(() => {
     localStorage.setItem(
-      "joinStep2",
-      JSON.stringify({ nickname, position, interests })
+        "joinStep2",
+        JSON.stringify({ nickname, position, interests })
     );
   }, [nickname, position, interests]);
 
@@ -45,14 +45,14 @@ const ProfileStep = ({ onPrev }: Props) => {
       // ✅ 메타 캐시 읽기(빈 배열이면 폴백 유지)
       const posMeta = (() => {
         const raw = JSON.parse(
-          localStorage.getItem("meta.positions.v1") || "null"
+            localStorage.getItem("meta.positions.v1") || "null"
         ) as Array<{ id: number; name: string }> | null;
         return raw && raw.length ? raw : FALLBACK_POSITIONS;
       })();
 
       const interestMetaGeneral = (() => {
         const raw = JSON.parse(
-          localStorage.getItem("meta.interests.GENERAL.v1") || "null"
+            localStorage.getItem("meta.interests.GENERAL.v1") || "null"
         ) as Array<{ id: number; name: string }> | null;
         return raw && raw.length ? raw : FALLBACK_INTERESTS_GENERAL;
       })();
@@ -60,11 +60,12 @@ const ProfileStep = ({ onPrev }: Props) => {
       // 이름 → id 매핑
       const positionId = posMeta.find((p) => p.name === position)?.id ?? null;
       const interestIds = interests
-        .map((n) => interestMetaGeneral.find((i) => i.name === n)?.id)
-        .filter((v): v is number => typeof v === "number");
+          .map((n) => interestMetaGeneral.find((i) => i.name === n)?.id)
+          .filter((v): v is number => typeof v === "number");
 
       console.log({ position, positionId, interests, interestIds });
 
+      // ✅ /auth/signup 호출 시, v3 토큰은 인터셉터가 자동으로 X-Recaptcha-Token 헤더로 부착됨
       await api.post("/auth/signup", {
         email,
         password,
@@ -83,20 +84,20 @@ const ProfileStep = ({ onPrev }: Props) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
-      <img src={logo} alt="logo" className="w-36 mb-10" />
-      <div className="w-full max-w-sm space-y-6">
-        <NameInput value={nickname} onChange={setNickname} />
-        <PositionSelect selected={position} onChange={setPosition} />
-        <InterestSelect selected={interests} onChange={setInterests} />
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+        <img src={logo} alt="logo" className="w-36 mb-10" />
+        <div className="w-full max-w-sm space-y-6">
+          <NameInput value={nickname} onChange={setNickname} />
+          <PositionSelect selected={position} onChange={setPosition} />
+          <InterestSelect selected={interests} onChange={setInterests} />
+        </div>
+        <CompleteButton
+            onPrev={onPrev}
+            onComplete={handleSubmit}
+            completeDisabled={!nickname || !position || interests.length === 0}
+            className="mt-8"
+        />
       </div>
-      <CompleteButton
-        onPrev={onPrev}
-        onComplete={handleSubmit}
-        completeDisabled={!nickname || !position || interests.length === 0}
-        className="mt-8"
-      />
-    </div>
   );
 };
 
