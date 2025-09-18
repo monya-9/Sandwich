@@ -5,6 +5,6 @@ import org.springframework.http.HttpStatus;
 
 public class MessageRoomForbiddenException extends CustomException {
     public MessageRoomForbiddenException() {
-        super(HttpStatus.FORBIDDEN, "이 채팅방에 접근할 수 없습니다.");
+        super(HttpStatus.FORBIDDEN, "ROOM_FORBIDDEN", "해당 채팅방에 접근할 수 없습니다.");
     }
 }

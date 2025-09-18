@@ -5,6 +5,6 @@ import org.springframework.http.HttpStatus;
 
 public class MessageNotFoundException extends CustomException {
     public MessageNotFoundException() {
-        super(HttpStatus.NOT_FOUND, "메시지를 찾을 수 없습니다.");
+        super(HttpStatus.NOT_FOUND, "MESSAGES_NOT_FOUND", "해당 범위 내 메시지가 존재하지 않습니다.");
     }
 }
