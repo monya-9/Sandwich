@@ -28,10 +28,25 @@ interface ProjectPreviewModalProps {
 export default function ProjectPreviewModal({ open, onClose, projectName = "프로젝트 이름", ownerName = "사용자 이름", category = "UI/UX", coverUrl, backgroundColor = "#FFFFFF", contentGapPx = 10, children, rawHtml, viewsCount = 0, likesCount = 0, commentsCount = 0, onEdit, onDelete }: ProjectPreviewModalProps) {
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	useEffect(() => {
-		if (open) {
-			try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch {}
-		}
-	}, [open]);
+		if (!open) return;
+		try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch {}
+		const syncNaturalImageWidth = () => {
+			try {
+				const imgs = document.querySelectorAll('.pm-preview-content .ql-editor img');
+				imgs.forEach((node) => {
+					const img = node as HTMLImageElement;
+					const nw = img.naturalWidth || img.width || 0;
+					if (nw > 0) {
+						img.style.maxWidth = nw + 'px';
+						img.style.width = 'auto';
+					}
+				});
+			} catch {}
+		};
+		syncNaturalImageWidth();
+		const t = window.setTimeout(syncNaturalImageWidth, 60);
+		return () => { try { window.clearTimeout(t); } catch {}; };
+	}, [open, rawHtml]);
 	if (!open) return null;
 
 	// 닉네임/이메일 기반 표시 이름과 이니셜 계산
@@ -59,11 +74,24 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 
 	return (
 		<div className="absolute inset-0 z-[10000] flex items-start justify-center overflow-visible" ref={scrollRef}>
-			<style>{`
+							<style>{`
 				.pm-preview-content { --pm-gap: ${contentGapPx}px; }
+				.pm-preview-frame { width: 1200px; margin-left: auto; margin-right: auto; }
 				/* 샘플 에디터와 동일한 간격 모델 (margin-top) */
-				.pm-preview-content .ql-editor { --pm-top-gap: var(--pm-gap); padding: 0; }
+				.pm-preview-content .ql-editor { --pm-top-gap: var(--pm-gap); padding: 0; width: 100%; max-width: none; margin-left: 0; margin-right: 0; }
+				/* text start offset only */
+				.pm-preview-content .ql-editor > p,
+				.pm-preview-content .ql-editor > h1,
+				.pm-preview-content .ql-editor > h2,
+				.pm-preview-content .ql-editor > h3,
+				.pm-preview-content .ql-editor > h4,
+				.pm-preview-content .ql-editor > h5,
+				.pm-preview-content .ql-editor > h6,
+				.pm-preview-content .ql-editor > blockquote,
+				.pm-preview-content .ql-editor > pre { text-indent: 40px; }
 				.pm-preview-content .ql-editor > * + * { margin-top: var(--pm-top-gap, var(--pm-gap)) !important; }
+				.pm-gap-0 .ql-editor > * + * { margin-top: 0 !important; }
+				/* keep user media padding even when gap=0 */
 				/* 마진 리셋: 기본 태그 마진을 제거 */
 				.pm-preview-content .ql-editor h1,
 				.pm-preview-content .ql-editor h2,
@@ -81,16 +109,24 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 				/* 리스트 아이템 간격 유지 */
 				.pm-preview-content .ql-editor li + li { margin-top: calc(var(--pm-gap) / 2) !important; }
 				.pm-preview-content img, .pm-preview-content iframe { display: block; margin-left: auto; margin-right: auto; }
-				.pm-preview-content img { max-width: 100%; height: auto; }
+				.pm-preview-content img { width: 100% !important; height: auto !important; }
 				.pm-preview-content iframe { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
-				/* 풀폭/기본 모두 컨테이너 폭으로 */
-				.pm-preview-content .pm-embed-full,
-				.pm-preview-content .ql-editor .pm-embed-full { width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
-				.pm-preview-content img.pm-embed-full, .pm-preview-content .ql-editor img.pm-embed-full { height: auto !important; }
-				.pm-preview-content iframe.pm-embed-full, .pm-preview-content .ql-editor iframe.pm-embed-full { height: auto !important; aspect-ratio: 16 / 9; }
+				/* 강제: 동영상은 항상 컨테이너 폭에 맞춤 */
+				.pm-preview-content iframe.ql-video, .pm-preview-content .ql-editor iframe.ql-video { width: 100% !important; max-width: none !important; height: auto !important; aspect-ratio: 16 / 9; display: block; }
+				/* 풀폭 처리: 미리보기에서는 iframe만 강제 풀폭 */
+				.pm-preview-content iframe.pm-embed-full, .pm-preview-content .ql-editor iframe.pm-embed-full { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
 				/* 이미지 기본 크기 강제 확장 금지: 에디터와 동일하게 자연 크기(컨테이너 이내) 유지 */
 				.pm-preview-content img:not(.pm-embed-padded), .pm-preview-content .ql-editor img:not(.pm-embed-padded) { max-width: 100% !important; height: auto !important; }
 				.pm-preview-content iframe:not(.pm-embed-padded), .pm-preview-content .ql-editor iframe:not(.pm-embed-padded) { width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; height: auto !important; aspect-ratio: 16 / 9; }
+				/* 패딩 컴포저: 간격 0이면 하단 패딩 제거로 완전 밀착 */
+				.pm-preview-content img.pm-embed-padded,
+				.pm-preview-content iframe.pm-embed-padded,
+				.pm-preview-content .ql-editor img.pm-embed-padded,
+				.pm-preview-content .ql-editor iframe.pm-embed-padded {
+					padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px);
+					margin-bottom: calc(-1 * var(--pm-pad, 0px));
+					background: transparent; box-sizing: border-box;
+				}
 				/* 에디터에서 설정한 --pm-pad 사용: 패딩 적용 + 하단 음수 마진으로 총 간격 유지 */
 				.pm-preview-content img.pm-embed-padded, .pm-preview-content iframe.pm-embed-padded,
 				.pm-preview-content .ql-editor img.pm-embed-padded, .pm-preview-content .ql-editor iframe.pm-embed-padded {

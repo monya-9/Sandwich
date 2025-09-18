@@ -2,15 +2,19 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { FaHandshake } from "react-icons/fa";
 import { FaCommentDots, FaRegCommentDots } from "react-icons/fa6";
+import LoginPrompt from "../LoginPrompt";
+import { useNavigate } from "react-router-dom";
 
 export default function SuggestAction() {
   const [hover, setHover] = useState(false);
   const [tooltipHover, setTooltipHover] = useState(false); // 삼각형/팝업 위에 올려도 true
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const btnRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // 스타일 한 번만 추가
   useEffect(() => {
@@ -78,6 +82,15 @@ export default function SuggestAction() {
   // 버튼/삼각형/팝업 셋 중 하나라도 hover면 보여줌
   const tooltipVisible = hover || tooltipHover;
 
+  const ensureLogin = () => {
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    if (!token) {
+      setShowLoginPrompt(true);
+      return false;
+    }
+    return true;
+  };
+
   // --- 중앙 모달 Portal 렌더링
   const ModalPortal = isModalOpen
     ? ReactDOM.createPortal(
@@ -139,13 +152,25 @@ export default function SuggestAction() {
 
   return (
     <div className="relative">
+      {/* 로그인 프롬프트 */}
+      {showLoginPrompt && (
+        <LoginPrompt
+          onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
+          onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
+          onClose={() => setShowLoginPrompt(false)}
+        />
+      )}
+
       {/* 액션 버튼 */}
       <button
         ref={btnRef}
         className="flex flex-col items-center gap-1 group"
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => {
+          if (!ensureLogin()) return;
+          setIsModalOpen(true);
+        }}
       >
         		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
 			<FaCommentDots className="w-6 h-6" />

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ReactDOM from "react-dom";
+import LoginPrompt from "./LoginPrompt";
 
 type Props = {
   userName: string;
@@ -21,6 +22,7 @@ export default function UserProfileBox({
   const [followBtnHover, setFollowBtnHover] = useState(false);
   const followBtnRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     if (!document.getElementById("toast-style")) {
@@ -87,13 +89,18 @@ export default function UserProfileBox({
     return () => clearTimeout(t);
   }, [toast]);
 
-  const handleToggle = async () => {
+  const ensureLogin = () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) {
-      alert("로그인이 필요합니다.");
-      navigate("/login");
-      return;
+      setShowLoginPrompt(true);
+      return false;
     }
+    return true;
+  };
+
+  const handleToggle = async () => {
+    if (!ensureLogin()) return;
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) {
       alert("대상 사용자를 확인할 수 없습니다.");
       return;
@@ -119,12 +126,16 @@ export default function UserProfileBox({
       onFollow?.();
     } catch (e: any) {
       if (e.response?.status === 401) {
-        alert("로그인이 필요합니다.");
-        navigate("/login");
+        setShowLoginPrompt(true);
         return;
       }
       alert("팔로우 처리 중 오류가 발생했습니다.");
     }
+  };
+
+  const handleSuggest = () => {
+    if (!ensureLogin()) return;
+    onSuggest?.();
   };
 
   const renderToast = toast && ReactDOM.createPortal(
@@ -149,6 +160,13 @@ export default function UserProfileBox({
   return (
     <div className="flex flex-col items-center mb-16">
       {renderToast}
+      {showLoginPrompt && (
+        <LoginPrompt
+          onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
+          onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
+          onClose={() => setShowLoginPrompt(false)}
+        />
+      )}
       <div className="w-14 h-14 rounded-full mb-4 bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
         {avatarInitial}
       </div>
@@ -164,7 +182,7 @@ export default function UserProfileBox({
           <span className="invisible">제안하기</span>
           <span className="absolute">{isFollowing ? (followBtnHover ? "팔로우 취소" : "팔로잉") : "+ 팔로우"}</span>
         </button>
-        <button className="bg-cyan-400 text-white rounded-full text-xl font-bold shadow hover:bg-cyan-500 transition px-14 py-5 inline-flex items-center justify-center" onClick={onSuggest}>
+        <button className="bg-cyan-400 text-white rounded-full text-xl font-bold shadow hover:bg-cyan-500 transition px-14 py-5 inline-flex items-center justify-center" onClick={handleSuggest}>
           제안하기
         </button>
       </div>

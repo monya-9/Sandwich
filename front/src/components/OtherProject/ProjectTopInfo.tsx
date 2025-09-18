@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ReactDOM from "react-dom";
+import LoginPrompt from "./LoginPrompt";
 
 type Props = {
   projectName: string;
@@ -14,6 +15,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
   const [isFollowing, setIsFollowing] = useState(false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
   const navigate = useNavigate();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     if (!document.getElementById("toast-style")) {
@@ -82,13 +84,18 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     };
   }, [ownerId]);
 
-  const handleToggleFollow = async () => {
+  const ensureLogin = () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) {
-      alert("로그인이 필요합니다.");
-      navigate("/login");
-      return;
+      setShowLoginPrompt(true);
+      return false;
     }
+    return true;
+  };
+
+  const handleToggleFollow = async () => {
+    if (!ensureLogin()) return;
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) {
       alert("대상 사용자를 확인할 수 없습니다.");
       return;
@@ -113,8 +120,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
       }
     } catch (e: any) {
       if (e.response?.status === 401) {
-        alert("로그인이 필요합니다.");
-        navigate("/login");
+        setShowLoginPrompt(true);
         return;
       }
       alert("팔로우 처리 중 오류가 발생했습니다.");
@@ -136,6 +142,13 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
   return (
     <div className="w-full flex items-start gap-4 mb-8">
       {renderToast}
+      {showLoginPrompt && (
+        <LoginPrompt
+          onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
+          onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
+          onClose={() => setShowLoginPrompt(false)}
+        />
+      )}
       <div className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0" />
       <div>
         <h1 className="text-2xl font-bold text-black">{projectName}</h1>
