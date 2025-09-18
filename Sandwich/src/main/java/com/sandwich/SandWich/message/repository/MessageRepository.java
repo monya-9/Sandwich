@@ -54,4 +54,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     Message findTopByRoomIdOrderByIdDesc(Long roomId);
 
     Optional<Message> findBySenderIdAndRoomIdAndClientNonce(Long senderId, Long roomId, String clientNonce);
+
+    @Query("""
+    SELECT m FROM Message m
+      JOIN FETCH m.sender s
+    WHERE m.room.id = :roomId
+      AND m.isDeleted = false
+      AND m.id BETWEEN :fromId AND :toId
+    ORDER BY m.id ASC
+    """)
+    List<Message> findRangeAscNotDeletedWithSender(@Param("roomId") Long roomId,
+                                                   @Param("fromId") Long fromId,
+                                                   @Param("toId") Long toId);
+
 }
