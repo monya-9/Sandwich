@@ -6,6 +6,7 @@ import com.sandwich.SandWich.challenge.domain.ChallengeType;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -37,4 +38,61 @@ public class AdminChallengeDtos {
     }
 
     public record PublishReq(List<Long> top, Long participant) {}
+
+    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
+    public static class ListItem {
+        private Long id;
+        private ChallengeType type;
+        private String title;
+        private ChallengeStatus status;
+        private OffsetDateTime startAt;
+        private OffsetDateTime endAt;
+        private OffsetDateTime voteStartAt;
+        private OffsetDateTime voteEndAt;
+        private long submissionCount;
+        private long voteCount;
+    }
+
+
+    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
+    public static class Overview {
+        private Long id;
+        private ChallengeType type;
+        private String title;
+        private ChallengeStatus status;
+        private OffsetDateTime startAt;
+        private OffsetDateTime endAt;
+        private OffsetDateTime voteStartAt;
+        private OffsetDateTime voteEndAt;
+        private String ruleJson;
+        private long submissionCount;
+        private long voteCount;
+    }
+
+
+    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
+    public static class SubmissionItem {
+        private Long id;
+        private Long ownerId;
+        private String title;
+        private String repoUrl;
+        private String demoUrl;
+        private String descr;
+        private String status;
+        private int assetCount;
+        private BigDecimal totalScore; // null 가능
+        private OffsetDateTime createdAt;
+    }
+
+
+    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
+    public static class VoteSummaryItem {
+        private Long submissionId;
+        private long voteCount;
+        private double uiUxAvg;
+        private double creativityAvg;
+        private double codeQualityAvg;
+        private double difficultyAvg;
+        private double totalScore;
+    }
 }

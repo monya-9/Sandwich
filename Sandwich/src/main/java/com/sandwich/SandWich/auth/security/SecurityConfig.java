@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/error", "/error/**").permitAll()
                         // 인증/문서/OAuth 콜백 등
                         // ===== 공개 라우트들 =====
                         .requestMatchers(

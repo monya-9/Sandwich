@@ -28,10 +28,35 @@ const MyPageSettingPage: React.FC = () => {
 		return ch ? ch.toUpperCase() : "H";
 	}, [email]);
 
-	const [userName, setUserName] = useState("");
-	const [urlSlug, setUrlSlug] = useState("");
-	const [oneLineProfile, setOneLineProfile] = useState("");
-	const [nickname, setNickname] = useState(""); // 커뮤니티 닉네임(로컬 저장)
+	const readStoredNickname = () => {
+		try { return localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || ""; } catch { return ""; }
+	};
+	const [userName, setUserName] = useState<string>(() => readStoredNickname());
+	const [userInitialized, setUserInitialized] = useState<boolean>(() => readStoredNickname().length > 0);
+	const [urlSlug, setUrlSlug] = useState<string>(() => { try { return localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || ""; } catch { return ""; } });
+	// 한줄 프로필은 동기 로컬 초기화 후, 서버 fetch 완료 시 한번 더 동기화
+	const [oneLineProfile, setOneLineProfile] = useState<string>(() => {
+		try {
+			// 우선 스코프 키
+			const authEmail = localStorage.getItem("authEmail") || sessionStorage.getItem("authEmail") || "";
+			const scoped = authEmail ? `profileOneLine:${authEmail}` : "profileOneLine";
+			let v = localStorage.getItem(scoped) || sessionStorage.getItem(scoped);
+			if (!v) {
+				// 스코프 키가 없다면 prefix 검색 후 첫 값을 사용
+				for (let i = 0; i < localStorage.length; i++) {
+					const k = localStorage.key(i) || "";
+					if (k.startsWith("profileOneLine:")) { v = localStorage.getItem(k); break; }
+				}
+				if (!v) {
+					for (let i = 0; i < sessionStorage.length; i++) {
+						const k = sessionStorage.key(i) || "";
+						if (k.startsWith("profileOneLine:")) { v = sessionStorage.getItem(k); break; }
+					}
+				}
+			}
+			return (v || "").slice(0, MAX20);
+		} catch { return ""; }
+	});
 	const [bio, setBio] = useState("");
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,18 +72,15 @@ const MyPageSettingPage: React.FC = () => {
 	// 최신 값 Refs
 	const userNameRef = useRef("");
 	useEffect(() => { userNameRef.current = userName; }, [userName]);
-	const communityNickRef = useRef("");
-	useEffect(() => { communityNickRef.current = nickname; }, [nickname]);
 	const bioRef = useRef("");
 	useEffect(() => { bioRef.current = bio; }, [bio]);
-	const slugRef = useRef("");
-	useEffect(() => { slugRef.current = urlSlug; }, [urlSlug]);
 	const oneLineRef = useRef("");
 	useEffect(() => { oneLineRef.current = oneLineProfile; }, [oneLineProfile]);
+	const slugRef = useRef("");
+	useEffect(() => { slugRef.current = urlSlug; }, [urlSlug]);
 
 	// 필수 항목 입력 상태
 	const isUserNameEmpty = userName.trim().length === 0;
-	const isCommunityEmpty = nickname.trim().length === 0;
 
 	// 작업/관심/기술 모달 상태
 	const [showWorkModal, setShowWorkModal] = useState(false);
@@ -77,30 +99,48 @@ const MyPageSettingPage: React.FC = () => {
 		try { return raw ? JSON.parse(raw) : []; } catch { return []; }
 	});
 
+	// 읽기 전용 사용자 이름 표시값: 서버값 > 스토리지 > 로컬 슬러그
+	const usernameDisplay = useMemo(() => {
+		const server = profile?.username?.trim();
+		if (server) return server;
+		try {
+			const stored = (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "").trim();
+			if (stored) return stored;
+		} catch {}
+		return (urlSlug || "").trim();
+	}, [profile?.username, urlSlug]);
+
 	// 초기 프로필 로드 + 로컬 초기값 세팅
 	useEffect(() => {
 		(async () => {
 			try {
 				const me = await UserApi.getMe();
 				setProfile(me);
-				setUserName(me.nickname || "");
+				// 서버 닉네임이 있으면 스토리지와 폼 상태 최신화
+				if ((me.nickname || "") && me.nickname !== userName) {
+					setUserName(me.nickname || "");
+					try { localStorage.setItem("userNickname", me.nickname || ""); sessionStorage.setItem("userNickname", me.nickname || ""); } catch {}
+				}
+				setUserInitialized(true);
 				setBio(me.bio || "");
 				setAvatarUrl(me.profileImage || null);
 				// 서버 저장값으로 작업/관심/기술 초기화
+				const existingWork = (() => { try { return JSON.parse(localStorage.getItem("workFields") || sessionStorage.getItem("workFields") || "null"); } catch { return null; } })();
 				const serverWork = me.position?.name ? [me.position.name] : [];
-				setWorkFields(serverWork);
-				try { localStorage.setItem("workFields", JSON.stringify(serverWork)); sessionStorage.setItem("workFields", JSON.stringify(serverWork)); } catch {}
+				const initWork = Array.isArray(existingWork) ? existingWork : serverWork;
+				setWorkFields(initWork);
+				try { localStorage.setItem("workFields", JSON.stringify(initWork)); sessionStorage.setItem("workFields", JSON.stringify(initWork)); } catch {}
 				const serverInterests = Array.isArray(me.interests) ? me.interests.map((i)=>i.name) : [];
 				setInterestFields(serverInterests);
 				try { localStorage.setItem("interestFields", JSON.stringify(serverInterests)); sessionStorage.setItem("interestFields", JSON.stringify(serverInterests)); } catch {}
 				const serverSkills = (me.skills || "").split(",").map(s=>s.trim()).filter(Boolean);
 				setSkillFields(serverSkills);
 				try { localStorage.setItem("skillFields", JSON.stringify(serverSkills)); sessionStorage.setItem("skillFields", JSON.stringify(serverSkills)); } catch {}
-				// 커뮤니티 닉네임/한 줄 프로필을 사용자별 스코프로 초기화
-				const storedComm = localStorage.getItem(scopedKey("communityNickname")) || sessionStorage.getItem(scopedKey("communityNickname"));
-				setNickname((storedComm || me.nickname || "").slice(0, MAX20));
-				setUrlSlug((localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "").slice(0, MAX20));
-				setOneLineProfile((localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "").slice(0, MAX20));
+				// 한 줄 프로필 및 URL 슬러그 초기화
+				const storedOneLine = (localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "").slice(0, MAX20);
+				if (storedOneLine !== oneLineProfile) setOneLineProfile(storedOneLine);
+				const storedSlug = (localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || me.username || "");
+				setUrlSlug(storedSlug);
 			} catch {}
 		})();
 	}, [email]);
@@ -169,25 +209,52 @@ const MyPageSettingPage: React.FC = () => {
 		return true;
 	};
 
-	// 사용자 이름 검사 + 저장 (항상 DB로 검사, 최신 요청만 반영)
+	// 사용자 이름(닉네임) 검사 + 저장: 전용 PATCH API 사용
 	const checkAndSaveUserName = async (value: string) => {
 		const trimmed = value.trim();
 		if (!trimmed) return false;
-		const mySeq = ++userReqSeqRef.current;
-		const res = await UserApi.checkNickname(trimmed);
-		if (mySeq !== userReqSeqRef.current) return false;
-		if (res.exists && profile && trimmed !== (profile.nickname || "")) {
+		const isDuplicate = await UserApi.checkNickname(trimmed);
+		if (isDuplicate && trimmed !== (profile?.nickname || "")) {
 			setUserNameError("이미 사용 중인 닉네임입니다.");
 			return false;
 		}
 		if (profile && trimmed === (profile.nickname || "")) { setUserNameError(null); return false; }
-		const ok = await persistProfilePartial({ nickname: trimmed });
-		if (ok && mySeq === userReqSeqRef.current) {
+		try {
+			// 1차: 전용 PATCH (있을 때 가볍게)
+			try { await UserApi.updateNickname(trimmed); } catch {}
+			// 2차: 응답이 늦거나 무시되는 경우 대비해 전체 프로필 PUT로 보정
+			let base = profile || null;
+			if (!base) {
+				try { base = await UserApi.getMe(); setProfile(base); } catch {}
+			}
+			if (base) {
+				let posId = base.position?.id || 0;
+				if (!posId) {
+					try { const p = await UserApi.getPosition(); posId = p.id; } catch {}
+				}
+				const interestIds = (base.interests || []).map(i=>i.id);
+				await UserApi.updateProfile({
+					nickname: trimmed,
+					positionId: posId || 1,
+					interestIds,
+					bio: base.bio || "",
+					skills: base.skills || "",
+					github: base.github || "",
+					linkedin: base.linkedin || "",
+					profileImageUrl: base.profileImage || null,
+				});
+			}
+			const refreshed = await UserApi.getMe();
+			setProfile(refreshed);
 			setUserNameError(null);
 			try { localStorage.setItem("userNickname", trimmed); sessionStorage.setItem("userNickname", trimmed); } catch {}
 			window.dispatchEvent(new Event("user-nickname-updated"));
+			setShowSavedBanner(true);
+			window.setTimeout(() => setShowSavedBanner(false), 3000);
+			return true;
+		} catch {
+			return false;
 		}
-		return ok;
 	};
 
 	// bio 저장(값이 달라졌을 때만)
@@ -209,6 +276,88 @@ const MyPageSettingPage: React.FC = () => {
 		return names.map((n) => dynamic[n] ?? interestMap[n]).filter((v): v is number => typeof v === "number");
 	};
 
+	// 닉네임 실시간(디바운스) 중복 검사
+	useEffect(() => {
+		const current = userName.trim();
+		if (!current) { setUserNameError(null); return; }
+		const mySeq = ++userReqSeqRef.current;
+		const handle = window.setTimeout(async () => {
+			try {
+				const isDuplicate = await UserApi.checkNickname(current);
+				if (mySeq !== userReqSeqRef.current) return;
+				if (isDuplicate && current !== (profile?.nickname || "")) {
+					setUserNameError("이미 사용 중인 닉네임입니다.");
+				} else {
+					setUserNameError(null);
+				}
+			} catch {}
+		}, 400);
+		return () => window.clearTimeout(handle);
+	}, [userName, profile?.nickname]);
+
+	// 샌드위치 URL 슬러그 실시간(디바운스) 중복/유효성 검사
+	const [slugError, setSlugError] = useState<string | null>(null);
+	const slugReqSeqRef = useRef(0);
+	const [slugVerified, setSlugVerified] = useState(false);
+	const [slugInitialized, setSlugInitialized] = useState(false);
+	useEffect(() => {
+		const current = urlSlug.trim();
+		if (!current) { setSlugError("필수 항목입니다."); return; }
+		if (!/^[a-z0-9_]{3,20}$/.test(current)) { setSlugError("소문자/숫자/언더스코어만 사용 (3~20자)"); return; }
+		// 사용자가 이전에 유효성 통과 후 저장한 값이라면(로컬 플래그), 서버 체크를 생략하고 에러를 숨깁니다.
+		try {
+			const verified = localStorage.getItem("profileUrlSlugVerified") === "1" || sessionStorage.getItem("profileUrlSlugVerified") === "1";
+			if (verified) { setSlugError(null); setSlugVerified(true); setSlugInitialized(true); return; }
+		} catch {}
+		const mySeq = ++slugReqSeqRef.current;
+		const handle = window.setTimeout(async () => {
+			try {
+				const res = await UserApi.checkUsername(current);
+				if (mySeq !== slugReqSeqRef.current) return;
+				// 현재 서버 username 과 동일한 값은 사용 가능
+				if (res.exists && current !== (profile?.username || "")) {
+					setSlugError("이미 사용 중인 주소입니다.");
+					setSlugInitialized(true);
+					return;
+				}
+				setSlugError(null);
+				// 자동 저장: 유효하고 중복 아님 → 로컬 저장
+				const prevSlug = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
+				if (current !== prevSlug) {
+					localStorage.setItem("profileUrlSlug", current);
+					sessionStorage.setItem("profileUrlSlug", current);
+					localStorage.setItem("profileUrlSlugVerified", "1");
+					sessionStorage.setItem("profileUrlSlugVerified", "1");
+					setShowSavedBanner(true);
+					window.setTimeout(() => setShowSavedBanner(false), 3000);
+				}
+				setSlugInitialized(true);
+			} catch {}
+		}, 400);
+		return () => window.clearTimeout(handle);
+	}, [urlSlug, profile?.username]);
+
+	// blur 시 즉시 저장
+	const saveSlugIfValid = () => {
+		const slug = urlSlug.trim();
+		if (!/^[a-z0-9_]{3,20}$/.test(slug)) return;
+		const prev = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
+		if (slug !== prev) {
+			try {
+				localStorage.setItem("profileUrlSlug", slug);
+				sessionStorage.setItem("profileUrlSlug", slug);
+				localStorage.setItem("profileUrlSlugVerified", "1");
+				sessionStorage.setItem("profileUrlSlugVerified", "1");
+			} catch {}
+			// 즉시 에러 해제 및 대기 중 검사 무효화
+			setSlugError(null);
+			slugReqSeqRef.current++;
+			setSlugVerified(true);
+			setShowSavedBanner(true);
+			window.setTimeout(() => setShowSavedBanner(false), 3000);
+		}
+	};
+
 	// 마우스 클릭 시(포커스 유지와 무관) 즉시 저장
 	useEffect(() => {
 		const handleMouseDown = () => {
@@ -219,20 +368,6 @@ const MyPageSettingPage: React.FC = () => {
 			// 로컬 저장 변경 시 배너
 			try {
 				let localChanged = false;
-				const comm = communityNickRef.current.trim();
-				const prevComm = localStorage.getItem(scopedKey("communityNickname")) || sessionStorage.getItem(scopedKey("communityNickname")) || "";
-				if (comm !== prevComm) {
-					localStorage.setItem(scopedKey("communityNickname"), comm);
-					sessionStorage.setItem(scopedKey("communityNickname"), comm);
-					localChanged = true;
-				}
-				const slug = slugRef.current.trim();
-				const prevSlug = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
-				if (slug !== prevSlug) {
-					localStorage.setItem("profileUrlSlug", slug);
-					sessionStorage.setItem("profileUrlSlug", slug);
-					localChanged = true;
-				}
 				const one = oneLineRef.current.trim();
 				const prevOne = localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "";
 				if (one !== prevOne) {
@@ -240,21 +375,34 @@ const MyPageSettingPage: React.FC = () => {
 					sessionStorage.setItem(scopedKey("profileOneLine"), one);
 					localChanged = true;
 				}
+									// URL 슬러그 저장
+					const slug = slugRef.current.trim();
+					const prevSlug = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
+					if (slug && slug !== prevSlug && /^[a-z0-9_]{3,20}$/.test(slug)) {
+						localStorage.setItem("profileUrlSlug", slug);
+						sessionStorage.setItem("profileUrlSlug", slug);
+						// 즉시 에러 해제 및 대기 중 검사 무효화
+						setSlugError(null);
+						slugReqSeqRef.current++;
+						localStorage.setItem("profileUrlSlugVerified", "1");
+						sessionStorage.setItem("profileUrlSlugVerified", "1");
+						localChanged = true;
+					}
 				if (localChanged) {
 					setShowSavedBanner(true);
 					window.setTimeout(() => setShowSavedBanner(false), 3000);
+					try { window.dispatchEvent(new Event("profile-one-line-updated")); } catch {}
 				}
 			} catch {}
 		};
 		document.addEventListener("mousedown", handleMouseDown, true);
 		return () => document.removeEventListener("mousedown", handleMouseDown, true);
-	}, [profile, email]);
+	}, [profile, email, slugError]);
 
 	// 입력 변경 핸들러들
-	const onNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => setNickname(e.target.value.slice(0, MAX20));
-	const onSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => setUrlSlug(e.target.value.slice(0, MAX20));
 	const onOneLineChange = (e: React.ChangeEvent<HTMLInputElement>) => setOneLineProfile(e.target.value.slice(0, MAX20));
 	const onBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => setBio(e.target.value);
+	const onSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => setUrlSlug(e.target.value);
 
 	const onConfirmWorkFields = async (values: string[]) => {
 		setWorkFields(values);
@@ -262,8 +410,15 @@ const MyPageSettingPage: React.FC = () => {
 			localStorage.setItem("workFields", JSON.stringify(values));
 			sessionStorage.setItem("workFields", JSON.stringify(values));
 		} catch {}
-		const posId = mapWorkNameToId(values[0]);
-		await persistProfilePartial({ positionId: posId });
+		// 값이 없으면 서버 업데이트 생략
+		if (values.length > 0) {
+			const posId = mapWorkNameToId(values[0]);
+			await persistProfilePartial({ positionId: posId });
+		} else {
+			// 로컬만 변경된 경우에도 사용자 피드백 제공
+			setShowSavedBanner(true);
+			window.setTimeout(() => setShowSavedBanner(false), 3000);
+		}
 		setShowWorkModal(false);
 	};
 	const onConfirmInterestFields = async (values: string[]) => {
@@ -310,24 +465,27 @@ const MyPageSettingPage: React.FC = () => {
 
 							{/* 프로필 + 업로드 */}
 							<div className="flex items-center gap-6 mb-6">
-								<div className="relative w-[100px] h-[100px] group">
-									<div className="w-full h-full rounded-full bg-[#F3F4F6] text-black flex items-center justify-center text-[28px] overflow-hidden">
-										{avatarUrl ? (
-											<img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-										) : (
-											<span>{initialLetter}</span>
+								<div className="w-[120px] flex flex-col items-center">
+									<div className="relative w-[100px] h-[100px] group">
+										<div className="w-full h-full rounded-full bg-[#F3F4F6] text-black flex items-center justify-center text-[28px] overflow-hidden">
+											{avatarUrl ? (
+												<img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+											) : (
+												<span>{initialLetter}</span>
+											)}
+										</div>
+										{avatarUrl && (
+											<button
+												type="button"
+												onClick={handleRemoveImage}
+												className="absolute -top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white rounded-full w-[20px] h-[20px] flex items-center justify-center text-[12px]"
+												aria-label="이미지 제거"
+											>
+												x
+											</button>
 										)}
 									</div>
-									{avatarUrl && (
-										<button
-											type="button"
-											onClick={handleRemoveImage}
-											className="absolute -top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white rounded-full w-[20px] h-[20px] flex items-center justify-center text-[12px]"
-											aria-label="이미지 제거"
-										>
-											×
-										</button>
-									)}
+
 								</div>
 								<div className="flex flex-col">
 									<button type="button" onClick={handleUploadClick} className="h-[36px] px-4 rounded-full border text-[13px] flex items-center gap-2 border-green-500 text-green-500 hover:bg-green-50 w-fit">
@@ -339,42 +497,82 @@ const MyPageSettingPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* 사용자 이름 (서버 닉네임) */}
+							{/* 닉네임 (서버 닉네임) */}
 							<div className="mb-7">
 								<FieldLabel>
 									<span className="inline-flex items-center gap-1">
-										사용자 이름 <span className="text-green-500">*</span>
+										닉네임 <span className="text-green-500">*</span>
 									</span>
 								</FieldLabel>
 								<div className="relative">
-									<input
-										type="text"
-										value={userName}
-										onChange={(e)=>{ setUserName(e.target.value.slice(0, MAX20)); setUserNameError(null); }}
-										className={`w-full h-[55px] py-0 leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${isUserNameEmpty ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
-									/>
+															<input
+							type="text"
+							value={userName}
+							onChange={(e)=>{ setUserName(e.target.value.slice(0, MAX20)); setUserNameError(null); }}
+							onBlur={() => { const v = userNameRef.current.trim(); if (v) checkAndSaveUserName(v); }}
+							className={`w-full h-[55px] py-0 leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${(userInitialized && isUserNameEmpty) ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
+						/>
 									<Counter value={userName.length} />
 								</div>
-								{isUserNameEmpty && (
+								{userInitialized && isUserNameEmpty && (
 									<p className="mt-2 text-[12px] text-[#DB2E2E]">필수 항목입니다.</p>
 								)}
-								{userNameError ? (
+								{userInitialized && userNameError ? (
 									<p className="mt-2 text-[12px] text-[#DB2E2E]">{userNameError}</p>
 								) : null}
 							</div>
 
-							{/* 샌드위치 URL */}
+							{/* 사용자 이름 (읽기 전용) */}
+							<div className="mb-7">
+								<FieldLabel>사용자 이름</FieldLabel>
+								<div className="relative">
+									<input
+										type="text"
+										value={usernameDisplay}
+										readOnly
+										disabled
+										className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] text-[#6B7280]"
+									/>
+								</div>
+							</div>
+
+							{/* 샌드위치 URL (뒷부분 슬러그 편집) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-								<div className="flex rounded-[10px] border border-[#E5E7EB] overflow-hidden h-[55px]">
+								<div className={`flex rounded-[10px] overflow-hidden h-[55px] border ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}>
 									<div className="px-4 flex items-center text-[14px] text-[#6B7280] bg-[#F3F4F6] border-r border-[#E5E7EB] whitespace-nowrap">sandwich.com/</div>
 									<input
 										type="text"
 										value={urlSlug}
 										onChange={onSlugChange}
-										className="flex-1 h-[55px] py-0 leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+										onBlur={async ()=>{
+											saveSlugIfValid();
+											const slug = urlSlug.trim();
+											if (/^[a-z0-9_]{3,20}$/.test(slug)) {
+												try {
+													const res = await UserApi.checkUsername(slug);
+													if (!res.exists || slug === (profile?.username || "")) {
+														await UserApi.updateUsername(slug);
+														const refreshed = await UserApi.getMe();
+														setProfile(refreshed);
+														try { localStorage.setItem("userUsername", slug); sessionStorage.setItem("userUsername", slug); } catch {}
+														setShowSavedBanner(true);
+														window.setTimeout(()=>setShowSavedBanner(false), 3000);
+													} else {
+														setSlugError("이미 사용 중인 주소입니다.");
+													}
+												} catch {}
+											}
+										}}
+										placeholder="URL 입력란"
+										pattern="^[a-z0-9_]{3,20}$"
+										title="소문자/숫자/언더스코어만 입력 가능합니다 (3~20자)"
+										className={`flex-1 h-[55px] py-0 leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white`}
 									/>
 								</div>
+								{slugInitialized && slugError && (
+									<p className="mt-2 text-[12px] text-[#DB2E2E]">{slugError}</p>
+								)}
 							</div>
 
 							{/* 한 줄 프로필 */}
@@ -389,22 +587,6 @@ const MyPageSettingPage: React.FC = () => {
 										className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 									/>
 									<Counter value={oneLineProfile.length} />
-								</div>
-							</div>
-
-							{/* 커뮤니티 닉네임 (가입 닉네임 기본값, 로컬 저장) */}
-							<div className="mb-7">
-								<FieldLabel>커뮤니티 닉네임</FieldLabel>
-								<div className="relative">
-									<input
-										type="text"
-										value={nickname}
-										onChange={onNicknameChange}
-										className={`w-full h-[55px] py-0 leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${isCommunityEmpty ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
-									/>
-									{isCommunityEmpty && (
-										<p className="mt-2 text-[12px] text-[#DB2E2E]">필수 항목입니다.</p>
-									)}
 								</div>
 							</div>
 

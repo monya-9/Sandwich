@@ -34,6 +34,13 @@ import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 // ✅ 모든 import를 최상단으로
 import { initFCM } from "./lib/fcm";
+import { enableRecaptchaV3OnPaths } from "./api/axiosInstance";
+import ProfilePage from "./components/Profile/ProfilePage";
+import WorkTab from "./components/Profile/WorkTab";
+import LikesTab from "./components/Profile/LikesTab";
+import CollectionsTab from "./components/Profile/CollectionsTab";
+import DraftsTab from "./components/Profile/DraftsTab";
+import CareerDetailsPage from "./components/Profile/CareerDetailsPage";
 import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
 import PortfolioSubmitPage from "./pages/challenge/PortfolioSubmitPage";
 import CodeEditPage from "./pages/challenge/CodeEditPage";
@@ -41,6 +48,13 @@ import CodeSubmissionListPage from "./pages/challenge/CodeSubmissionListPage";
 import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
 import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
+
+// ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
+enableRecaptchaV3OnPaths({
+    "/auth/signup": "signup",
+
+});
+
 
 /** /rooms/:id -> /messages/:id (v6 안전 리다이렉트) */
 function RoomToMessagesRedirect() {
@@ -77,6 +91,13 @@ function App() {
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
 
+                                {/* 프로필 페이지 */}
+                                <Route path="/profile" element={<ProfilePage />} />
+                                <Route path="/profile/work" element={<ProfilePage />} />
+                                <Route path="/profile/likes" element={<ProfilePage />} />
+                                <Route path="/profile/collections" element={<ProfilePage />} />
+                                <Route path="/profile/drafts" element={<ProfilePage />} />
+                                <Route path="/profile/careers" element={<CareerDetailsPage />} />
                                 {/* ✅ 챌린지 라우팅 */}
                                 <Route path="/challenge" element={<ChallengeListPage />} />
                                 <Route path="/challenge/code/:id" element={<ChallengeDetailPage />} />
@@ -95,7 +116,6 @@ function App() {
 
                                 {/* (예시) 코드 제출 수정 */}
                                 <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
-
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />

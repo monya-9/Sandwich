@@ -1,3 +1,4 @@
+// src/components/auth/login/LoginForm.tsx
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
@@ -9,36 +10,41 @@ import SNSLogin from "./SNSLogin";
 import LoginActions from "./LoginActions";
 import RecentLogin from "../RecentLogin";
 import api from "../../../api/axiosInstance";
-import { setToken } from "../../../utils/tokenStorage";
+import { setToken, setRefreshToken } from "../../../utils/tokenStorage";
 import { ensureNicknameInStorage } from "../../../utils/profile";
 
 const LoginForm = () => {
     const navigate = useNavigate();
+    const { login } = useContext(AuthContext);
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const { login } = useContext(AuthContext);
+    const [keepLogin, setKeepLogin] = useState(true); // 기본 체크
     const [loginFailed, setLoginFailed] = useState(false);
-
-    const [keepLogin, setKeepLogin] = useState(false);
     const isActive = email.trim() !== "" && password.trim() !== "";
 
     const handleLogin = async () => {
         try {
             const res = await api.post("/auth/login", { email, password });
-            const { accessToken, email: serverEmail } = res.data;
+            const {
+                accessToken,
+                refreshToken,          // ⬅️ 응답에 오면 같이 저장
+                email: serverEmail,
+            } = res.data || {};
 
             // 토큰 저장 (keepLogin=true → localStorage, false → sessionStorage)
             setToken(accessToken, keepLogin);
+            setRefreshToken(refreshToken ?? null, keepLogin); // ⬅️ 중요!
 
             // 이메일 결정 + 저장
             const storage = keepLogin ? localStorage : sessionStorage;
-            const effectiveEmail = (serverEmail as string) || email;
+            const effectiveEmail = serverEmail || email;
             storage.setItem("userEmail", effectiveEmail);
 
-            // 로그인 직후 프로필/닉네임 보강 (→ /api/users/me 호출)
+            // 로그인 직후 프로필/닉네임 보강
             await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
 
-            // 컨텍스트에 '이메일' 주입 (토큰 아님!)
+            // 컨텍스트엔 이메일만
             login(effectiveEmail);
 
             setLoginFailed(false);
@@ -63,7 +69,6 @@ const LoginForm = () => {
                     setPassword={setPassword}
                     isError={loginFailed}
                 />
-
                 <LoginButton onClick={handleLogin} isActive={isActive} />
                 <KeepLoginCheck checked={keepLogin} onChange={setKeepLogin} />
             </div>
