@@ -25,6 +25,19 @@ type UserMini = {
 };
 
 const userMiniCache = new Map<string, UserMini | null>();
+const MAX_CACHE_SIZE = 100; // 최대 캐시 크기
+
+// 캐시 크기 제한 함수
+function cleanupCache() {
+    if (userMiniCache.size > MAX_CACHE_SIZE) {
+        const entries = Array.from(userMiniCache.entries());
+        userMiniCache.clear();
+        // 최신 50개만 유지
+        entries.slice(-50).forEach(([key, value]) => {
+            userMiniCache.set(key, value);
+        });
+    }
+}
 
 const CANDIDATE_USER_PATHS = (id: string) => [
     `users/${id}`,     // 프로젝트에 맞게 여기만 실제 경로로 바꿔줘
@@ -51,10 +64,12 @@ async function fetchUserMini(userId: string | number): Promise<UserMini | null> 
         const got = await tryGet<UserMini>(p);
         if (got) {
             userMiniCache.set(key, got);
+            cleanupCache(); // 캐시 크기 제한
             return got;
         }
     }
     userMiniCache.set(key, null);
+    cleanupCache(); // 캐시 크기 제한
     return null;
 }
 
@@ -104,13 +119,32 @@ const toStr = (v: unknown) => (v == null ? undefined : String(v));
 export async function fetchNotifications(opt: { size?: number; cursor?: string } = {}) {
     const { size = 20, cursor } = opt;
 
+    console.log("[API] Fetching notifications with params:", { size, cursor });
+    
     // baseURL이 "/api"이므로 선행 슬래시 없이!
     const { data } = await api.get<NotificationPageDTO>("notifications", {
         params: { size, cursor },
     });
+    
+    console.log("[API] Notifications response:", data);
+    console.log("[API] Response items count:", data.items?.length || 0);
+    console.log("[API] Response items:", data.items);
+    
+    // 각 아이템의 상세 정보 로그
+    data.items?.forEach((item, index) => {
+        console.log(`[API] Item ${index}:`, {
+            id: item.id,
+            actorNickname: (item as any).actorNickname,
+            actorEmail: (item as any).actorEmail,
+            actorName: (item as any).actorName,
+            extra: (item as any).extra,
+            title: item.title,
+            body: item.body
+        });
+    });
 
     const raws: RawNotification[] = data.items || [];
-    const items: NotifyItem[] = raws.map(toNotifyItem);
+    const items: NotifyItem[] = raws.map(toNotifyItem); // ★ toNotifyItem 함수로 변환하여 extra 필드 생성
 
     // 수화 대상: actorName이 비었거나 "누군가"인데, resource.type === "USER" 인 경우
     const targets: Array<{ idx: number; userId: string }> = [];
@@ -170,7 +204,9 @@ export async function fetchNotifications(opt: { size?: number; cursor?: string }
 
 /** 미읽음 수 조회 */
 export async function fetchUnreadCount() {
+    console.log("[API] Fetching unread count");
     const { data } = await api.get<UnreadCountDTO>("notifications/unread-count");
+    console.log("[API] Unread count response:", data);
     return data;
 }
 
