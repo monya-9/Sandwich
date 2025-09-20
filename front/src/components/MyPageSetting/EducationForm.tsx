@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import SelectDropdown from "./SelectDropdown";
 import { EducationApi } from "../../api/educationApi";
 import { EducationItem } from "./EducationCard";
+import Toast from "../common/Toast";
 
 interface Props {
 	onCancel: () => void;
@@ -23,6 +24,10 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	const [desc, setDesc] = useState("");
 	const [isMain, setIsMain] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 
 	const degrees = ["학사","석사","박사","전문학사"]; 
 	const statuses = ["졸업","재학","휴학","중퇴"]; 
@@ -106,7 +111,10 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 			}
 			onDone();
 		} catch (e) {
-			alert("학력 저장에 실패했습니다.");
+			setErrorToast({
+				visible: true,
+				message: "학력 저장에 실패했습니다."
+			});
 		} finally {
 			setSaving(false);
 		}
@@ -119,7 +127,17 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	const removeLastMajor = () => setMajors(prev => (prev.length > 1 ? prev.slice(0, prev.length - 1) : prev));
 
 	return (
-		<div className="space-y-5">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="space-y-5">
 			{/* 학교 이름 / 학위 */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
@@ -191,6 +209,7 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 				</div>
 			</div>
 		</div>
+		</>
 	);
 };
 

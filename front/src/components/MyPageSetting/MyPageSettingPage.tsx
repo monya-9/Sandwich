@@ -7,6 +7,7 @@ import WorkFieldModal from "./WorkFieldModal";
 import InterestFieldModal from "./InterestFieldModal";
 import SkillFieldModal from "./SkillFieldModal";
 import { positionMap, interestMap } from "../../constants/position";
+import Toast from "../common/Toast";
 
 const MAX20 = 20;
 const MAX_FILE_MB = 10;
@@ -22,6 +23,10 @@ const Counter: React.FC<{ value: number; max?: number }> = ({ value, max = MAX20
 const MyPageSettingPage: React.FC = () => {
 	const { email } = useContext(AuthContext);
 	const scopedKey = (key: string) => (email ? `${key}:${email}` : key);
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 	const initialLetter = useMemo(() => {
 		if (!email || email.length === 0) return "H";
 		const ch = email.trim()[0];
@@ -154,12 +159,18 @@ const MyPageSettingPage: React.FC = () => {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		if (!file.type.startsWith("image/")) {
-			alert("이미지 파일만 업로드할 수 있습니다.");
+			setErrorToast({
+				visible: true,
+				message: "이미지 파일만 업로드할 수 있습니다."
+			});
 			e.target.value = "";
 			return;
 		}
 		if (file.size > MAX_FILE_MB * 1024 * 1024) {
-			alert(`파일 용량은 ${MAX_FILE_MB}MB 이하여야 합니다.`);
+			setErrorToast({
+				visible: true,
+				message: `파일 용량은 ${MAX_FILE_MB}MB 이하여야 합니다.`
+			});
 			e.target.value = "";
 			return;
 		}
@@ -175,7 +186,10 @@ const MyPageSettingPage: React.FC = () => {
 			setAvatarUrl(url);
 			e.target.value = "";
 		} catch (err) {
-			alert("이미지 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
+			setErrorToast({
+				visible: true,
+				message: "이미지 업로드에 실패했습니다. 잠시 후 다시 시도해주세요."
+			});
 		}
 	};
 
@@ -442,7 +456,17 @@ const MyPageSettingPage: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
 				{/* 저장 배너 */}
 				{showSavedBanner && (
@@ -636,6 +660,7 @@ const MyPageSettingPage: React.FC = () => {
 				<SkillFieldModal open={showSkillModal} initial={skillFields as any} onClose={()=>setShowSkillModal(false)} onConfirm={(vals)=>onConfirmSkillFields(vals as any)} />
 			</div>
 		</div>
+		</>
 	);
 };
 
