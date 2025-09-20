@@ -4,7 +4,7 @@ const SearchBar = () => {
     return (
         <>
             {/* PC 검색창 */}
-            <div className="hidden md:flex w-[310px] h-[36px] items-center px-3 border border-black/50 rounded-full text-[14px] text-black/50">
+            <div className="hidden md:flex w-[310px] h-[36px] items-center px-3 border border-black/30 rounded-full text-[14px] text-black/50">
                 <input
                     type="text"
                     placeholder="검색어를 입력하세요"
