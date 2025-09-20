@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import ReactDOM from "react-dom";
 import { FaHeart } from "react-icons/fa";
 import axios from "axios";
 import LikedUsersModal from "./LikedUsersModal";
 import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
+import Toast from "../../common/Toast";
 
 interface LikeActionProps {
   targetType: "PROJECT" | "BOARD" | "COMMENT";
@@ -47,12 +47,6 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     fetchLike();
   }, [targetType, targetId]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   const handleLike = async () => {
     if (!isLoggedIn) {
@@ -95,59 +89,29 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   };
 
   const CheckIcon = (
-    <span
-      className="flex items-center justify-center w-8 h-8 rounded-full mr-3"
-      style={{ background: "#19c37d" }}
-    >
-      <svg width="22" height="22" viewBox="0 0 22 22">
-        <polyline
-          points="5.5,12.5 10,17 17,7.5"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
+    <svg width="16" height="16" viewBox="0 0 22 22">
+      <polyline
+        points="5.5,12.5 10,17 17,7.5"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
-
-  const renderToast =
-    toast &&
-    ReactDOM.createPortal(
-      <div
-        style={{
-          position: "fixed",
-          top: "60px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 9999,
-          background: "#222",
-          color: "#fff",
-          fontFamily: "'Gmarket Sans', sans-serif",
-          fontWeight: 700,
-          borderRadius: 18,
-          boxShadow: "0 2px 18px #0002",
-          padding: "18px 38px",
-          display: "flex",
-          alignItems: "center",
-          gap: 24,
-          fontSize: 20,
-          letterSpacing: "0.02em",
-          minWidth: 340,
-          minHeight: 46,
-        }}
-      >
-        {CheckIcon}
-        {toast === "like"
-          ? "사용자의 작업에 좋아요를 눌렀습니다."
-          : "좋아요를 취소하였습니다."}
-      </div>,
-      document.body
-    );
 
   return (
     <>
-      {renderToast}
+      <Toast
+        visible={!!toast}
+        message={toast === "like" ? "사용자의 작업에 좋아요를 눌렀습니다." : "좋아요를 취소하였습니다."}
+        type="success"
+        size="medium"
+        autoClose={2000}
+        closable={true}
+        onClose={() => setToast(null)}
+        icon={CheckIcon}
+      />
       {showLoginPrompt && (
         <LoginPrompt
           onLoginClick={() => {
