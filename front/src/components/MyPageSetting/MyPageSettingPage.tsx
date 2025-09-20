@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useContext, useRef, useEffect } from "react";
+import React, { useMemo, useState, useContext, useRef, useEffect, useCallback } from "react";
 import { AuthContext } from "../../context/AuthContext";
-import { HiOutlineArrowUpTray, HiCheckCircle } from "react-icons/hi2";
+import { HiOutlineArrowUpTray } from "react-icons/hi2";
 import Sidebar from "./Sidebar";
 import { UserApi, UserProfileResponse } from "../../api/userApi";
 import WorkFieldModal from "./WorkFieldModal";
@@ -22,8 +22,12 @@ const Counter: React.FC<{ value: number; max?: number }> = ({ value, max = MAX20
 
 const MyPageSettingPage: React.FC = () => {
 	const { email } = useContext(AuthContext);
-	const scopedKey = (key: string) => (email ? `${key}:${email}` : key);
+	const scopedKey = useCallback((key: string) => (email ? `${key}:${email}` : key), [email]);
 	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
+	const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
 		visible: false,
 		message: ''
 	});
@@ -69,8 +73,7 @@ const MyPageSettingPage: React.FC = () => {
 	// 서버 프로필 상태
 	const [profile, setProfile] = useState<UserProfileResponse | null>(null);
 
-	// 배너/검증 상태
-	const [showSavedBanner, setShowSavedBanner] = useState(false);
+	// 검증 상태
 	const [userNameError, setUserNameError] = useState<string | null>(null);
 	const userReqSeqRef = useRef(0); // 최신 요청 시퀀스
 
@@ -148,7 +151,8 @@ const MyPageSettingPage: React.FC = () => {
 				setUrlSlug(storedSlug);
 			} catch {}
 		})();
-	}, [email]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [email, scopedKey]);
 
 	const onOpenWorkModal = () => setShowWorkModal(true);
 	const onOpenSkillModal = () => setShowSkillModal(true);
@@ -203,7 +207,7 @@ const MyPageSettingPage: React.FC = () => {
 	};
 
 	// 프로필 부분 업데이트(필드 일부만 변경)
-	const persistProfilePartial = async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>) => {
+	const persistProfilePartial = useCallback(async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>) => {
 		const base = profile;
 		if (!base) return false;
 		await UserApi.updateProfile({
@@ -218,13 +222,16 @@ const MyPageSettingPage: React.FC = () => {
 		});
 		const refreshed = await UserApi.getMe();
 		setProfile(refreshed);
-		setShowSavedBanner(true);
-		window.setTimeout(() => setShowSavedBanner(false), 3000);
+		setSuccessToast({
+			visible: true,
+			message: "설정 내용이 저장되었습니다."
+		});
 		return true;
-	};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// 사용자 이름(닉네임) 검사 + 저장: 전용 PATCH API 사용
-	const checkAndSaveUserName = async (value: string) => {
+	const checkAndSaveUserName = useCallback(async (value: string) => {
 		const trimmed = value.trim();
 		if (!trimmed) return false;
 		const isDuplicate = await UserApi.checkNickname(trimmed);
@@ -263,21 +270,23 @@ const MyPageSettingPage: React.FC = () => {
 			setUserNameError(null);
 			try { localStorage.setItem("userNickname", trimmed); sessionStorage.setItem("userNickname", trimmed); } catch {}
 			window.dispatchEvent(new Event("user-nickname-updated"));
-			setShowSavedBanner(true);
-			window.setTimeout(() => setShowSavedBanner(false), 3000);
+			setSuccessToast({
+				visible: true,
+				message: "설정 내용이 저장되었습니다."
+			});
 			return true;
 		} catch {
 			return false;
 		}
-	};
+	}, [profile]);
 
 	// bio 저장(값이 달라졌을 때만)
-	const checkAndSaveBio = async (value: string) => {
+	const checkAndSaveBio = useCallback(async (value: string) => {
 		const trimmed = value.trim();
 		if (!profile) return false;
 		if ((profile.bio || "") === trimmed) return false;
 		return persistProfilePartial({ bio: trimmed });
-	};
+	}, [profile, persistProfilePartial]);
 
 	// 헬퍼: 이름→ID 매핑
 	const mapWorkNameToId = (name: string | undefined): number => {
@@ -312,7 +321,6 @@ const MyPageSettingPage: React.FC = () => {
 	// 샌드위치 URL 슬러그 실시간(디바운스) 중복/유효성 검사
 	const [slugError, setSlugError] = useState<string | null>(null);
 	const slugReqSeqRef = useRef(0);
-	const [slugVerified, setSlugVerified] = useState(false);
 	const [slugInitialized, setSlugInitialized] = useState(false);
 	useEffect(() => {
 		const current = urlSlug.trim();
@@ -321,7 +329,7 @@ const MyPageSettingPage: React.FC = () => {
 		// 사용자가 이전에 유효성 통과 후 저장한 값이라면(로컬 플래그), 서버 체크를 생략하고 에러를 숨깁니다.
 		try {
 			const verified = localStorage.getItem("profileUrlSlugVerified") === "1" || sessionStorage.getItem("profileUrlSlugVerified") === "1";
-			if (verified) { setSlugError(null); setSlugVerified(true); setSlugInitialized(true); return; }
+			if (verified) { setSlugError(null); setSlugInitialized(true); return; }
 		} catch {}
 		const mySeq = ++slugReqSeqRef.current;
 		const handle = window.setTimeout(async () => {
@@ -342,8 +350,10 @@ const MyPageSettingPage: React.FC = () => {
 					sessionStorage.setItem("profileUrlSlug", current);
 					localStorage.setItem("profileUrlSlugVerified", "1");
 					sessionStorage.setItem("profileUrlSlugVerified", "1");
-					setShowSavedBanner(true);
-					window.setTimeout(() => setShowSavedBanner(false), 3000);
+					setSuccessToast({
+						visible: true,
+						message: "설정 내용이 저장되었습니다."
+					});
 				}
 				setSlugInitialized(true);
 			} catch {}
@@ -366,9 +376,10 @@ const MyPageSettingPage: React.FC = () => {
 			// 즉시 에러 해제 및 대기 중 검사 무효화
 			setSlugError(null);
 			slugReqSeqRef.current++;
-			setSlugVerified(true);
-			setShowSavedBanner(true);
-			window.setTimeout(() => setShowSavedBanner(false), 3000);
+			setSuccessToast({
+				visible: true,
+				message: "설정 내용이 저장되었습니다."
+			});
 		}
 	};
 
@@ -403,15 +414,17 @@ const MyPageSettingPage: React.FC = () => {
 						localChanged = true;
 					}
 				if (localChanged) {
-					setShowSavedBanner(true);
-					window.setTimeout(() => setShowSavedBanner(false), 3000);
+					setSuccessToast({
+						visible: true,
+						message: "설정 내용이 저장되었습니다."
+					});
 					try { window.dispatchEvent(new Event("profile-one-line-updated")); } catch {}
 				}
 			} catch {}
 		};
 		document.addEventListener("mousedown", handleMouseDown, true);
 		return () => document.removeEventListener("mousedown", handleMouseDown, true);
-	}, [profile, email, slugError]);
+	}, [profile, email, slugError, checkAndSaveBio, checkAndSaveUserName, scopedKey]);
 
 	// 입력 변경 핸들러들
 	const onOneLineChange = (e: React.ChangeEvent<HTMLInputElement>) => setOneLineProfile(e.target.value.slice(0, MAX20));
@@ -430,8 +443,10 @@ const MyPageSettingPage: React.FC = () => {
 			await persistProfilePartial({ positionId: posId });
 		} else {
 			// 로컬만 변경된 경우에도 사용자 피드백 제공
-			setShowSavedBanner(true);
-			window.setTimeout(() => setShowSavedBanner(false), 3000);
+			setSuccessToast({
+				visible: true,
+				message: "설정 내용이 저장되었습니다."
+			});
 		}
 		setShowWorkModal(false);
 	};
@@ -466,15 +481,17 @@ const MyPageSettingPage: React.FC = () => {
 				closable={true}
 				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
 			/>
+			<Toast
+				visible={successToast.visible}
+				message={successToast.message}
+				type="success"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+			/>
 			<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				{/* 저장 배너 */}
-				{showSavedBanner && (
-					<div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full bg-black text-white text-[13px] px-3 py-1.5 shadow-lg flex items-center gap-2">
-						<HiCheckCircle className="text-[#22C55E] w-4 h-4" />
-						설정 내용이 저장되었습니다.
-					</div>
-				)}
 				<div className="flex gap-6">
 					{/* 좌측 사이드 카드 */}
 					<aside className="w-[320px] shrink-0">
@@ -580,8 +597,10 @@ const MyPageSettingPage: React.FC = () => {
 														const refreshed = await UserApi.getMe();
 														setProfile(refreshed);
 														try { localStorage.setItem("userUsername", slug); sessionStorage.setItem("userUsername", slug); } catch {}
-														setShowSavedBanner(true);
-														window.setTimeout(()=>setShowSavedBanner(false), 3000);
+														setSuccessToast({
+															visible: true,
+															message: "설정 내용이 저장되었습니다."
+														});
 													} else {
 														setSlugError("이미 사용 중인 주소입니다.");
 													}
