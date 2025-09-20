@@ -8,6 +8,7 @@ import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { addCodeSubmission } from "../../data/Challenge/submissionsDummy";
+import Toast from "../../components/common/Toast";
 
 type CodeSubmitPayload = {
     title: string;
@@ -61,6 +62,10 @@ export default function CodeSubmitPage() {
         note: "",
     });
     const [submitting, setSubmitting] = useState(false);
+    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
 
     // 프리뷰/작성 공통으로 쓰는 더미 상태
     const submissionId: number | null = null;
@@ -82,7 +87,10 @@ export default function CodeSubmitPage() {
                 authorName: "허은진",
                 authorRole: "프론트엔드 개발자",
             });
-            alert("제출이 접수되었습니다.");
+            setSuccessToast({
+                visible: true,
+                message: "제출이 접수되었습니다."
+            });
             nav(`/challenge/code/${id}/submissions`, { replace: true });
         } finally {
             setSubmitting(false);
@@ -90,7 +98,17 @@ export default function CodeSubmitPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
+        <>
+            <Toast
+                visible={successToast.visible}
+                message={successToast.message}
+                type="success"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+            />
+            <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
             <LoginRequiredModal open={loginOpen && !isLoggedIn} onClose={() => setLoginOpen(false)} />
 
             {/* 헤더 */}
@@ -305,5 +323,6 @@ export default function CodeSubmitPage() {
                 </SectionCard>
             )}
         </div>
+        </>
     );
 }

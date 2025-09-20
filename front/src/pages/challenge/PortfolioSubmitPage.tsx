@@ -7,6 +7,7 @@ import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
 import { addPortfolioProject } from "../../data/Challenge/submissionsDummy";
+import Toast from "../../components/common/Toast";
 
 type PortfolioSubmitPayload = {
     title: string;
@@ -39,6 +40,10 @@ export default function PortfolioSubmitPage() {
     useEffect(() => { if (!isLoggedIn) setLoginOpen(true); }, [isLoggedIn]);
 
     const [tab, setTab] = useState<"edit" | "preview">("edit");
+    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
     const [form, setForm] = useState<PortfolioSubmitPayload>({
         title: data.title.replace(/^포트폴리오 챌린지:\s*/, ""),
         repoUrl: data.submitExample?.repoUrl || "",
@@ -64,12 +69,25 @@ export default function PortfolioSubmitPage() {
             teamName: form.teamName?.trim() || undefined,
             authorRole: "포트폴리오",
         });
-        alert("제출이 접수되었습니다.");
+        setSuccessToast({
+            visible: true,
+            message: "제출이 접수되었습니다."
+        });
         nav(`/challenge/portfolio/${id}/vote`, { replace: true });
     };
 
     return (
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
+        <>
+            <Toast
+                visible={successToast.visible}
+                message={successToast.message}
+                type="success"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+            />
+            <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
             <LoginRequiredModal open={loginOpen && !isLoggedIn} onClose={() => setLoginOpen(false)} />
             <div className="mb-4 flex items(center) gap-2">
                 <button
@@ -248,5 +266,6 @@ export default function PortfolioSubmitPage() {
                 </SectionCard>
             </div>
         </div>
+        </>
     );
 }

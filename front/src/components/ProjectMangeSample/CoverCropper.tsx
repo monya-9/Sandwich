@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import Toast from "../common/Toast";
 
 export type HandleType = 'move' | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'scale';
 
@@ -34,6 +35,10 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
   const [boxRect, setBoxRect] = useState({ x: 0, y: 0, w: 120, h: 60 });
   const [dragRect, setDragRect] = useState<{ type: HandleType | null; sx: number; sy: number; start: { x: number; y: number; w: number; h: number } } | null>(null);
   const [activeCrop, setActiveCrop] = useState<'square' | 'rect'>('square');
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const rectRatioRef = useRef(RECT_RATIO); // 고정 3:2
 
   // 공통: 현재 뷰포트에서 최대 스테이지 경계 계산
@@ -344,7 +349,12 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
       const sqBlob = await cropToBlob(boxSq);
       const rtBlob = await cropRectToBlob(boxRect);
       if (!sqBlob || !rtBlob) {
-        try { alert('이미지를 처리할 수 없습니다. 다른 이미지를 시도해주세요.'); } catch {}
+        try { 
+          setErrorToast({
+            visible: true,
+            message: '이미지를 처리할 수 없습니다. 다른 이미지를 시도해주세요.'
+          });
+        } catch {}
         onClose();
         return;
       }
@@ -353,7 +363,12 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
       onCropped(sq, rt);
       onClose();
     } catch (_e) {
-      try { alert('이미지 크롭 중 오류가 발생했습니다.'); } catch {}
+      try { 
+        setErrorToast({
+          visible: true,
+          message: '이미지 크롭 중 오류가 발생했습니다.'
+        });
+      } catch {}
       onClose();
     }
   };
@@ -380,7 +395,17 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
   if (!open) return null;
 
   const modal = (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center isolate" role="dialog" aria-modal="true">
+    <>
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
+      <div className="fixed inset-0 z-[999999] flex items-center justify-center isolate" role="dialog" aria-modal="true">
       <div className="absolute inset-0 z-0 bg-black/60" />
       <div
         className="relative z-10 bg-white w-[800px] max-w-[90%] rounded-xl shadow-2xl ring-1 ring-black/5 p-0 opacity-100"
@@ -430,6 +455,7 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
         </div>
       </div>
     </div>
+    </>
   );
 
   return createPortal(modal, document.body);
