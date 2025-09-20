@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
 
 export interface ToastProps {
   /** 토스트 메시지 */
@@ -77,7 +78,7 @@ const Toast: React.FC<ToastProps> = ({
           minWidth: '200px',
           minHeight: '32px',
           gap: '8px',
-          iconSize: '16px',
+          iconSize: '18px',
         };
       case 'large':
         return {
@@ -86,7 +87,7 @@ const Toast: React.FC<ToastProps> = ({
           minWidth: '340px',
           minHeight: '46px',
           gap: '24px',
-          iconSize: '24px',
+          iconSize: '28px',
         };
       case 'medium':
       default:
@@ -96,13 +97,30 @@ const Toast: React.FC<ToastProps> = ({
           minWidth: '280px',
           minHeight: '40px',
           gap: '12px',
-          iconSize: '20px',
+          iconSize: '22px',
         };
     }
   };
 
   const typeStyles = getTypeStyles();
   const sizeStyles = getSizeStyles();
+
+  // 타입별 기본 아이콘
+  const getDefaultIcon = () => {
+    if (icon) return icon; // 사용자가 직접 아이콘을 제공한 경우
+    
+    switch (type) {
+      case 'success':
+        return <CheckCircle2 size={parseInt(sizeStyles.iconSize)} />;
+      case 'error':
+        return <XCircle size={parseInt(sizeStyles.iconSize)} />;
+      case 'warning':
+        return <AlertTriangle size={parseInt(sizeStyles.iconSize)} />;
+      case 'info':
+      default:
+        return <Info size={parseInt(sizeStyles.iconSize)} />;
+    }
+  };
 
   const toastElement = (
     <div
@@ -121,6 +139,7 @@ const Toast: React.FC<ToastProps> = ({
         padding: sizeStyles.padding,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: sizeStyles.gap,
         fontSize: sizeStyles.fontSize,
         letterSpacing: '0.02em',
@@ -131,24 +150,22 @@ const Toast: React.FC<ToastProps> = ({
       }}
       onClick={closable ? onClose : undefined}
     >
-      {icon && (
-        <div
-          style={{
-            width: sizeStyles.iconSize,
-            height: sizeStyles.iconSize,
-            borderRadius: '50%',
-            background: typeStyles.iconBg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: `${parseInt(sizeStyles.iconSize) * 0.6}px`,
-            fontWeight: 'bold',
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
-      )}
+      <div
+        style={{
+          width: sizeStyles.iconSize,
+          height: sizeStyles.iconSize,
+          borderRadius: '50%',
+          background: typeStyles.iconBg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: `${parseInt(sizeStyles.iconSize) * 0.6}px`,
+          fontWeight: 'bold',
+          flexShrink: 0,
+        }}
+      >
+        {getDefaultIcon()}
+      </div>
       <span>{message}</span>
     </div>
   );

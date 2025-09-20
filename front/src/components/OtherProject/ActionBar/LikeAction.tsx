@@ -95,17 +95,6 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     }
   };
 
-  const CheckIcon = (
-    <svg width="16" height="16" viewBox="0 0 22 22">
-      <polyline
-        points="5.5,12.5 10,17 17,7.5"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
 
   return (
     <>
@@ -117,7 +106,6 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
         autoClose={2000}
         closable={true}
         onClose={() => setToast(null)}
-        icon={CheckIcon}
       />
       <Toast
         visible={errorToast.visible}
