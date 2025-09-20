@@ -99,7 +99,7 @@ export function useNotificationStream(opt: Options) {
             try {
                 const x = await fetchUnreadCount();
                 if (alive) {
-                    console.log("[NOTIFICATION] Unread count:", x.unreadCount);
+                    // 로그 제거
                     setUnread(x.unreadCount);
                 }
             } catch (error) {
@@ -188,7 +188,6 @@ export function useNotificationStream(opt: Options) {
     /* ---------------- 드롭다운 열릴 때 첫 페이지 로드 ---------------- */
     useEffect(() => {
         if (dropdownOpen && !initialized) {
-            console.log("[NOTIFICATION] Dropdown opened, loading notifications");
             // loadFirst 함수를 직접 호출하지 않고 인라인으로 처리
             (async () => {
                 if (!enabled || !dropdownOpen) return;
@@ -198,13 +197,6 @@ export function useNotificationStream(opt: Options) {
                 setLoading(true);
                 try {
                     const page = await fetchNotifications({ size: pageSize });
-                    console.log("[NOTIFICATION] Raw server data:", page.items.length, "items");
-                    console.log("[NOTIFICATION] Current idSet:", Array.from(idSet.current));
-                    console.log("[NOTIFICATION] Server item IDs:", page.items.map(item => item.id));
-                    
-                    // 서버 데이터를 우선시: 중복 제거하지 않고 모든 서버 데이터 표시
-                    console.log("[NOTIFICATION] Using all server data:", page.items.length, "items");
-                    console.log("[NOTIFICATION] Read status:", page.items.map(item => ({ id: item.id, read: item.read })));
                     
                     // 서버 데이터의 ID들을 idSet에 추가 (WebSocket 중복 방지용)
                     page.items.forEach((it) => idSet.current!.add(it.id));

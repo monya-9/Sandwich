@@ -6,10 +6,6 @@
  * - 포커스/네비게이션 처리
  */
 
-/* eslint-env serviceworker */
-/* eslint-disable no-restricted-globals, no-redeclare, no-undef */
-/* global firebase */
-
 importScripts('https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.1.0/firebase-messaging-compat.js');
 
@@ -39,7 +35,7 @@ const toAbsUrl = (raw) => {
 function normalizePath(path) {
     try {
         const u = new URL(path, APP_ORIGIN);
-        const m = u.pathname.match(/^\/rooms\/([^/#?]+)/);
+        const m = u.pathname.match(/^\/rooms\/([^\/?#]+)/);
         if (m && m[1]) u.pathname = `/messages/${m[1]}`;
         return u.toString();
     } catch { return toAbsUrl(path); }
@@ -49,23 +45,17 @@ function normalizePath(path) {
 function decideDeepLink(d) {
     if (d.deepLink) return d.deepLink;
 
-    const t = (d.event || d.nType || d.type || '').toUpperCase();
+    const t = (d.nType || d.type || '').toUpperCase();
     switch (t) {
-        case 'MESSAGE_CREATED':
         case 'MESSAGE_NEW':
         case 'MESSAGE':
             if (d.roomId) return `/messages/${d.roomId}`;
             return '/messages';
-        case 'LIKE_CREATED':
         case 'LIKE':
             return d.targetUrl || '/notifications';
-        case 'COMMENT_CREATED':
         case 'COMMENT':
             return d.targetUrl || '/notifications';
-        case 'FOLLOW_CREATED':
         case 'FOLLOW':
-            return d.targetUrl || '/notifications';
-        case 'COLLECTION_SAVED':
             return d.targetUrl || '/notifications';
         default:
             return d.targetUrl || '/';
@@ -74,47 +64,36 @@ function decideDeepLink(d) {
 
 // 제목/본문 결정: 타입별로 보기 좋게
 function decideTitleBody(d) {
-    const t = (d.event || d.nType || d.type || '').toUpperCase();
+    const t = (d.nType || d.type || '').toUpperCase();
     const sender = d.senderName || '';
     const preview = d.preview || d.commentPreview || d.body || '';
 
-    // 제목 (백엔드에서 이미 완성된 제목이 있으면 우선 사용)
-    let title = d.title;
-    if (!title) {
-        switch (t) {
-            case 'MESSAGE_CREATED':
-            case 'MESSAGE_NEW':
-            case 'MESSAGE':
-                title = '새 메시지';
-                break;
-            case 'LIKE_CREATED':
-            case 'LIKE':
-                title = '새 좋아요';
-                break;
-            case 'COMMENT_CREATED':
-            case 'COMMENT':
-                title = '새 댓글';
-                break;
-            case 'FOLLOW_CREATED':
-            case 'FOLLOW':
-                title = '새 팔로우';
-                break;
-            case 'COLLECTION_SAVED':
-                title = '컬렉션에 저장됨';
-                break;
-            default:
-                title = '새 알림';
-                break;
-        }
+    // 제목
+    let title;
+    switch (t) {
+        case 'MESSAGE_NEW':
+        case 'MESSAGE':
+            title = '새 메시지';
+            break;
+        case 'LIKE':
+            title = '새 좋아요';
+            break;
+        case 'COMMENT':
+            title = '새 댓글';
+            break;
+        case 'FOLLOW':
+            title = '새 팔로우';
+            break;
+        default:
+            title = d.title || '새 알림';
+            break;
     }
 
-    // 본문 (백엔드에서 이미 완성된 본문이 있으면 우선 사용)
-    let body = d.body;
-    if (!body) {
-        if (sender && preview) body = `${sender}: ${preview}`;
-        else if (preview)      body = preview;
-        else                   body = '알림이 도착했어요';
-    }
+    // 본문
+    let body;
+    if (sender && preview) body = `${sender}: ${preview}`;
+    else if (preview)      body = preview;
+    else                   body = d.body || '알림이 도착했어요';
 
     return { title, body };
 }
@@ -139,9 +118,7 @@ async function show(payload) {
         (d.notifId && `n-${d.notifId}`) ||
         (d.messageId && `msg-${d.messageId}`) ||
         (d.roomId && `room-${d.roomId}`) ||
-        (d.event && d.resource?.id && `${d.event}-${d.resource.id}`) ||
-        (d.event && `event-${d.event}`) ||
-        `sandwich-${Date.now()}`;
+        'sandwich-noti';
 
     const options = {
         body,

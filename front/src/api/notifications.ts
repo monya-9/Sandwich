@@ -126,22 +126,7 @@ export async function fetchNotifications(opt: { size?: number; cursor?: string }
         params: { size, cursor },
     });
     
-    console.log("[API] Notifications response:", data);
-    console.log("[API] Response items count:", data.items?.length || 0);
-    console.log("[API] Response items:", data.items);
-    
-    // 각 아이템의 상세 정보 로그
-    data.items?.forEach((item, index) => {
-        console.log(`[API] Item ${index}:`, {
-            id: item.id,
-            actorNickname: (item as any).actorNickname,
-            actorEmail: (item as any).actorEmail,
-            actorName: (item as any).actorName,
-            extra: (item as any).extra,
-            title: item.title,
-            body: item.body
-        });
-    });
+    // 로그 제거 - 깔끔한 콘솔을 위해
 
     const raws: RawNotification[] = data.items || [];
     const items: NotifyItem[] = raws.map(toNotifyItem); // ★ toNotifyItem 함수로 변환하여 extra 필드 생성
@@ -204,9 +189,7 @@ export async function fetchNotifications(opt: { size?: number; cursor?: string }
 
 /** 미읽음 수 조회 */
 export async function fetchUnreadCount() {
-    console.log("[API] Fetching unread count");
     const { data } = await api.get<UnreadCountDTO>("notifications/unread-count");
-    console.log("[API] Unread count response:", data);
     return data;
 }
 
