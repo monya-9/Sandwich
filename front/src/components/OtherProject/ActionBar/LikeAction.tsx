@@ -15,6 +15,10 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(0);
   const [toast, setToast] = useState<null | "like" | "unlike">(null);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showLikedUsers, setShowLikedUsers] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -81,7 +85,10 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
       if (e.response?.status === 401) {
         setShowLoginPrompt(true);
       } else {
-        alert("좋아요 처리 중 오류가 발생했습니다.");
+        setErrorToast({
+          visible: true,
+          message: "좋아요 처리 중 오류가 발생했습니다."
+        });
       }
     } finally {
       setLoading(false);
@@ -111,6 +118,15 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
         closable={true}
         onClose={() => setToast(null)}
         icon={CheckIcon}
+      />
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
       />
       {showLoginPrompt && (
         <LoginPrompt
