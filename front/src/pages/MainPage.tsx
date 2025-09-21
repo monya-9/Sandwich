@@ -34,7 +34,7 @@ const MainPage = () => {
   // 업로드 시간 필터 함수
   const filterByUploadTime = (project: Project) => {
     const now = new Date();
-    const uploadDate = new Date(project.uploadDate);
+    const uploadDate = new Date(project.uploadDate || '2025-01-01');
     const diffHours = (now.getTime() - uploadDate.getTime()) / (1000 * 60 * 60);
 
     switch (selectedUploadTime) {
@@ -54,7 +54,7 @@ const MainPage = () => {
   // 카테고리 + 업로드 시간 필터 적용
   const filteredProjects: Project[] = dummyProjects.filter((project) => {
     const matchesCategory =
-      selectedCategory === '전체' || project.categories.includes(selectedCategory);
+      selectedCategory === '전체' || project.categories?.includes(selectedCategory);
     const matchesUploadTime = filterByUploadTime(project);
     return matchesCategory && matchesUploadTime;
   });
@@ -62,14 +62,14 @@ const MainPage = () => {
   // 정렬 로직 적용
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     if (selectedSort === '최신순') {
-      return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
+      return new Date(b.uploadDate || '2025-01-01').getTime() - new Date(a.uploadDate || '2025-01-01').getTime();
     }
     if (selectedSort === '추천순') {
-      return b.likes - a.likes;
+      return (b.likes || 0) - (a.likes || 0);
     }
     if (selectedSort === '샌드위치 픽') {
-      const scoreA = a.likes * 2 + a.comments * 1.5 + a.views * 0.5;
-      const scoreB = b.likes * 2 + b.comments * 1.5 + b.views * 0.5;
+      const scoreA = (a.likes || 0) * 2 + (a.comments || 0) * 1.5 + (a.views || 0) * 0.5;
+      const scoreB = (b.likes || 0) * 2 + (b.comments || 0) * 1.5 + (b.views || 0) * 0.5;
       return scoreB - scoreA;
     }
     return 0;

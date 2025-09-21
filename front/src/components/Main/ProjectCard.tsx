@@ -13,10 +13,12 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [imgErr, setImgErr] = useState(false);
     const [triedAltExt, setTriedAltExt] = useState(false);
-    const [src, setSrc] = useState(() => resolveCover(project, { position: indexInList }));
+    const [src, setSrc] = useState(() => project.coverUrl || resolveCover(project, { position: indexInList }));
 
-    const author = dummyUsers.find((user) => user.id === project.authorId);
-    const initial = author?.name.charAt(0).toUpperCase() || '?';
+    // DB 데이터는 username, 더미데이터는 authorId로 사용자 정보 제공
+    const username = project.username || (project.authorId ? dummyUsers.find(user => user.id === project.authorId)?.name : null) || '알 수 없음';
+    const initial = username.charAt(0).toUpperCase();
+    
 
     const handleError = () => {
         if (!triedAltExt) {
@@ -39,12 +41,12 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
                 <div className="relative w-full aspect-[4/3] bg-gray-200">
                     {imgErr ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                            <span className="text-sm text-gray-500">{project.title.slice(0, 14)}</span>
+                            <span className="text-sm text-gray-500">{(project.title || '프로젝트').slice(0, 14)}</span>
                         </div>
                     ) : (
                         <img
                             src={src}
-                            alt={project.title}
+                            alt={project.title || '프로젝트'}
                             className="absolute inset-0 w-full h-full object-cover"
                             loading="lazy"
                             onError={handleError}
@@ -65,12 +67,12 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
                     <div className="w-6 h-6 rounded-full bg-gray-300 text-xs font-semibold flex items-center justify-center text-black">
                         {initial}
                     </div>
-                    <span className="text-sm text-black">{author?.name || '알 수 없음'}</span>
+                    <span className="text-sm text-black">{username}</span>
                 </div>
                 <div className="text-xs text-gray-600 flex gap-3">
-                    <span>👁 {project.views}</span>
-                    <span>♥ {project.likes}</span>
-                    <span>💬 {project.comments}</span>
+                    <span>👁 {project.views || 0}</span>
+                    <span>♥ {project.likes || 0}</span>
+                    <span>💬 {project.comments || 0}</span>
                 </div>
             </div>
         </div>
