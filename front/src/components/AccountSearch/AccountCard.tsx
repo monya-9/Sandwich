@@ -21,7 +21,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
     <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
       {/* 프로필 헤더 - 스크린샷처럼 좌측 정렬 */}
       <div className="flex items-start space-x-3 mb-3">
-        {/* 프로필 이미지 */}
+        {/* 프로필 이미지 - 위 드롭다운과 동일한 스타일 */}
         <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
           {avatarUrl ? (
             <img 
@@ -30,7 +30,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold text-lg">
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-700 font-bold text-lg">
               {getInitial()}
             </div>
           )}
