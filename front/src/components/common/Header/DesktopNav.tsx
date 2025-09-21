@@ -39,7 +39,10 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             (typeof window !== "undefined" &&
                 (localStorage.getItem(k) || sessionStorage.getItem(k))) || "";
         const nick = getItem("userNickname")?.trim();
-        const user = getItem("userUsername")?.trim();
+        // 계정별 스코프 username 우선
+        const userEmail = getItem("userEmail");
+        const scopedKey = userEmail ? `userUsername:${userEmail}` : "userUsername";
+        const user = getItem(scopedKey)?.trim() || getItem("userUsername")?.trim();
         if (nick) return nick;
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];

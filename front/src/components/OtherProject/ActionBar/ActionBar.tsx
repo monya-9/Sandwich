@@ -28,7 +28,7 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
   return (
     <aside className="flex flex-col items-center gap-4">
       <ProfileAction targetUserId={project.ownerId} userName={project.owner} />
-      <SuggestAction />
+      <SuggestAction targetUserId={project.ownerId} />
       <LikeAction targetType="PROJECT" targetId={project.id} />
       <CollectionAction />
       <CommentAction onClick={onCommentClick} />

@@ -44,6 +44,7 @@ import CodeSubmissionListPage from "./pages/challenge/CodeSubmissionListPage";
 import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
 import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -121,7 +122,7 @@ function App() {
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />
                             <Route path="project/sample" element={<ProjectMangeSampleForm />} />
 
-                            <Route path="*" element={<Navigate to="/" replace />} />
+                            <Route path="*" element={<NotFoundPage />} />
                         </Routes>
                     </BrowserRouter>
                 </MessagesProvider>
