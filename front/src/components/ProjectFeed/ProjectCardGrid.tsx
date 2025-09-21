@@ -10,13 +10,15 @@ interface ProjectCardGridProps {
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
+  onClearSearch?: () => void;
 }
 
 export const ProjectCardGrid: React.FC<ProjectCardGridProps> = ({
   projects,
   isLoading,
   error,
-  onRefresh
+  onRefresh,
+  onClearSearch
 }) => {
   // 로딩 상태
   if (isLoading && projects.length === 0) {
@@ -46,7 +48,7 @@ export const ProjectCardGrid: React.FC<ProjectCardGridProps> = ({
         title="프로젝트가 없습니다"
         description="검색 조건을 변경하거나 다른 키워드로 검색해보세요."
         actionLabel="전체 프로젝트 보기"
-        onAction={onRefresh}
+        onAction={onClearSearch || onRefresh}
       />
     );
   }

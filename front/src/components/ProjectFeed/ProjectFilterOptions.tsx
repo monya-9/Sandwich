@@ -39,19 +39,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between">
-      {/* 검색 결과 요약 */}
-      <div className="flex items-center gap-4">
-        {filters.q && (
-          <h1 className="text-2xl font-bold text-gray-900">
-            '{filters.q}'에 대한 검색 결과
-          </h1>
-        )}
-        <p className="text-gray-600">
-          {totalElements.toLocaleString()}개의 포트폴리오를 발견했습니다.
-        </p>
-      </div>
-
+    <div className="flex items-center justify-end">
       {/* 필터 옵션들 */}
       <div className="flex items-center gap-4">
         {/* 팔로우 회원만 */}

@@ -62,7 +62,10 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
     searchParams.append('sort', sort);
   }
 
-  const response = await api.get(`/projects?${searchParams.toString()}`);
+  const url = `/projects?${searchParams.toString()}`;
+  console.log('API 호출:', url); // 디버깅용 로그
+  const response = await api.get(url);
+  console.log('API 응답:', response.data); // 디버깅용 로그
   return response.data;
 };
 

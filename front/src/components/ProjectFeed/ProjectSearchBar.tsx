@@ -1,5 +1,6 @@
 // 프로젝트 검색바 컴포넌트
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { SearchTypeDropdown } from './SearchTypeDropdown';
 import { SortDropdown } from './SortDropdown';
@@ -23,7 +24,16 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   sortType,
   onSortChange
 }) => {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(currentQuery);
+
+  // URL 파라미터에서 검색어 읽기
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, [searchParams]);
 
   // Enter 키 처리 (검색 실행)
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -36,6 +46,12 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   }, []);
+
+  // 검색어 초기화
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    onSearch('');
+  }, [onSearch]);
 
   // 검색 타입 변경은 props로 받은 함수 사용
 
@@ -51,9 +67,21 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
             onChange={handleQueryChange}
             onKeyPress={handleKeyPress}
             placeholder="프로젝트를 검색해보세요..."
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
             disabled={isLoading}
           />
+          {/* X 버튼 */}
+          {searchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              type="button"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 

@@ -10,11 +10,13 @@ import { useState } from 'react';
 interface ProjectFeedContainerProps {
   searchType: 'PORTFOLIO' | 'ACCOUNT';
   onSearchTypeChange: (type: 'PORTFOLIO' | 'ACCOUNT') => void;
+  initialSearchTerm?: string;
 }
 
 const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({ 
   searchType, 
-  onSearchTypeChange 
+  onSearchTypeChange,
+  initialSearchTerm = ''
 }) => {
   const {
     projects,
@@ -26,10 +28,18 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
     clearFilters,
     searchProjects,
     refresh
-  } = useProjectFeed();
+  } = useProjectFeed({}, initialSearchTerm);
 
   // 정렬 타입 상태
   const [sortType, setSortType] = useState<'latest' | 'popular' | 'recommended'>('recommended');
+
+  // 검색어 초기화 함수
+  const handleClearSearch = () => {
+    const clearedFilters = { ...filters, q: undefined, page: 0 };
+    setFilters(clearedFilters);
+    // URL도 업데이트
+    window.history.pushState({}, '', '/search');
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -38,7 +48,7 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
         <div className="max-w-7xl mx-auto">
           <ProjectSearchBar 
             onSearch={searchProjects}
-            currentQuery={filters.q || ''}
+            currentQuery={filters.q || initialSearchTerm}
             isLoading={isLoading}
             searchType={searchType}
             onSearchTypeChange={onSearchTypeChange}
@@ -56,11 +66,24 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
 
       {/* 메인 콘텐츠 */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* 검색 결과 텍스트 */}
+        {filters.q && (
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              '{filters.q}'에 대한 검색 결과
+            </h1>
+            <p className="text-gray-600">
+              {totalElements.toLocaleString()}개의 포트폴리오를 발견했습니다.
+            </p>
+          </div>
+        )}
+        
         <ProjectCardGrid 
           projects={projects}
           isLoading={isLoading}
           error={error}
           onRefresh={refresh}
+          onClearSearch={handleClearSearch}
         />
         
         {/* 페이지네이션 */}
