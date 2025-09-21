@@ -25,7 +25,7 @@ export const useAccountSearch = () => {
           email: 'lee@example.com', 
           avatarUrl: null, 
           isVerified: true, 
-          position: '백엔드 개발자',
+          position: { id: 1, name: '백엔드 개발자' },
           projects: [
             { id: 1, title: 'Spring Boot API', description: 'REST API 개발', thumbnailUrl: null },
             { id: 2, title: 'Database 설계', description: 'PostgreSQL 설계', thumbnailUrl: null },
@@ -38,7 +38,7 @@ export const useAccountSearch = () => {
           email: 'lee2@example.com', 
           avatarUrl: null, 
           isVerified: true, 
-          position: '프런트엔드 개발자',
+          position: { id: 2, name: '프런트엔드 개발자' },
           projects: [
             { id: 4, title: 'React App', description: 'React 웹앱', thumbnailUrl: null },
             { id: 5, title: 'Vue.js 프로젝트', description: 'Vue.js 개발', thumbnailUrl: null },
@@ -51,7 +51,7 @@ export const useAccountSearch = () => {
           email: 'lee3@example.com', 
           avatarUrl: null, 
           isVerified: true, 
-          position: '인공지능 개발자',
+          position: { id: 3, name: '인공지능 개발자' },
           projects: [
             { id: 7, title: 'ML 모델', description: '머신러닝 모델', thumbnailUrl: null },
             { id: 8, title: 'Deep Learning', description: '딥러닝 프로젝트', thumbnailUrl: null }
@@ -63,7 +63,7 @@ export const useAccountSearch = () => {
           email: 'kim@example.com', 
           avatarUrl: null, 
           isVerified: true, 
-          position: '데이터 사이언티스트',
+          position: { id: 4, name: '데이터 사이언티스트' },
           projects: [
             { id: 9, title: '데이터 분석', description: 'Python 분석', thumbnailUrl: null },
             { id: 10, title: '시각화', description: '차트 생성', thumbnailUrl: null },

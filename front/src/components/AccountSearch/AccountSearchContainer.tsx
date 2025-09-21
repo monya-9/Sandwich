@@ -56,7 +56,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="계정 검색 (닉네임, 소개, 스킬, 포지션, 관심사)"
-                className="w-full px-4 py-3 pl-12 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 pl-12 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             </div>

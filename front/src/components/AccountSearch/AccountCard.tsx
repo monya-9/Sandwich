@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AccountSearchResult, highlightSearchTerm } from '../../api/accounts';
 
 interface AccountCardProps {
@@ -8,6 +9,7 @@ interface AccountCardProps {
 
 const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
   const { id, nickname, avatarUrl, isVerified, email, position, projects } = account;
+  const navigate = useNavigate();
 
   // 이메일에서 첫 글자 추출 (이메일이 있으면 이메일, 없으면 닉네임)
   const getInitial = () => {
@@ -17,10 +19,15 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
     return nickname.charAt(0).toUpperCase();
   };
 
+  // 프로필 클릭 시 해당 사용자 프로필로 이동
+  const handleProfileClick = () => {
+    navigate(`/profile/${id}`);
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
-      {/* 프로필 헤더 - 스크린샷처럼 좌측 정렬 */}
-      <div className="flex items-start space-x-3 mb-3">
+      {/* 프로필 헤더 - 스크린샷처럼 좌측 정렬, 클릭 가능 */}
+      <div className="flex items-start space-x-3 mb-3 cursor-pointer" onClick={handleProfileClick}>
         {/* 프로필 이미지 - 위 드롭다운과 동일한 스타일 */}
         <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
           {avatarUrl ? (
@@ -38,7 +45,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
 
         {/* 사용자 정보 */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 mb-1">
+          <h3 className="text-base font-semibold text-gray-900 mb-1 hover:text-blue-600 transition-colors">
             <span 
               dangerouslySetInnerHTML={{ 
                 __html: highlightSearchTerm(nickname, searchTerm) 
@@ -46,7 +53,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
             />
           </h3>
           <p className="text-sm text-gray-600">
-            {position || (isVerified ? '인증된 사용자' : '일반 사용자')}
+            {position?.name || (isVerified ? '인증된 사용자' : '일반 사용자')}
           </p>
         </div>
       </div>

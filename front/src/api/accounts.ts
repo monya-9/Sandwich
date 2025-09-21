@@ -9,6 +9,12 @@ export interface ProjectInfo {
   thumbnailUrl: string | null;
 }
 
+// 포지션 정보 타입 (기존 userApi에서 가져옴)
+export interface PositionDto {
+  id: number;
+  name: string;
+}
+
 // 계정 검색 결과 타입 (백엔드 AccountSearchItem에 맞춤)
 export interface AccountSearchResult {
   id: number;
@@ -16,7 +22,7 @@ export interface AccountSearchResult {
   email?: string;  // 추가: 이메일 필드
   avatarUrl: string | null;
   isVerified: boolean;
-  position?: string;  // 추가: 포지션 필드
+  position?: PositionDto;  // 포지션 객체로 변경
   projects?: ProjectInfo[];  // 추가: 프로젝트 정보
 }
 
