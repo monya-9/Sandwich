@@ -12,9 +12,27 @@ public class ProjectListItemResponse {
     private final String coverUrl;
     private final Boolean isTeam;
     private final String username;
-    private String shareUrl;       // 예: https://sandwich.com/테스트유저1/1
-    private String qrImageUrl;     // S3에 업로드된 QR 이미지 주소
+    private final String shareUrl;       // 예: https://sandwich.com/테스트유저1/1
+    private final String qrImageUrl;     // S3에 업로드된 QR 이미지 주소
+    private final Owner owner;
 
+
+    @Getter
+    public static class Owner {
+        private final Long id;
+        private final String nickname;  // Profile.nickname 우선
+        private final String email;
+        private final String avatarUrl; // Profile.profileImage
+        private final String username;
+
+        public Owner(User u) {
+            this.id = u.getId();
+            this.nickname = u.getNickname();
+            this.email = u.getEmail();
+            this.avatarUrl = u.getProfileImageUrl();
+            this.username = u.getUsername();
+        }
+    }
 
     public ProjectListItemResponse(Project project) {
         this.id = project.getId();
@@ -22,12 +40,18 @@ public class ProjectListItemResponse {
         this.description = project.getDescription();
         this.coverUrl = project.getCoverUrl();
         this.isTeam = project.getIsTeam();
-
-        this.username = project.getUser().isDeleted()
-                ? "탈퇴한 사용자"
-                : project.getUser().getUsername();
-
         this.shareUrl = project.getShareUrl();
         this.qrImageUrl = project.getQrImageUrl();
+
+        User ownerEntity = project.getUser();
+        boolean deleted = (ownerEntity != null && Boolean.TRUE.equals(ownerEntity.isDeleted()));
+
+        // 프런트 요구: username 그대로, 탈퇴 사용자는 표기만 변경
+        this.username = (ownerEntity == null)
+                ? null
+                : (deleted ? "탈퇴한 사용자" : ownerEntity.getUsername());
+
+        // 탈퇴 계정의 민감정보 노출 방지: owner 블록은 null
+        this.owner = (ownerEntity == null || deleted) ? null : new Owner(ownerEntity);
     }
 }
