@@ -244,6 +244,89 @@ export async function sendAttachment(roomId: number, file: File): Promise<Server
     return uploadAttachment(roomId, file);
 }
 
+/** 메시지 범위 기반 PNG 스크린샷 */
+export async function downloadMessageRangePNG(
+    roomId: number,
+    fromId: number,
+    toId: number,
+    opts?: { width?: number; preset?: "default" | "compact"; scale?: 1 | 2 | 3; theme?: "light" | "dark" }
+) {
+    const width = opts?.width || 960;
+    const preset = opts?.preset || "default";
+    const scale = opts?.scale || 2;
+    const theme = opts?.theme || "light";
+
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    const headers: Record<string, string> = {
+        'Accept': 'image/png'
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const qs = `?fromId=${fromId}&toId=${toId}&width=${width}&preset=${preset}&scale=${scale}&theme=${theme}`;
+    const url = `/api/messages/${roomId}/screenshot.png${qs}`;
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`PNG 스크린샷 요청 실패 (${res.status}): ${body || "알 수 없음"}`);
+    }
+
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename\*?=(?:UTF-8''|")?([^;"']+)/i.exec(cd);
+    const filename = (m && decodeURIComponent(m[1])) || `room-${roomId}_${fromId}-${toId}@${scale}x.png`;
+
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(urlObj);
+}
+
+/** 메시지 범위 기반 PDF 스크린샷 */
+export async function downloadMessageRangePDF(
+    roomId: number,
+    fromId: number,
+    toId: number,
+    opts?: { width?: number; preset?: "default" | "compact"; theme?: "light" | "dark" }
+) {
+    const width = opts?.width || 960;
+    const preset = opts?.preset || "default";
+    const theme = opts?.theme || "light";
+
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    const headers: Record<string, string> = {
+        'Accept': 'application/pdf'
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const qs = `?fromId=${fromId}&toId=${toId}&width=${width}&preset=${preset}&theme=${theme}`;
+    const url = `/api/messages/${roomId}/screenshot.pdf${qs}`;
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`PDF 스크린샷 요청 실패 (${res.status}): ${body || "알 수 없음"}`);
+    }
+
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename\*?=(?:UTF-8''|")?([^;"']+)/i.exec(cd);
+    const filename = (m && decodeURIComponent(m[1])) || `room-${roomId}_${fromId}-${toId}.pdf`;
+
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(urlObj);
+}
+
 /** (옵션) 대화 캡처 */
 export async function downloadRoomScreenshot(
     roomId: number,
