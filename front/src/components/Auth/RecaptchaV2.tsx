@@ -131,7 +131,8 @@ const RecaptchaV2 = forwardRef<RecaptchaV2Handle, Props>(function RecaptchaV2(
                 }
             } catch {}
             widgetIdRef.current = null;
-            if (rootRef.current) rootRef.current.innerHTML = "";
+            const currentRoot = rootRef.current;
+            if (currentRoot) currentRoot.innerHTML = "";
         };
         // theme/size만 의존 → 콜백/클래스 변경으로 재초기화 안 함
     }, [theme, size]);

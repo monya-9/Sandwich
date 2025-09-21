@@ -4,10 +4,15 @@ import { AuthContext } from '../../../context/AuthContext';
 import DesktopNav from './DesktopNav';
 import MobileNav from './MobileNav';
 import SidebarMenu from './SidebarMenu';
+import Toast from '../Toast';
 
 const Header = () => {
     const { logout } = useContext(AuthContext);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
     const navigate = useNavigate();
 
     // 화면 크기 커지면 메뉴 자동 닫기
@@ -44,12 +49,25 @@ const Header = () => {
         // 프론트 상태 초기화
         logout();
         localStorage.removeItem('accessToken');
-        alert('로그아웃 되었습니다');
+        setSuccessToast({
+            visible: true,
+            message: '로그아웃 되었습니다'
+        });
         navigate('/');
     };
 
     return (
-        <header className="w-full border-b-[1.5px] border-[#068334] font-gmarket bg-white fixed top-0 left-0 z-50">
+        <>
+            <Toast
+                visible={successToast.visible}
+                message={successToast.message}
+                type="success"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+            />
+            <header className="w-full border-b-[1.5px] border-[#068334] font-gmarket bg-white fixed top-0 left-0 z-50">
             <div className="w-full px-6 py-3 flex items-center justify-between">
                 {/* PC 전용 네비 */}
                 <div className="hidden md:flex w-full">
@@ -68,6 +86,7 @@ const Header = () => {
                 onLogout={handleLogout}
             />
         </header>
+        </>
     );
 };
 

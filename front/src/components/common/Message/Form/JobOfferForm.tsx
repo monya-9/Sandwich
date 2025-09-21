@@ -1,5 +1,6 @@
 import React from "react";
 import { sendJobOffer, type JobOfferPayload } from "../../../../api/message.presets";
+import Toast from "../../Toast";
 
 type Props = {
     targetUserId: number;
@@ -14,6 +15,14 @@ const JobOfferForm: React.FC<Props> = ({ targetUserId, onSent }) => {
         description: "",
     });
     const [loading, setLoading] = React.useState(false);
+    const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
+    const [successToast, setSuccessToast] = React.useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.currentTarget;
@@ -22,22 +31,53 @@ const JobOfferForm: React.FC<Props> = ({ targetUserId, onSent }) => {
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.companyName.trim()) return alert("회사 이름을 입력해 주세요.");
+        if (!form.companyName.trim()) {
+            setErrorToast({
+                visible: true,
+                message: "회사 이름을 입력해 주세요."
+            });
+            return;
+        }
         setLoading(true);
         try {
             await sendJobOffer(targetUserId, form);
             onSent?.();
-            alert("채용 제안을 보냈어요.");
+            setSuccessToast({
+                visible: true,
+                message: "채용 제안을 보냈어요."
+            });
             setForm({ companyName: "", salary: "", location: "", description: "" });
         } catch (err: any) {
-            alert(err?.response?.data?.message || "전송에 실패했어요.");
+            setErrorToast({
+                visible: true,
+                message: err?.response?.data?.message || "전송에 실패했어요."
+            });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <form onSubmit={submit} className="space-y-3">
+        <>
+            <Toast
+                visible={errorToast.visible}
+                message={errorToast.message}
+                type="error"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+            />
+            <Toast
+                visible={successToast.visible}
+                message={successToast.message}
+                type="success"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+            />
+            <form onSubmit={submit} className="space-y-3">
             <input name="companyName" value={form.companyName} onChange={onChange} placeholder="회사 이름" className="w-full border rounded px-3 py-2" />
             <input name="salary" value={form.salary} onChange={onChange} placeholder="연봉 (예: 4,000 - 6,000만원)" className="w-full border rounded px-3 py-2" />
             <input name="location" value={form.location} onChange={onChange} placeholder="근무 위치" className="w-full border rounded px-3 py-2" />
@@ -46,6 +86,7 @@ const JobOfferForm: React.FC<Props> = ({ targetUserId, onSent }) => {
                 {loading ? "전송 중..." : "채용 제안 보내기"}
             </button>
         </form>
+        </>
     );
 };
 

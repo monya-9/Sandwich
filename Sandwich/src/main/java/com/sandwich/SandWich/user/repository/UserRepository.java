@@ -29,6 +29,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
         """)
     Optional<User> findByEmailWithDetails(@Param("email") String email);
 
+    @Query("""
+        SELECT u FROM User u
+        LEFT JOIN FETCH u.profile
+        LEFT JOIN FETCH u.userPosition up
+        LEFT JOIN FETCH up.position
+        LEFT JOIN FETCH u.interests ui
+        LEFT JOIN FETCH ui.interest
+        WHERE u.id = :id AND u.isDeleted = false
+        """)
+    Optional<User> findByIdWithDetails(@Param("id") Long id);
 
     @Query("SELECT u FROM User u WHERE u.id = :id AND u.isDeleted = false")
     Optional<User> findByIdIfNotDeleted(@Param("id") Long id);

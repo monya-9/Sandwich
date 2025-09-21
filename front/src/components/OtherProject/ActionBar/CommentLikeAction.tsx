@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import ReactDOM from "react-dom";
 import axios from "axios";
 import LikedUsersModal from "./LikedUsersModal";
+import Toast from "../../common/Toast";
 
 interface CommentLikeActionProps {
   commentId: number;
@@ -11,6 +11,10 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(0);
   const [toast, setToast] = useState<null | "like" | "unlike">(null);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showLikedUsers, setShowLikedUsers] = useState(false);
 
@@ -51,7 +55,10 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
 
   const handleLike = async () => {
     if (!isLoggedIn) {
-      alert("로그인이 필요합니다.");
+      setErrorToast({
+        visible: true,
+        message: "로그인이 필요합니다."
+      });
       return;
     }
     if (loading) return;
@@ -60,7 +67,10 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
     try {
       const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) {
-        alert("로그인이 필요합니다.");
+        setErrorToast({
+          visible: true,
+          message: "로그인이 필요합니다."
+        });
         return;
       }
 
@@ -80,9 +90,15 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
     } catch (e: any) {
       console.error("댓글 좋아요 처리 실패:", e);
       if (e.response?.status === 401) {
-        alert("로그인이 필요합니다.");
+        setErrorToast({
+          visible: true,
+          message: "로그인이 필요합니다."
+        });
       } else {
-        alert("좋아요 처리 중 오류가 발생했습니다.");
+        setErrorToast({
+          visible: true,
+          message: "좋아요 처리 중 오류가 발생했습니다."
+        });
       }
     } finally {
       setLoading(false);
@@ -90,55 +106,39 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
   };
 
   const CheckIcon = (
-    <span
-      className="flex items-center justify-center w-6 h-6 rounded-full mr-2"
-      style={{ background: "#19c37d" }}
-    >
-      <svg width="14" height="14" viewBox="0 0 22 22">
-        <polyline
-          points="5.5,12.5 10,17 17,7.5"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
+    <svg width="16" height="16" viewBox="0 0 22 22">
+      <polyline
+        points="5.5,12.5 10,17 17,7.5"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 
-  const renderToast = toast && ReactDOM.createPortal(
-    <div
-      style={{
-        position: "fixed",
-        top: "60px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 9999,
-        background: "#222",
-        color: "#fff",
-        fontFamily: "'Gmarket Sans', sans-serif",
-        fontWeight: 700,
-        borderRadius: 18,
-        boxShadow: "0 2px 18px #0002",
-        padding: "12px 24px",
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        fontSize: 16,
-        letterSpacing: "0.02em",
-        minWidth: 280,
-        minHeight: 40,
-      }}
-    >
-      {CheckIcon}
-      {toast === "like" ? "댓글에 좋아요를 눌렀습니다." : "좋아요를 취소하였습니다."}
-    </div>,
-    document.body
-  );
 
   return (
     <>
-      {renderToast}
+      <Toast
+        visible={!!toast}
+        message={toast === "like" ? "댓글에 좋아요를 눌렀습니다." : "좋아요를 취소하였습니다."}
+        type="success"
+        size="medium"
+        autoClose={2000}
+        closable={true}
+        onClose={() => setToast(null)}
+        icon={CheckIcon}
+      />
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
       <LikedUsersModal
         isOpen={showLikedUsers}
         onClose={() => setShowLikedUsers(false)}

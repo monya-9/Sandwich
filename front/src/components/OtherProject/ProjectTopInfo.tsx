@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import ReactDOM from "react-dom";
 import LoginPrompt from "./LoginPrompt";
+import Toast from "../common/Toast";
 
 type Props = {
   projectName: string;
@@ -14,33 +14,13 @@ type Props = {
 export default function ProjectTopInfo({ projectName, userName, intro, ownerId }: Props) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const navigate = useNavigate();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  useEffect(() => {
-    if (!document.getElementById("toast-style")) {
-      const style = document.createElement("style");
-      style.id = "toast-style";
-      style.innerHTML = `
-      .follow-toast {
-        position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-        background: #222; color: #fff; font-size: 1.2rem;
-        border-radius: 20px; padding: 18px 38px; z-index: 9999;
-        box-shadow: 0px 2px 12px rgba(0,0,0,0.13);
-        display: flex; align-items: center; gap: 24px;
-        font-family: 'Gmarket Sans', sans-serif;
-      }
-      .toast-check {
-        display: flex; align-items: center; justify-content: center;
-        width: 46px; height: 46px; border-radius: 50%;
-        background: #46ce6b; font-size: 2rem;
-      }
-      .follow-toast.unfollow { background: #222; }
-      .follow-toast.unfollow .toast-check { background: #F6323E; }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
@@ -63,11 +43,6 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     })();
   }, [ownerId]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -97,7 +72,10 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     if (!ensureLogin()) return;
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) {
-      alert("대상 사용자를 확인할 수 없습니다.");
+      setErrorToast({
+        visible: true,
+        message: "대상 사용자를 확인할 수 없습니다."
+      });
       return;
     }
     try {
@@ -123,46 +101,63 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
         setShowLoginPrompt(true);
         return;
       }
-      alert("팔로우 처리 중 오류가 발생했습니다.");
+      setErrorToast({
+        visible: true,
+        message: "팔로우 처리 중 오류가 발생했습니다."
+      });
     }
   };
 
-  const renderToast = toast && ReactDOM.createPortal(
-    <div className={`follow-toast${toast === "unfollow" ? " unfollow" : ""}`}>
-      <span className="toast-check">
-        <svg width="24" height="24" viewBox="0 0 24 24">
-          <polyline points="20 6 9 17 4 12" fill="none" stroke="#fff" strokeWidth="3"/>
-        </svg>
-      </span>
-      {toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."}
-    </div>,
-    document.body
+  const CheckIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <polyline points="20 6 9 17 4 12" fill="none" stroke="#fff" strokeWidth="3"/>
+    </svg>
   );
 
   return (
-    <div className="w-full flex items-start gap-4 mb-8">
-      {renderToast}
-      {showLoginPrompt && (
+    <>
+      <Toast
+        visible={!!toast}
+        message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."}
+        type={toast === "follow" ? "success" : "info"}
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setToast(null)}
+        icon={CheckIcon}
+      />
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
+      <div className="w-full flex items-start gap-4 mb-8">
+        {showLoginPrompt && (
         <LoginPrompt
           onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
           onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
           onClose={() => setShowLoginPrompt(false)}
         />
-      )}
-      <div className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0" />
-      <div>
-        <h1 className="text-2xl font-bold text-black">{projectName}</h1>
-        <div className="flex items-center gap-2 text-gray-600 text-base mt-1">
-          <span>{userName}</span>
-          <span
-            className="font-bold text-green-700 ml-2 cursor-pointer hover:underline"
-            onClick={handleToggleFollow}
-          >
-            {isFollowing ? "팔로잉" : "팔로우"}
-          </span>
+        )}
+        <div className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0" />
+        <div>
+          <h1 className="text-2xl font-bold text-black">{projectName}</h1>
+          <div className="flex items-center gap-2 text-gray-600 text-base mt-1">
+            <span>{userName}</span>
+            <span
+              className="font-bold text-green-700 ml-2 cursor-pointer hover:underline"
+              onClick={handleToggleFollow}
+            >
+              {isFollowing ? "팔로잉" : "팔로우"}
+            </span>
+          </div>
+          <div className="text-gray-500 text-base mt-1">{intro}</div>
         </div>
-        <div className="text-gray-500 text-base mt-1">{intro}</div>
       </div>
-    </div>
+    </>
   );
 }

@@ -13,6 +13,7 @@ import { createProject, ProjectRequest } from "../../api/projectApi";
 import { useNavigate } from "react-router-dom";
 import ProjectDetailsModal from "./ProjectDetailsModal";
 import ProjectPreviewModal from "./ProjectPreviewModal";
+import Toast from "../common/Toast";
 import SettingsPanel from "./SettingsPanel";
 import RightPanelActions from "./RightPanelActions";
 
@@ -666,7 +667,13 @@ export default function ProjectMangeSampleForm() {
 		const url = window.prompt('새 동영상 URL (YouTube/Vimeo)');
 		if (!url) return;
 		const embedUrl = normalizeVideoUrl(url);
-		if (!embedUrl) { window.alert('지원하지 않는 형식입니다.'); return; }
+		if (!embedUrl) { 
+			setErrorToast({
+				visible: true,
+				message: '지원하지 않는 형식입니다.'
+			});
+			return; 
+		}
 		iframe.src = embedUrl;
 	};
 
@@ -684,7 +691,13 @@ export default function ProjectMangeSampleForm() {
 			let u = rawUrl.trim();
 			if (!u) return;
 			const embedUrl = normalizeVideoUrl(u);
-			if (!embedUrl) { window.alert('지원하지 않는 동영상 URL 형식입니다. YouTube 또는 Vimeo 링크를 입력해주세요.'); return; }
+			if (!embedUrl) { 
+				setErrorToast({
+					visible: true,
+					message: '지원하지 않는 동영상 URL 형식입니다. YouTube 또는 Vimeo 링크를 입력해주세요.'
+				});
+				return; 
+			}
 			insertEmbedAsBlock('video', embedUrl);
 		} catch {}
 	};
@@ -863,6 +876,10 @@ export default function ProjectMangeSampleForm() {
 	const navigate = useNavigate();
 	const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 
 	const handleSubmit = async () => {
 		if (!hasContent) return;
@@ -872,7 +889,10 @@ export default function ProjectMangeSampleForm() {
 			return;
 		}
 		if (isJwtExpired(token)) {
-			window.alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+			setErrorToast({
+				visible: true,
+				message: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.'
+			});
 			navigate('/login');
 			return;
 		}
@@ -890,7 +910,17 @@ export default function ProjectMangeSampleForm() {
 	};
 
 	return (
-		<div className="min-h-screen font-gmarket relative pt-[76px] md:pt-[92px]">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="min-h-screen font-gmarket relative pt-[76px] md:pt-[92px]">
 			<style>{`
 				.pm-sample-editor { width: 100%; }
 				.pm-sample-editor .ql-toolbar { border-radius: 10px 10px 0 0; }
@@ -1197,6 +1227,7 @@ export default function ProjectMangeSampleForm() {
 				<ProjectPreviewModal open={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} projectName={""} category="UI/UX" coverUrl={previewCoverUrl} backgroundColor={backgroundColor} contentGapPx={contentGapPx} rawHtml={previewHtml} />
 			</main>
 		</div>
+		</>
 	);
 }
 

@@ -1,45 +1,147 @@
 package com.sandwich.SandWich.message.service;
 
-import com.sandwich.SandWich.common.exception.exceptiontype.MessageRoomForbiddenException;
-import com.sandwich.SandWich.common.exception.exceptiontype.MessageRoomNotFoundException;
+import com.microsoft.playwright.*;
+import com.sandwich.SandWich.common.exception.exceptiontype.InvalidRangeException;
+import com.sandwich.SandWich.common.exception.exceptiontype.ScreenshotTooLargeException;
+import com.sandwich.SandWich.common.exception.exceptiontype.*;
 import com.sandwich.SandWich.message.attach.repository.AttachmentMetadataRepository;
 import com.sandwich.SandWich.message.attach.storage.StorageService;
+import com.sandwich.SandWich.message.domain.Message;
+import com.sandwich.SandWich.message.dto.MessageType;
 import com.sandwich.SandWich.message.repository.MessageRepository;
 import com.sandwich.SandWich.message.repository.MessageRoomRepository;
+import com.sandwich.SandWich.message.screenshot.config.ScreenshotProperties;
 import com.sandwich.SandWich.message.util.ChatScreenshotHtmlRenderer;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.microsoft.playwright.*;
+
+import java.time.ZoneId;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class MessageScreenshotService {
+
     private final MessageRoomRepository roomRepo;
     private final MessageRepository messageRepo;
     private final AttachmentMetadataRepository attachmentMetadataRepository;
     private final StorageService storageService;
     private final Browser browser;
-    private static final com.fasterxml.jackson.databind.ObjectMapper M = new com.fasterxml.jackson.databind.ObjectMapper();
+    private final ScreenshotProperties props;
 
-
+    private static final com.fasterxml.jackson.databind.ObjectMapper M =
+            new com.fasterxml.jackson.databind.ObjectMapper();
     @Transactional(readOnly = true)
-    public byte[] screenshotRoom(User me, Long roomId, Integer width, String theme, java.time.ZoneId zone) {
+    public byte[] screenshotRoom(User me, Long roomId, Integer width, String theme, ZoneId zone) {
         var room = roomRepo.findById(roomId).orElseThrow(MessageRoomNotFoundException::new);
         Long u1 = room.getUser1().getId(), u2 = room.getUser2().getId();
         if (!me.getId().equals(u1) && !me.getId().equals(u2)) throw new MessageRoomForbiddenException();
 
         var list = messageRepo.findAllByRoomIdOrderByCreatedAtAsc(roomId);
+        var thumbDataUrls = buildThumbDataUrls(list);
 
-        // ★ 메시지ID -> 썸네일 data URL 매핑 (없으면 키만 있고 값 null)
-        java.util.Map<Long, String> thumbDataUrls = new java.util.HashMap<>();
-        for (var m : list) {
-            if (m.getType() != com.sandwich.SandWich.message.dto.MessageType.ATTACHMENT) continue;
+        int w = (width != null ? width : 900);
+        String th = (theme == null ? "light" : theme);
+
+        String html = ChatScreenshotHtmlRenderer.buildHtml(list, me.getId(), w, th, zone, thumbDataUrls);
+
+        try (BrowserContext context = browser.newContext(
+                new Browser.NewContextOptions().setViewportSize(w, 800))) {
+
+            Page page = context.newPage();
+            page.setDefaultTimeout(props.getTimeoutMs());
+
+            page.setContent(html, new Page.SetContentOptions()
+                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.NETWORKIDLE));
+
+            return page.screenshot(new Page.ScreenshotOptions()
+                    .setFullPage(true)
+                    .setType(com.microsoft.playwright.options.ScreenshotType.PNG));
+        }
+    }
+
+    // 뷰포트 범위 PNG
+    @Transactional(readOnly = true)
+    public byte[] screenshotRangePng(Long meId, Long roomId, long fromId, long toId,
+                                     int width, String theme, int scale, ZoneId zone) {
+
+        validateRange(fromId, toId);
+        ensureParticipant(meId, roomId);
+
+        var list = messageRepo.findRangeAscNotDeletedWithSender(roomId, fromId, toId);
+        if (list.isEmpty()) {
+            throw new MessageNotFoundException();
+        }
+
+        if (list.size() > props.getMaxCount()) {
+            throw new ScreenshotTooLargeException(list.size(), props.getMaxCount());
+        }
+
+        var thumbs = buildThumbDataUrls(list);
+        String html = ChatScreenshotHtmlRenderer.buildHtml(list, meId, width, theme, zone, thumbs);
+
+        try (BrowserContext context = browser.newContext(
+                new Browser.NewContextOptions().setViewportSize(width, 800))) {
+
+            Page page = context.newPage();
+            page.setDefaultTimeout(props.getTimeoutMs());
+            page.setContent(html, new Page.SetContentOptions()
+                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.NETWORKIDLE));
+
+            return page.screenshot(new Page.ScreenshotOptions()
+                    .setFullPage(true)
+                    .setScale(com.microsoft.playwright.options.ScreenshotScale.CSS)
+                    .setType(com.microsoft.playwright.options.ScreenshotType.PNG));
+        }
+    }
+
+    // 뷰포트 범위 PDF
+    @Transactional(readOnly = true)
+    public byte[] screenshotRangePdf(Long meId, Long roomId, long fromId, long toId,
+                                     int width, String theme, ZoneId zone) {
+
+        validateRange(fromId, toId);
+        ensureParticipant(meId, roomId);
+
+        var list = messageRepo.findRangeAscNotDeletedWithSender(roomId, fromId, toId);
+        if (list.isEmpty()) throw new NotFoundException("No messages in range");
+        if (list.size() > props.getMaxCount()) {
+            throw new PayloadTooLargeException("Too many messages in range (" + list.size() + " > " + props.getMaxCount() + ")");
+        }
+
+        var thumbs = buildThumbDataUrls(list);
+        String html = ChatScreenshotHtmlRenderer.buildHtml(list, meId, width, theme, zone, thumbs);
+
+        try (BrowserContext context = browser.newContext(
+                new Browser.NewContextOptions().setViewportSize(width, 800))) {
+
+            Page page = context.newPage();
+            page.setDefaultTimeout(props.getTimeoutMs());
+            page.setContent(html, new Page.SetContentOptions()
+                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.NETWORKIDLE));
+
+            return page.pdf(new Page.PdfOptions().setPrintBackground(true));
+        }
+    }
+
+    // ───── 내부 유틸 ─────
+    private void ensureParticipant(Long meId, Long roomId) {
+        if (!roomRepo.isParticipant(roomId, meId)) throw new MessageRoomForbiddenException();
+    }
+
+    private void validateRange(long fromId, long toId) {
+        if (fromId <= 0 || toId <= 0 || fromId > toId) throw new InvalidRangeException();
+    }
+
+    private Map<Long, String> buildThumbDataUrls(List<Message> list) {
+        Map<Long, String> map = new HashMap<>();
+        for (Message m : list) {
+            if (m.getType() != MessageType.ATTACHMENT) continue;
             String mime = jsonVal(m.getPayload(), "mime");
             if (mime == null || !mime.startsWith("image/")) continue;
 
-            // payload.url: "/api/files/{filename}" 형태 → filename 추출
             String url = jsonVal(m.getPayload(), "url");
             if (url == null) continue;
             int idx = url.lastIndexOf('/');
@@ -51,44 +153,17 @@ public class MessageScreenshotService {
             var md = mdOpt.get();
             if (md.getThumbnailKey() == null) continue;
 
-            // 썸네일 바이트 로드 → data URL
-            byte[] bytes = storageService.load(md.getThumbnailKey());  // Local/S3 구현 필요(이미 있으실 거예요)
+            byte[] bytes = storageService.load(md.getThumbnailKey());
             if (bytes == null || bytes.length == 0) continue;
 
-            String b64 = java.util.Base64.getEncoder().encodeToString(bytes);
-            // ⬇썸네일 키 확장자로 MIME 추론
-            String mime2 = "image/jpeg";
             String keyLower = md.getThumbnailKey().toLowerCase();
-            if (keyLower.endsWith(".png"))  mime2 = "image/png";
-            else if (keyLower.endsWith(".webp")) mime2 = "image/webp";
-
-            String dataUrl = "data:" + mime2 + ";base64," + b64;
-            thumbDataUrls.put(m.getId(), dataUrl);
+            String outMime = keyLower.endsWith(".png") ? "image/png"
+                    : keyLower.endsWith(".webp") ? "image/webp"
+                    : "image/jpeg";
+            String b64 = Base64.getEncoder().encodeToString(bytes);
+            map.put(m.getId(), "data:" + outMime + ";base64," + b64);
         }
-
-        int w = (width != null ? width : 900);
-        String th = (theme == null ? "light" : theme);
-
-        // ★ buildHtml에 썸네일 매핑을 넘김
-        String html = ChatScreenshotHtmlRenderer.buildHtml(
-                list, me.getId(), w, th, zone, thumbDataUrls);
-
-        try (BrowserContext context = browser.newContext(
-                new Browser.NewContextOptions().setViewportSize(w, 800))) {
-
-            Page page = context.newPage();
-            page.setDefaultTimeout(15_000); // 타임아웃 가드 (권장)
-
-            page.setContent(html, new Page.SetContentOptions()
-                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.NETWORKIDLE));
-
-            byte[] png = page.screenshot(new Page.ScreenshotOptions()
-                    .setFullPage(true)
-                    .setType(com.microsoft.playwright.options.ScreenshotType.PNG));
-
-            return png;
-        }
-
+        return map;
     }
 
     private static String jsonVal(String json, String key) {
@@ -101,5 +176,4 @@ public class MessageScreenshotService {
             return null;
         }
     }
-
 }

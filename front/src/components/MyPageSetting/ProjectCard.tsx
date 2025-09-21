@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, MoreHorizontal, Pencil, X } from "lucide-react";
 import { CareerProjectApi, CareerProjectPayload } from "../../api/careerProjectApi";
+import Toast from "../common/Toast";
+import ConfirmModal from "../common/ConfirmModal";
 
 export interface ProjectItem extends CareerProjectPayload {
 	id: number;
@@ -25,6 +27,14 @@ const Tooltip: React.FC<{ label: string; children: React.ReactNode }> = ({ label
 const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [isPrivate, setIsPrivate] = useState(false); // UI 전용 비공개 상태
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
+	const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; commentId: number | null }>({
+		visible: false,
+		commentId: null
+	});
 	const start = `${item.startYear}.${item.startMonth}`;
 	const end = item.endYear == null ? "진행중" : `${item.endYear}.${item.endMonth ?? ""}`.replace(/\.$/, "");
 
@@ -43,18 +53,42 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 			await CareerProjectApi.setRepresentative((item as any).id);
 			onUpdated && onUpdated();
 		} catch (e) {
-			alert("대표 설정에 실패했습니다.");
+			setErrorToast({
+				visible: true,
+				message: "대표 설정에 실패했습니다."
+			});
 		}
 	};
 
-	const onDelete = async () => {
-		if (!window.confirm("정말 삭제하시겠습니까?")) return;
+	const onDeleteClick = () => {
+		setDeleteConfirm({
+			visible: true,
+			commentId: (item as any).id
+		});
+	};
+
+	const onDeleteConfirm = async () => {
 		try {
 			await CareerProjectApi.remove((item as any).id);
 			onUpdated && onUpdated();
 		} catch (e) {
-			alert("삭제에 실패했습니다.");
+			setErrorToast({
+				visible: true,
+				message: "삭제에 실패했습니다."
+			});
+		} finally {
+			setDeleteConfirm({
+				visible: false,
+				commentId: null
+			});
 		}
+	};
+
+	const onDeleteCancel = () => {
+		setDeleteConfirm({
+			visible: false,
+			commentId: null
+		});
 	};
 
 	const onTogglePrivate = () => {
@@ -77,7 +111,27 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const starCls = isPrivate ? textMuted : ((item as any).isRepresentative ? "text-[#21B284] fill-[#21B284]" : "text-[#6B7280]");
 
 	return (
-		<div className="w-full py-6">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<ConfirmModal
+				visible={deleteConfirm.visible}
+				title="프로젝트 삭제"
+				message="정말 삭제하시겠습니까?"
+				confirmText="삭제"
+				cancelText="취소"
+				confirmButtonColor="red"
+				onConfirm={onDeleteConfirm}
+				onCancel={onDeleteCancel}
+			/>
+			<div className="w-full py-6">
 			<div className="min-w-0">
 				<div className="flex items-center justify-between">
 					<div className={roleCls}>{item.role}</div>
@@ -101,7 +155,7 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA]" onClick={()=>{ setMenuOpen(false); onEdit && onEdit(item); }}>
 										<Pencil size={16} className="text-[#6B7280]" /> 수정하기
 									</button>
-									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] text-[#EF4444]" onClick={()=>{ setMenuOpen(false); onDelete(); }}>
+									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] text-[#EF4444]" onClick={()=>{ setMenuOpen(false); onDeleteClick(); }}>
 										<X size={16} /> 삭제하기
 									</button>
 								</div>
@@ -116,6 +170,7 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 				) : null}
 			</div>
 		</div>
+		</>
 	);
 };
 

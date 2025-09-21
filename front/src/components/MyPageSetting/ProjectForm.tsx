@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MonthSelect from "./MonthSelect";
 import { CareerProjectApi } from "../../api/careerProjectApi";
+import Toast from "../common/Toast";
 
 interface InitialValues {
 	title?: string;
@@ -31,6 +32,10 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 	const [desc, setDesc] = useState("");
 	const [isMain, setIsMain] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 
 	useEffect(() => {
 		if (!initial) return;
@@ -91,14 +96,27 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 			}
 			onDone();
 		} catch (e) {
-			alert("프로젝트 저장에 실패했습니다.");
+			setErrorToast({
+				visible: true,
+				message: "프로젝트 저장에 실패했습니다."
+			});
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	return (
-		<div className="space-y-5">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="space-y-5">
 			{/* 프로젝트 이름 / 역할 */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
@@ -157,6 +175,7 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 				</div>
 			</div>
 		</div>
+		</>
 	);
 };
 

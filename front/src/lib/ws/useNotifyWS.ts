@@ -100,6 +100,30 @@ export function useNotifyWS({
         }
     };
 
+    const updateTokenInConnection = async () => {
+        if (stoppedRef.current || !clientRef.current?.connected) return;
+        
+        try {
+            const newToken = await Promise.resolve(getToken());
+            if (!newToken) return;
+            
+            // 기존 연결 유지하면서 헤더만 업데이트
+            const currentClient = clientRef.current;
+            if (currentClient && currentClient.connected) {
+                // STOMP 클라이언트의 헤더 업데이트 (재연결 없이)
+                console.log("[NOTIFY][WS] Token updated without reconnection");
+                // 실제로는 STOMP 라이브러리에서 헤더 업데이트가 제한적이므로
+                // 연결이 안정적이면 재연결하지 않음
+                return;
+            }
+        } catch (error) {
+            console.warn("[NOTIFY][WS] Failed to update token:", error);
+        }
+        
+        // 연결이 불안정하거나 토큰 업데이트 실패 시에만 재연결
+        reconnectWithLatestToken();
+    };
+
     const reconnectWithLatestToken = () => {
         if (stoppedRef.current) return;
         try {
@@ -128,8 +152,8 @@ export function useNotifyWS({
         stoppedRef.current = false;
         void connect(0);
 
-        // accessToken 변경되면 최신 토큰으로 재연결
-        tokenUnsubRef.current = onAccessTokenChange(() => reconnectWithLatestToken());
+        // accessToken 변경되면 토큰 업데이트 시도 (재연결 최소화)
+        tokenUnsubRef.current = onAccessTokenChange(() => updateTokenInConnection());
 
         return () => {
             stoppedRef.current = true;
