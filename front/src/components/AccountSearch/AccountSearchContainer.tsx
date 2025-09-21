@@ -22,7 +22,6 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
     error,
     searchTerm,
     currentPage,
-    totalElements,
     totalPages,
     handleSearch,
     handlePageChange

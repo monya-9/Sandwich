@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  getRecentSearches, 
+  saveRecentSearch, 
+  deleteRecentSearch, 
+  clearAllRecentSearches,
+  RecentSearchItem 
+} from '../../../api/recentSearch';
 
 const SearchBar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [recentSearches, setRecentSearches] = useState<string[]>([]);
+    const [recentSearches, setRecentSearches] = useState<RecentSearchItem[]>([]);
     const navigate = useNavigate();
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -13,38 +20,58 @@ const SearchBar = () => {
 
     // 최근 검색어 로드
     useEffect(() => {
-        const saved = localStorage.getItem('recentSearches');
-        if (saved) {
-            setRecentSearches(JSON.parse(saved));
-        }
+        const loadRecentSearches = async () => {
+            try {
+                const searches = await getRecentSearches();
+                setRecentSearches(searches);
+            } catch (error) {
+                console.error('최근 검색어 로드 실패:', error);
+                setRecentSearches([]);
+            }
+        };
+        
+        loadRecentSearches();
     }, []);
 
     // 최근 검색어 저장
-    const saveRecentSearch = (term: string) => {
+    const handleSaveRecentSearch = async (term: string) => {
         if (!term.trim()) return;
-        
-        const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 10);
-        setRecentSearches(updated);
-        localStorage.setItem('recentSearches', JSON.stringify(updated));
+        try {
+            await saveRecentSearch(term, 'PORTFOLIO');
+            // 저장 후 최근 검색어 다시 로드
+            const searches = await getRecentSearches();
+            setRecentSearches(searches);
+        } catch (error) {
+            console.error('최근 검색어 저장 실패:', error);
+        }
     };
 
     // 검색어 삭제
-    const deleteRecentSearch = (term: string) => {
-        const updated = recentSearches.filter(s => s !== term);
-        setRecentSearches(updated);
-        localStorage.setItem('recentSearches', JSON.stringify(updated));
+    const handleDeleteRecentSearch = async (id: number) => {
+        try {
+            await deleteRecentSearch(id);
+            // 삭제 후 최근 검색어 다시 로드
+            const searches = await getRecentSearches();
+            setRecentSearches(searches);
+        } catch (error) {
+            console.error('최근 검색어 삭제 실패:', error);
+        }
     };
 
-    // 모든 최근 검색어 삭제
-    const clearAllRecentSearches = () => {
-        setRecentSearches([]);
-        localStorage.removeItem('recentSearches');
+    // 모든 검색어 삭제
+    const handleClearAllRecentSearches = async () => {
+        try {
+            await clearAllRecentSearches();
+            setRecentSearches([]);
+        } catch (error) {
+            console.error('모든 최근 검색어 삭제 실패:', error);
+        }
     };
 
     // 검색 실행
     const handleSearch = (term: string) => {
         if (!term.trim()) return;
-        saveRecentSearch(term);
+        handleSaveRecentSearch(term);
         setIsOpen(false);
         navigate(`/search?q=${encodeURIComponent(term)}`);
     };
@@ -123,17 +150,17 @@ const SearchBar = () => {
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-sm font-medium text-gray-900">최근 검색어</h3>
                                     <button
-                                        onClick={clearAllRecentSearches}
+                                        onClick={handleClearAllRecentSearches}
                                         className="text-xs text-gray-500 hover:text-gray-700"
                                     >
                                         모두 삭제하기
                                     </button>
                                 </div>
                                 <div className="space-y-2">
-                                    {recentSearches.map((term, index) => (
-                                        <div key={index} className="flex items-center justify-between group">
+                                    {recentSearches.map((searchItem) => (
+                                        <div key={searchItem.id} className="flex items-center justify-between group">
                                             <button
-                                                onClick={() => handleSearch(term)}
+                                                onClick={() => handleSearch(searchItem.keyword)}
                                                 className="flex items-center text-sm text-gray-700 hover:text-gray-900"
                                             >
                                                 <svg
@@ -149,12 +176,12 @@ const SearchBar = () => {
                                                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                                     />
                                                 </svg>
-                                                {term}
+                                                {searchItem.keyword}
                                             </button>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    deleteRecentSearch(term);
+                                                    handleDeleteRecentSearch(searchItem.id);
                                                 }}
                                                 className="opacity-60 hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
                                                 title="삭제"
