@@ -10,6 +10,8 @@ import {
     fetchRoomParticipants,
     fetchRoomMeta,
     downloadRoomScreenshot,
+    downloadMessageRangePNG,
+    downloadMessageRangePDF,
     sendAttachment,
     getMessage,
     type ServerMessage,
@@ -27,6 +29,12 @@ import {
 import { emitMessagesRefresh } from "../../../lib/messageEvents";
 import AuthImage from "./AuthImage";
 import Toast from "../Toast";
+import { 
+    calculateVisibleMessageRange, 
+    calculateChatPanelWidth, 
+    validateMessageRange, 
+    formatScreenshotError 
+} from "../../../utils/screenshot";
 
 /* ---------- props ---------- */
 type Props = {
@@ -110,6 +118,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         visible: false,
         message: ''
     });
+    const [screenshotLoading, setScreenshotLoading] = React.useState(false);
+    const [showScreenshotMenu, setShowScreenshotMenu] = React.useState(false);
 
     // 카드형 메시지 하이드레이션 캐시
     const [hydrated, setHydrated] = React.useState<Record<number, ServerMessage>>({});
@@ -142,6 +152,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const endRef = React.useRef<HTMLDivElement>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const firstLoadRef = React.useRef(true);
+    const messageContainerRef = React.useRef<HTMLDivElement>(null);
 
     // 하이드레이트 제어
     const hydratedDone = React.useRef<Set<number>>(new Set());
@@ -213,6 +224,111 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
         }
     }, [text]);
     React.useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [history.length]);
+
+
+    /* 스크린샷 관련 함수들 */
+    const handleScreenshotPNG = React.useCallback(async () => {
+        if (!roomId || screenshotLoading) return;
+        
+        setScreenshotLoading(true);
+        setShowScreenshotMenu(false); // 모달 즉시 닫기
+        
+        try {
+            // 현재 보이는 메시지 범위 계산
+            const range = calculateVisibleMessageRange(messageContainerRef.current);
+            const validation = validateMessageRange(range.fromId, range.toId);
+            
+            if (!validation.isValid) {
+                setErrorToast({
+                    visible: true,
+                    message: validation.error || '메시지 범위를 찾을 수 없습니다.'
+                });
+                return;
+            }
+
+            // 패널 너비 계산
+            const width = calculateChatPanelWidth(messageContainerRef.current);
+            
+            await downloadMessageRangePNG(roomId, range.fromId!, range.toId!, {
+                width,
+                scale: 2,
+                theme: 'light'
+            });
+            
+        } catch (error: any) {
+            const errorMessage = formatScreenshotError(error);
+            setErrorToast({
+                visible: true,
+                message: errorMessage
+            });
+        } finally {
+            setScreenshotLoading(false);
+        }
+    }, [roomId, screenshotLoading]);
+
+    const handleScreenshotPDF = React.useCallback(async () => {
+        if (!roomId || screenshotLoading) return;
+        
+        setScreenshotLoading(true);
+        setShowScreenshotMenu(false); // 모달 즉시 닫기
+        
+        try {
+            // 현재 보이는 메시지 범위 계산
+            const range = calculateVisibleMessageRange(messageContainerRef.current);
+            const validation = validateMessageRange(range.fromId, range.toId);
+            
+            if (!validation.isValid) {
+                setErrorToast({
+                    visible: true,
+                    message: validation.error || '메시지 범위를 찾을 수 없습니다.'
+                });
+                return;
+            }
+
+            // 패널 너비 계산
+            const width = calculateChatPanelWidth(messageContainerRef.current);
+            
+            await downloadMessageRangePDF(roomId, range.fromId!, range.toId!, {
+                width,
+                theme: 'light'
+            });
+            
+        } catch (error: any) {
+            const errorMessage = formatScreenshotError(error);
+            setErrorToast({
+                visible: true,
+                message: errorMessage
+            });
+        } finally {
+            setScreenshotLoading(false);
+        }
+    }, [roomId, screenshotLoading]);
+
+    const handleRoomScreenshot = React.useCallback(async () => {
+        if (!roomId || screenshotLoading) return;
+        
+        setScreenshotLoading(true);
+        setShowScreenshotMenu(false); // 모달 즉시 닫기
+        
+        try {
+            // 패널 너비 계산
+            const width = calculateChatPanelWidth(messageContainerRef.current);
+            
+            await downloadRoomScreenshot(roomId, {
+                width,
+                theme: 'light'
+            });
+            
+        } catch (error: any) {
+            const errorMessage = formatScreenshotError(error);
+            setErrorToast({
+                visible: true,
+                message: errorMessage
+            });
+        } finally {
+            setScreenshotLoading(false);
+        }
+    }, [roomId, screenshotLoading]);
 
     /* 2차 보강(실패 자동 재시도) */
     React.useEffect(() => {
@@ -378,30 +494,66 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                     <span className="text-xs text-gray-400">{timeAgo(headerTime)}</span>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <button
-                        type="button"
-                        aria-label="대화 캡처"
-                        className="text-gray-500 hover:text-gray-700 disabled:opacity-40"
-                        disabled={!roomId}
-                        onClick={async () => {
-                            if (!roomId) return;
-                            const panel = document.getElementById("chat-panel");
-                            const width = Math.floor(panel?.clientWidth || 960);
-                            try { await downloadRoomScreenshot(roomId, { width, tz: "Asia/Seoul", theme: "light" }); }
-                            catch { 
-                                setErrorToast({
-                                    visible: true,
-                                    message: "대화 캡처에 실패했어요."
-                                });
-                            }
-                        }}
-                    >
-                        <Crop size={18} />
-                    </button>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            aria-label="스크린샷"
+                            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                            disabled={!roomId || screenshotLoading}
+                            onClick={() => setShowScreenshotMenu(!showScreenshotMenu)}
+                        >
+                            <Crop size={18} />
+                        </button>
+                        
+                        {screenshotLoading ? (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                                <div className="bg-white rounded-lg shadow-lg p-4 w-[280px] text-center">
+                                    <div className="text-lg font-semibold text-gray-800 mb-2">캡처 중...</div>
+                                    <div className="text-sm text-gray-600">잠시만 기다려주세요</div>
+                                </div>
+                            </div>
+                        ) : showScreenshotMenu ? (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setShowScreenshotMenu(false)}>
+                                <div className="bg-white rounded-lg shadow-lg p-4 w-[280px]" onClick={(e) => e.stopPropagation()}>
+                                    <h3 className="text-lg font-semibold mb-3 text-center">스크린샷 옵션</h3>
+                                    <div className="space-y-2">
+                                        <button
+                                            type="button"
+                                            className="w-full px-4 py-2 text-center text-sm bg-gray-50 hover:bg-gray-100 rounded"
+                                            onClick={handleRoomScreenshot}
+                                        >
+                                            전체 대화 캡처
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="w-full px-4 py-2 text-center text-sm bg-gray-50 hover:bg-gray-100 rounded"
+                                            onClick={handleScreenshotPNG}
+                                        >
+                                            보이는 메시지 PNG
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="w-full px-4 py-2 text-center text-sm bg-gray-50 hover:bg-gray-100 rounded"
+                                            onClick={handleScreenshotPDF}
+                                        >
+                                            보이는 메시지 PDF
+                                        </button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="mt-3 px-6 py-2 text-sm text-gray-600 hover:text-red-600 transition-colors duration-200 mx-auto block"
+                                        onClick={() => setShowScreenshotMenu(false)}
+                                    >
+                                        취소
+                                    </button>
+                                </div>
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
             </div>
 
-            <div id="chat-panel" className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 {history.map((m) => {
                     const m2 = hydrated[m.messageId] ?? m;
                     const when = new Date(m2.createdAt || 0);
@@ -449,7 +601,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                                     : <div className="whitespace-pre-wrap text-sm text-gray-800">{m2.content}</div>;
 
                     return mine ? (
-                        <div key={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
+                        <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
                             {/* ⬇️ 시간 + 작은 다운로드 버튼 (오른쪽 정렬 라인) */}
                             <div className="flex items-center gap-1 order-1">
                                 <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
@@ -468,7 +620,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             <div className={`${meBubble} order-2`}>{body}</div>
                         </div>
                     ) : (
-                        <div key={m.messageId} className="flex items-end gap-2 max-w-full">
+                        <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 max-w-full">
                             <div className={youBubble}>{body}</div>
                             {/* ⬇️ 시간 + 작은 다운로드 버튼 (왼쪽 라인) */}
                             <div className="flex items-center gap-1">
