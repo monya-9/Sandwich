@@ -17,8 +17,8 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
     const [triedAltExt, setTriedAltExt] = useState(false);
     const [src, setSrc] = useState(() => project.coverUrl || resolveCover(project, { position: indexInList }));
 
-    // DB 데이터는 username, 더미데이터는 authorId로 사용자 정보 제공
-    const username = project.username || (project.authorId ? dummyUsers.find(user => user.id === project.authorId)?.name : null) || '알 수 없음';
+    // DB 데이터는 username, 더미데이터는 authorId로 사용자 정보 제공 (닉네임 우선)
+    const username = project.username || (project.authorId ? dummyUsers.find(user => user.id === project.authorId)?.nickname || dummyUsers.find(user => user.id === project.authorId)?.name : null) || '알 수 없음';
     const initial = username.charAt(0).toUpperCase();
 
     // 포트폴리오 상세 페이지로 이동

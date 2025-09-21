@@ -21,7 +21,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
 
   // 프로필 클릭 시 해당 사용자 프로필로 이동
   const handleProfileClick = () => {
-    navigate(`/profile/${id}`);
+    navigate(`/users/${id}`);
   };
 
   return (
