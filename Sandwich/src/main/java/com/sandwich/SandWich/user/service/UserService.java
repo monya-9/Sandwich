@@ -335,6 +335,7 @@ public class UserService {
                 user.getId(),
                 user.getProfile() != null ? user.getProfile().getNickname() : null,
                 user.getUsername(),
+                user.getEmail(),
                 posName,
                 interestNames
         );

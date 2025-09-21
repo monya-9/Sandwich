@@ -8,9 +8,18 @@ import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
 import ProposalAction from "./ProposalAction";
 import JobOfferAction from "./JobOfferAction";
+import api from "../../../api/axiosInstance";
 
-type Props = {
+ type Props = {
   targetUserId?: number;
+};
+
+ type PublicProfile = {
+  id: number;
+  nickname: string | null;
+  username?: string | null;
+  email?: string | null;
+  profileImage?: string | null;
 };
 
 export default function SuggestAction({ targetUserId }: Props = {}) {
@@ -26,21 +35,21 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
   const popupRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const safeGet = (k: string) => { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ""; } catch { return ""; } };
-  const storedEmail = safeGet("userEmail");
-  const displayName = (safeGet("userNickname").trim()) || (safeGet("userUsername").trim()) || "사용자";
-  const profileOneLineKey = storedEmail ? `profileOneLine:${storedEmail}` : "profileOneLine";
-  // 한줄 프로필은 현재 사용자 스코프 키에서만 읽는다. 없으면 공란 저장 후 공란 사용.
-  let localScoped = ""; let sessionScoped = "";
-  try { localScoped = localStorage.getItem(profileOneLineKey) || ""; } catch {}
-  try { sessionScoped = sessionStorage.getItem(profileOneLineKey) || ""; } catch {}
-  if (!localScoped && !sessionScoped) {
-    try { localStorage.setItem(profileOneLineKey, ""); } catch {}
-    try { sessionStorage.setItem(profileOneLineKey, ""); } catch {}
-  }
-  let oneLineProfile = (localScoped || sessionScoped || "").trim();
-  const avatarInitial = ((storedEmail || displayName || "?").trim()[0] || "U").toUpperCase();
-  const profileImageUrl = safeGet("userProfileImage") || safeGet("profileImageUrl") || "";
+
+  // 타겟 사용자 공개 프로필 가져오기(이메일/닉네임/프로필이미지)
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (!targetUserId) return;
+        const { data } = await api.get<PublicProfile>(`/users/${targetUserId}`);
+        if (!alive) return;
+        setProfile(data);
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, [targetUserId]);
 
   // 스타일 한 번만 추가
   useEffect(() => {
@@ -104,6 +113,18 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
     };
   }, [isModalOpen, proposalOpen, jobOfferOpen, generalOpen]);
 
+  // 외부에서 "suggest:open" 이벤트로 모달 열기 지원
+  useEffect(() => {
+    const onOpen = () => {
+      if (!ensureLogin()) return;
+      setHover(false);
+      setTooltipHover(false);
+      setIsModalOpen(true);
+    };
+    window.addEventListener("suggest:open", onOpen as EventListener);
+    return () => window.removeEventListener("suggest:open", onOpen as EventListener);
+  }, []);
+
   // *** 툴팁 유지 ***
   const tooltipVisible = hover || tooltipHover;
 
@@ -115,6 +136,9 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
     }
     return true;
   };
+
+  const targetInitial = ((profile?.email || "").trim()[0] || (profile?.nickname || " ")[0] || "N").toUpperCase();
+  const targetName = (profile?.nickname || profile?.username || "사용자").trim();
 
   return (
     <div className="relative">
@@ -138,10 +162,10 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
           setIsModalOpen(true);
         }}
       >
-        		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-			<FaCommentDots className="w-6 h-6" />
-		</div>
-		<span className="text-xs text-white font-semibold text-center">제안하기</span>
+        <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
+          <FaCommentDots className="w-6 h-6" />
+        </div>
+        <span className="text-xs text-white font-semibold text-center">제안하기</span>
       </button>
 
       {/* 툴팁 */}
@@ -181,11 +205,11 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
             <button className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none" onClick={() => setIsModalOpen(false)} aria-label="닫기">×</button>
             <div className="mt-8 mb-6">
               <div className="mx-auto w-[72px] h-[72px] rounded-full bg-gray-200 ring-1 ring-gray-300 overflow-hidden flex items-center justify-center">
-                {profileImageUrl ? (<img src={profileImageUrl} alt="avatar" className="w-full h-full object-cover" />) : (<span className="text-[22px] leading-none text-gray-700 bg-transparent">{avatarInitial}</span>)}
+                {profile?.profileImage ? (<img src={profile.profileImage} alt="avatar" className="w-full h-full object-cover" />) : (<span className="text-[22px] leading-none text-gray-700 bg-transparent">{targetInitial}</span>)}
               </div>
             </div>
-            <div className="text-[20px] font-bold mb-1">{displayName}</div>
-            <div className="min-h-[18px] max-h-[18px] text-[13px] text-gray-500 px-6 text-center mb-6"><span className="inline-block max-w-[420px] whitespace-nowrap overflow-hidden text-ellipsis align-top" title={oneLineProfile}>{oneLineProfile}</span></div>
+            <div className="text-[20px] font-bold mb-1">{targetName}</div>
+            <div className="min-h-[18px] max-h-[18px] text-[13px] text-gray-500 px-6 text-center mb-6"><span className="inline-block max-w-[420px] whitespace-nowrap overflow-hidden text-ellipsis align-top" title=""></span></div>
 
             <div className="w-full px-6 pt-3 pb-10">
               <div className="flex flex-col gap-3">

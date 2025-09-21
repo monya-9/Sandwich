@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { postMessage } from "../../../api/messages";
+import Toast from "../../common/Toast";
 
 type Props = {
   open: boolean;
@@ -17,6 +18,8 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
   const avatarInitial = ((storedEmail || displayName || "?").trim()[0] || "U").toUpperCase();
 
   const [message, setMessage] = React.useState("");
+  const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
+  const [successToast, setSuccessToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
 
   const resetAll = () => setMessage("");
   React.useEffect(() => { if (open) resetAll(); }, [open]);
@@ -82,14 +85,20 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
 
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((message || "").trim().length < 1) return alert("메시지를 입력해 주세요.");
-    if (!targetUserId) return alert("대상 사용자 정보를 찾을 수 없습니다.");
+    if ((message || "").trim().length < 1) {
+      setErrorToast({ visible: true, message: "메시지를 입력해 주세요." });
+      return;
+    }
+    if (!targetUserId) {
+      setErrorToast({ visible: true, message: "대상 사용자 정보를 찾을 수 없습니다." });
+      return;
+    }
     try {
       await postMessage({ targetUserId, type: "GENERAL", content: message.trim(), payload: null });
-      alert("메시지를 전송했어요.");
+      setSuccessToast({ visible: true, message: "메시지를 전송했어요." });
       onClose();
     } catch (err: any) {
-      alert(err?.response?.data?.message || "전송에 실패했어요.");
+      setErrorToast({ visible: true, message: err?.response?.data?.message || "전송에 실패했어요." });
     }
   };
 
@@ -137,7 +146,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
             </div>
 
             {/* 내용 영역 */}
-                         <div className="px-6 py-4 flex-1 overflow-visible" style={{ overscrollBehavior: "auto" }}>
+            <div className="px-6 py-4 flex-1 overflow-visible" style={{ overscrollBehavior: "auto" }}>
               <div className="w-[400px] max-w-full mx-auto">
                 <div className="text-center mb-3">
                   <div className="text-[18px] font-bold">일반 메시지</div>
@@ -164,5 +173,25 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
       )
     : null;
 
-  return <>{Modal}</>;
+  return <>
+    {Modal}
+    <Toast
+      visible={errorToast.visible}
+      message={errorToast.message}
+      type="error"
+      size="medium"
+      autoClose={3000}
+      closable={true}
+      onClose={() => setErrorToast({ visible: false, message: "" })}
+    />
+    <Toast
+      visible={successToast.visible}
+      message={successToast.message}
+      type="success"
+      size="medium"
+      autoClose={2000}
+      closable={true}
+      onClose={() => setSuccessToast({ visible: false, message: "" })}
+    />
+  </>;
 } 

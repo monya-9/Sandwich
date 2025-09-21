@@ -45,6 +45,7 @@ import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
 import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import UserPublicProfilePage from "./pages/UserPublicProfilePage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -113,6 +114,9 @@ function App() {
 
                                 {/* (예시) 코드 제출 수정 */}
                                 <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
+
+                                {/* 공개 사용자 프로필 */}
+                                <Route path="/users/:id" element={<UserPublicProfilePage />} />
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />

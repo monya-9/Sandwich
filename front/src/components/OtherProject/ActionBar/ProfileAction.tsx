@@ -211,6 +211,7 @@ export default function ProfileAction({
         className="flex flex-col items-center gap-1 group"
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
+        onClick={() => targetUserId && navigate(`/users/${targetUserId}`)}
       >
         		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
 			<FaUser className="w-6 h-6" />

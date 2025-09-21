@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { sendJobOffer } from "../../../api/message.presets";
+import Toast from "../../common/Toast";
 
 type Props = {
   open: boolean;
@@ -15,6 +16,10 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
   const storedEmail = safeGet("userEmail");
   const displayName = (safeGet("userNickname").trim()) || (safeGet("userUsername").trim()) || "사용자";
   const avatarInitial = ((storedEmail || displayName || "?").trim()[0] || "U").toUpperCase();
+
+  // 토스트 상태
+  const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
+  const [successToast, setSuccessToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
 
   // 폼 상태
   const [company, setCompany] = React.useState("");
@@ -119,7 +124,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
     const f = e.target.files?.[0];
     if (!f) { setFile(null); return; }
     const max = 10 * 1024 * 1024;
-    if (f.size > max) { alert("파일은 10MB 이하여야 합니다."); e.currentTarget.value = ""; return; }
+    if (f.size > max) { setErrorToast({ visible: true, message: "파일은 10MB 이하여야 합니다." }); e.currentTarget.value = ""; return; }
     setFile(f);
   };
 
@@ -183,7 +188,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
       return;
     }
     if (!targetUserId) {
-      alert("대상 사용자 정보를 찾을 수 없습니다.");
+      setErrorToast({ visible: true, message: "대상 사용자 정보를 찾을 수 없습니다." });
       return;
     }
     const salaryStr = salaryNegotiable ? "협의" : `${minTrim || "0"}-${maxTrim || "0"} 만원`;
@@ -194,10 +199,10 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
         location: location.trim(),
         description: description.trim(),
       });
-      alert("메시지를 전송했어요.");
+      setSuccessToast({ visible: true, message: "메시지를 전송했어요." });
       onClose();
     } catch (err: any) {
-      alert(err?.response?.data?.message || "전송에 실패했어요.");
+      setErrorToast({ visible: true, message: err?.response?.data?.message || "전송에 실패했어요." });
     }
   };
 
@@ -342,5 +347,26 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
       )
     : null;
 
-  return <>{Modal}</>;
+  return <>
+    {Modal}
+    {/* 토스트: 포털 바깥에서 렌더링하여 모달 닫혀도 유지 */}
+    <Toast
+      visible={errorToast.visible}
+      message={errorToast.message}
+      type="error"
+      size="medium"
+      autoClose={3000}
+      closable={true}
+      onClose={() => setErrorToast({ visible: false, message: "" })}
+    />
+    <Toast
+      visible={successToast.visible}
+      message={successToast.message}
+      type="success"
+      size="medium"
+      autoClose={2000}
+      closable={true}
+      onClose={() => setSuccessToast({ visible: false, message: "" })}
+    />
+  </>;
 } 

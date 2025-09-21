@@ -6,6 +6,7 @@ public record PublicProfileResponse(
         Long id,
         String nickname,
         String username,
+        String email,
         String position,
         List<String> interests
 ) {}
