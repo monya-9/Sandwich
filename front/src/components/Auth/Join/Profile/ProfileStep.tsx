@@ -10,6 +10,7 @@ import {
   FALLBACK_POSITIONS,
   FALLBACK_INTERESTS_GENERAL,
 } from "../../../../constants/position";
+import Toast from "../../../common/Toast";
 
 interface Props { onPrev: () => void; }
 
@@ -17,6 +18,11 @@ const ProfileStep = ({ onPrev }: Props) => {
   const [nickname, setNickname] = useState("");
   const [position, setPosition] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({
+    visible: false,
+    message: '',
+    type: 'success'
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -74,16 +80,34 @@ const ProfileStep = ({ onPrev }: Props) => {
         interestIds,
       });
 
-      alert("✅ 회원가입이 완료되었습니다.");
+      setToast({
+        visible: true,
+        message: "✅ 회원가입이 완료되었습니다.",
+        type: 'success'
+      });
       localStorage.removeItem("joinStep1");
       localStorage.removeItem("joinStep2");
-      navigate("/login");
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err: any) {
-      alert("회원가입 실패: " + (err?.response?.data?.message || err.message));
+      setToast({
+        visible: true,
+        message: "회원가입 실패: " + (err?.response?.data?.message || err.message),
+        type: 'error'
+      });
     }
   };
 
   return (
+    <>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+      />
       <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
         <img src={logo} alt="logo" className="w-36 mb-10" />
         <div className="w-full max-w-sm space-y-6">
@@ -98,6 +122,7 @@ const ProfileStep = ({ onPrev }: Props) => {
             className="mt-8"
         />
       </div>
+    </>
   );
 };
 

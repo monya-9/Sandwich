@@ -4,6 +4,7 @@ import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
 import CoverCropper from "./CoverCropper";
+import Toast from "../common/Toast";
 
 interface Props {
   open: boolean;
@@ -133,6 +134,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const coverIsUploaded = useMemo(() => {
     const v = String(coverUrl || "");
     return /^https?:\/\//.test(v) || v.startsWith("/api/");
@@ -180,7 +185,13 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   const openCropperWithFile = (file: File) => {
     const err = validateFile(file);
-    if (err) { alert(err); return; }
+    if (err) { 
+      setErrorToast({
+        visible: true,
+        message: err
+      });
+      return; 
+    }
     const url = URL.createObjectURL(file);
     setCropSrc(url);
     setCropOpen(true);
@@ -283,7 +294,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       const finalCover = await ensureCoverUploaded();
       const resolvedCover = finalCover || (coverIsUploaded ? coverUrl : undefined);
       if (!resolvedCover) {
-        alert("커버 이미지를 업로드해 주세요.");
+        setErrorToast({
+          visible: true,
+          message: "커버 이미지를 업로드해 주세요."
+        });
         return;
       }
       const payload: ProjectRequest = {
@@ -307,10 +321,16 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       };
       const res = await createProject(payload);
       onCreated?.(res.projectId, res.previewUrl);
-      alert(`프로젝트 생성 완료! 미리보기: ${res.previewUrl}`);
+      setErrorToast({
+        visible: true,
+        message: `프로젝트 생성 완료! 미리보기: ${res.previewUrl}`
+      });
       onClose();
     } catch (e: any) {
-      alert(e?.message ?? "생성 실패");
+      setErrorToast({
+        visible: true,
+        message: e?.message ?? "생성 실패"
+      });
     } finally {
       setSubmitting(false);
     }
@@ -318,6 +338,15 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   return (
     <>
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
       {cropOpen ? (
         <div className="fixed inset-0 z-[9998]" />
       ) : (

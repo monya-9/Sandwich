@@ -1,5 +1,6 @@
 import React from "react";
 import { sendProjectProposal, type ProjectPayload } from "../../../../api/message.presets";
+import Toast from "../../Toast";
 
 type Props = {
     targetUserId: number;
@@ -14,6 +15,14 @@ const ProjectProposalForm: React.FC<Props> = ({ targetUserId, onSent }) => {
         description: "",
     });
     const [loading, setLoading] = React.useState(false);
+    const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
+    const [successToast, setSuccessToast] = React.useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.currentTarget;
@@ -22,22 +31,53 @@ const ProjectProposalForm: React.FC<Props> = ({ targetUserId, onSent }) => {
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.title.trim()) return alert("제목을 입력해 주세요.");
+        if (!form.title.trim()) {
+            setErrorToast({
+                visible: true,
+                message: "제목을 입력해 주세요."
+            });
+            return;
+        }
         setLoading(true);
         try {
             await sendProjectProposal(targetUserId, form);
             onSent?.();
-            alert("프로젝트 제안을 보냈어요.");
+            setSuccessToast({
+                visible: true,
+                message: "프로젝트 제안을 보냈어요."
+            });
             setForm({ title: "", contact: "", budget: "", description: "" });
         } catch (err: any) {
-            alert(err?.response?.data?.message || "전송에 실패했어요.");
+            setErrorToast({
+                visible: true,
+                message: err?.response?.data?.message || "전송에 실패했어요."
+            });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <form onSubmit={submit} className="space-y-3">
+        <>
+            <Toast
+                visible={errorToast.visible}
+                message={errorToast.message}
+                type="error"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+            />
+            <Toast
+                visible={successToast.visible}
+                message={successToast.message}
+                type="success"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+            />
+            <form onSubmit={submit} className="space-y-3">
             <input name="title" value={form.title} onChange={onChange} placeholder="프로젝트 제목" className="w-full border rounded px-3 py-2" />
             <input name="contact" value={form.contact} onChange={onChange} placeholder="연락처" className="w-full border rounded px-3 py-2" />
             <input name="budget" value={String(form.budget)} onChange={onChange} placeholder="예산" className="w-full border rounded px-3 py-2" />
@@ -46,6 +86,7 @@ const ProjectProposalForm: React.FC<Props> = ({ targetUserId, onSent }) => {
                 {loading ? "전송 중..." : "프로젝트 제안 보내기"}
             </button>
         </form>
+        </>
     );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MonthSelect from "./MonthSelect";
 import { AwardApi } from "../../api/awardApi";
+import Toast from "../common/Toast";
 
 interface Props {
 	onCancel: () => void;
@@ -25,6 +26,10 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 	const [desc, setDesc] = useState("");
 	const [isMain, setIsMain] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 
 	useEffect(() => {
 		if (!initial) return;
@@ -92,14 +97,27 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 			}
 			onDone();
 		} catch (e) {
-			alert("수상 저장에 실패했습니다.");
+			setErrorToast({
+				visible: true,
+				message: "수상 저장에 실패했습니다."
+			});
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	return (
-		<div className="space-y-5">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="space-y-5">
 			{/* 수상 부문 / 이름 */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
@@ -148,6 +166,7 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 				</div>
 			</div>
 		</div>
+		</>
 	);
 };
 

@@ -26,6 +26,7 @@ import {
 } from "./MessageCards";
 import { emitMessagesRefresh } from "../../../lib/messageEvents";
 import AuthImage from "./AuthImage";
+import Toast from "../Toast";
 
 /* ---------- props ---------- */
 type Props = {
@@ -105,6 +106,10 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [history, setHistory] = React.useState<ServerMessage[]>([]);
     const [participants, setParticipants] = React.useState<RoomParticipant[]>([]);
     const [meta, setMeta] = React.useState<RoomMeta | null>(null);
+    const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
 
     const taRef = React.useRef<HTMLTextAreaElement>(null);
     const endRef = React.useRef<HTMLDivElement>(null);
@@ -225,7 +230,13 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
     /* 텍스트 전송 */
     const handleSendText = async () => {
-        if (!message || !targetUserId) { alert("상대 사용자를 알 수 없어 전송할 수 없어요."); return; }
+        if (!message || !targetUserId) { 
+            setErrorToast({
+                visible: true,
+                message: "상대 사용자를 알 수 없어 전송할 수 없어요."
+            });
+            return; 
+        }
         if (isComposing) return;
         const body = text.trim(); if (!body || sending) return;
 
@@ -235,7 +246,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             const createdAt = server.createdAt || new Date().toISOString();
             setHistory((prev) => mergeAndSort(prev, [{ ...server, createdAt, senderId: myId ?? server.senderId, mine: true }]));
             setText(""); emitMessagesRefresh(); await onSend?.(server.messageId, body);
-        } catch { alert("메시지 전송에 실패했어요."); }
+        } catch { 
+            setErrorToast({
+                visible: true,
+                message: "메시지 전송에 실패했어요."
+            });
+        }
         finally { setSending(false); endRef.current?.scrollIntoView({ block: "end" }); }
     };
 
@@ -310,7 +326,17 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     };
 
     return (
-        <div className="flex-1 min-h-0 flex flex-col">
+        <>
+            <Toast
+                visible={errorToast.visible}
+                message={errorToast.message}
+                type="error"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+            />
+            <div className="flex-1 min-h-0 flex flex-col">
             {/* 헤더 */}
             <div className="px-6 py-4 border-b flex items-center gap-3">
                 {avatar ? (
@@ -335,7 +361,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             const panel = document.getElementById("chat-panel");
                             const width = Math.floor(panel?.clientWidth || 960);
                             try { await downloadRoomScreenshot(roomId, { width, tz: "Asia/Seoul", theme: "light" }); }
-                            catch { alert("대화 캡처에 실패했어요."); }
+                            catch { 
+                                setErrorToast({
+                                    visible: true,
+                                    message: "대화 캡처에 실패했어요."
+                                });
+                            }
                         }}
                     >
                         <Crop size={18} />
@@ -465,8 +496,22 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                             if (!f || !roomId || !targetUserId) return;
 
                             const ext = (f.name.split(".").pop() || "").toLowerCase();
-                            if (!ALLOWED_EXT.includes(ext)) { alert("허용되지 않은 파일 형식이에요. (jpg, jpeg, png, pdf)"); inputEl.value = ""; return; }
-                            if (f.size > MAX_MB * 1024 * 1024) { alert(`파일이 너무 커요. 최대 ${MAX_MB}MB까지 업로드 가능합니다.`); inputEl.value = ""; return; }
+                            if (!ALLOWED_EXT.includes(ext)) { 
+                                setErrorToast({
+                                    visible: true,
+                                    message: "허용되지 않은 파일 형식이에요. (jpg, jpeg, png, pdf)"
+                                });
+                                inputEl.value = ""; 
+                                return; 
+                            }
+                            if (f.size > MAX_MB * 1024 * 1024) { 
+                                setErrorToast({
+                                    visible: true,
+                                    message: `파일이 너무 커요. 최대 ${MAX_MB}MB까지 업로드 가능합니다.`
+                                });
+                                inputEl.value = ""; 
+                                return; 
+                            }
 
                             setUploading(true);
                             try {
@@ -477,10 +522,30 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                                 await onSend?.(created.messageId, created.content ?? "[파일]");
                             } catch (err: any) {
                                 const status = err?.response?.status;
-                                if (status === 403) alert("채팅방 참여자만 첨부를 보낼 수 있어요.");
-                                else if (status === 413) alert("파일이 너무 큽니다.");
-                                else if (status === 415) alert("허용되지 않은 파일 형식입니다.");
-                                else alert("파일 업로드에 실패했어요.");
+                                if (status === 403) {
+                                    setErrorToast({
+                                        visible: true,
+                                        message: "채팅방 참여자만 첨부를 보낼 수 있어요."
+                                    });
+                                }
+                                else if (status === 413) {
+                                    setErrorToast({
+                                        visible: true,
+                                        message: "파일이 너무 큽니다."
+                                    });
+                                }
+                                else if (status === 415) {
+                                    setErrorToast({
+                                        visible: true,
+                                        message: "허용되지 않은 파일 형식입니다."
+                                    });
+                                }
+                                else {
+                                    setErrorToast({
+                                        visible: true,
+                                        message: "파일 업로드에 실패했어요."
+                                    });
+                                }
                             } finally {
                                 setUploading(false);
                                 inputEl.value = "";
@@ -499,6 +564,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

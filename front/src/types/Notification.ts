@@ -135,11 +135,14 @@ export function toNotifyItem(raw: RawNotification): NotifyItem {
         nonEmpty(ex.actorProfileImage) ??
         null;
 
+    // 이메일이 있으면 이메일 첫 글자를 사용, 없으면 "누군가"
+    const emailFallback = actorEmail ? emailLocal(actorEmail) : "누군가";
+    
     const whoRaw = displayName({
         nickname,
         email: actorEmail ?? null,
         id: actorId,
-        fallback: "누군가",
+        fallback: emailFallback,
     });
 
     // ‘누군가’거나 숫자만인 이름은 배우 없음으로 처리
@@ -178,18 +181,48 @@ export function toNotifyItem(raw: RawNotification): NotifyItem {
             body = "";
             break;
 
-        case "COMMENT_CREATED":
-            title = hasActor ? `${whoRaw}님이 댓글을 남겼습니다` : "누군가님이 댓글을 남겼습니다";
-            body =
-                nonEmpty(raw.snippet ?? ex.snippet) ??
-                nonEmpty(raw.targetTitle ?? ex.targetTitle) ??
-                "";
+        case "COMMENT_CREATED": {
+            const res: any = (raw as any).resource ?? (ex as any).resource;
+            const resourceType = res?.type;
+            const resourceTitle = nonEmpty(raw.targetTitle ?? ex.targetTitle);
+            const commentSnippet = nonEmpty(raw.snippet ?? ex.snippet);
+            
+            let resourceText = "";
+            if (resourceType === "PROJECT") {
+                resourceText = resourceTitle ? `프로젝트 "${resourceTitle}"에` : "프로젝트에";
+            } else if (resourceType === "POST") {
+                resourceText = resourceTitle ? `포스트 "${resourceTitle}"에` : "포스트에";
+            } else if (resourceType === "COMMENT") {
+                resourceText = resourceTitle ? `댓글 "${resourceTitle}"에` : "댓글에";
+            } else {
+                resourceText = resourceTitle ? `"${resourceTitle}"에` : "댓글을";
+            }
+            
+            title = hasActor ? `${whoRaw}님이 ${resourceText} 댓글을 남겼습니다` : `누군가님이 ${resourceText} 댓글을 남겼습니다`;
+            body = commentSnippet ?? "";
             break;
+        }
 
-        case "LIKE_CREATED":
-            title = hasActor ? `${whoRaw}님이 좋아요를 눌렀습니다` : "누군가님이 좋아요를 눌렀습니다";
-            body = nonEmpty(raw.targetTitle ?? ex.targetTitle) ?? "";
+        case "LIKE_CREATED": {
+            const res: any = (raw as any).resource ?? (ex as any).resource;
+            const resourceType = res?.type;
+            const resourceTitle = nonEmpty(raw.targetTitle ?? ex.targetTitle);
+            
+            let resourceText = "";
+            if (resourceType === "PROJECT") {
+                resourceText = resourceTitle ? `프로젝트 "${resourceTitle}"에` : "프로젝트에";
+            } else if (resourceType === "POST") {
+                resourceText = resourceTitle ? `포스트 "${resourceTitle}"에` : "포스트에";
+            } else if (resourceType === "COMMENT") {
+                resourceText = resourceTitle ? `댓글 "${resourceTitle}"에` : "댓글에";
+            } else {
+                resourceText = resourceTitle ? `"${resourceTitle}"에` : "좋아요를";
+            }
+            
+            title = hasActor ? `${whoRaw}님이 ${resourceText} 좋아요를 눌렀습니다` : `누군가님이 ${resourceText} 좋아요를 눌렀습니다`;
+            body = "";
             break;
+        }
 
         case "COLLECTION_SAVED": {
             const col = nonEmpty(ex.collectionName);
