@@ -1,5 +1,6 @@
 // src/components/project/ProjectCard.tsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Project } from '../../types/Project';
 import { dummyUsers } from '../../data/dummyUsers';
 import { resolveCover, swapJpgPng } from '../../utils/getProjectCover';
@@ -10,6 +11,7 @@ type Props = {
 };
 
 const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
+    const navigate = useNavigate();
     const [isHovered, setIsHovered] = useState(false);
     const [imgErr, setImgErr] = useState(false);
     const [triedAltExt, setTriedAltExt] = useState(false);
@@ -18,6 +20,13 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
     // DB 데이터는 username, 더미데이터는 authorId로 사용자 정보 제공
     const username = project.username || (project.authorId ? dummyUsers.find(user => user.id === project.authorId)?.name : null) || '알 수 없음';
     const initial = username.charAt(0).toUpperCase();
+
+    // 포트폴리오 상세 페이지로 이동
+    const handleCardClick = () => {
+        // ownerId는 authorId를 우선 사용, 없으면 username 사용
+        const ownerId = project.authorId || project.username || 'unknown';
+        navigate(`/other-project/${ownerId}/${project.id}`);
+    };
     
 
     const handleError = () => {
@@ -36,6 +45,7 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
                 className="relative w-full rounded-[20px] overflow-hidden cursor-pointer"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
+                onClick={handleCardClick}
             >
                 {/* 핵심: 비율 고정 */}
                 <div className="relative w-full aspect-[4/3] bg-gray-200">
