@@ -7,7 +7,15 @@ import ProjectPagination from './ProjectPagination';
 import { useProjectFeed } from '../../hooks/useProjectFeed';
 import { useState } from 'react';
 
-const ProjectFeedContainer: React.FC = () => {
+interface ProjectFeedContainerProps {
+  searchType: 'PORTFOLIO' | 'ACCOUNT';
+  onSearchTypeChange: (type: 'PORTFOLIO' | 'ACCOUNT') => void;
+}
+
+const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({ 
+  searchType, 
+  onSearchTypeChange 
+}) => {
   const {
     projects,
     totalElements,
@@ -20,9 +28,6 @@ const ProjectFeedContainer: React.FC = () => {
     refresh
   } = useProjectFeed();
 
-  // 검색 타입 상태
-  const [searchType, setSearchType] = useState<'PORTFOLIO' | 'ACCOUNT'>('PORTFOLIO');
-  
   // 정렬 타입 상태
   const [sortType, setSortType] = useState<'latest' | 'popular' | 'recommended'>('recommended');
 
@@ -36,7 +41,7 @@ const ProjectFeedContainer: React.FC = () => {
             currentQuery={filters.q || ''}
             isLoading={isLoading}
             searchType={searchType}
-            onSearchTypeChange={setSearchType}
+            onSearchTypeChange={onSearchTypeChange}
             sortType={sortType}
             onSortChange={setSortType}
           />
