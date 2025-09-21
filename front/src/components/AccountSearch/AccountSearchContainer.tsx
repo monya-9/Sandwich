@@ -56,9 +56,21 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="계정 검색 (닉네임, 소개, 스킬, 포지션, 관심사)"
-                className="w-full px-4 py-3 pl-12 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 pl-12 pr-12 rounded-lg outline-none border-0 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
               />
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              {/* X 버튼 */}
+              {searchTerm && (
+                <button
+                  onClick={() => handleSearch('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  type="button"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -85,12 +97,6 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
           </div>
         )}
 
-        {/* 검색 결과 요약 */}
-        {totalElements > 0 && (
-          <div className="mt-6 text-center text-sm text-gray-600">
-            총 {totalElements}개의 계정 중 {currentPage + 1}페이지 ({accounts.length}개 표시)
-          </div>
-        )}
       </div>
     </div>
   );

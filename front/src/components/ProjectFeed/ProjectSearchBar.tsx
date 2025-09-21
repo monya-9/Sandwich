@@ -67,7 +67,7 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
             onChange={handleQueryChange}
             onKeyPress={handleKeyPress}
             placeholder="프로젝트를 검색해보세요..."
-            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-12 py-3 rounded-lg outline-none border-0 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
             disabled={isLoading}
           />
           {/* X 버튼 */}
