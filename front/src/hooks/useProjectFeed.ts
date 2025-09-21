@@ -116,16 +116,13 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
 
   // 초기 로드 및 검색어 처리
   useEffect(() => {
-    console.log('useProjectFeed 초기화:', { initialSearchTerm, filters }); // 디버깅용 로그
     if (initialSearchTerm && initialSearchTerm.trim()) {
       // 초기 검색어가 있으면 검색 실행
       const searchParams = { ...filters, q: initialSearchTerm, page: 0 };
-      console.log('검색 실행:', searchParams); // 디버깅용 로그
       setFilters(searchParams);
       loadProjects(searchParams);
     } else {
       // 초기 검색어가 없으면 일반 로드
-      console.log('일반 로드:', filters); // 디버깅용 로그
       loadProjects(filters);
     }
   }, [initialSearchTerm]); // initialSearchTerm만 의존성으로 사용
