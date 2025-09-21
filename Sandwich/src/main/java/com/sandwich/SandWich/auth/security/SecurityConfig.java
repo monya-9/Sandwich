@@ -97,6 +97,19 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
 
+                        // 사용자 보안 세분화 =====
+                        // 1) 내 프로필은 반드시 인증
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        // 2) 개별 보호 엔드포인트는 계속 잠금 (GET이라도 잠금 유지)
+                        .requestMatchers(HttpMethod.GET, "/api/users/position").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/interests/**").authenticated()
+                        // 닉네임 중복 확인은 회원가입 단계에서 쓸 수 있게 공개해두는 게 일반적
+                        .requestMatchers(HttpMethod.GET, "/api/users/check-nickname").permitAll()
+                        // 3) 타인 공개 프로필: /api/users/{id} 만 열기
+                        //    Ant의 "/api/users/*"는 한 세그먼트만 매칭 → {id}에만 해당.
+                        //    위에서 /me/position/interests/** 를 먼저 선언해 잠가두었기 때문에 이 줄이 그들을 열어버리지 않음.
+                        .requestMatchers(HttpMethod.GET, "/api/users/*").permitAll()
+
                         // ===== 보호 구간 (여기부터 인증 필요) =====
                         .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER","ADMIN","AI")
                         .requestMatchers(HttpMethod.POST, "/api/likes").authenticated()
