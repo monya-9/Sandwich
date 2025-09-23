@@ -108,8 +108,13 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 				.pm-preview-content .ql-editor figure { margin: 0; }
 				/* 리스트 아이템 간격 유지 */
 				.pm-preview-content .ql-editor li + li { margin-top: calc(var(--pm-gap) / 2) !important; }
+				/* Collapse empty paragraphs Quill inserts between embeds */
+				.pm-preview-content .ql-editor p:has(> br:only-child) { margin: 0 !important; height: 0; line-height: 0; padding: 0; }
+				/* Remove line box extra space when paragraph wraps only an embed */
+				.pm-preview-content .ql-editor p:has(> iframe:only-child),
+				.pm-preview-content .ql-editor p:has(> img:only-child) { line-height: 0; font-size: 0; }
 				.pm-preview-content img, .pm-preview-content iframe { display: block; margin-left: auto; margin-right: auto; }
-				.pm-preview-content img { width: 100% !important; height: auto !important; }
+				.pm-preview-content img { height: auto !important; max-width: 100% !important; width: auto !important; }
 				.pm-preview-content iframe { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
 				/* 강제: 동영상은 항상 컨테이너 폭에 맞춤 */
 				.pm-preview-content iframe.ql-video, .pm-preview-content .ql-editor iframe.ql-video { width: 100% !important; max-width: none !important; height: auto !important; aspect-ratio: 16 / 9; display: block; }
@@ -134,11 +139,21 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 					margin-bottom: calc(-1 * var(--pm-pad, 0px));
 					background: transparent; border-radius: 0; box-sizing: border-box;
 				}
+				/* Keep outer gap when previous block is padded media */
+				.pm-preview-content img.pm-embed-padded + *,
+				.pm-preview-content iframe.pm-embed-padded + *,
+				.pm-preview-content .ql-editor img.pm-embed-padded + *,
+				.pm-preview-content .ql-editor iframe.pm-embed-padded + * { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
 				/* 연속 미디어 간격 */
 				.pm-preview-content .ql-editor img + img,
 				.pm-preview-content .ql-editor img + iframe,
 				.pm-preview-content .ql-editor iframe + img,
 				.pm-preview-content .ql-editor iframe + iframe { margin-top: var(--pm-gap) !important; display: block; }
+				/* if previous embed is padded, add pad back to keep exact outer gap */
+				.pm-preview-content .ql-editor img.pm-embed-padded + img,
+				.pm-preview-content .ql-editor img.pm-embed-padded + iframe,
+				.pm-preview-content .ql-editor iframe.pm-embed-padded + img,
+				.pm-preview-content .ql-editor iframe.pm-embed-padded + iframe { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
 			`}</style>
 			<div className="fixed inset-0 bg-black/80" onClick={onClose} />
 			<div className="relative w-full max-w-[1440px] mx-auto px-0 py-10">
@@ -181,23 +196,23 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 														<script dangerouslySetInnerHTML={{ __html: `
 															(function(){
 															  try{
-																    var root = document.currentScript && document.currentScript.previousElementSibling;
-																    if(!root) return;
-																    var imgs = root.querySelectorAll('img');
-																    var iframes = root.querySelectorAll('iframe');
-																    function setPad(el){
-																	  var s = getComputedStyle(el);
-																	  var pad = parseFloat(s.getPropertyValue('--pm-pad')||'0');
-																	  if(!pad){
-																	    var pl = parseFloat(s.paddingLeft||'0');
-																	    var pr = parseFloat(s.paddingRight||'0');
-																	    var pb = parseFloat(s.paddingBottom||'0');
-																	    pad = Math.max(pl,pr,pb);
-																	  }
-																	  el.style.setProperty('--pm-pad', pad + 'px');
-																	}
-																	imgs.forEach(setPad); iframes.forEach(setPad);
-																  }catch(e){}
+															    var root = document.currentScript && document.currentScript.previousElementSibling;
+															    if(!root) return;
+															    var imgs = root.querySelectorAll('img');
+															    var iframes = root.querySelectorAll('iframe');
+															    function setPad(el){
+																  var s = getComputedStyle(el);
+																  var pad = parseFloat(s.getPropertyValue('--pm-pad')||'0');
+																  if(!pad){
+																    var pl = parseFloat(s.paddingLeft||'0');
+																    var pr = parseFloat(s.paddingRight||'0');
+																    var pb = parseFloat(s.paddingBottom||'0');
+																    pad = Math.max(pl,pr,pb);
+																  }
+																  el.style.setProperty('--pm-pad', pad + 'px');
+																}
+																imgs.forEach(setPad); iframes.forEach(setPad);
+															  }catch(e){}
 															})();` }} />
 													</div>
 												) : (
@@ -232,27 +247,27 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 											<div className="pm-preview-content" style={{ ['--pm-gap' as any]: `${contentGapPx}px` }}>
 												<div className="ql-editor" dangerouslySetInnerHTML={{ __html: rawHtml }} />
 												<script dangerouslySetInnerHTML={{ __html: `
-													(function(){
-													  try{
-													    var root = document.currentScript && document.currentScript.previousElementSibling;
-													    if(!root) return;
-													    var imgs = root.querySelectorAll('img');
-													    var iframes = root.querySelectorAll('iframe');
-													    function setPad(el){
-														  var s = getComputedStyle(el);
-														  var pad = parseFloat(s.getPropertyValue('--pm-pad')||'0');
-														  if(!pad){
-														    var pl = parseFloat(s.paddingLeft||'0');
-														    var pr = parseFloat(s.paddingRight||'0');
-														    var pb = parseFloat(s.paddingBottom||'0');
-														    pad = Math.max(pl,pr,pb);
-														  }
-														  el.style.setProperty('--pm-pad', pad + 'px');
-														}
-														imgs.forEach(setPad); iframes.forEach(setPad);
-													  }catch(e){}
-													})();` }} />
-											</div>
+												(function(){
+												  try{
+												    var root = document.currentScript && document.currentScript.previousElementSibling;
+												    if(!root) return;
+												    var imgs = root.querySelectorAll('img');
+												    var iframes = root.querySelectorAll('iframe');
+												    function setPad(el){
+													  var s = getComputedStyle(el);
+													  var pad = parseFloat(s.getPropertyValue('--pm-pad')||'0');
+													  if(!pad){
+													    var pl = parseFloat(s.paddingLeft||'0');
+													    var pr = parseFloat(s.paddingRight||'0');
+													    var pb = parseFloat(s.paddingBottom||'0');
+													    pad = Math.max(pl,pr,pb);
+													  }
+													  el.style.setProperty('--pm-pad', pad + 'px');
+													}
+													imgs.forEach(setPad); iframes.forEach(setPad);
+												  }catch(e){}
+												})();` }} />
+										</div>
 										) : (
 											<div className="pm-preview-content" style={{ ['--pm-gap' as any]: `${contentGapPx}px` }}>{children}</div>
 										)}
@@ -272,4 +287,4 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 			</div>
 		</div>
 	);
-} 
+}

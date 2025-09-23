@@ -121,6 +121,33 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     const [screenshotLoading, setScreenshotLoading] = React.useState(false);
     const [showScreenshotMenu, setShowScreenshotMenu] = React.useState(false);
 
+    // 카드형 메시지 하이드레이션 캐시
+    const [hydrated, setHydrated] = React.useState<Record<number, ServerMessage>>({});
+
+    // history가 갱신될 때, 카드형인데 payload/top-level이 비어있는 항목은 상세 조회로 보강
+    React.useEffect(() => {
+        const needIds: number[] = [];
+        for (const m of history) {
+            const isCard = m.type === "PROJECT_OFFER" || m.type === "PROJECT_PROPOSAL" || m.type === "JOB_OFFER";
+            if (!isCard) continue;
+            const hasAny = !!m.payload || !!m.title || !!m.companyName || !!m.description || !!m.budget;
+            if (!hasAny && !hydrated[m.messageId]) needIds.push(m.messageId);
+        }
+        if (needIds.length === 0) return;
+        (async () => {
+            const entries: Record<number, ServerMessage> = {};
+            for (const id of needIds) {
+                try {
+                    const full = await getMessage(id);
+                    entries[id] = full;
+                } catch {}
+            }
+            if (Object.keys(entries).length > 0) {
+                setHydrated(prev => ({ ...prev, ...entries }));
+            }
+        })();
+    }, [history]);
+
     const taRef = React.useRef<HTMLTextAreaElement>(null);
     const endRef = React.useRef<HTMLDivElement>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -528,27 +555,50 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
             <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 {history.map((m) => {
-                    const when = new Date(m.createdAt || 0);
+                    const m2 = hydrated[m.messageId] ?? m;
+                    const when = new Date(m2.createdAt || 0);
                     const hhmm = isNaN(when.getTime()) ? "" : when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-                    const mine = typeof m.mine === "boolean" ? m.mine : (myId != null ? m.senderId === myId : false);
+                    const mine = typeof m2.mine === "boolean" ? m2.mine : (myId != null ? m2.senderId === myId : false);
 
                     // ⬇️ 첨부 메타 (다운로드 버튼용)
                     let attSrc: string | undefined;
                     let attName: string | undefined;
-                    if (m.type === "ATTACHMENT") {
-                        const p = parsePayload<{ url?: string; path?: string; name?: string }>(m.payload);
+                    if (m2.type === "ATTACHMENT") {
+                        const p = parsePayload<{ url?: string; path?: string; name?: string }>(m2.payload);
                         attSrc = p?.url || (p?.path ? fileUrl(p.path) : undefined);
                         attName = p?.name || undefined;
                     }
 
                     const body =
-                        m.type === "PROJECT_PROPOSAL" || m.type === "PROJECT_OFFER"
-                            ? <ProjectProposalCard data={parsePayload<ProjectPayload>(m.payload) || {}} />
-                            : m.type === "JOB_OFFER"
-                                ? <JobOfferCard data={parsePayload<JobOfferPayload>(m.payload) || {}} />
-                                : m.type === "ATTACHMENT"
-                                    ? renderAttachment(m)
-                                    : <div className="whitespace-pre-wrap text-sm text-gray-800">{m.content}</div>;
+                        m2.type === "PROJECT_PROPOSAL" || m2.type === "PROJECT_OFFER"
+                            ? (() => {
+                                  const p = parsePayload<ProjectPayload>(m2.payload) || {} as any;
+                                  const filled = {
+                                      title: p.title ?? (m2 as any).title,
+                                      contact: p.contact ?? (m2 as any).contact,
+                                      budget: p.budget ?? (m2 as any).budget,
+                                      description: p.description ?? (m2 as any).description,
+                                      attachments: p.attachments,
+                                  } as ProjectPayload;
+                                  return <ProjectProposalCard data={filled} />;
+                              })()
+                            : m2.type === "JOB_OFFER"
+                                ? (() => {
+                                      const p = parsePayload<JobOfferPayload>(m2.payload) || {} as any;
+                                      const filled = {
+                                          companyName: p.companyName ?? (m2 as any).companyName,
+                                          position: p.position ?? (m2 as any).position,
+                                          salary: p.salary ?? (m2 as any).salary,
+                                          location: p.location ?? (m2 as any).location,
+                                          description: p.description ?? (m2 as any).description,
+                                          isNegotiable: p.isNegotiable ?? (m2 as any).isNegotiable,
+                                          attachments: p.attachments,
+                                      } as JobOfferPayload;
+                                      return <JobOfferCard data={filled} />;
+                                  })()
+                                : m2.type === "ATTACHMENT"
+                                    ? renderAttachment(m2)
+                                    : <div className="whitespace-pre-wrap text-sm text-gray-800">{m2.content}</div>;
 
                     return mine ? (
                         <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">

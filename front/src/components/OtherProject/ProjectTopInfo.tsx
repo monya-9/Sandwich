@@ -143,7 +143,12 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
           onClose={() => setShowLoginPrompt(false)}
         />
         )}
-        <div className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0" />
+        <div
+          role="button"
+          className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0 cursor-pointer"
+          onClick={() => ownerId && navigate(`/users/${ownerId}`)}
+          title="프로필 보기"
+        />
         <div>
           <h1 className="text-2xl font-bold text-black">{projectName}</h1>
           <div className="flex items-center gap-2 text-gray-600 text-base mt-1">

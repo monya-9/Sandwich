@@ -6,6 +6,7 @@ export type ProjectPayload = {
     contact: string;
     budget: string | number;
     description: string;
+    isNegotiable?: boolean;
     attachments?: { url: string; name?: string }[];
 };
 
@@ -14,16 +15,24 @@ export type JobOfferPayload = {
     salary: string;     // "4,000 - 6,000만원(협의가능)" 같은 문자열
     location: string;
     description: string;
+    isNegotiable?: boolean;
+    position?: string;
     attachments?: { url: string; name?: string }[];
 };
 
 export async function sendProjectProposal(targetUserId: number, form: ProjectPayload) {
     const body: SendMessageBody = {
         targetUserId,
-        type: "PROJECT_PROPOSAL",         // 서버 스펙에 맞게 유지
-        content: form.title || "프로젝트 제안", // 드롭다운/목록 프리뷰용
-        payload: form,
-    };
+        type: "PROJECT_OFFER",            // 서버 스펙에 맞게 변경
+        content: null,
+        payload: JSON.stringify(form),
+        // top-level 필드도 함께 전송 (백엔드가 우선 사용)
+        title: form.title,
+        contact: form.contact,
+        budget: String(form.budget ?? ""),
+        description: form.description,
+        isNegotiable: !!form.isNegotiable,
+    } as any;
     return postMessage(body);
 }
 
@@ -31,8 +40,15 @@ export async function sendJobOffer(targetUserId: number, form: JobOfferPayload) 
     const body: SendMessageBody = {
         targetUserId,
         type: "JOB_OFFER",
-        content: form.companyName || "채용 제안",
-        payload: form,
-    };
+        content: null,
+        payload: JSON.stringify(form),
+        // top-level 필드도 함께 전송
+        companyName: form.companyName,
+        position: (form.position && String(form.position).trim()) || "기타",
+        salary: form.isNegotiable ? null : (form.salary ?? null),
+        location: form.location,
+        isNegotiable: !!form.isNegotiable,
+        description: form.description,
+    } as any;
     return postMessage(body);
 }

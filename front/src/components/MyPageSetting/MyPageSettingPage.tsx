@@ -42,7 +42,7 @@ const MyPageSettingPage: React.FC = () => {
 	};
 	const [userName, setUserName] = useState<string>(() => readStoredNickname());
 	const [userInitialized, setUserInitialized] = useState<boolean>(() => readStoredNickname().length > 0);
-	const [urlSlug, setUrlSlug] = useState<string>(() => { try { return localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || ""; } catch { return ""; } });
+	const [urlSlug, setUrlSlug] = useState<string>(() => { try { return localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || ""; } catch { return ""; } });
 	// 한줄 프로필은 동기 로컬 초기화 후, 서버 fetch 완료 시 한번 더 동기화
 	const [oneLineProfile, setOneLineProfile] = useState<string>(() => {
 		try {
@@ -112,7 +112,7 @@ const MyPageSettingPage: React.FC = () => {
 		const server = profile?.username?.trim();
 		if (server) return server;
 		try {
-			const stored = (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "").trim();
+			const stored = (localStorage.getItem(scopedKey("userUsername")) || sessionStorage.getItem(scopedKey("userUsername")) || "").trim();
 			if (stored) return stored;
 		} catch {}
 		return (urlSlug || "").trim();
@@ -147,8 +147,16 @@ const MyPageSettingPage: React.FC = () => {
 				// 한 줄 프로필 및 URL 슬러그 초기화
 				const storedOneLine = (localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "").slice(0, MAX20);
 				if (storedOneLine !== oneLineProfile) setOneLineProfile(storedOneLine);
-				const storedSlug = (localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || me.username || "");
-				setUrlSlug(storedSlug);
+				// 로컬(스코프) 값을 우선으로 사용하고, 없으면 서버 사용자 이름을 사용
+				const storedSlugScoped = (localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "");
+				const resolvedSlug = (storedSlugScoped || me.username || "");
+				setUrlSlug(resolvedSlug);
+				try {
+					localStorage.setItem(scopedKey("profileUrlSlug"), resolvedSlug);
+					sessionStorage.setItem(scopedKey("profileUrlSlug"), resolvedSlug);
+					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+				} catch {}
 			} catch {}
 		})();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -328,7 +336,7 @@ const MyPageSettingPage: React.FC = () => {
 		if (!/^[a-z0-9_]{3,20}$/.test(current)) { setSlugError("소문자/숫자/언더스코어만 사용 (3~20자)"); return; }
 		// 사용자가 이전에 유효성 통과 후 저장한 값이라면(로컬 플래그), 서버 체크를 생략하고 에러를 숨깁니다.
 		try {
-			const verified = localStorage.getItem("profileUrlSlugVerified") === "1" || sessionStorage.getItem("profileUrlSlugVerified") === "1";
+			const verified = localStorage.getItem(scopedKey("profileUrlSlugVerified")) === "1" || sessionStorage.getItem(scopedKey("profileUrlSlugVerified")) === "1";
 			if (verified) { setSlugError(null); setSlugInitialized(true); return; }
 		} catch {}
 		const mySeq = ++slugReqSeqRef.current;
@@ -344,12 +352,12 @@ const MyPageSettingPage: React.FC = () => {
 				}
 				setSlugError(null);
 				// 자동 저장: 유효하고 중복 아님 → 로컬 저장
-				const prevSlug = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
+				const prevSlug = localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "";
 				if (current !== prevSlug) {
-					localStorage.setItem("profileUrlSlug", current);
-					sessionStorage.setItem("profileUrlSlug", current);
-					localStorage.setItem("profileUrlSlugVerified", "1");
-					sessionStorage.setItem("profileUrlSlugVerified", "1");
+					localStorage.setItem(scopedKey("profileUrlSlug"), current);
+					sessionStorage.setItem(scopedKey("profileUrlSlug"), current);
+					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 					setSuccessToast({
 						visible: true,
 						message: "설정 내용이 저장되었습니다."
@@ -365,13 +373,13 @@ const MyPageSettingPage: React.FC = () => {
 	const saveSlugIfValid = () => {
 		const slug = urlSlug.trim();
 		if (!/^[a-z0-9_]{3,20}$/.test(slug)) return;
-		const prev = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
+		const prev = localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "";
 		if (slug !== prev) {
 			try {
-				localStorage.setItem("profileUrlSlug", slug);
-				sessionStorage.setItem("profileUrlSlug", slug);
-				localStorage.setItem("profileUrlSlugVerified", "1");
-				sessionStorage.setItem("profileUrlSlugVerified", "1");
+				localStorage.setItem(scopedKey("profileUrlSlug"), slug);
+				sessionStorage.setItem(scopedKey("profileUrlSlug"), slug);
+				localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+				sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 			} catch {}
 			// 즉시 에러 해제 및 대기 중 검사 무효화
 			setSlugError(null);
@@ -381,6 +389,36 @@ const MyPageSettingPage: React.FC = () => {
 				message: "설정 내용이 저장되었습니다."
 			});
 		}
+	};
+
+	// 서버에도 즉시 반영하는 저장 헬퍼 (중복/형식 검증 포함)
+	const saveSlugToServerIfValid = async () => {
+		const slug = urlSlug.trim();
+		if (!/^[a-z0-9_]{3,20}$/.test(slug)) return;
+		try {
+			const res = await UserApi.checkUsername(slug);
+			if (!res.exists || slug === (profile?.username || "")) {
+				await UserApi.updateUsername(slug);
+				const refreshed = await UserApi.getMe();
+				setProfile(refreshed);
+				try {
+					localStorage.setItem(scopedKey("userUsername"), slug);
+					sessionStorage.setItem(scopedKey("userUsername"), slug);
+					localStorage.setItem(scopedKey("profileUrlSlug"), slug);
+					sessionStorage.setItem(scopedKey("profileUrlSlug"), slug);
+					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+					// 전역 알림: username(slug) 업데이트됨
+					try { window.dispatchEvent(new Event("user-username-updated")); } catch {}
+				} catch {}
+				setSuccessToast({
+					visible: true,
+					message: "설정 내용이 저장되었습니다."
+				});
+			} else {
+				setSlugError("이미 사용 중인 주소입니다.");
+			}
+		} catch {}
 	};
 
 	// 마우스 클릭 시(포커스 유지와 무관) 즉시 저장
@@ -400,18 +438,20 @@ const MyPageSettingPage: React.FC = () => {
 					sessionStorage.setItem(scopedKey("profileOneLine"), one);
 					localChanged = true;
 				}
-									// URL 슬러그 저장
+												// URL 슬러그 저장
 					const slug = slugRef.current.trim();
-					const prevSlug = localStorage.getItem("profileUrlSlug") || sessionStorage.getItem("profileUrlSlug") || "";
+					const prevSlug = localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "";
 					if (slug && slug !== prevSlug && /^[a-z0-9_]{3,20}$/.test(slug)) {
-						localStorage.setItem("profileUrlSlug", slug);
-						sessionStorage.setItem("profileUrlSlug", slug);
+						localStorage.setItem(scopedKey("profileUrlSlug"), slug);
+						sessionStorage.setItem(scopedKey("profileUrlSlug"), slug);
 						// 즉시 에러 해제 및 대기 중 검사 무효화
 						setSlugError(null);
 						slugReqSeqRef.current++;
-						localStorage.setItem("profileUrlSlugVerified", "1");
-						sessionStorage.setItem("profileUrlSlugVerified", "1");
+						localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
+						sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 						localChanged = true;
+						// 클릭 시 서버에도 저장
+						saveSlugToServerIfValid().catch(()=>{});
 					}
 				if (localChanged) {
 					setSuccessToast({
@@ -586,27 +626,9 @@ const MyPageSettingPage: React.FC = () => {
 										type="text"
 										value={urlSlug}
 										onChange={onSlugChange}
-										onBlur={async ()=>{
-											saveSlugIfValid();
-											const slug = urlSlug.trim();
-											if (/^[a-z0-9_]{3,20}$/.test(slug)) {
-												try {
-													const res = await UserApi.checkUsername(slug);
-													if (!res.exists || slug === (profile?.username || "")) {
-														await UserApi.updateUsername(slug);
-														const refreshed = await UserApi.getMe();
-														setProfile(refreshed);
-														try { localStorage.setItem("userUsername", slug); sessionStorage.setItem("userUsername", slug); } catch {}
-														setSuccessToast({
-															visible: true,
-															message: "설정 내용이 저장되었습니다."
-														});
-													} else {
-														setSlugError("이미 사용 중인 주소입니다.");
-													}
-												} catch {}
-											}
-										}}
+										// 저장은 마우스 클릭 시 전역 핸들러에서만 수행
+										onBlur={undefined as any}
+										onKeyDown={undefined as any}
 										placeholder="URL 입력란"
 										pattern="^[a-z0-9_]{3,20}$"
 										title="소문자/숫자/언더스코어만 입력 가능합니다 (3~20자)"

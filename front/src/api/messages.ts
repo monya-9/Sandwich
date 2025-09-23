@@ -40,6 +40,16 @@ export type ServerMessage = {
     read: boolean;
     createdAt?: string | null;
     mine?: boolean;
+    // 카드형 필드(서버 top-level)를 보존하여 UI 폴백에 사용
+    companyName?: string | null;
+    position?: string | null;
+    salary?: string | null;
+    location?: string | null;
+    isNegotiable?: boolean | null;
+    title?: string | null;
+    contact?: string | null;
+    budget?: string | null;
+    description?: string | null;
 };
 
 type PageResp<T> = {
@@ -137,6 +147,16 @@ function normalizeMessage(raw: any, fallbackRoomId?: number): ServerMessage {
         read: Boolean(raw.read ?? raw.isRead),
         createdAt: raw.createdAt ?? raw.created_at ?? null,
         mine: raw.mine,
+        // 서버 top-level 카드형 필드 보존
+        companyName: (raw.companyName ?? raw.company_name) ?? null,
+        position: raw.position ?? null,
+        salary: raw.salary ?? null,
+        location: raw.location ?? null,
+        isNegotiable: typeof raw.isNegotiable === "boolean" ? raw.isNegotiable : (raw.is_negotiable ?? null),
+        title: raw.title ?? null,
+        contact: raw.contact ?? null,
+        budget: raw.budget != null ? String(raw.budget) : null,
+        description: (raw.description ?? raw.cardDescription ?? raw.card_description) ?? null,
     };
 }
 

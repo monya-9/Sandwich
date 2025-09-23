@@ -126,11 +126,8 @@ export default function UserProfileBox({
   );
 
   // 표시 이름/이니셜 계산
-  const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
-  const storedEmail = (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "").trim();
-  const displayName = storedNickname || userName;
-  const emailInitial = storedEmail ? storedEmail[0].toUpperCase() : "";
-  const avatarInitial = emailInitial || (displayName?.[0] || "").toUpperCase();
+  const displayName = userName;
+  const avatarInitial = (displayName?.[0] || "").toUpperCase();
 
   return (
     <>
@@ -161,7 +158,12 @@ export default function UserProfileBox({
           onClose={() => setShowLoginPrompt(false)}
         />
         )}
-        <div className="w-14 h-14 rounded-full mb-4 bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
+        <div
+          role="button"
+          className="w-14 h-14 rounded-full mb-4 bg-gray-200 text-gray-700 font-bold flex items-center justify-center cursor-pointer"
+          onClick={() => ownerId && navigate(`/users/${ownerId}`)}
+          title="프로필 보기"
+        >
           {avatarInitial}
         </div>
         <div className="text-2xl font-bold mb-3">{displayName}</div>
