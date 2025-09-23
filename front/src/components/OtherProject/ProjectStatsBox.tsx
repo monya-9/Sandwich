@@ -9,12 +9,13 @@ type Props = {
   comments: number;
   projectName: string;
   date: string;
-  category: string;
+  category?: string;
   badge?: string;
 };
 
 export default function ProjectStatsBox({ likes, views, comments, projectName, date, category, badge, }: Props) {
   const displayName = (projectName || "").trim();
+  const hasCategory = !!(category && category.trim().length > 0);
   return (
     <div className="-mx-8 bg-black text-white w-auto mb-8">
       <div className="max-w-[1800px] mx-auto py-10 px-6 flex flex-col items-center">
@@ -54,7 +55,7 @@ export default function ProjectStatsBox({ likes, views, comments, projectName, d
         {/* 프로젝트명, 날짜, 통계 */}
         {displayName && <div className="text-2xl font-bold mb-2 text-center">{displayName}</div>}
         <div className="mb-6 text-center text-gray-300">
-          {date} | {category}
+          {hasCategory ? (<>{date} | {category}</>) : date}
         </div>
         <div className="flex justify-center gap-8 text-gray-200 text-lg">
           <div className="inline-flex items-center gap-2 h-5 align-middle">
