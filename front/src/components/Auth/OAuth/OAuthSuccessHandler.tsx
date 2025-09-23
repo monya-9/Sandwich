@@ -54,7 +54,11 @@ const OAuthSuccessHandler: React.FC = () => {
                     "";
 
                 if (display) localStorage.setItem("userNickname", display);
-                if (me.username) localStorage.setItem("userUsername", me.username);
+                if (me.username) {
+                    localStorage.setItem("userUsername", me.username);
+                    const scopedKey = me.email ? `userUsername:${me.email}` : undefined;
+                    if (scopedKey) localStorage.setItem(scopedKey, me.username);
+                }
                 if (me.profileName) localStorage.setItem("userProfileName", me.profileName);
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
 

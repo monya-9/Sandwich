@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MonthSelect from "./MonthSelect";
 import { CareerApi } from "../../api/careerApi";
+import Toast from "../common/Toast";
 
 interface InitialValues {
 	role?: string;
@@ -32,6 +33,10 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 	const [desc, setDesc] = useState("");
 	const [isMainCareer, setIsMainCareer] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 
 	useEffect(() => {
 		if (!initial) return;
@@ -93,14 +98,27 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 			}
 			onDone();
 		} catch (e) {
-			alert("경력 저장에 실패했습니다.");
+			setErrorToast({
+				visible: true,
+				message: "경력 저장에 실패했습니다."
+			});
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	return (
-		<div className="space-y-5">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="space-y-5">
 			{/* 역할 / 회사 이름 */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
@@ -163,6 +181,7 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 				</div>
 			</div>
 		</div>
+		</>
 	);
 };
 

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Toast from "../common/Toast";
 
 type Props = {
 	onAdd: (embedUrl: string) => void;
@@ -24,8 +25,22 @@ export function normalizeVideoUrl(raw: string): string | null {
 
 export default function VideoUploadSection({ onAdd }: Props) {
 	const [url, setUrl] = useState("");
+	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 	return (
-		<div className="flex items-center gap-2">
+		<>
+			<Toast
+				visible={errorToast.visible}
+				message={errorToast.message}
+				type="error"
+				size="medium"
+				autoClose={3000}
+				closable={true}
+				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<div className="flex items-center gap-2">
 			<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="YouTube/Vimeo URL" className="border rounded px-2 py-1 w-[260px]" />
 			<button
 				type="button"
@@ -33,12 +48,18 @@ export default function VideoUploadSection({ onAdd }: Props) {
 				onClick={() => {
 					const embed = normalizeVideoUrl(url);
 					if (embed) onAdd(embed);
-					else alert('지원하지 않는 동영상 URL 형식입니다. YouTube 또는 Vimeo 링크를 입력해주세요.');
+					else {
+					setErrorToast({
+						visible: true,
+						message: '지원하지 않는 동영상 URL 형식입니다. YouTube 또는 Vimeo 링크를 입력해주세요.'
+					});
+				}
 					setUrl("");
 				}}
 			>
 				추가
 			</button>
 		</div>
+		</>
 	);
 } 

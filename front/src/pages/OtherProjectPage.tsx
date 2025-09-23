@@ -11,6 +11,7 @@ import QueenImg from "../assets/images/Queen.jpg";
 import { AuthContext } from "../context/AuthContext";
 import { useParams } from "react-router-dom";
 import { fetchProjectDetail, type ProjectDetailResponse } from "../api/projectApi";
+import api from "../api/axiosInstance";
 
 // 실 서비스라면 아래처럼 username을 동적으로 받아오세요
 // import { useParams } from "react-router-dom";
@@ -34,6 +35,7 @@ export default function OtherProjectPage() {
     const projectId = projectIdParam ? Number(projectIdParam) : undefined;
 
     const [projectDetail, setProjectDetail] = useState<ProjectDetailResponse | null>(null);
+    const [ownerNickname, setOwnerNickname] = useState<string>("");
 
     useEffect(() => {
         if (ownerId && projectId) {
@@ -43,9 +45,22 @@ export default function OtherProjectPage() {
         }
     }, [ownerId, projectId]);
 
-    // 스토리지의 닉네임 우선 사용
-    const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
-    const finalOwnerName = storedNickname || "사용자 이름";
+    // ownerId 기준으로 공개 프로필 조회 → 닉네임 세팅
+    useEffect(() => {
+        async function loadOwnerNickname(id?: number) {
+            if (!id) {
+                setOwnerNickname("");
+                return;
+            }
+            try {
+                const { data } = await api.get<{ id: number; nickname: string }>(`/users/${id}`);
+                setOwnerNickname(data?.nickname || "");
+            } catch {
+                setOwnerNickname("");
+            }
+        }
+        loadOwnerNickname(ownerId);
+    }, [ownerId]);
 
     // ✅ 실제 프로젝트 API 응답이라고 가정 (데모 기본값 + 파라미터 우선 적용)
     const project = {
@@ -53,7 +68,7 @@ export default function OtherProjectPage() {
         username: "sampleuser", // 실제 서비스에서는 동적으로!
         id: projectId ?? 123, // 파라미터 없으면 데모 값
         name: projectDetail?.title ?? "프로젝트 이름",
-        owner: finalOwnerName,
+        owner: ownerNickname || "사용자", // 공개 프로필 닉네임 사용
         category: "UI·UX",
         ownerId: ownerId ?? 0, // 파라미터 없으면 0 (팔로우 대상 없음)
         shareUrl: projectDetail?.shareUrl,

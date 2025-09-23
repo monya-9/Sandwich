@@ -102,62 +102,44 @@ export default function ProfilePage() {
     };
   }, []);
 
-  // 닉네임 저장 이벤트 수신: 헤더와 동일하게 즉시 반영
+  // 닉네임/슬러그 저장 이벤트 수신: 즉시 반영
   useEffect(() => {
-    const onNickUpdated = async () => {
+    const onUserUpdated = async () => {
       try {
         const data = await UserApi.getMe();
         setMe(data);
       } catch {}
     };
-    const onOneLineUpdated = () => {
-      try {
-        const storedEmail = (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "");
-        const scopedKey = storedEmail ? `profileOneLine:${storedEmail}` : "profileOneLine";
-        const v = (localStorage.getItem(scopedKey) || sessionStorage.getItem(scopedKey) || "").trim();
-        if (v) setShowTip(false);
-        setMe((prev)=> (prev ? ({ ...prev, profileName: v } as any) : prev));
-      } catch {}
-    };
-    window.addEventListener("user-nickname-updated", onNickUpdated as any);
-    window.addEventListener("profile-one-line-updated", onOneLineUpdated as any);
+    window.addEventListener("user-username-updated", onUserUpdated as any);
+    window.addEventListener("user-nickname-updated", onUserUpdated as any);
     return () => {
-      window.removeEventListener("user-nickname-updated", onNickUpdated as any);
-      window.removeEventListener("profile-one-line-updated", onOneLineUpdated as any);
+      window.removeEventListener("user-username-updated", onUserUpdated as any);
+      window.removeEventListener("user-nickname-updated", onUserUpdated as any);
     };
   }, []);
 
   const displayName = (me?.nickname && me.nickname.trim()) || (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim() || me?.username || "사용자";
-  const profileUrlSlug = me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
+  // 계정별 스코프 키를 우선 사용해 새로고침 후에도 동기화 유지
+  const userEmailScoped = (typeof window !== "undefined" && (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail"))) || "";
+  const usernameScopedKey = userEmailScoped ? `userUsername:${userEmailScoped}` : "userUsername";
+  const scopedUsernameLocal = (typeof window !== "undefined" && (localStorage.getItem(usernameScopedKey) || sessionStorage.getItem(usernameScopedKey))) || "";
+  const profileUrlScopedKey = userEmailScoped ? `profileUrlSlug:${userEmailScoped}` : "profileUrlSlug";
+  const scopedProfileUrl = (typeof window !== "undefined" && (localStorage.getItem(profileUrlScopedKey) || sessionStorage.getItem(profileUrlScopedKey))) || "";
+  const profileUrlSlug = scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
   const profileImageUrl = me?.profileImage || "";
   const initial = (() => {
     const src = (me?.email || "").trim();
     const ch = src ? src[0] : "";
     return ch ? ch.toUpperCase() : "N";
   })();
-  const storedProfileName =
-    (typeof window !== "undefined" && (localStorage.getItem("userProfileName") || sessionStorage.getItem("userProfileName"))) || "";
-  // Read one-line profile from scoped storage key used in settings page
+  // 한줄 프로필은 현재 로그인 스코프 키에서만 읽는다. 없으면 표시하지 않음.
   const storedEmail = (typeof window !== "undefined" && (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail"))) || "";
   const scopedKey = storedEmail ? `profileOneLine:${storedEmail}` : "profileOneLine";
   let oneLineScoped = "";
   try {
     oneLineScoped = localStorage.getItem(scopedKey) || sessionStorage.getItem(scopedKey) || "";
-    if (!oneLineScoped) {
-      // Fallback: scan prefixed keys if scope mismatch
-      for (let i = 0; i < (localStorage?.length || 0); i++) {
-        const k = localStorage.key(i) || "";
-        if (k.startsWith("profileOneLine:")) { oneLineScoped = localStorage.getItem(k) || ""; if (oneLineScoped) break; }
-      }
-      if (!oneLineScoped) {
-        for (let i = 0; i < (sessionStorage?.length || 0); i++) {
-          const k = sessionStorage.key(i) || "";
-          if (k.startsWith("profileOneLine:")) { oneLineScoped = sessionStorage.getItem(k) || ""; if (oneLineScoped) break; }
-        }
-      }
-    }
   } catch {}
-  const rawOneLiner = (me as any)?.profileName || storedProfileName || oneLineScoped || "";
+  const rawOneLiner = (me as any)?.profileName || oneLineScoped || "";
   const oneLiner = rawOneLiner && rawOneLiner.trim ? rawOneLiner.trim() : rawOneLiner;
   const bioText = (me?.bio || "").trim();
 

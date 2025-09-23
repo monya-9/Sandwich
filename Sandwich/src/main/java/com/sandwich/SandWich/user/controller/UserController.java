@@ -119,4 +119,10 @@ public class UserController {
         return ResponseEntity.ok("기술 스택 설정 완료");
     }
 
+    @GetMapping("/{id:\\d+}")
+    @jakarta.transaction.Transactional
+    public ResponseEntity<PublicProfileResponse> getPublicProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getPublicProfile(id));
+    }
+
 }

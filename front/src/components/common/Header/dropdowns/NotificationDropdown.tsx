@@ -63,11 +63,14 @@ const NotificationDropdown: React.FC<Props> = ({
 
             {initializing ? (
                 <Skeleton />
-            ) : items.length === 0 ? (
-                <EmptyState text="새로운 알림이 없어요" />
-            ) : (
-                <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
-                    {items.map((n) => {
+            ) : (() => {
+                // 모든 알림 표시 (읽음/읽지 않음 구분 없이)
+                return items.length === 0 ? (
+                    <EmptyState text="새로운 알림이 없어요" />
+                ) : (
+                    <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {items.map((n) => {
+                        // extra.actorName에 이미 처리된 닉네임이 있음
                         const actorName = n.extra?.actorName;
                         const profileUrl = n.thumbnail || n.extra?.profileImageUrl || null;
 
@@ -75,8 +78,11 @@ const NotificationDropdown: React.FC<Props> = ({
                         const unknown =
                             !actorName || actorName === "누군가" || /^\d+$/.test(actorName);
 
-                        const initialSource =
-                            n.extra?.actorEmail?.split("@")?.[0] || actorName || n.title;
+                        // 이메일 첫 글자 또는 닉네임 첫 글자 사용
+                        const initialSource = 
+                            n.extra?.actorEmail?.split("@")?.[0] || 
+                            actorName || 
+                            n.title;
                         const initial = (initialSource?.[0] || "?").toUpperCase();
 
                         return (
@@ -141,7 +147,8 @@ const NotificationDropdown: React.FC<Props> = ({
                         </li>
                     )}
                 </ul>
-            )}
+                );
+            })()}
         </DropdownWrapper>
     );
 };

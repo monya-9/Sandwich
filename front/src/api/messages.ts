@@ -40,6 +40,16 @@ export type ServerMessage = {
     read: boolean;
     createdAt?: string | null;
     mine?: boolean;
+    // 카드형 필드(서버 top-level)를 보존하여 UI 폴백에 사용
+    companyName?: string | null;
+    position?: string | null;
+    salary?: string | null;
+    location?: string | null;
+    isNegotiable?: boolean | null;
+    title?: string | null;
+    contact?: string | null;
+    budget?: string | null;
+    description?: string | null;
 };
 
 type PageResp<T> = {
@@ -137,6 +147,16 @@ function normalizeMessage(raw: any, fallbackRoomId?: number): ServerMessage {
         read: Boolean(raw.read ?? raw.isRead),
         createdAt: raw.createdAt ?? raw.created_at ?? null,
         mine: raw.mine,
+        // 서버 top-level 카드형 필드 보존
+        companyName: (raw.companyName ?? raw.company_name) ?? null,
+        position: raw.position ?? null,
+        salary: raw.salary ?? null,
+        location: raw.location ?? null,
+        isNegotiable: typeof raw.isNegotiable === "boolean" ? raw.isNegotiable : (raw.is_negotiable ?? null),
+        title: raw.title ?? null,
+        contact: raw.contact ?? null,
+        budget: raw.budget != null ? String(raw.budget) : null,
+        description: (raw.description ?? raw.cardDescription ?? raw.card_description) ?? null,
     };
 }
 
@@ -242,6 +262,89 @@ export async function fetchRoomMeta(roomId: number) {
 /** (호환용) sendAttachment – 현재는 /attachments 단일 경로만 사용 */
 export async function sendAttachment(roomId: number, file: File): Promise<ServerMessage> {
     return uploadAttachment(roomId, file);
+}
+
+/** 메시지 범위 기반 PNG 스크린샷 */
+export async function downloadMessageRangePNG(
+    roomId: number,
+    fromId: number,
+    toId: number,
+    opts?: { width?: number; preset?: "default" | "compact"; scale?: 1 | 2 | 3; theme?: "light" | "dark" }
+) {
+    const width = opts?.width || 960;
+    const preset = opts?.preset || "default";
+    const scale = opts?.scale || 2;
+    const theme = opts?.theme || "light";
+
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    const headers: Record<string, string> = {
+        'Accept': 'image/png'
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const qs = `?fromId=${fromId}&toId=${toId}&width=${width}&preset=${preset}&scale=${scale}&theme=${theme}`;
+    const url = `/api/messages/${roomId}/screenshot.png${qs}`;
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`PNG 스크린샷 요청 실패 (${res.status}): ${body || "알 수 없음"}`);
+    }
+
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename\*?=(?:UTF-8''|")?([^;"']+)/i.exec(cd);
+    const filename = (m && decodeURIComponent(m[1])) || `room-${roomId}_${fromId}-${toId}@${scale}x.png`;
+
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(urlObj);
+}
+
+/** 메시지 범위 기반 PDF 스크린샷 */
+export async function downloadMessageRangePDF(
+    roomId: number,
+    fromId: number,
+    toId: number,
+    opts?: { width?: number; preset?: "default" | "compact"; theme?: "light" | "dark" }
+) {
+    const width = opts?.width || 960;
+    const preset = opts?.preset || "default";
+    const theme = opts?.theme || "light";
+
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    const headers: Record<string, string> = {
+        'Accept': 'application/pdf'
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const qs = `?fromId=${fromId}&toId=${toId}&width=${width}&preset=${preset}&theme=${theme}`;
+    const url = `/api/messages/${roomId}/screenshot.pdf${qs}`;
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`PDF 스크린샷 요청 실패 (${res.status}): ${body || "알 수 없음"}`);
+    }
+
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename\*?=(?:UTF-8''|")?([^;"']+)/i.exec(cd);
+    const filename = (m && decodeURIComponent(m[1])) || `room-${roomId}_${fromId}-${toId}.pdf`;
+
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(urlObj);
 }
 
 /** (옵션) 대화 캡처 */

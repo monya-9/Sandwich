@@ -4,7 +4,7 @@
 if (process.env.NODE_ENV !== "production") {
     /* ===== 경로 제한: 여기 나열된 경로에선 오버레이 DOM 자체를 숨긴다 ===== */
     const AUTH_PATHS = [/^\/join\b/, /^\/login\b/];
-    const onAuthPath = () => AUTH_PATHS.some((rx) => rx.test(location.pathname));
+    const onAuthPath = () => AUTH_PATHS.some((rx) => rx.test(window.location.pathname));
 
     // 오버레이 DOM 숨김 (웹팩/CRA/바이트 등 다 커버)
     const hideOverlayDom = () => {

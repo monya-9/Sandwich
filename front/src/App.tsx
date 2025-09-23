@@ -36,10 +36,6 @@ import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 import { initFCM } from "./lib/fcm";
 import { enableRecaptchaV3OnPaths } from "./api/axiosInstance";
 import ProfilePage from "./components/Profile/ProfilePage";
-import WorkTab from "./components/Profile/WorkTab";
-import LikesTab from "./components/Profile/LikesTab";
-import CollectionsTab from "./components/Profile/CollectionsTab";
-import DraftsTab from "./components/Profile/DraftsTab";
 import CareerDetailsPage from "./components/Profile/CareerDetailsPage";
 import CodeSubmitPage from "./pages/challenge/CodeSubmitPage";
 import PortfolioSubmitPage from "./pages/challenge/PortfolioSubmitPage";
@@ -48,6 +44,8 @@ import CodeSubmissionListPage from "./pages/challenge/CodeSubmissionListPage";
 import PortfolioVotePage from "./pages/challenge/PortfolioVotePage";
 import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetailPage";
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import UserPublicProfilePage from "./pages/UserPublicProfilePage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -116,6 +114,9 @@ function App() {
 
                                 {/* (예시) 코드 제출 수정 */}
                                 <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
+
+                                {/* 공개 사용자 프로필 */}
+                                <Route path="/users/:id" element={<UserPublicProfilePage />} />
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />
@@ -125,7 +126,7 @@ function App() {
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />
                             <Route path="project/sample" element={<ProjectMangeSampleForm />} />
 
-                            <Route path="*" element={<Navigate to="/" replace />} />
+                            <Route path="*" element={<NotFoundPage />} />
                         </Routes>
                     </BrowserRouter>
                 </MessagesProvider>

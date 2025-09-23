@@ -39,7 +39,10 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             (typeof window !== "undefined" &&
                 (localStorage.getItem(k) || sessionStorage.getItem(k))) || "";
         const nick = getItem("userNickname")?.trim();
-        const user = getItem("userUsername")?.trim();
+        // 계정별 스코프 username 우선
+        const userEmail = getItem("userEmail");
+        const scopedKey = userEmail ? `userUsername:${userEmail}` : "userUsername";
+        const user = getItem(scopedKey)?.trim() || getItem("userUsername")?.trim();
         if (nick) return nick;
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
@@ -57,8 +60,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
     // 버튼/드롭다운 표시 여부(로그인 & 토큰)
     const notiReady = isLoggedIn && !!accessToken;
-    // WS 연결 여부(= userId가 확보된 뒤)
-    const notiWsEnabled = notiReady && myId > 0 && !USE_DUMMY_NOTI;
+    // WS 연결은 useNotificationStream 훅 내부에서 처리됨
 
     // ▼ 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);
@@ -104,7 +106,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
     // ▼ 알림 스트림(WS + API)
     const noti = useNotificationStream({
-        enabled: notiReady && showNotification,// ★ 드롭다운 열렸을 때만 REST/WS 모두 동작
+        enabled: notiReady,// ★ 항상 연결 유지 (실시간 알림 수신 보장)
         userId: myId || 0,
         wsUrl: "/stomp",
         topicBase: "/topic/users",
@@ -115,14 +117,10 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             null,
         resetOnDisable: false,
         debug: false,
+        dropdownOpen: showNotification, // ★ 드롭다운 열림 상태 전달
     });
 
-    // 열릴 때 첫 페이지 로드
-    useEffect(() => {
-        if (!notiReady || USE_DUMMY_NOTI) return;
-        if (!showNotification) return;
-        if (!noti.initialized) void noti.loadFirst();
-    }, [notiReady, showNotification]); // eslint-disable-line react-hooks/exhaustive-deps
+    // 드롭다운 열릴 때 첫 페이지 로드 (훅 내부에서 자동 처리됨)
 
     // 드롭다운 데이터 원천
     const notiItems: NotifyItem[] = USE_DUMMY_NOTI

@@ -115,30 +115,23 @@ function CareerDetailsPage() {
 		return () => window.removeEventListener("privacy-changed", onPrivacy as any);
 	}, []);
 
-	const profileUrlSlug = me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
+	// 계정별 스코프 키 우선
+	const userEmailScoped = (typeof window !== "undefined" && (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail"))) || "";
+	const usernameScopedKey = userEmailScoped ? `userUsername:${userEmailScoped}` : "userUsername";
+	const scopedUsernameLocal = (typeof window !== "undefined" && (localStorage.getItem(usernameScopedKey) || sessionStorage.getItem(usernameScopedKey))) || "";
+	const profileUrlScopedKey = userEmailScoped ? `profileUrlSlug:${userEmailScoped}` : "profileUrlSlug";
+	const scopedProfileUrl = (typeof window !== "undefined" && (localStorage.getItem(profileUrlScopedKey) || sessionStorage.getItem(profileUrlScopedKey))) || "";
+	const profileUrlSlug = scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
 	const displayName = (me?.nickname && me.nickname.trim()) || (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim() || me?.username || "사용자";
 	const profileImageUrl = me?.profileImage || "";
-	// 한줄 프로필 스코프 키(설정 페이지 저장 키와 동일)
-	const storedProfileName = (typeof window !== "undefined" && (localStorage.getItem("userProfileName") || sessionStorage.getItem("userProfileName"))) || "";
+	// 한줄 프로필: 현재 로그인 스코프 키에서만 읽고, 없으면 표시하지 않음
 	const storedEmail = (typeof window !== "undefined" && (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail"))) || "";
 	const scopedKey = storedEmail ? `profileOneLine:${storedEmail}` : "profileOneLine";
 	let oneLineScoped = "";
 	try {
 		oneLineScoped = localStorage.getItem(scopedKey) || sessionStorage.getItem(scopedKey) || "";
-		if (!oneLineScoped) {
-			for (let i = 0; i < (localStorage?.length || 0); i++) {
-				const k = localStorage.key(i) || "";
-				if (k.startsWith("profileOneLine:")) { oneLineScoped = localStorage.getItem(k) || ""; if (oneLineScoped) break; }
-			}
-			if (!oneLineScoped) {
-				for (let i = 0; i < (sessionStorage?.length || 0); i++) {
-					const k = sessionStorage.key(i) || "";
-					if (k.startsWith("profileOneLine:")) { oneLineScoped = sessionStorage.getItem(k) || ""; if (oneLineScoped) break; }
-				}
-			}
-		}
 	} catch {}
-	const rawOneLiner = (me as any)?.profileName || storedProfileName || oneLineScoped || "";
+	const rawOneLiner = (me as any)?.profileName || oneLineScoped || "";
 	const oneLiner = rawOneLiner && (rawOneLiner as any).trim ? (rawOneLiner as string).trim() : rawOneLiner;
 	const bioText = (me?.bio || "").trim();
 
@@ -153,6 +146,21 @@ function CareerDetailsPage() {
 			return { ...e, major, status } as any;
 		});
 	}, [educations]);
+
+	useEffect(() => {
+		const onUserUpdated = async () => {
+			try {
+				const meRes = await UserApi.getMe();
+				setMe(meRes);
+			} catch {}
+		};
+		window.addEventListener("user-username-updated", onUserUpdated as any);
+		window.addEventListener("user-nickname-updated", onUserUpdated as any);
+		return () => {
+			window.removeEventListener("user-username-updated", onUserUpdated as any);
+			window.removeEventListener("user-nickname-updated", onUserUpdated as any);
+		};
+	}, []);
 
 	if (loading) {
 		return (

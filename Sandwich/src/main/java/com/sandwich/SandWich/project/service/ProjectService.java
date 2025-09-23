@@ -106,6 +106,7 @@ public class ProjectService {
                 .backendBuildCommand(project.getBackendBuildCommand())
                 .portNumber(project.getPortNumber())
                 .extraRepoUrl(project.getExtraRepoUrl())
+                .owner(project.getUser() != null ? new ProjectDetailResponse.Owner(project.getUser()) : null)
                 .build();
     }
 

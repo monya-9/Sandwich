@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { challengeApi } from "../../api/challengeApi";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
+import Toast from "../../components/common/Toast";
 
 type Form = {
     title: string;
@@ -19,6 +20,10 @@ export default function CodeEditPage() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+        visible: false,
+        message: ''
+    });
     const [form, setForm] = useState<Form>({ title: "", repoUrl: "", language: "node", entrypoint: "npm start", note: "" });
 
     useEffect(() => {
@@ -52,7 +57,10 @@ export default function CodeEditPage() {
                 entrypoint: form.entrypoint.trim(),
                 note: form.note?.trim() || undefined,
             });
-            alert("수정되었습니다.");
+            setSuccessToast({
+                visible: true,
+                message: "수정되었습니다."
+            });
             nav(`/challenge/code/${challengeId}`);
         } finally {
             setSaving(false);
@@ -62,7 +70,17 @@ export default function CodeEditPage() {
     if (loading) return <div className="p-6 text-[13.5px]">불러오는 중…</div>;
 
     return (
-        <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6 md:py-10">
+        <>
+            <Toast
+                visible={successToast.visible}
+                message={successToast.message}
+                type="success"
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+            />
+            <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6 md:py-10">
             <h1 className="mb-4 text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">코드 제출 수정</h1>
             <SectionCard className="!px-5 !py-5">
                 <div className="space-y-4">
@@ -121,5 +139,6 @@ export default function CodeEditPage() {
                 </div>
             </SectionCard>
         </div>
+        </>
     );
 }

@@ -61,7 +61,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         if (!el) return;
         el.addEventListener('scroll', handleScroll);
         return () => el.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [handleScroll]);
 
     return (
         <section className="w-full relative mb-10 py-[20px]">

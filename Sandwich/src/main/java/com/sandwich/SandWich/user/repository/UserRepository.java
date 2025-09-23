@@ -1,5 +1,7 @@
 package com.sandwich.SandWich.user.repository;
 import com.sandwich.SandWich.user.domain.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -29,6 +31,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
         """)
     Optional<User> findByEmailWithDetails(@Param("email") String email);
 
+    @Query("""
+        SELECT u FROM User u
+        LEFT JOIN FETCH u.profile
+        LEFT JOIN FETCH u.userPosition up
+        LEFT JOIN FETCH up.position
+        LEFT JOIN FETCH u.interests ui
+        LEFT JOIN FETCH ui.interest
+        WHERE u.id = :id AND u.isDeleted = false
+        """)
+    Optional<User> findByIdWithDetails(@Param("id") Long id);
 
     @Query("SELECT u FROM User u WHERE u.id = :id AND u.isDeleted = false")
     Optional<User> findByIdIfNotDeleted(@Param("id") Long id);
@@ -54,4 +66,41 @@ public interface UserRepository extends JpaRepository<User, Long> {
       where u.id in :ids and u.isDeleted = false
     """)
     List<ActorView> findActorViewsByIds(@Param("ids") Set<Long> ids);
+
+    /** 빈 검색어일 때: 전체 사용자 */
+    @Query("""
+        select u.id as id,
+               COALESCE(p.nickname, u.username) as nickname,
+               u.email as email,
+               p.profileImage as avatarUrl,
+               u.isVerified as isVerified,
+               pos.name as position
+        from User u
+        left join u.profile p
+        left join u.userPosition up
+        left join up.position pos
+        where u.isDeleted = false
+        """)
+    Page<UserAccountRow> findAllAccounts(Pageable pageable);
+
+    /** 검색어 있을 때: nickname(username 대체), email, username 대상으로 LIKE 검색 */
+    @Query("""
+        select u.id as id,
+               COALESCE(p.nickname, u.username) as nickname,
+               u.email as email,
+               p.profileImage as avatarUrl,
+               u.isVerified as isVerified,
+               pos.name as position
+        from User u
+        left join u.profile p
+        left join u.userPosition up
+        left join up.position pos
+        where u.isDeleted = false
+          and (
+               lower(COALESCE(p.nickname, u.username)) like lower(concat('%', :q, '%'))
+            or lower(u.email) like lower(concat('%', :q, '%'))
+            or lower(u.username) like lower(concat('%', :q, '%'))
+          )
+        """)
+    Page<UserAccountRow> searchAccounts(@Param("q") String q, Pageable pageable);
 }

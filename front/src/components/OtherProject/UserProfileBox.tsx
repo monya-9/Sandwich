@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import ReactDOM from "react-dom";
 import LoginPrompt from "./LoginPrompt";
+import Toast from "../common/Toast";
 
 type Props = {
   userName: string;
@@ -19,35 +19,15 @@ export default function UserProfileBox({
 }: Props) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const [followBtnHover, setFollowBtnHover] = useState(false);
   const followBtnRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  useEffect(() => {
-    if (!document.getElementById("toast-style")) {
-      const style = document.createElement("style");
-      style.id = "toast-style";
-      style.innerHTML = `
-      .follow-toast {
-        position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-        background: #222; color: #fff; font-size: 1.2rem;
-        border-radius: 20px; padding: 18px 38px; z-index: 9999;
-        box-shadow: 0px 2px 12px rgba(0,0,0,0.13);
-        display: flex; align-items: center; gap: 24px;
-        font-family: 'Gmarket Sans', sans-serif;
-      }
-      .toast-check {
-        display: flex; align-items: center; justify-content: center;
-        width: 46px; height: 46px; border-radius: 50%;
-        background: #46ce6b; font-size: 2rem;
-      }
-      .follow-toast.unfollow { background: #222; }
-      .follow-toast.unfollow .toast-check { background: #F6323E; }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
@@ -83,11 +63,6 @@ export default function UserProfileBox({
     };
   }, [ownerId]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const ensureLogin = () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
@@ -102,7 +77,10 @@ export default function UserProfileBox({
     if (!ensureLogin()) return;
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) {
-      alert("대상 사용자를 확인할 수 없습니다.");
+      setErrorToast({
+        visible: true,
+        message: "대상 사용자를 확인할 수 없습니다."
+      });
       return;
     }
     try {
@@ -129,7 +107,10 @@ export default function UserProfileBox({
         setShowLoginPrompt(true);
         return;
       }
-      alert("팔로우 처리 중 오류가 발생했습니다.");
+      setErrorToast({
+        visible: true,
+        message: "팔로우 처리 중 오류가 발생했습니다."
+      });
     }
   };
 
@@ -138,54 +119,70 @@ export default function UserProfileBox({
     onSuggest?.();
   };
 
-  const renderToast = toast && ReactDOM.createPortal(
-    <div className={`follow-toast${toast === "unfollow" ? " unfollow" : ""}`}>
-      <span className="toast-check">
-        <svg width="24" height="24" viewBox="0 0 24 24">
-          <polyline points="20 6 9 17 4 12" fill="none" stroke="#fff" strokeWidth="3"/>
-        </svg>
-      </span>
-      {toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."}
-    </div>,
-    document.body
+  const CheckIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <polyline points="20 6 9 17 4 12" fill="none" stroke="#fff" strokeWidth="3"/>
+    </svg>
   );
 
   // 표시 이름/이니셜 계산
-  const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
-  const storedEmail = (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "").trim();
-  const displayName = storedNickname || userName;
-  const emailInitial = storedEmail ? storedEmail[0].toUpperCase() : "";
-  const avatarInitial = emailInitial || (displayName?.[0] || "").toUpperCase();
+  const displayName = userName;
+  const avatarInitial = (displayName?.[0] || "").toUpperCase();
 
   return (
-    <div className="flex flex-col items-center mb-16">
-      {renderToast}
-      {showLoginPrompt && (
+    <>
+      <Toast
+        visible={!!toast}
+        message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."}
+        type={toast === "follow" ? "success" : "info"}
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setToast(null)}
+        icon={CheckIcon}
+      />
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
+      <div className="flex flex-col items-center mb-16">
+        {showLoginPrompt && (
         <LoginPrompt
           onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
           onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
           onClose={() => setShowLoginPrompt(false)}
         />
-      )}
-      <div className="w-14 h-14 rounded-full mb-4 bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
-        {avatarInitial}
-      </div>
-      <div className="text-2xl font-bold mb-3">{displayName}</div>
-      <div className="flex gap-6">
-        <button
-          ref={followBtnRef}
-          className={`${isFollowing ? (followBtnHover ? "bg-[#F6323E] text-white border-2 border-[#F6323E]" : "bg-white border-2 border-black text-black") : "bg-white border-2 border-black text-black"} rounded-full text-xl font-bold shadow transition px-14 py-5 inline-flex items-center justify-center whitespace-nowrap`}
-          onClick={handleToggle}
-          onMouseEnter={() => setFollowBtnHover(true)}
-          onMouseLeave={() => setFollowBtnHover(false)}
+        )}
+        <div
+          role="button"
+          className="w-14 h-14 rounded-full mb-4 bg-gray-200 text-gray-700 font-bold flex items-center justify-center cursor-pointer"
+          onClick={() => ownerId && navigate(`/users/${ownerId}`)}
+          title="프로필 보기"
         >
-          <span className="invisible">제안하기</span>
-          <span className="absolute">{isFollowing ? (followBtnHover ? "팔로우 취소" : "팔로잉") : "+ 팔로우"}</span>
-        </button>
-        <button className="bg-cyan-400 text-white rounded-full text-xl font-bold shadow hover:bg-cyan-500 transition px-14 py-5 inline-flex items-center justify-center" onClick={handleSuggest}>
-          제안하기
-        </button>
+          {avatarInitial}
+        </div>
+        <div className="text-2xl font-bold mb-3">{displayName}</div>
+        <div className="flex gap-6">
+          <button
+            ref={followBtnRef}
+            className={`${isFollowing ? (followBtnHover ? "bg-[#F6323E] text-white border-2 border-[#F6323E]" : "bg-white border-2 border-black text-black") : "bg-white border-2 border-black text-black"} rounded-full text-xl font-bold shadow transition px-14 py-5 inline-flex items-center justify-center whitespace-nowrap`}
+            onClick={handleToggle}
+            onMouseEnter={() => setFollowBtnHover(true)}
+            onMouseLeave={() => setFollowBtnHover(false)}
+          >
+            <span className="invisible">제안하기</span>
+            <span className="absolute">{isFollowing ? (followBtnHover ? "팔로우 취소" : "팔로잉") : "+ 팔로우"}</span>
+          </button>
+          <button className="bg-cyan-400 text-white rounded-full text-xl font-bold shadow hover:bg-cyan-500 transition px-14 py-5 inline-flex items-center justify-center" onClick={handleSuggest}>
+            제안하기
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
