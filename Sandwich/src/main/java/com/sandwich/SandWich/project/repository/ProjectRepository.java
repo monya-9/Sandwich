@@ -38,4 +38,21 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
             @Param("excludeId") Long excludeId,
             Pageable pageable
     );
+
+    interface UserProjectIdRow {
+        Long getUserId();
+        Long getProjectId();
+    }
+
+    @Query(value = """
+        select user_id as userId, id as projectId
+        from (
+          select p.user_id, p.id,
+                 row_number() over(partition by p.user_id order by p.created_at desc) rn
+          from project p
+          where p.user_id in (:userIds)
+        ) t
+        where rn <= 3
+        """, nativeQuery = true)
+    List<UserProjectIdRow> findTop3IdsByUserIds(@Param("userIds") List<Long> userIds);
 }
