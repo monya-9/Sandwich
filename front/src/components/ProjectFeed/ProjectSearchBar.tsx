@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { SearchTypeDropdown } from './SearchTypeDropdown';
 import { SortDropdown } from './SortDropdown';
-import { saveRecentSearch } from '../../api/recentSearch';
+import { useRecentSearches } from '../../hooks/useRecentSearches';
 
 interface ProjectSearchBarProps {
   onSearch: (query: string) => void;
@@ -29,6 +29,9 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
 }) => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(currentQuery);
+  
+  // 최근 검색어 훅 사용
+  const { saveSearch } = useRecentSearches();
 
   // URL 파라미터에서 검색어 읽기
   useEffect(() => {
@@ -53,13 +56,13 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
       
       // 최근 검색어 저장
       try {
-        await saveRecentSearch(searchQuery.trim(), 'PORTFOLIO');
+        await saveSearch(searchQuery.trim(), 'PORTFOLIO');
       } catch (error) {
         console.error('최근 검색어 저장 실패:', error);
         // 에러가 발생해도 검색은 계속 진행
       }
     }
-  }, [searchQuery, onSearch]);
+  }, [searchQuery, onSearch, saveSearch]);
 
   // 검색어 변경
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

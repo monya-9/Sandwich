@@ -1,83 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  getRecentSearches, 
-  saveRecentSearch, 
-  deleteRecentSearch, 
-  clearAllRecentSearches,
-  RecentSearchItem 
-} from '../../../api/recentSearch';
+import { useRecentSearches } from '../../../hooks/useRecentSearches';
 
 const SearchBar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [recentSearches, setRecentSearches] = useState<RecentSearchItem[]>([]);
     const navigate = useNavigate();
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // 최근 검색어 훅 사용
+    const {
+        recentSearches,
+        saveSearch,
+        deleteSearch,
+        clearAllSearches,
+        refreshSearches
+    } = useRecentSearches();
 
     // 추천 검색어
     const recommendedSearches = ['java', 'python', 'spring', 'react', '머신러닝', 'spring-boot', '객체지향'];
 
-    // 최근 검색어 로드
-    useEffect(() => {
-        const loadRecentSearches = async () => {
-            try {
-                const searches = await getRecentSearches();
-                setRecentSearches(searches);
-            } catch (error) {
-                console.error('최근 검색어 로드 실패:', error);
-                setRecentSearches([]);
-            }
-        };
-        
-        loadRecentSearches();
-    }, []);
+    // 드롭다운 열릴 때 최근 검색어 새로고침
+    const handleDropdownOpen = () => {
+        setIsOpen(true);
+        refreshSearches(); // 드롭다운이 열릴 때마다 최근 검색어 새로고침
+    };
 
-    // 최근 검색어 저장
+    // 최근 검색어 저장 (새로운 훅 사용)
     const handleSaveRecentSearch = async (term: string) => {
-        if (!term.trim()) return;
-        try {
-            await saveRecentSearch(term, 'PORTFOLIO');
-            // 저장 후 최근 검색어 다시 로드
-            const searches = await getRecentSearches();
-            setRecentSearches(searches);
-        } catch (error) {
-            console.error('최근 검색어 저장 실패:', error);
-        }
+        await saveSearch(term, 'PORTFOLIO');
     };
 
-    // 검색어 삭제
+    // 검색어 삭제 (새로운 훅 사용)
     const handleDeleteRecentSearch = async (id: number) => {
-        try {
-            // 낙관적 업데이트: 즉시 UI에서 제거
-            setRecentSearches(prev => prev.filter(item => item.id !== id));
-            
-            await deleteRecentSearch(id);
-            
-            // 삭제 후 최근 검색어 다시 로드 (서버 상태와 동기화)
-            const searches = await getRecentSearches();
-            setRecentSearches(searches);
-        } catch (error) {
-            console.error('최근 검색어 삭제 실패:', error);
-            // 실패 시 원래 상태로 복구
-            const searches = await getRecentSearches();
-            setRecentSearches(searches);
-        }
+        await deleteSearch(id);
     };
 
-    // 모든 검색어 삭제
+    // 모든 검색어 삭제 (새로운 훅 사용)
     const handleClearAllRecentSearches = async () => {
-        try {
-            // 낙관적 업데이트: 즉시 UI에서 모든 항목 제거
-            setRecentSearches([]);
-            
-            await clearAllRecentSearches('PORTFOLIO');
-        } catch (error) {
-            console.error('모든 최근 검색어 삭제 실패:', error);
-            // 실패 시 원래 상태로 복구
-            const searches = await getRecentSearches();
-            setRecentSearches(searches);
-        }
+        await clearAllSearches('PORTFOLIO');
     };
 
     // 검색 실행
@@ -94,9 +55,9 @@ const SearchBar = () => {
         }
     };
 
-    // 입력창 포커스
+    // 입력창 포커스 (드롭다운 열기 + 최근 검색어 새로고침)
     const handleFocus = () => {
-        setIsOpen(true);
+        handleDropdownOpen();
     };
 
     // 외부 클릭 감지
