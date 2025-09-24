@@ -9,7 +9,7 @@ public record AccountSearchItem(
         String avatarUrl,
         Boolean isVerified,
         String position,
-        List<ProjectIdOnly> projects
+        List<ProjectCard> projects
 ) {
-    public record ProjectIdOnly(Long id) {}
+    public record ProjectCard(Long id, String coverUrl) {}
 }
