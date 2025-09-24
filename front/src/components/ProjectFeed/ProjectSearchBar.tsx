@@ -14,6 +14,7 @@ interface ProjectSearchBarProps {
   onSearchTypeChange: (type: 'PORTFOLIO' | 'ACCOUNT') => void;
   sortType: 'latest' | 'popular' | 'recommended';
   onSortChange: (sort: 'latest' | 'popular' | 'recommended') => void;
+  onClearSearch: () => void;
 }
 
 export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
@@ -23,7 +24,8 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   searchType,
   onSearchTypeChange,
   sortType,
-  onSortChange
+  onSortChange,
+  onClearSearch
 }) => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(currentQuery);
@@ -35,6 +37,11 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
       setSearchQuery(q);
     }
   }, [searchParams]);
+
+  // currentQuery prop이 변경될 때 내부 상태 업데이트
+  useEffect(() => {
+    setSearchQuery(currentQuery);
+  }, [currentQuery]);
 
   // Enter 키 처리 (검색 실행)
   const handleKeyPress = useCallback(async (e: React.KeyboardEvent) => {
@@ -62,10 +69,8 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   // 검색어 초기화
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
-    onSearch('');
-    // URL도 업데이트
-    window.history.pushState({}, '', '/search');
-  }, [onSearch]);
+    onClearSearch(); // 부모 컴포넌트의 초기화 함수 호출
+  }, [onClearSearch]);
 
   // 검색 타입 변경은 props로 받은 함수 사용
 

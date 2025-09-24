@@ -28,19 +28,27 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
     setFilters,
     clearFilters,
     searchProjects,
-    refresh,
-    loadProjects
+    refresh
   } = useProjectFeed({}, initialSearchTerm);
 
   // 정렬 타입 상태
   const [sortType, setSortType] = useState<'latest' | 'popular' | 'recommended'>('recommended');
+  
+  // 검색어 상태 (초기화를 위해 별도 관리)
+  const [currentSearchQuery, setCurrentSearchQuery] = useState(filters.q || initialSearchTerm);
+
+  // 검색 함수 (검색어 상태도 함께 업데이트)
+  const handleSearch = (query: string) => {
+    setCurrentSearchQuery(query);
+    searchProjects(query);
+  };
 
   // 검색어 초기화 함수
   const handleClearSearch = () => {
-    const clearedFilters = { ...filters, page: 0 };
-    delete clearedFilters.q; // q 필드 완전 제거
+    const clearedFilters = { page: 0, size: 20, q: undefined }; // q 필드를 명시적으로 undefined로 설정
     setFilters(clearedFilters);
-    loadProjects(clearedFilters); // 전체 프로젝트 로드
+    setCurrentSearchQuery(''); // 검색어 입력창 초기화
+    // loadProjects는 useEffect에서 자동으로 호출됨
     // URL도 업데이트
     window.history.pushState({}, '', '/search');
   };
@@ -51,18 +59,20 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
       <div className="bg-white border-b border-gray-200 px-4 py-6">
         <div className="max-w-7xl mx-auto">
           <ProjectSearchBar 
-            onSearch={searchProjects}
-            currentQuery={filters.q || initialSearchTerm}
+            onSearch={handleSearch}
+            currentQuery={currentSearchQuery}
             isLoading={isLoading}
             searchType={searchType}
             onSearchTypeChange={onSearchTypeChange}
             sortType={sortType}
             onSortChange={setSortType}
+            onClearSearch={handleClearSearch}
           />
           <ProjectFilterOptions 
             filters={filters}
             onFiltersChange={setFilters}
             onClearFilters={clearFilters}
+            onClearSearch={handleClearSearch}
             totalElements={totalElements}
           />
         </div>
@@ -71,7 +81,7 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
       {/* 메인 콘텐츠 */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* 검색 결과 텍스트 - 로딩 중이 아닐 때만 표시 */}
-        {filters.q && !isLoading && !isInitialLoading && (
+        {filters.q && filters.q.trim() && !isLoading && !isInitialLoading && (
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               '{filters.q}'에 대한 검색 결과

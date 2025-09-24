@@ -1,12 +1,7 @@
 // 프로젝트 피드 상태 관리 훅
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchProjectFeed, ProjectFeedParams } from '../api/projects';
 import { Project } from '../types/Project';
-// Toast 알림을 위한 간단한 함수 (임시)
-const showToast = (type: 'success' | 'error' | 'warning', message: string) => {
-  console.log(`[${type.toUpperCase()}] ${message}`);
-  // TODO: 실제 Toast 컴포넌트와 연동
-};
 
 interface UseProjectFeedReturn {
   // 데이터
@@ -39,6 +34,7 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
   const [isInitialLoading, setIsInitialLoading] = useState(true); // 초기 로딩 상태 추가
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectFeedParams>(initialParams);
+  const hasInitialized = useRef(false); // 초기화 완료 여부
   
   // showToast 함수는 위에서 정의됨
 
@@ -59,7 +55,6 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '프로젝트를 불러오는데 실패했습니다.';
       setError(errorMessage);
-      showToast('error', errorMessage);
     } finally {
       setIsLoading(false);
       setIsInitialLoading(false); // 초기 로딩 완료
@@ -85,7 +80,6 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '더 많은 프로젝트를 불러오는데 실패했습니다.';
       setError(errorMessage);
-      showToast('error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +114,12 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
   // 필터 변경
   const handleSetFilters = useCallback((newFilters: ProjectFeedParams) => {
     const updatedFilters = { ...filters, ...newFilters, page: 0 };
+    
+    // q 필드가 undefined이면 완전히 제거
+    if (newFilters.q === undefined) {
+      delete updatedFilters.q;
+    }
+    
     setFilters(updatedFilters);
     loadProjects(updatedFilters);
   }, [filters, loadProjects]);
@@ -131,20 +131,31 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     loadProjects(clearedFilters);
   }, [loadProjects]);
 
-  // 초기 검색어 처리 및 초기 로딩
+  // 초기 검색어 처리 및 초기 로딩 (한 번만 실행)
   useEffect(() => {
+    if (hasInitialized.current) return; // 이미 초기화되었으면 무시
+    
+    hasInitialized.current = true;
+    
     if (initialSearchTerm && initialSearchTerm.trim()) {
       // 초기 검색어가 있으면 검색 실행
       const searchParams = { page: 0, size: 20, q: initialSearchTerm };
       setFilters(searchParams);
-      loadProjects(searchParams); // 직접 호출
+      loadProjects(searchParams);
     } else {
       // 초기 검색어가 없으면 전체 프로젝트 로드
       const defaultParams = { page: 0, size: 20 };
       setFilters(defaultParams);
-      loadProjects(defaultParams); // 직접 호출
+      loadProjects(defaultParams);
     }
   }, [initialSearchTerm, loadProjects]);
+
+  // 필터 변경 시 프로젝트 로드 (초기화 제외)
+  useEffect(() => {
+    if (hasInitialized.current) {
+      loadProjects(filters);
+    }
+  }, [filters, loadProjects]);
 
   return {
     // 데이터

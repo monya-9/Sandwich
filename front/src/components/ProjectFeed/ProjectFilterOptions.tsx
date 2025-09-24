@@ -6,6 +6,7 @@ interface ProjectFilterOptionsProps {
   filters: ProjectFeedParams;
   onFiltersChange: (filters: ProjectFeedParams) => void;
   onClearFilters: () => void;
+  onClearSearch: () => void;
   totalElements: number;
 }
 
@@ -13,6 +14,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
   filters,
   onFiltersChange,
   onClearFilters,
+  onClearSearch,
   totalElements
 }) => {
   // 정렬 방식은 드롭다운으로 이동됨
@@ -76,7 +78,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
 
         {/* 필터 초기화 */}
         <button
-          onClick={onClearFilters}
+          onClick={onClearSearch}
           className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors"
         >
           <svg 

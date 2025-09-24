@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { searchAccounts, AccountSearchResult, AccountSearchParams } from '../api/accounts';
 
-const showToast = (type: 'success' | 'error' | 'warning', message: string) => {
-  console.log(`[${type.toUpperCase()}] ${message}`);
-};
-
 export const useAccountSearch = () => {
   const [accounts, setAccounts] = useState<AccountSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -19,15 +15,12 @@ export const useAccountSearch = () => {
     setError(null);
 
     try {
-      console.log('계정 검색 API 호출:', params);
       const response = await searchAccounts(params);
       
       setAccounts(response.content);
       setTotalElements(response.totalElements);
       setTotalPages(response.totalPages);
       setCurrentPage(response.page);
-      
-      showToast('success', `${response.content.length}개의 계정을 찾았습니다.`);
     } catch (error: any) {
       console.error('계정 검색 실패:', error);
       setError(error.message || '계정 검색에 실패했습니다.');
@@ -35,8 +28,6 @@ export const useAccountSearch = () => {
       setTotalElements(0);
       setTotalPages(0);
       setCurrentPage(0);
-      
-      showToast('error', '계정 검색에 실패했습니다.');
     } finally {
       setLoading(false);
     }

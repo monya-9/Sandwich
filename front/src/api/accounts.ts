@@ -65,24 +65,10 @@ export const searchAccounts = async (params: AccountSearchParams): Promise<Accou
   
   try {
     const url = `/search/accounts?${searchParams.toString()}`;
-    console.log('계정 검색 API 요청 URL:', url);
-    console.log('요청 파라미터:', params);
-    console.log('검색어:', q);
-    console.log('URL 인코딩된 검색어:', encodeURIComponent(q || ''));
-    
     const response = await api.get<AccountSearchResponse>(url);
-    console.log('계정 검색 API 응답:', response.data);
-    console.log('검색 결과 개수:', response.data.content.length);
     return response.data;
   } catch (error: any) {
     console.error('계정 검색 API 호출 실패:', error);
-    console.error('에러 상세 정보:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      url: error.config?.url,
-      method: error.config?.method
-    });
     throw error;
   }
 };
