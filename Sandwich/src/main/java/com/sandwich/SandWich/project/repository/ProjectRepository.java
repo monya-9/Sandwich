@@ -55,4 +55,23 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
         where rn <= 3
         """, nativeQuery = true)
     List<UserProjectIdRow> findTop3IdsByUserIds(@Param("userIds") List<Long> userIds);
+
+    /** 유저별 최신 3개 프로젝트 {id, coverUrl}까지 */
+    interface UserProjectCardRow {
+        Long getUserId();
+        Long getProjectId();
+        String getCoverUrl();
+    }
+
+    @Query(value = """
+        select user_id as userId, id as projectId, cover_url as coverUrl
+        from (
+          select p.user_id, p.id, p.cover_url,
+                 row_number() over(partition by p.user_id order by p.created_at desc) rn
+          from project p
+          where p.user_id in (:userIds)
+        ) t
+        where rn <= 3
+        """, nativeQuery = true)
+    List<UserProjectCardRow> findTop3CardsByUserIds(@Param("userIds") List<Long> userIds);
 }

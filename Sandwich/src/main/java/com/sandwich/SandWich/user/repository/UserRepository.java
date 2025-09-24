@@ -67,7 +67,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
     List<ActorView> findActorViewsByIds(@Param("ids") Set<Long> ids);
 
-    /** 빈 검색어일 때: 전체 사용자 */
+    /** 빈 검색어일 때: admin계정을 제외한 전체 사용자 */
     @Query("""
         select u.id as id,
                COALESCE(p.nickname, u.username) as nickname,
@@ -80,6 +80,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
         left join u.userPosition up
         left join up.position pos
         where u.isDeleted = false
+            and u.role = 'ROLE_USER'
         """)
     Page<UserAccountRow> findAllAccounts(Pageable pageable);
 
@@ -96,6 +97,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
         left join u.userPosition up
         left join up.position pos
         where u.isDeleted = false
+          and u.role = 'ROLE_USER'
           and (
                lower(COALESCE(p.nickname, u.username)) like lower(concat('%', :q, '%'))
             or lower(u.email) like lower(concat('%', :q, '%'))
