@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { SearchTypeDropdown } from './SearchTypeDropdown';
 import { SortDropdown } from './SortDropdown';
+import { saveRecentSearch } from '../../api/recentSearch';
 
 interface ProjectSearchBarProps {
   onSearch: (query: string) => void;
@@ -36,9 +37,17 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   }, [searchParams]);
 
   // Enter 키 처리 (검색 실행)
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback(async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       onSearch(searchQuery.trim());
+      
+      // 최근 검색어 저장
+      try {
+        await saveRecentSearch(searchQuery.trim(), 'PORTFOLIO');
+      } catch (error) {
+        console.error('최근 검색어 저장 실패:', error);
+        // 에러가 발생해도 검색은 계속 진행
+      }
     }
   }, [searchQuery, onSearch]);
 

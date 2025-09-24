@@ -61,7 +61,7 @@ const SearchBar = () => {
     // 모든 검색어 삭제
     const handleClearAllRecentSearches = async () => {
         try {
-            await clearAllRecentSearches();
+            await clearAllRecentSearches('PORTFOLIO');
             setRecentSearches([]);
         } catch (error) {
             console.error('모든 최근 검색어 삭제 실패:', error);

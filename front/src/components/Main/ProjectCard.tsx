@@ -17,9 +17,48 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
     const [triedAltExt, setTriedAltExt] = useState(false);
     const [src, setSrc] = useState(() => project.coverUrl || resolveCover(project, { position: indexInList }));
 
-    // DB 데이터는 username, 더미데이터는 authorId로 사용자 정보 제공 (닉네임 우선)
-    const username = project.username || (project.authorId ? dummyUsers.find(user => user.id === project.authorId)?.nickname || dummyUsers.find(user => user.id === project.authorId)?.name : null) || '알 수 없음';
-    const initial = username.charAt(0).toUpperCase();
+    // 이메일에서 사용자명 부분만 추출하는 함수
+    const getUsernameFromEmail = (email: string) => {
+        if (!email) return '';
+        const atIndex = email.indexOf('@');
+        if (atIndex === -1) return email;
+        return email.substring(0, atIndex);
+    };
+
+    // 백엔드 owner 필드 우선, 없으면 기존 로직 사용 (닉네임 우선, 없으면 이메일 사용자명)
+    const getDisplayName = () => {
+        if (project.owner) {
+            if (project.owner.nickname) {
+                return project.owner.nickname;
+            }
+            if (project.owner.email) {
+                return getUsernameFromEmail(project.owner.email);
+            }
+            return '알 수 없음';
+        }
+        return project.username || (project.authorId ? dummyUsers.find(user => user.id === project.authorId)?.nickname || dummyUsers.find(user => user.id === project.authorId)?.name : null) || '알 수 없음';
+    };
+    
+    const getInitial = () => {
+        if (project.owner) {
+            // 백엔드 owner가 있으면 이메일 사용자명 첫 글자 우선, 없으면 닉네임 첫 글자
+            const email = project.owner.email;
+            const nickname = project.owner.nickname;
+            if (email) {
+                const username = getUsernameFromEmail(email);
+                return username.charAt(0).toUpperCase();
+            }
+            if (nickname) {
+                return nickname.charAt(0).toUpperCase();
+            }
+        }
+        // 기존 로직: username 첫 글자
+        const username = getDisplayName();
+        return username.charAt(0).toUpperCase();
+    };
+    
+    const username = getDisplayName();
+    const initial = getInitial();
 
     // 포트폴리오 상세 페이지로 이동
     const handleCardClick = () => {
@@ -74,7 +113,7 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
             {/* 작성자 + 정보 영역 */}
             <div className="w-full mt-1 flex justify-between items-center px-1">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gray-300 text-xs font-semibold flex items-center justify-center text-black">
+                    <div className="w-6 h-6 rounded-full bg-gray-200 text-xs font-semibold flex items-center justify-center text-gray-700">
                         {initial}
                     </div>
                     <span className="text-sm text-black">{username}</span>

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AccountSearchResult, highlightSearchTerm } from '../../api/accounts';
+import { AccountSearchResult, highlightSearchTerm, fetchProjectsDetails, ProjectInfo } from '../../api/accounts';
 
 interface AccountCardProps {
   account: AccountSearchResult;
@@ -10,6 +10,30 @@ interface AccountCardProps {
 const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
   const { id, nickname, avatarUrl, isVerified, email, position, projects } = account;
   const navigate = useNavigate();
+  const [projectDetails, setProjectDetails] = useState<ProjectInfo[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // 프로젝트 상세 정보 로드 (백엔드에서 coverUrl 추가될 때까지 비활성화)
+  useEffect(() => {
+    // 임시로 비활성화 - 백엔드에서 projects에 coverUrl 추가되면 활성화
+    /*
+    if (projects && projects.length > 0) {
+      setLoadingProjects(true);
+      const projectIds = projects.slice(0, 3).map(p => p.id);
+      fetchProjectsDetails(projectIds)
+        .then(details => {
+          setProjectDetails(details);
+        })
+        .catch(error => {
+          console.error('프로젝트 상세 정보 로드 실패:', error);
+          setProjectDetails([]);
+        })
+        .finally(() => {
+          setLoadingProjects(false);
+        });
+    }
+    */
+  }, [projects]);
 
   // 이메일에서 첫 글자 추출 (이메일이 있으면 이메일, 없으면 닉네임)
   const getInitial = () => {
@@ -53,28 +77,20 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
             />
           </h3>
           <p className="text-sm text-gray-600">
-            {position?.name || (isVerified ? '인증된 사용자' : '일반 사용자')}
+            {position || (isVerified ? '인증된 사용자' : '일반 사용자')}
           </p>
         </div>
       </div>
 
-      {/* 프로젝트 영역 - 스크린샷처럼 가로로 3개씩 */}
+      {/* 프로젝트 영역 - 백엔드에서 coverUrl 추가될 때까지 간단 표시 */}
       <div className="grid grid-cols-3 gap-2">
         {projects && projects.length > 0 ? (
           <>
             {projects.slice(0, 3).map((project, index) => (
               <div key={project.id || index} className="aspect-square bg-gray-100 rounded flex items-center justify-center">
-                {project.thumbnailUrl ? (
-                  <img 
-                    src={project.thumbnailUrl} 
-                    alt={project.title}
-                    className="w-full h-full object-cover rounded"
-                  />
-                ) : (
-                  <span className="text-xs text-gray-500 text-center px-1">
-                    {project.title}
-                  </span>
-                )}
+                <span className="text-xs text-gray-500 text-center px-1">
+                  Project {project.id}
+                </span>
               </div>
             ))}
             {/* 빈 프로젝트 슬롯 채우기 */}
