@@ -41,6 +41,9 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
     if (e.key === 'Enter' && searchQuery.trim()) {
       onSearch(searchQuery.trim());
       
+      // URL 업데이트
+      window.history.pushState({}, '', `/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      
       // 최근 검색어 저장
       try {
         await saveRecentSearch(searchQuery.trim(), 'PORTFOLIO');

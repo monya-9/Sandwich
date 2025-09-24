@@ -137,14 +137,14 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       // 초기 검색어가 있으면 검색 실행
       const searchParams = { page: 0, size: 20, q: initialSearchTerm };
       setFilters(searchParams);
-      loadProjects(searchParams);
+      loadProjects(searchParams); // 직접 호출
     } else {
       // 초기 검색어가 없으면 전체 프로젝트 로드
       const defaultParams = { page: 0, size: 20 };
       setFilters(defaultParams);
-      loadProjects(defaultParams);
+      loadProjects(defaultParams); // 직접 호출
     }
-  }, [initialSearchTerm, loadProjects]); // loadProjects 의존성 추가
+  }, [initialSearchTerm, loadProjects]);
 
   return {
     // 데이터

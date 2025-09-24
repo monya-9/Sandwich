@@ -37,7 +37,8 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
 
   // 검색어 초기화 함수
   const handleClearSearch = () => {
-    const clearedFilters = { ...filters, q: undefined, page: 0 };
+    const clearedFilters = { ...filters, page: 0 };
+    delete clearedFilters.q; // q 필드 완전 제거
     setFilters(clearedFilters);
     loadProjects(clearedFilters); // 전체 프로젝트 로드
     // URL도 업데이트

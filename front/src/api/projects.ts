@@ -62,7 +62,8 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
     searchParams.append('sort', sort);
   }
 
-  const response = await api.get(`/projects?${searchParams.toString()}`);
+  const url = `/projects?${searchParams.toString()}`;
+  const response = await api.get(url);
   return response.data;
 };
 
