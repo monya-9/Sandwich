@@ -82,10 +82,16 @@ const SearchBar = () => {
 
     // 검색 실행
     const handleSearch = (term: string) => {
-        if (!term.trim()) return;
-        handleSaveRecentSearch(term);
         setIsOpen(false);
-        navigate(`/search?q=${encodeURIComponent(term)}`);
+        
+        if (term.trim()) {
+            // 검색어가 있으면 검색어 저장하고 검색 페이지로 이동
+            handleSaveRecentSearch(term);
+            navigate(`/search?q=${encodeURIComponent(term)}`);
+        } else {
+            // 검색어가 없으면 그냥 검색 페이지로 이동
+            navigate('/search');
+        }
     };
 
     // 입력창 포커스
@@ -122,20 +128,26 @@ const SearchBar = () => {
                         }
                     }}
                 />
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-[18px] h-[18px]"
+                <button
+                    onClick={() => handleSearch(searchTerm)}
+                    className="flex-shrink-0 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    type="button"
                 >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21 21l-4.35-4.35M9 17a8 8 0 100-16 8 8 0 000 16z"
-                    />
-                </svg>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-[18px] h-[18px]"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M21 21l-4.35-4.35M9 17a8 8 0 100-16 8 8 0 000 16z"
+                        />
+                    </svg>
+                </button>
 
                 {/* 드롭다운 */}
                 {isOpen && (
