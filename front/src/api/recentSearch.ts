@@ -33,8 +33,6 @@ export const getRecentSearches = async (
   type?: 'PORTFOLIO' | 'ACCOUNT'
 ): Promise<RecentSearchItem[]> => {
   try {
-    console.log('최근 검색어 API 호출 시작...', { limit, type });
-    
     const params = new URLSearchParams();
     params.append('limit', limit.toString());
     if (type) {
@@ -45,7 +43,6 @@ export const getRecentSearches = async (
       `/search/recent?${params.toString()}`
     );
     
-    console.log('최근 검색어 API 응답:', response.data);
     return response.data.content || [];
   } catch (error: any) {
     console.error('최근 검색어 조회 실패:', error);
@@ -68,8 +65,6 @@ export const saveRecentSearch = async (
   type: 'PORTFOLIO' | 'ACCOUNT'
 ): Promise<RecentSearchItem> => {
   try {
-    console.log('최근 검색어 저장 API 호출...', { keyword, type });
-    
     const response = await api.post<RecentSearchItem>(
       '/search/recent',
       {
@@ -78,7 +73,6 @@ export const saveRecentSearch = async (
       }
     );
     
-    console.log('최근 검색어 저장 성공:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('최근 검색어 저장 실패:', error);
@@ -97,11 +91,7 @@ export const saveRecentSearch = async (
  */
 export const deleteRecentSearch = async (id: number): Promise<void> => {
   try {
-    console.log('최근 검색어 삭제 API 호출...', { id });
-    
     await api.delete(`/search/recent/${id}`);
-    
-    console.log('최근 검색어 삭제 성공');
   } catch (error: any) {
     console.error('최근 검색어 삭제 실패:', error);
     throw error;
@@ -116,11 +106,15 @@ export const clearAllRecentSearches = async (
   type: 'PORTFOLIO' | 'ACCOUNT'
 ): Promise<void> => {
   try {
-    console.log('전체 최근 검색어 삭제 API 호출...', { type });
+    // 모든 검색어를 가져옴
+    const allSearches = await getRecentSearches(50);
     
-    await api.delete(`/search/recent?type=${type}`);
+    // 각 검색어를 개별적으로 삭제
+    const deletePromises = allSearches.map(searchItem => 
+      deleteRecentSearch(searchItem.id)
+    );
     
-    console.log('전체 최근 검색어 삭제 성공');
+    await Promise.all(deletePromises);
   } catch (error: any) {
     console.error('전체 최근 검색어 삭제 실패:', error);
     throw error;

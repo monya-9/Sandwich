@@ -8,23 +8,42 @@ import EmptyState from '../common/EmptyState';
 interface ProjectCardGridProps {
   projects: Project[];
   isLoading: boolean;
+  isInitialLoading: boolean;
   error: string | null;
   onRefresh: () => void;
   onClearSearch?: () => void;
+  currentSearchTerm?: string; // 현재 검색어 추가
 }
 
 export const ProjectCardGrid: React.FC<ProjectCardGridProps> = ({
   projects,
   isLoading,
+  isInitialLoading,
   error,
   onRefresh,
-  onClearSearch
+  onClearSearch,
+  currentSearchTerm
 }) => {
-  // 로딩 상태
-  if (isLoading && projects.length === 0) {
+  // 초기 로딩 상태
+  if (isInitialLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex flex-col justify-center items-center py-20">
         <LoadingSpinner size="large" />
+        <p className="mt-4 text-gray-600 text-lg">회원수 10만명 포트폴리오 가져오는 중입니다...</p>
+      </div>
+    );
+  }
+
+  // 로딩 상태 (검색 중일 때는 이전 결과 숨김)
+  if (isLoading) {
+    const loadingMessage = currentSearchTerm 
+      ? `'${currentSearchTerm}'에 대한 검색 중입니다...`
+      : '검색중입니다...';
+    
+    return (
+      <div className="flex flex-col justify-center items-center py-20">
+        <LoadingSpinner size="large" />
+        <p className="mt-4 text-gray-600 text-lg">{loadingMessage}</p>
       </div>
     );
   }

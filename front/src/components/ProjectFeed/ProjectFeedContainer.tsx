@@ -22,12 +22,14 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
     projects,
     totalElements,
     isLoading,
+    isInitialLoading,
     error,
     filters,
     setFilters,
     clearFilters,
     searchProjects,
-    refresh
+    refresh,
+    loadProjects
   } = useProjectFeed({}, initialSearchTerm);
 
   // 정렬 타입 상태
@@ -37,6 +39,7 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
   const handleClearSearch = () => {
     const clearedFilters = { ...filters, q: undefined, page: 0 };
     setFilters(clearedFilters);
+    loadProjects(clearedFilters); // 전체 프로젝트 로드
     // URL도 업데이트
     window.history.pushState({}, '', '/search');
   };
@@ -66,8 +69,8 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
 
       {/* 메인 콘텐츠 */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* 검색 결과 텍스트 */}
-        {filters.q && (
+        {/* 검색 결과 텍스트 - 로딩 중이 아닐 때만 표시 */}
+        {filters.q && !isLoading && !isInitialLoading && (
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               '{filters.q}'에 대한 검색 결과
@@ -81,13 +84,15 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
         <ProjectCardGrid 
           projects={projects}
           isLoading={isLoading}
+          isInitialLoading={isInitialLoading}
           error={error}
           onRefresh={refresh}
           onClearSearch={handleClearSearch}
+          currentSearchTerm={filters.q}
         />
         
-        {/* 페이지네이션 */}
-        {projects.length > 0 && (
+        {/* 페이지네이션 - 로딩 중이 아닐 때만 표시 */}
+        {projects.length > 0 && !isLoading && !isInitialLoading && (
           <ProjectPagination 
             currentPage={filters.page || 0}
             totalPages={Math.ceil(totalElements / (filters.size || 20))}

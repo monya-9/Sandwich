@@ -49,22 +49,34 @@ const SearchBar = () => {
     // 검색어 삭제
     const handleDeleteRecentSearch = async (id: number) => {
         try {
+            // 낙관적 업데이트: 즉시 UI에서 제거
+            setRecentSearches(prev => prev.filter(item => item.id !== id));
+            
             await deleteRecentSearch(id);
-            // 삭제 후 최근 검색어 다시 로드
+            
+            // 삭제 후 최근 검색어 다시 로드 (서버 상태와 동기화)
             const searches = await getRecentSearches();
             setRecentSearches(searches);
         } catch (error) {
             console.error('최근 검색어 삭제 실패:', error);
+            // 실패 시 원래 상태로 복구
+            const searches = await getRecentSearches();
+            setRecentSearches(searches);
         }
     };
 
     // 모든 검색어 삭제
     const handleClearAllRecentSearches = async () => {
         try {
-            await clearAllRecentSearches('PORTFOLIO');
+            // 낙관적 업데이트: 즉시 UI에서 모든 항목 제거
             setRecentSearches([]);
+            
+            await clearAllRecentSearches('PORTFOLIO');
         } catch (error) {
             console.error('모든 최근 검색어 삭제 실패:', error);
+            // 실패 시 원래 상태로 복구
+            const searches = await getRecentSearches();
+            setRecentSearches(searches);
         }
     };
 
@@ -156,8 +168,8 @@ const SearchBar = () => {
                                         모두 삭제하기
                                     </button>
                                 </div>
-                                <div className="space-y-2">
-                                    {recentSearches.map((searchItem) => (
+                                <div className="max-h-[120px] overflow-y-auto space-y-2">
+                                    {recentSearches.slice(0, 3).map((searchItem) => (
                                         <div key={searchItem.id} className="flex items-center justify-between group">
                                             <button
                                                 onClick={() => handleSearch(searchItem.keyword)}
@@ -192,6 +204,46 @@ const SearchBar = () => {
                                             </button>
                                         </div>
                                     ))}
+                                    {/* 나머지 검색어들 (스크롤 가능) */}
+                                    {recentSearches.length > 3 && (
+                                        <div className="space-y-2">
+                                            {recentSearches.slice(3).map((searchItem) => (
+                                                <div key={searchItem.id} className="flex items-center justify-between group">
+                                                    <button
+                                                        onClick={() => handleSearch(searchItem.keyword)}
+                                                        className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                                                    >
+                                                        <svg
+                                                            className="w-4 h-4 mr-2 text-gray-400"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                            />
+                                                        </svg>
+                                                        {searchItem.keyword}
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteRecentSearch(searchItem.id);
+                                                        }}
+                                                        className="opacity-60 hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                                                        title="삭제"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

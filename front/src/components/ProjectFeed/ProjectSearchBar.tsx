@@ -60,6 +60,8 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
     onSearch('');
+    // URL도 업데이트
+    window.history.pushState({}, '', '/search');
   }, [onSearch]);
 
   // 검색 타입 변경은 props로 받은 함수 사용
@@ -77,7 +79,7 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
             onKeyPress={handleKeyPress}
             placeholder="프로젝트를 검색해보세요..."
             className="w-full pl-10 pr-12 py-3 rounded-lg outline-none border-0 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
-            disabled={isLoading}
+            disabled={false}
           />
           {/* X 버튼 */}
           {searchQuery && (

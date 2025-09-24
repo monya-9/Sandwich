@@ -15,6 +15,7 @@ interface UseProjectFeedReturn {
   totalPages: number;
   currentPage: number;
   isLoading: boolean;
+  isInitialLoading: boolean;
   error: string | null;
   
   // 액션
@@ -35,6 +36,7 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // 초기 로딩 상태 추가
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectFeedParams>(initialParams);
   
@@ -60,6 +62,7 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       showToast('error', errorMessage);
     } finally {
       setIsLoading(false);
+      setIsInitialLoading(false); // 초기 로딩 완료
     }
   }, []);
 
@@ -95,7 +98,21 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
 
   // 프로젝트 검색
   const searchProjects = useCallback(async (query: string) => {
-    const searchParams = { ...filters, q: query, page: 0 };
+    const searchParams = { ...filters, page: 0 };
+    
+    // 빈 검색어인 경우 q 필드를 명시적으로 제거
+    if (query.trim()) {
+      searchParams.q = query;
+    } else {
+      delete searchParams.q; // q 필드 완전 제거
+    }
+    
+    // 검색 시작 시 이전 프로젝트들 초기화
+    setProjects([]);
+    setTotalElements(0);
+    setTotalPages(0);
+    setCurrentPage(0);
+    
     setFilters(searchParams);
     await loadProjects(searchParams);
   }, [filters, loadProjects]);
@@ -114,15 +131,20 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     loadProjects(clearedFilters);
   }, [loadProjects]);
 
-  // 초기 검색어 처리 (한 번만 실행)
+  // 초기 검색어 처리 및 초기 로딩
   useEffect(() => {
     if (initialSearchTerm && initialSearchTerm.trim()) {
       // 초기 검색어가 있으면 검색 실행
       const searchParams = { page: 0, size: 20, q: initialSearchTerm };
       setFilters(searchParams);
       loadProjects(searchParams);
+    } else {
+      // 초기 검색어가 없으면 전체 프로젝트 로드
+      const defaultParams = { page: 0, size: 20 };
+      setFilters(defaultParams);
+      loadProjects(defaultParams);
     }
-  }, [initialSearchTerm]); // initialSearchTerm만 의존성으로 사용
+  }, [initialSearchTerm, loadProjects]); // loadProjects 의존성 추가
 
   return {
     // 데이터
@@ -131,6 +153,7 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     totalPages,
     currentPage,
     isLoading,
+    isInitialLoading,
     error,
     
     // 액션
