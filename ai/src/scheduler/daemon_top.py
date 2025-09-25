@@ -69,4 +69,4 @@ def main(run_now: bool = False):
         LOG.info("=== AI scheduler stopped ===")
 
 if __name__ == "__main__":
-    main(run_now=False)
+    main(run_now=True)
