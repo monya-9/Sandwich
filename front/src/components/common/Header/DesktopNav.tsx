@@ -1,6 +1,6 @@
 // src/components/common/Header/DesktopNav.tsx
 import React, { useContext, useState, useMemo, useEffect } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 
 import logo from "../../../assets/logo.png";
 import { AuthContext } from "../../../context/AuthContext";
@@ -27,6 +27,10 @@ const USE_DUMMY_NOTI = false;
 
 const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const { isLoggedIn, email } = useContext(AuthContext);
+    const location = useLocation();
+    
+    // 검색 페이지인지 확인
+    const isSearchPage = location.pathname === '/search';
 
     const safeEmail = useMemo(() => {
         if (!email) return "";
@@ -146,7 +150,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             </div>
 
             <div className="flex items-center gap-5 ml-auto relative">
-                <SearchBar />
+                {!isSearchPage && <SearchBar />}
 
                 {isLoggedIn ? (
                     <div className="flex items-center gap-5 relative">

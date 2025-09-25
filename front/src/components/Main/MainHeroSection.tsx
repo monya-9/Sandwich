@@ -105,7 +105,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                             {...cardProps}
                             className="group relative min-w-[300px] h-[220px] rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start"
                         >
-                            <CoverImage initialSrc={initialSrc} title={project.title} />
+                            <CoverImage initialSrc={initialSrc} title={project.title || '프로젝트'} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
                             <p className="absolute bottom-0 left-0 right-0 p-4 text-white text-sm font-semibold line-clamp-1">
                                 {project.title}

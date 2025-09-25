@@ -125,10 +125,14 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 	onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
 	onDrop: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
 }) {
-	const [src, setSrc] = useState(() => resolveCover(project, { position: indexInList }));
+	const [src, setSrc] = useState(() => {
+		const cover = resolveCover(project, { position: indexInList });
+		return cover ? cover : '';
+	});
 	const [triedAlt, setTriedAlt] = useState(false);
 	useEffect(() => {
-		setSrc(resolveCover(project, { position: indexInList }));
+		const cover = resolveCover(project, { position: indexInList });
+		setSrc(cover ? cover : '');
 		setTriedAlt(false);
 	}, [project, indexInList]);
 	const onError = () => { if (!triedAlt) { setTriedAlt(true); setSrc(swapJpgPng(src)); } };
@@ -139,7 +143,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 			{...(isReorderMode ? { draggable: true, onDragStart: (e: any) => onDragStart(e, project.id), onDragOver: (e: any) => onDragOver(e), onDrop: (e: any) => onDrop(e, project.id) } : {})}
 		>
 			<div className="relative w-full aspect-[4/3] bg-gray-200">
-				<img src={src} alt={project.title} className="absolute inset-0 w-full h-full object-cover" onError={onError} />
+				<img src={src} alt={project.title ? project.title : ''} className="absolute inset-0 w-full h-full object-cover" onError={onError} />
 				{isReorderMode && (
 					<div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[12px] font-medium text-black/80">
 						{indexInList + 1}

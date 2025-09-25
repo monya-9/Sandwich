@@ -31,10 +31,12 @@ export default function PublicWorkGrid() {
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {projects.map((p, idx) => {
           const cover = resolveCover(p, { position: idx });
+          const coverUrl = cover ? cover : '';
+          const title = p.title ? p.title : '';
           return (
             <div key={p.id} className="relative rounded-xl overflow-hidden">
               <div className="relative w-full aspect-[4/3] bg-gray-200">
-                <Img src={cover} alt={p.title} />
+                <Img src={coverUrl} alt={title} />
               </div>
             </div>
           );

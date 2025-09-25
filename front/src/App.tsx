@@ -46,6 +46,7 @@ import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetail
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
+import ProjectFeedPage from "./pages/ProjectFeedPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -76,6 +77,7 @@ function App() {
                                 <Route index element={<MainPage />} />
                                 <Route path="other-project" element={<OtherProjectPage />} />
                                 <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
+                                <Route path="search" element={<ProjectFeedPage />} />
                                 <Route path="project/new" element={<ProjectForm />} />
 
                                 <Route path="/messages" element={<MessagesPage />} />
