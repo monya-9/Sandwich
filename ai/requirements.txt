@@ -10,7 +10,5 @@ celery
 APScheduler>=3.10
 tzdata>=2024.1
 python-dotenv
-
-
-openai>=1.42.0
 pydantic>=2.7.0
+requests>=2.32

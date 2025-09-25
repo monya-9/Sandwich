@@ -14,7 +14,7 @@ const MainDeveloperHighlight: React.FC<Props> = ({ projects }) => {
   // 사용자별 프로젝트 점수 계산
   const userScores = dummyUsers.map((user) => {
     const userProjects = projects.filter(p => p.authorId === user.id);
-    const score = userProjects.reduce((acc, cur) => acc + cur.likes + cur.views, 0);
+    const score = userProjects.reduce((acc, cur) => acc + (cur.likes || 0) + (cur.views || 0), 0);
     return { ...user, score, projects: userProjects.slice(0, 3) };
   });
 

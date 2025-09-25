@@ -9,7 +9,7 @@ import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
 import { AuthContext } from "../context/AuthContext";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { fetchProjectDetail, type ProjectDetailResponse, fetchProjectContents, type ProjectContentResponseItem } from "../api/projectApi";
 import api from "../api/axiosInstance";
 
@@ -29,6 +29,8 @@ export default function OtherProjectPage() {
     const projectWidth = commentOpen ? PROJECT_NARROW : PROJECT_WIDE;
     const { isLoggedIn } = useContext(AuthContext);
     const nav = useNavigate();
+    const location = useLocation();
+    const forcePage = !!(location.state as any)?.page; // 상세페이지로 이동에서만 true
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
     const { ownerId: ownerIdParam, projectId: projectIdParam } = useParams<{ ownerId?: string; projectId?: string }>();
@@ -46,7 +48,6 @@ export default function OtherProjectPage() {
         }
     }, [ownerId, projectId]);
 
-    // 공개 프로필 조회 + 현재 로그인 사용자(me) 조회로 DB 기반 소유자 판단
     useEffect(() => {
         async function loadOwnerAndMe(id?: number) {
             try {
@@ -59,7 +60,6 @@ export default function OtherProjectPage() {
             } catch {
                 if (id) setOwnerProfile({ id, nickname: "" }); else setOwnerProfile({ id: 0 });
             }
-            // me
             try {
                 const token = (typeof window !== 'undefined') ? (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) : null;
                 const { data: me } = await api.get<{ id: number }>(`/users/me`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
@@ -71,7 +71,6 @@ export default function OtherProjectPage() {
         loadOwnerAndMe(ownerId);
     }, [ownerId]);
 
-    // 메타 파생
     const headerSummary = useMemo(() => {
         const html = projectDetail?.description || "";
         try {
@@ -95,31 +94,18 @@ export default function OtherProjectPage() {
         return `${y}.${m}.${day}`;
     }, []);
 
-    // 소유자 여부 (DB의 /users/me 결과 기반)
     const isOwner = useMemo(() => {
         if (!currentUserId || !ownerId) return false;
         return currentUserId === ownerId;
     }, [currentUserId, ownerId]);
 
-    // 커버 이미지 제외한 본문 콘텐츠
     const normalizedContents = useMemo(() => {
         const cover = normalizeUrl(projectDetail?.coverUrl || projectDetail?.image);
-        // 메타 파싱: 첫 TEXT가 <!--PM_META{...}--> 형태면 추출
-        try {
-            const first = (contents || []).find(c => c.type === 'TEXT' && typeof c.data === 'string' && c.data.startsWith('<!--PM_META'));
-            if (first) {
-                const json = first.data.replace(/^<!--PM_META/, '').replace(/-->$/, '');
-                const meta = JSON.parse(json);
-                (window as any).__pmMeta = meta;
-            }
-        } catch {}
         return (contents || [])
             .filter((it) => {
                 if (!it?.data) return false;
-                // 메타 TEXT는 숨김
                 if (it.type === 'TEXT' && typeof it.data === 'string' && it.data.startsWith('<!--PM_META')) return false;
                 if (it.type === "IMAGE") {
-                    // data가 JSON({src,...})일 수 있으므로 src 파싱 후 비교
                     let imgSrc = it.data;
                     try { const o = JSON.parse(it.data); if (o && o.src) imgSrc = String(o.src); } catch {}
                     return normalizeUrl(imgSrc) !== cover;
@@ -133,67 +119,7 @@ export default function OtherProjectPage() {
             })
             .sort((a, b) => a.order - b.order);
     }, [contents, projectDetail?.coverUrl, projectDetail?.image]);
-    const renderContent = (it: ProjectContentResponseItem) => {
-        if (it.type === "IMAGE") {
-            // data may be raw src or JSON {src,pad,full,padded}
-            let src = it.data; let pad = 0; let full = false; let padded = false;
-            try { const o = JSON.parse(it.data); src = o.src || src; pad = Number(o.pad || 0); full = !!o.full; padded = !!o.padded; } catch {}
-            const cls = `${padded ? 'pm-embed-padded' : ''}${full ? ' pm-embed-full' : ''}`.trim();
-            const style = padded ? ({ ['--pm-pad' as any]: `${pad}px` }) : undefined;
-            return (
-                <div key={`img-${it.id}`} className="pm-preview-content ql-snow">
-                    <div className="ql-editor">
-                        <img src={src} alt="content" className={cls} style={style as any} />
-                    </div>
-                </div>
-            );
-        }
-        if (it.type === "VIDEO") {
-            let src = it.data; let pad = 0; let full = true; let padded = false;
-            try { const o = JSON.parse(it.data); src = o.src || src; pad = Number(o.pad || 0); full = (o.full ?? true); padded = !!o.padded; } catch {}
-            const cls = `ql-video${padded ? ' pm-embed-padded' : ''}${full ? ' pm-embed-full' : ''}`;
-            const style = { ...(padded ? ({ ['--pm-pad' as any]: `${pad}px` }) : {}), marginTop: 0 } as any;
-            return (
-                <div key={`vid-${it.id}`} className="pm-preview-content ql-snow">
-                    <div className="ql-editor">
-                        <iframe className={cls} src={src} style={style} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                    </div>
-                </div>
-            );
-        }
-        // Fallback: if TEXT contains an iframe/img (legacy saved), render as embed
-        if (it.type === "TEXT") {
-            const html = it.data || "";
-            const iframeMatch = html.match(/<iframe[^>]*src=\"([^\"]+)\"[^>]*><\/iframe>/i);
-            if (iframeMatch) {
-                const src = iframeMatch[1];
-                return (
-                    <div key={`txt-${it.id}`} className="pm-preview-content ql-snow">
-                        <div className="ql-editor">
-                            <iframe className="ql-video" src={src} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                        </div>
-                    </div>
-                );
-            }
-            const imgMatch = html.match(/<img[^>]*src=\"([^\"]+)\"[^>]*\/*>/i);
-            if (imgMatch) {
-                const src = imgMatch[1];
-                return (
-                    <div key={`txt-${it.id}`} className="pm-preview-content ql-snow">
-                        <div className="ql-editor">
-                            <img src={src} alt="content" />
-                        </div>
-                    </div>
-                );
-            }
-        }
-        return (
-            <div key={`txt-${it.id}`} className="pm-preview-content ql-snow">
-                <div className="ql-editor" dangerouslySetInnerHTML={{ __html: it.data }} />
-            </div>
-        );
-    };
-    // 하나의 ql-editor로 합쳐 렌더 (간격 규칙 적용용)
+
     const joinedHtml = useMemo(() => {
         const esc = (s: string) => String(s || '').replace(/\"/g, '&quot;');
         return normalizedContents.map((it) => {
@@ -211,7 +137,6 @@ export default function OtherProjectPage() {
                 const style = padded ? ` style=\"--pm-pad: ${pad}px; margin-top: 0\"` : ` style=\"margin-top: 0\"`;
                 return `<iframe class=\"${cls}\" src=\"${esc(src)}\"${style} allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe>`;
             }
-            // TEXT: 비어있는 문단만 있는 항목은 제거
             if (it.type === 'TEXT') {
                 const html = String(it.data || '').trim();
                 const collapsed = html
@@ -239,21 +164,30 @@ export default function OtherProjectPage() {
         isOwner,
     } as const;
 
-    const meta = (window as any).__pmMeta || {};
-    const bgColor = meta.bg || '#6c7178';
-    const gapPx = typeof meta.gap === 'number' ? meta.gap : 10;
+    // 사용자 설정 메타: 배경/간격
+    const metaFromContents = useMemo(() => {
+        try {
+            const first = (contents || []).find(
+                (c) => c.type === 'TEXT' && typeof c.data === 'string' && c.data.startsWith('<!--PM_META')
+            );
+            if (first) {
+                const json = first.data.replace(/^<!--PM_META/, '').replace(/-->$/, '');
+                return JSON.parse(json);
+            }
+        } catch {}
+        return {} as any;
+    }, [contents]);
+    const pageBg = (metaFromContents as any)?.bg || '#ffffff';
+    const gapPx = typeof (metaFromContents as any)?.gap === 'number' ? (metaFromContents as any).gap : 10;
     const styles = (
         <style>
             {`
             .pm-preview-content { --pm-gap: ${gapPx}px; }
             .pm-preview-content .ql-editor { padding: 0; width: 100%; max-width: none; margin-left: 0; margin-right: 0; overflow: visible; }
-            /* 기본: 모든 인접 형제 요소 간격은 --pm-gap */
             .pm-preview-content .ql-editor > * + * { margin-top: var(--pm-gap) !important; }
             .pm-preview-content .ql-editor p:has(> br:only-child) { margin: 0 !important; height: 0; line-height: 0; padding: 0; }
-            /* 임베드 직후 Quill이 삽입한 빈 문단의 마진 제거(이중 간격 방지) */
             .pm-preview-content .ql-editor p:has(> img:only-child) + p:has(> br:only-child),
             .pm-preview-content .ql-editor p:has(> iframe:only-child) + p:has(> br:only-child) { margin-top: 0 !important; }
-            /* 기본 블록 요소의 기본 마진 제거 */
             .pm-preview-content .ql-editor h1,
             .pm-preview-content .ql-editor h2,
             .pm-preview-content .ql-editor h3,
@@ -271,7 +205,6 @@ export default function OtherProjectPage() {
             .pm-preview-content img { height: auto !important; max-width: 100% !important; width: auto !important; }
             .pm-preview-content iframe { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
             .pm-preview-content iframe.ql-video { width: 100% !important; max-width: none !important; height: auto !important; aspect-ratio: 16 / 9; display: block; }
-            /* 에디터와 동일: 텍스트 블록 좌우 여백 적용 */
             .pm-preview-content .ql-editor > p,
             .pm-preview-content .ql-editor > h1,
             .pm-preview-content .ql-editor > h2,
@@ -281,17 +214,14 @@ export default function OtherProjectPage() {
             .pm-preview-content .ql-editor > h6,
             .pm-preview-content .ql-editor > blockquote,
             .pm-preview-content .ql-editor > pre { margin-left: 80px; margin-right: 80px; }
-            /* 임베드만 포함한 문단은 좌우 여백 제거 */
             .pm-preview-content .ql-editor > p:has(> img:only-child),
             .pm-preview-content .ql-editor > p:has(> iframe:only-child) { margin-left: 0; margin-right: 0; }
             .pm-preview-content img.pm-embed-padded,
             .pm-preview-content iframe.pm-embed-padded { padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px); margin-bottom: calc(-1 * var(--pm-pad, 0px)); background: transparent; box-sizing: border-box; }
-            /* 패딩 임베드 뒤 간격: pad 만큼 추가 */
             .pm-preview-content img.pm-embed-padded + *,
             .pm-preview-content iframe.pm-embed-padded + *,
             .pm-preview-content .ql-editor p:has(> img.pm-embed-padded:only-child) + *,
             .pm-preview-content .ql-editor p:has(> iframe.pm-embed-padded:only-child) + * { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
-            /* 연속 임베드 간격: 항상 --pm-gap (추가 pad는 첫 요소가 먹었음) */
             .pm-preview-content .ql-editor img + img,
             .pm-preview-content .ql-editor img + iframe,
             .pm-preview-content .ql-editor iframe + img,
@@ -301,34 +231,61 @@ export default function OtherProjectPage() {
         </style>
     );
 
-    return (
-        <div className="min-h-screen w-full bg-[#6c7178] font-gmarketsans">
-            {styles}
-            <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-12">
-                <div className="flex flex-row items-start w-full relative" style={{ maxWidth: MAX_WIDTH }}>
-                    <div className="flex flex-row items-start">
-                        <section
-                            className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300"
-                            style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}
-                        >
-                            <ProjectTopInfo
-                                projectName={project.name}
-                                userName={project.owner}
-                                intro={headerSummary}
-                                ownerId={project.ownerId}
-                                ownerEmail={project.ownerEmail}
-                                ownerImageUrl={project.ownerImageUrl}
-                                isOwner={project.isOwner}
-                                projectId={project.id}
-                            />
-                            {false && (
-                            <div className="mb-6">
-                                <ProjectThumbnail imgUrl={project.coverUrl || QueenImg} />
+    // forcePage=true일 때만 페이지 형식, 그 외(기본)는 모달
+    if (forcePage) {
+        return (
+            <div className="min-h-screen w-full bg-[#f5f6f8] font-gmarketsans">
+                {styles}
+                <style>{`.op-actionbar, .op-actionbar * { color: #000 !important; }`}</style>
+                <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-12">
+                    <div className="flex flex-row items-start w-full relative" style={{ maxWidth: MAX_WIDTH }}>
+                        <div className="flex flex-row items-start">
+                            <section className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300" style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
+                                <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} />
+                                <div className="mt-6 -mx-8 mb-8">
+                                    <div className="rounded-xl overflow-hidden" style={{ background: pageBg }}>
+                                        <div className="px-0 py-8">
+                                            <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
+                                                <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <TagList tags={headerCategories} />
+                                <div className="mb-8">
+                                    <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                                </div>
+                                <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} />
+                            </section>
+                            {!commentOpen && (
+                                <div className={`hidden lg:flex flex-col ${forcePage ? 'op-actionbar' : ''}`} style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }}>
+                                    <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} />
                                 </div>
                             )}
-                            {/* 콘텐츠를 상단으로 배치: 한 컨테이너로 합쳐 간격 규칙 적용 + 배경색 적용 */}
+                        </div>
+                        {commentOpen && (
+                            <div style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                                <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // 기본: 모달 레이아웃
+    return (
+        <div className="fixed inset-0 z-[10000] font-gmarketsans">
+            {styles}
+            <div className="absolute inset-0 bg-black/70" onClick={() => { try { nav(-1); } catch { nav('/search'); } }} />
+            <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-12" onClick={() => { try { nav(-1); } catch { nav('/search'); } }}>
+                <div className="flex flex-row items-start w-full relative px-4" style={{ maxWidth: MAX_WIDTH }}>
+                    <div className="flex flex-row items-start">
+                        <section className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300" style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                            <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} />
                             <div className="mt-6 -mx-8 mb-8">
-                                <div className="rounded-xl overflow-hidden" style={{ background: bgColor }}>
+                                <div className="rounded-xl overflow-hidden" style={{ background: pageBg }}>
                                     <div className="px-0 py-8">
                                         <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                             <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
@@ -340,30 +297,21 @@ export default function OtherProjectPage() {
                             <div className="mb-8">
                                 <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
                             </div>
-                            <UserProfileBox 
-                                userName={project.owner} 
-                                ownerId={project.ownerId} 
-                                isOwner={project.isOwner}
-                                email={project.ownerEmail}
-                                profileImageUrl={project.ownerImageUrl}
-                                projectId={project.id}
-                            />
+                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} />
                         </section>
-
                         {!commentOpen && (
-                            <div className="hidden lg:flex flex-col" style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }}>
+                            <div className="hidden lg:flex flex-col" style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>
                                 <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} />
                             </div>
                         )}
                     </div>
-
                     {commentOpen && (
-                        <div style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                        <div style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }} onClick={(e) => e.stopPropagation()}>
                             <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
                         </div>
                     )}
                 </div>
-            </main>
+            </div>
         </div>
     );
 }

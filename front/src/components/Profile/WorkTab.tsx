@@ -1,29 +1,113 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { dummyProjects } from "../../data/dummyProjects";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+// import { dummyProjects } from "../../data/dummyProjects";
 import type { Project } from "../../types/Project";
 import { resolveCover, swapJpgPng } from "../../utils/getProjectCover";
+import { fetchProjectFeed } from "../../api/projects";
+import api from "../../api/axiosInstance";
+import { deleteProject as apiDeleteProject } from "../../api/projectApi";
+import ConfirmModal from "../common/ConfirmModal";
+import Toast from "../common/Toast";
 
 const STORAGE_KEY = "profile_work_order";
+const CACHE_KEY = "my_projects_cache_v1";
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
 
 const WorkTab: React.FC = () => {
-	// 데모: 메인 페이지 더미 프로젝트 사용
-	const baseProjects: Project[] = useMemo(() => dummyProjects.slice(0, 2), []);
+	// 실제: 내 프로젝트 목록
+	const [projects, setProjects] = useState<Project[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
+	const [confirm, setConfirm] = useState<{ visible: boolean; ownerId?: number; projectId?: number }>(() => ({ visible: false }));
+	const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' }>(() => ({ visible: false, message: '', type: 'success' }));
 
-	// 저장된 순서 적용
-	const [projects, setProjects] = useState<Project[]>(() => {
+	useEffect(() => {
+		let mounted = true;
+
+		// 1) 캐시 즉시 표시 (있으면)
 		try {
-			const raw = localStorage.getItem(STORAGE_KEY);
-			if (!raw) return baseProjects;
-			const order: number[] = JSON.parse(raw);
-			const map = new Map(baseProjects.map(p => [p.id, p] as const));
-			const ordered = order.map(id => map.get(id)).filter(Boolean) as Project[];
-			const remaining = baseProjects.filter(p => !order.includes(p.id));
-			return [...ordered, ...remaining];
-		} catch {
-			return baseProjects;
+			const raw = localStorage.getItem(CACHE_KEY);
+			if (raw) {
+				const cached = JSON.parse(raw) as { updatedAt: number; items: Project[] };
+				if (cached?.items?.length) {
+					setProjects(cached.items);
+					setLoading(false);
+				}
+			}
+		} catch {}
+
+		// 2) 백그라운드 새로고침 (빠른 페이징)
+		(async () => {
+			try {
+				const me = (await api.get<{ id: number }>("/users/me")).data;
+				const myId = me?.id;
+				if (!myId) { if (mounted && projects.length === 0) setLoading(false); return; }
+
+				let page = 0; 
+				const size = 100; // 큰 페이지로 왕복 횟수 최소화
+				let last = false; 
+				const collected: Project[] = [];
+				let miss = 0; // 연속 미스 페이지 수
+				const MAX_PAGES = 10; // 안전 가드
+
+				while (!last && page < MAX_PAGES && miss < 3) {
+					const res = await fetchProjectFeed({ page, size, sort: 'latest' });
+					const pageItems = res.content || [];
+					const mine = pageItems.filter(p => (p.owner && (p.owner as any).id === myId) || (p.authorId === myId));
+					if (mine.length === 0) miss += 1; else miss = 0;
+					collected.push(...mine);
+					last = !!res.last || (page >= (res.totalPages || 0) - 1);
+					page += 1;
+				}
+
+				// 저장된 순서 적용 (있으면)
+				let ordered: Project[] = collected;
+				try {
+					const rawOrder = localStorage.getItem(STORAGE_KEY);
+					if (rawOrder) {
+						const order: number[] = JSON.parse(rawOrder);
+						const map = new Map(collected.map(p => [p.id, p] as const));
+						const seq = order.map(id => map.get(id)).filter(Boolean) as Project[];
+						const remaining = collected.filter(p => !order.includes(p.id));
+						ordered = [...seq, ...remaining];
+					}
+				} catch {}
+
+				// 캐시 저장
+				try {
+					localStorage.setItem(CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items: ordered }));
+				} catch {}
+
+				if (mounted) {
+					setProjects(ordered);
+					setLoading(false);
+				}
+			} catch {
+				if (mounted && projects.length === 0) setLoading(false);
+			}
+		})();
+
+		return () => { mounted = false; };
+	}, []);
+
+	// 삭제 실행 핸들러 (모달 확인 시 호출)
+	const handleConfirmDelete = async () => {
+		const ownerId = confirm.ownerId;
+		const projectId = confirm.projectId;
+		if (!ownerId || !projectId) { setConfirm({ visible: false }); return; }
+		try {
+			await apiDeleteProject(ownerId, projectId);
+			// 목록에서 제거
+			setProjects(prev => prev.filter(p => p.id !== projectId));
+			// 캐시도 업데이트
+			try { localStorage.setItem(CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items: projects.filter(p => p.id !== projectId) })); } catch {}
+			setToast({ visible: true, message: "프로젝트를 삭제했습니다.", type: 'success' });
+		} catch (e) {
+			setToast({ visible: true, message: "삭제에 실패했습니다.", type: 'error' });
+		} finally {
+			setConfirm({ visible: false });
+			setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2500);
 		}
-	});
+	};
 
 	// 드래그 정렬 모드
 	const [isReorderMode, setIsReorderMode] = useState(false);
@@ -55,6 +139,8 @@ const WorkTab: React.FC = () => {
 		const next = order.map(id => idToProject.get(id)).filter(Boolean) as Project[];
 		setProjects(next);
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+		// 캐시도 업데이트하여 다음 방문 때 즉시 반영
+		try { localStorage.setItem(CACHE_KEY, JSON.stringify({ updatedAt: Date.now(), items: next })); } catch {}
 		setIsReorderMode(false);
 	};
 	const handleCancelOrder = () => {
@@ -62,18 +148,18 @@ const WorkTab: React.FC = () => {
 		setIsReorderMode(false);
 	};
 
+	if (loading && projects.length === 0) {
+		return <div className="min-h-[360px] flex items-center justify-center text-black/70">불러오는 중…</div>;
+	}
 	if (projects.length === 0) {
 		return (
 			<div className="min-h-[360px] flex flex-col items-center justify-center text-center">
-				<div className="mt-6 text-[16px] md:text-[18px] text-black/90">작업 시작이 어렵고 막막하신가요?</div>
+				<div className="mt-6 text-[16px] md:text-[18px] text-black/90">아직 등록한 작업이 없습니다.</div>
 				<div className="mt-2 text-[14px] md:text-[15px] text-black/70 leading-relaxed">
-					커뮤니티에서 다른 창작자와 디자이너들에게 조언을 구하고
-					<br />
-					노트폴리오에서 즐거운 창작 생활을 시작해 보세요!
+					상단의 업로드 버튼으로 프로젝트를 등록해 보세요!
 				</div>
 				<div className="mt-6 flex items-center gap-3">
-					<Link to="/community" className="h-[44px] px-5 rounded-[22px] bg-[#068334] text-white text-[14px] flex items-center">커뮤니티 바로가기</Link>
-					<Link to="/project/sample" className="h-[44px] px-5 rounded-[22px] border border-black/20 text-[14px] flex items-center text-black">새로운 작업 업로드</Link>
+					<Link to="/project/edit" className="h-[44px] px-5 rounded-[22px] bg-[#068334] text-white text-[14px] flex items-center">새로운 작업 업로드</Link>
 				</div>
 			</div>
 		);
@@ -96,6 +182,20 @@ const WorkTab: React.FC = () => {
 				</div>
 			</div>
 
+			{/* 삭제 확인 모달 */}
+			<ConfirmModal
+				visible={confirm.visible}
+				title="삭제하기"
+				message="정말 이 프로젝트를 삭제할까요? 이 작업은 되돌릴 수 없습니다."
+				confirmText="삭제"
+				cancelText="취소"
+				confirmButtonColor="red"
+				onConfirm={handleConfirmDelete}
+				onCancel={() => setConfirm({ visible: false })}
+			/>
+			{/* 삭제 완료 토스트 */}
+			<Toast visible={toast.visible} message={toast.message} type={toast.type} size="medium" autoClose={2000} closable={true} onClose={() => setToast(prev => ({ ...prev, visible: false }))} />
+
 			{/* 그리드 */}
 			<div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 				{(isReorderMode ? order.map(id => projects.find(p => p.id === id)!).filter(Boolean) : projects).map((project, idx) => {
@@ -109,6 +209,8 @@ const WorkTab: React.FC = () => {
 							onDragStart={onDragStart}
 							onDragOver={onDragOver}
 							onDrop={onDrop}
+							// 삭제 요청 모달 열기
+							onRequestDelete={(ownerId: number, projectId: number) => setConfirm({ visible: true, ownerId, projectId })}
 						/>
 					);
 				})}
@@ -117,29 +219,55 @@ const WorkTab: React.FC = () => {
 	);
 };
 
-function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragOver, onDrop }: {
+function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragOver, onDrop, onRequestDelete }: {
 	project: Project;
 	indexInList: number;
 	isReorderMode: boolean;
 	onDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
 	onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
 	onDrop: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+	onRequestDelete: (ownerId: number, projectId: number) => void;
 }) {
-	const [src, setSrc] = useState(() => resolveCover(project, { position: indexInList }));
+	const [menuOpen, setMenuOpen] = useState(false);
+	const navigate = useNavigate();
+	const [src, setSrc] = useState(() => {
+		const cover = (project as any).coverUrl || resolveCover(project, { position: indexInList });
+		return cover ? cover : '';
+	});
 	const [triedAlt, setTriedAlt] = useState(false);
 	useEffect(() => {
-		setSrc(resolveCover(project, { position: indexInList }));
+		const cover = (project as any).coverUrl || resolveCover(project, { position: indexInList });
+		setSrc(cover ? cover : '');
 		setTriedAlt(false);
 	}, [project, indexInList]);
 	const onError = () => { if (!triedAlt) { setTriedAlt(true); setSrc(swapJpgPng(src)); } };
 
+	const ownerId = (project as any).owner?.id || (project as any).authorId;
+	const goDetail = () => navigate(`/other-project/${ownerId}/${project.id}`);
+	const goEdit = () => navigate(`/project/edit/${ownerId}/${project.id}`);
+
 	return (
 		<div
 			className={`relative rounded-xl overflow-hidden ${isReorderMode ? "cursor-move" : "cursor-pointer"}`}
-			{...(isReorderMode ? { draggable: true, onDragStart: (e: any) => onDragStart(e, project.id), onDragOver: (e: any) => onDragOver(e), onDrop: (e: any) => onDrop(e, project.id) } : {})}
+			{...(isReorderMode ? { draggable: true, onDragStart: (e: any) => onDragStart(e, project.id), onDragOver: (e: any) => onDragOver(e), onDrop: (e: any) => onDrop(e, project.id) } : { onClick: goDetail })}
 		>
-			<div className="relative w-full aspect-[4/3] bg-gray-200">
-				<img src={src} alt={project.title} className="absolute inset-0 w-full h-full object-cover" onError={onError} />
+			<div className="relative w-full aspect-[4/3] bg-gray-200 group" onMouseLeave={() => setMenuOpen(false)}>
+				<img src={src} alt={project.title ? project.title : ''} className="absolute inset-0 w-full h-full object-cover" onError={onError} />
+				{/* 하단 좌측 제목 오버레이 */}
+				<div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+				<div className="absolute left-2 bottom-2 text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity line-clamp-1">
+					{(project as any).title || ''}
+				</div>
+				{/* 좌상단 점3 메뉴 버튼 (호버 시 표시) */}
+				<button type="button" className={`absolute ${isReorderMode ? 'top-2 right-2' : 'top-2 left-2'} w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity`} onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}>
+					···
+				</button>
+				{menuOpen && (
+					<div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white rounded-md shadow-lg border border-black/10 overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
+						<button className="px-4 py-2 text-sm hover:bg-gray-100 w-full text-left" onClick={goEdit}>수정하기</button>
+						<button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
+					</div>
+				)}
 				{isReorderMode && (
 					<div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[12px] font-medium text-black/80">
 						{indexInList + 1}

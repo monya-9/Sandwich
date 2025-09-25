@@ -46,6 +46,8 @@ import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetail
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
+import ProjectFeedPage from "./pages/ProjectFeedPage";
+import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -58,6 +60,13 @@ enableRecaptchaV3OnPaths({
 function RoomToMessagesRedirect() {
     const { id } = useParams();
     const to = id ? `/messages/${id}` : "/messages";
+    return <Navigate to={to} replace />;
+}
+
+/** /:ownerId/:projectId -> /other-project/:ownerId/:projectId 리다이렉트 */
+function RootProjectToOtherRedirect() {
+    const { ownerId, projectId } = useParams();
+    const to = ownerId && projectId ? `/other-project/${ownerId}/${projectId}` : "/search";
     return <Navigate to={to} replace />;
 }
 
@@ -75,14 +84,19 @@ function App() {
                             <Route element={<AppLayout />}>
                                 <Route index element={<MainPage />} />
                                 {/* Notefolio 스타일 상세 경로 */}
-                                <Route path=":ownerId/:projectId" element={<OtherProjectPage />} />
+                                <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
+                                <Route path="project/new" element={<ProjectForm />} />
 
                                 {/* 신규/편집 업로드 경로 */}
                                 <Route path="/project/edit" element={<ProjectMangeSampleForm />} />
                                 <Route path="/project/edit/:ownerId/:projectId" element={<ProjectMangeSampleForm />} />
 
                                 {/* 레거시/샘플 경로(유지 필요 시) */}
-                                <Route path="project/new" element={<ProjectForm />} />
+                                <Route path="other-project" element={<Navigate to="/search" replace />} />
+                                <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
+                                <Route path="l/:ownerId/:projectId" element={<ProjectDetailLightboxPage />} />
+                                <Route path="search" element={<ProjectFeedPage />} />
+                                
 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
