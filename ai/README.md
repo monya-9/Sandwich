@@ -61,17 +61,8 @@ PyCharm 하단 터미널 또는 IDE 내 Python Console에서 아래 명령을 �
    pip install -r requirements.txt
    ```
 
-`requirements.txt` 예시:
-
-```text
-fastapi
-uvicorn[standard]
-SQLAlchemy
-psycopg2-binary
-redis
-pandas
-numpy
-celery
-```
-
 PyCharm 환경에서 GPU 학습·추론 및 API 개발 환경
+
+fastapi localhost:8000
+# 프로젝트 루트에서
+uvicorn src.api_redis.main:app --host 0.0.0.0 --port 8000

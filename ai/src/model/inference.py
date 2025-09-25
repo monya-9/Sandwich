@@ -123,8 +123,23 @@ def load_fallback_arrays():
     rec_arr = np.zeros(num_items, dtype=np.float32)
     for _, r in meta.iterrows():
         pid = str(int(r["project_id"]))
-        ts = r["created_at"].timestamp() if pd.notna(r["created_at"]) else None
-        rec_arr[p2i[pid]] = math.exp(-lam * max(0.0, now - ts)) if ts else 0.0
+        idx = p2i.get(pid)
+        if idx is None:
+            # 매핑에 없는 프로젝트는 건너뜀(0 유지)
+            continue
+        ts_val = r["created_at"]
+        # created_at 처리: NaT/None → 0, naive → UTC 가정
+        if pd.isna(ts_val):
+            rec_arr[idx] = 0.0
+            continue
+        if hasattr(ts_val, "to_pydatetime"):
+            dt = ts_val.to_pydatetime()
+        else:
+            dt = ts_val
+        if getattr(dt, "tzinfo", None) is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        ts = dt.timestamp()
+        rec_arr[idx] = math.exp(-lam * max(0.0, now - ts)) if ts else 0.0
 
     return pop_arr, rec_arr
 
