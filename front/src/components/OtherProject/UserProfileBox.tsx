@@ -122,12 +122,7 @@ export default function UserProfileBox({
         </div>
         <div className="text-2xl font-bold mb-3">{displayName}</div>
         <div className="flex gap-6">
-          {isOwner ? (
-            <>
-              <button className="bg-white border-2 border-black text-black rounded-full text-xl font-bold shadow transition px-14 py-5 inline-flex items-center justify-center" onClick={onEdit}>수정하기</button>
-              <button className="bg-white border-2 border-black text-black rounded-full text-xl font-bold shadow transition px-14 py-5 inline-flex items-center justify-center" onClick={onDelete}>삭제하기</button>
-            </>
-          ) : (
+          {!isOwner && (
             <>
               <button ref={followBtnRef} className={`${isFollowing ? (followBtnHover ? "bg-[#F6323E] text-white border-2 border-[#F6323E]" : "bg-white border-2 border-black text-black") : "bg-white border-2 border-black text-black"} rounded-full text-xl font-bold shadow transition px-14 py-5 inline-flex items-center justify-center whitespace-nowrap`} onClick={handleToggle} onMouseEnter={() => setFollowBtnHover(true)} onMouseLeave={() => setFollowBtnHover(false)}>
             <span className="invisible">제안하기</span>
