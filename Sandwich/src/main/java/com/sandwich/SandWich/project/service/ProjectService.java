@@ -25,6 +25,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.Clock;
 import java.util.Set;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -157,5 +159,43 @@ public class ProjectService {
         Page<Project> page = projectRepository.findAll(spec, byLatest);
         Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
         return PageResponse.of(mapped);
+    }
+
+    @Transactional
+    public void updateProject(Long userId, Long id, ProjectRequest request, User actor) {
+        Project project = projectRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 프로젝트입니다."));
+        if (!project.getUser().getId().equals(actor.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
+        }
+
+        project.setTitle(request.getTitle());
+        project.setDescription(request.getDescription());
+        project.setImage(request.getImage());
+        project.setTools(request.getTools());
+        project.setRepositoryUrl(request.getRepositoryUrl());
+        project.setDemoUrl(request.getDemoUrl());
+        project.setStartYear(request.getStartYear());
+        project.setEndYear(request.getEndYear());
+        project.setIsTeam(request.getIsTeam());
+        project.setTeamSize(request.getTeamSize());
+        project.setCoverUrl(request.getCoverUrl());
+        project.setQrCodeEnabled(request.getQrCodeEnabled());
+        project.setFrontendBuildCommand(request.getFrontendBuildCommand());
+        project.setBackendBuildCommand(request.getBackendBuildCommand());
+        project.setPortNumber(request.getPortNumber());
+        project.setExtraRepoUrl(request.getExtraRepoUrl());
+
+        projectRepository.save(project);
+    }
+
+    @Transactional
+    public void deleteProject(Long userId, Long id, User actor) {
+        Project project = projectRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 프로젝트입니다."));
+        if (!project.getUser().getId().equals(actor.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
+        }
+        projectRepository.delete(project); // orphanRemoval=true 로 콘텐츠/뷰 등 함께 삭제
     }
 }

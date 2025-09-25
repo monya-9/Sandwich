@@ -74,8 +74,14 @@ function App() {
                         <Routes>
                             <Route element={<AppLayout />}>
                                 <Route index element={<MainPage />} />
-                                <Route path="other-project" element={<OtherProjectPage />} />
-                                <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
+                                {/* Notefolio 스타일 상세 경로 */}
+                                <Route path=":ownerId/:projectId" element={<OtherProjectPage />} />
+
+                                {/* 신규/편집 업로드 경로 */}
+                                <Route path="/project/edit" element={<ProjectMangeSampleForm />} />
+                                <Route path="/project/edit/:ownerId/:projectId" element={<ProjectMangeSampleForm />} />
+
+                                {/* 레거시/샘플 경로(유지 필요 시) */}
                                 <Route path="project/new" element={<ProjectForm />} />
 
                                 <Route path="/messages" element={<MessagesPage />} />
@@ -111,7 +117,6 @@ function App() {
                                 <Route path="/challenge/portfolio/:id/vote/:projectId" element={<PortfolioProjectDetailPage />} />
                                 <Route path="/challenge/code/:id/submissions/:submissionId" element={<CodeSubmissionDetailPage />} />
 
-
                                 {/* (예시) 코드 제출 수정 */}
                                 <Route path="/challenge/code/:id/edit/:submissionId" element={<CodeEditPage />} />
 
@@ -124,7 +129,6 @@ function App() {
                             <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
                             <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />
-                            <Route path="project/sample" element={<ProjectMangeSampleForm />} />
 
                             <Route path="*" element={<NotFoundPage />} />
                         </Routes>

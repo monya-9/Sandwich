@@ -109,6 +109,7 @@ public class UserService {
                 .toList().size();
 
         return new UserProfileResponse(
+                user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 profile != null ? profile.getNickname()   : null,

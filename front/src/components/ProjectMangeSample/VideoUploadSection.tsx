@@ -7,8 +7,40 @@ type Props = {
 
 export function normalizeVideoUrl(raw: string): string | null {
 	try {
-		let u = raw.trim();
+		let u = (raw || "").trim();
+		if (!u) return null;
+		// iframe snippet 붙여넣기 지원
+		const iframeSrc = u.match(/<iframe[^>]*src=\"([^\"]+)\"[^>]*><\/iframe>/i);
+		if (iframeSrc) u = iframeSrc[1];
 		if (u.startsWith("http://")) u = "https://" + u.slice(7);
+		// URL 파싱 후 호스트/패스 정규화
+		let parsed: URL | null = null;
+		try { parsed = new URL(u); } catch { parsed = null; }
+		if (parsed) {
+			const host = parsed.hostname.replace(/^m\./, "");
+			const path = parsed.pathname.replace(/\/+$/, "");
+			// YouTube variants
+			if (/^(www\.)?youtube\.com$/.test(host)) {
+				// watch?v=ID, shorts/ID, live/ID, embed/ID
+				const v = parsed.searchParams.get("v");
+				if (v) return `https://www.youtube.com/embed/${v}`;
+				const m = path.match(/^\/(shorts|live|embed)\/([\w-]+)/i);
+				if (m) return `https://www.youtube.com/embed/${m[2]}`;
+			}
+			if (/^(www\.)?youtu\.be$/.test(host)) {
+				const id = path.split("/").filter(Boolean)[0];
+				if (id) return `https://www.youtube.com/embed/${id}`;
+			}
+			// Vimeo
+			if (/^(www\.)?vimeo\.com$/.test(host)) {
+				const id = path.split("/").filter(Boolean)[0];
+				if (id && /^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`;
+			}
+			if (/^(player\.)?vimeo\.com$/.test(host) && /\/video\//.test(path)) {
+				return `https://player.vimeo.com${path}`;
+			}
+		}
+		// 마지막 폴백: 기존 정규식
 		const ytWatch = u.match(/https?:\/\/(www\.)?youtube\.com\/watch\?v=([\w-]+)/i);
 		if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[2]}`;
 		const ytShort = u.match(/https?:\/\/(www\.)?youtu\.be\/([\w-]+)/i);

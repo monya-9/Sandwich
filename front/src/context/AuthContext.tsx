@@ -92,6 +92,8 @@ export const AuthProvider = ({ children }: Props) => {
         sessionStorage.removeItem("userUsername");
         localStorage.removeItem("userProfileName");
         sessionStorage.removeItem("userProfileName");
+        localStorage.removeItem("userId");
+        sessionStorage.removeItem("userId");
     };
 
     return (

@@ -84,6 +84,7 @@ public class SecurityConfig {
                         // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)
+                        .requestMatchers(HttpMethod.GET, "/api/projects/*/*/contents").permitAll() // 상세 콘텐츠 목록
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/author/**").permitAll()// 작성자 다른 작품(캐러셀)
 
                         // ===== 챌린지 공개 GET  =====
@@ -155,13 +156,14 @@ public class SecurityConfig {
         var failureHandler = oAuth2FailureHandlerProvider.getIfAvailable();
 
         if (repo != null && userService != null && successHandler != null && failureHandler != null) {
-            http.oauth2Login(oauth -> oauth
-                    .authorizationEndpoint(endpoint -> endpoint.baseUri("/oauth2/authorization"))
-                    .userInfoEndpoint(userInfo -> userInfo.userService(userService))
-                    .successHandler(successHandler)
-                    .failureHandler(failureHandler)
-            );
+            http
+                    .oauth2Login(oauth -> oauth
+                            .userInfoEndpoint(u -> u.userService(userService))
+                            .successHandler(successHandler)
+                            .failureHandler(failureHandler)
+                    );
         }
+
         return http.build();
     }
 }

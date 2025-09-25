@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { createProject, uploadImage, ProjectRequest } from "../../api/projectApi";
+import { createProject, uploadImage, ProjectRequest, updateProject } from "../../api/projectApi";
+import { createGithubBranchAndPR } from "../../api/projectApi";
 import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
@@ -11,6 +12,16 @@ interface Props {
   onClose: () => void;
   onCreated?: (projectId: number, previewUrl: string) => void;
   libraryImages?: string[]; // 에디터에서 사용된 이미지 목록
+  // 편집 모드 지원
+  editMode?: boolean;
+  initialDetail?: any;
+  editOwnerId?: number;
+  editProjectId?: number;
+  // 프리뷰 연동
+  onTitleChange?: (v: string) => void;
+  onSummaryChange?: (v: string) => void;
+  onCategoriesChange?: (arr: string[]) => void;
+  onCoverChange?: (url: string) => void;
 }
 
 const Backdrop: React.FC<{ onClose: () => void }> = ({ onClose }) => (
@@ -97,7 +108,7 @@ const MediaPicker: React.FC<{
   );
 };
 
-const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, libraryImages }) => {
+const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, libraryImages, editMode = false, initialDetail, editOwnerId, editProjectId, onTitleChange, onSummaryChange, onCategoriesChange, onCoverChange }) => {
   const totalSteps = 4;
   const [step, setStep] = useState(1);
   const gotoNext = () => setStep(s => Math.min(totalSteps, s + 1));
@@ -122,25 +133,66 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [tools, setTools] = useState<string[]>([]);
   const [detailDescription, setDetailDescription] = useState(" ");
 
-  const [demoUrl, setDemoUrl] = useState("");
-  const [shareUrl, setShareUrl] = useState("");
-  const [extraRepoUrl, setExtraRepoUrl] = useState("");
   const [qrCodeEnabled, setQrCodeEnabled] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false); // 미디어 피커 상태 (훅은 early return 위)
   const [noImageToast, setNoImageToast] = useState(false); // 콘텐츠 이미지 없음 토스트
+
+  // GitHub 배포 설정
+  const [ghOwner, setGhOwner] = useState("");
+  const [ghRepo, setGhRepo] = useState("");
+  const [ghBase, setGhBase] = useState("main");
+  const [ghToken, setGhToken] = useState("");
+  const [ghBusy, setGhBusy] = useState(false);
+  const [ghResult, setGhResult] = useState<string | null>(null);
 
   // 크롭 모달 상태
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
-  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
-    visible: false,
-    message: ''
-  });
+  const [errorToast, setErrorToast] = useState({ visible: false, message: "" });
+
+  useEffect(() => {
+    if (!open) return;
+    if (!editMode || !initialDetail) return;
+    try {
+      setTitle(initialDetail.title || "");
+      setSummary(initialDetail.summary || initialDetail.description || "");
+      onTitleChange?.(initialDetail.title || "");
+      onSummaryChange?.(initialDetail.summary || initialDetail.description || "");
+      const toolsCsv = initialDetail.tools || "";
+      const arr = String(toolsCsv).split(",").map((s: string) => s.trim()).filter(Boolean).slice(0, 2);
+      setTools(arr);
+      onCategoriesChange?.(arr);
+      if (initialDetail.startYear) setStartYear(Number(initialDetail.startYear));
+      if (initialDetail.endYear) setEndYear(Number(initialDetail.endYear));
+      if (typeof initialDetail.coverUrl === 'string' && initialDetail.coverUrl) {
+        setCoverUrl(initialDetail.coverUrl);
+        onCoverChange?.(initialDetail.coverUrl);
+      }
+      setDetailDescription(initialDetail.description || " ");
+      setRepositoryUrl(initialDetail.repositoryUrl || "");
+      setFrontendBuildCommand(initialDetail.frontendBuildCommand || "");
+      setBackendBuildCommand(initialDetail.backendBuildCommand || "");
+      setPortNumber(initialDetail.portNumber || "");
+      if (typeof initialDetail.qrCodeEnabled === 'boolean') setQrCodeEnabled(initialDetail.qrCodeEnabled);
+
+      // Prefill gh* UI states from existing fields
+      setGhOwner(initialDetail.repositoryUrl || "");
+      setGhRepo(initialDetail.extraRepoUrl || "");
+      setGhBase(initialDetail.frontendBuildCommand || "");
+      setGhToken(initialDetail.backendBuildCommand || "");
+    } catch {}
+  }, [open, editMode, initialDetail]);
+
+  useEffect(() => { onTitleChange?.(title); }, [title]);
+  useEffect(() => { onSummaryChange?.(summary || detailDescription || ""); }, [summary, detailDescription]);
+  useEffect(() => { onCategoriesChange?.(tools); }, [tools]);
+  useEffect(() => { onCoverChange?.(coverUrl); }, [coverUrl]);
+
   const coverIsUploaded = useMemo(() => {
     const v = String(coverUrl || "");
-    return /^https?:\/\//.test(v) || v.startsWith("/api/");
+    return /^(http|https):\/\//.test(v);
   }, [coverUrl]);
   const isStep1Valid = useMemo(
     () => !!title && (!!startYear || !!endYear) && (coverIsUploaded || !!pendingCoverFile),
@@ -156,7 +208,15 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     "Elasticsearch","MongoDB","Redis","Jenkins"
   ];
   const toggleTool = (name: string) => {
-    setTools(prev => prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]);
+    setTools(prev => {
+      const has = prev.includes(name);
+      if (has) return prev.filter(t => t !== name);
+      if (prev.length >= 2) {
+        setErrorToast({ visible: true, message: "카테고리는 최대 2개까지 선택할 수 있습니다." });
+        return prev;
+      }
+      return [...prev, name];
+    });
   };
 
   // 모달 오픈 시 바깥쪽 스크롤 잠금
@@ -186,10 +246,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const openCropperWithFile = (file: File) => {
     const err = validateFile(file);
     if (err) { 
-      setErrorToast({
-        visible: true,
-        message: err
-      });
+      setErrorToast({ visible: true, message: err });
       return; 
     }
     const url = URL.createObjectURL(file);
@@ -273,8 +330,9 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   };
 
   const ensureCoverUploaded = async (): Promise<string | undefined> => {
-    // 이미 서버 URL이면 그대로 사용
-    if (!pendingCoverFile) return coverIsUploaded ? String(coverUrl) : undefined;
+    const coverIsUploaded = typeof coverUrl === 'string' && /^(http|https):\/\//.test(String(coverUrl));
+    if (coverIsUploaded) return String(coverUrl);
+    if (!pendingCoverFile) return undefined;
     try {
       const res = await uploadImage(pendingCoverFile);
       setPendingCoverFile(null);
@@ -305,26 +363,32 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         description: summary || detailDescription,
         tools: tools.join(","),
         repositoryUrl,
-        demoUrl,
         startYear: startYear === "" ? undefined : Number(startYear),
         endYear: endYear === "" ? undefined : Number(endYear),
         isTeam,
         teamSize: teamSize === "" ? undefined : Number(teamSize),
         coverUrl: String(resolvedCover),
         image: String(resolvedCover),
-        shareUrl: shareUrl || undefined,
         qrCodeEnabled,
         frontendBuildCommand: frontendBuildCommand || undefined,
         backendBuildCommand: backendBuildCommand || undefined,
         portNumber: portNumber === "" ? undefined : Number(portNumber),
-        extraRepoUrl: extraRepoUrl || undefined,
       };
-      const res = await createProject(payload);
-      onCreated?.(res.projectId, res.previewUrl);
-      setErrorToast({
-        visible: true,
-        message: `프로젝트 생성 완료! 미리보기: ${res.previewUrl}`
-      });
+      if (editMode && editOwnerId && editProjectId) {
+        await updateProject(editOwnerId, editProjectId, payload);
+        onCreated?.(editProjectId, initialDetail?.previewUrl || "");
+      } else {
+        const res = await createProject(payload);
+        onCreated?.(res.projectId, res.previewUrl);
+        setErrorToast({ visible: true, message: `프로젝트 생성 완료! 미리보기: ${res.previewUrl}` });
+        try {
+          if (ghOwner && ghRepo && ghBase && ghToken) {
+            await createGithubBranchAndPR(res.projectId, { owner: ghOwner, repo: ghRepo, baseBranch: ghBase, token: ghToken });
+          }
+        } catch (e: any) {
+          console.warn("GH PR 트리거 실패:", e?.message);
+        }
+      }
       onClose();
     } catch (e: any) {
       setErrorToast({
@@ -439,25 +503,29 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
               {/* 섹션 2: 저장소/빌드/포트 */}
               <div className="pt-4">
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">GitHub URL</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="프론트엔드/백엔드 소스코드 링크를 URL로 입력하세요" value={repositoryUrl} onChange={e=>setRepositoryUrl(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 mb-3">깃 이름</div>
+                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="owner (깃 사용자/조직)" value={ghOwner} onChange={e=>setGhOwner(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">빌드 명령어 (Frontend)</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="ex) npm run build" value={frontendBuildCommand} onChange={e=>setFrontendBuildCommand(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 mb-3">깃 레포명</div>
+                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="repo (레포 이름)" value={ghRepo} onChange={e=>setGhRepo(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">빌드 명령어 (Backend)</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="ex) ./gradlew build" value={backendBuildCommand} onChange={e=>setBackendBuildCommand(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 mb-3">레포 메인 브랜치명</div>
+                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="baseBranch (기본 main)" value={ghBase} onChange={e=>setGhBase(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">서버 포트 번호</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="ex) 8080" value={portNumber} onChange={e=>setPortNumber(e.target.value === '' ? '' : Number(e.target.value))} />
+                <div className="text-[16px] font-semibold text-gray-900 mb-3">깃 토큰</div>
+                <input type="password" className="border border-[#ADADAD] rounded px-4 h-12 w-full text-[16px] bg-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
+                <div className="text-[12px] text-gray-500 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
               </div>
+              {ghResult && (
+                <div className="text-sm mt-2 text-gray-600">{ghResult}</div>
+              )}
 
-              {/* 섹션 3: 기술 스택 및 상세 설명 */}
+              {/* 섹션 3: 카테고리 및 상세 설명 */}
               <div className="pt-4">
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">기술 스택 선택</div>
+                <div className="text-[16px] font-semibold text-gray-900 mb-3">카테고리</div>
                 <div className="flex flex-wrap gap-x-6 gap-y-3">
                   {toolOptions.map(opt => (
                     <label key={opt} className="flex items-center gap-2 text-[15px]">
@@ -471,19 +539,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <textarea className="border border-[#ADADAD] rounded p-4 w-full min-h-[180px] text-[15px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="프로젝트 소개, 주요 기능, 구현 내용 등 상세 설명을 입력해주세요" value={detailDescription} onChange={e=>setDetailDescription(e.target.value)} />
               </div>
 
-              {/* 섹션 4: 데모/공유/추가 URL & QR */}
-              <div className="pt-4">
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">라이브 데모 URL (생성 후 자동 제공 예정)</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="자동생성 (https://username.yoursite.com)" value={demoUrl} onChange={e=>setDemoUrl(e.target.value)} />
-              </div>
-              <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">SNS 공유용 링크 입력</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="ex) 블로그 등 링크" value={shareUrl} onChange={e=>setShareUrl(e.target.value)} />
-              </div>
-              <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">추가 소스코드 URL</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="GitLab, Bitbucket 등 다른 저장소 링크" value={extraRepoUrl} onChange={e=>setExtraRepoUrl(e.target.value)} />
-              </div>
+              {/* 섹션 4: QR만 유지 */}
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 mb-3">QR 코드 자동 생성 여부 (기본 자동 생성)</div>
                 <div className="flex items-center gap-8">
