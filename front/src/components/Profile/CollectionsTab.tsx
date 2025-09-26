@@ -33,7 +33,7 @@ const CollectionsTab: React.FC = () => {
 					<div className="text-[13px] text-black/50 col-span-full text-center py-10">등록된 컬렉션이 없습니다.</div>
 				</div>
 
-				<Modal open={open} onClose={resetAndClose} widthClass="w-[500px]" paddingClass="p-6 bg-white rounded-[12px] shadow-xl" heightClass="min-h-[00px]">
+				<Modal open={open} onClose={resetAndClose} widthClass="w-[200px]" paddingClass="p-6 bg-white rounded-[12px] shadow-xl" heightClass="min-h-[00px]">
 					<div className="text-left">
 						<div className="text-[18px] font-semibold mb-4">컬렉션 폴더 만들기</div>
 						<form onSubmit={onSubmit} className="space-y-4">
