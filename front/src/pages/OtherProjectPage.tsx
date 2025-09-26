@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useMemo } from "react";
 import ActionBar from "../components/OtherProject/ActionBar/ActionBar";
 import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
 import ProjectThumbnail from "../components/OtherProject/ProjectThumbnail";
@@ -9,13 +9,9 @@ import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
 import { AuthContext } from "../context/AuthContext";
-import { useParams } from "react-router-dom";
-import { fetchProjectDetail, type ProjectDetailResponse } from "../api/projectApi";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { fetchProjectDetail, type ProjectDetailResponse, fetchProjectContents, type ProjectContentResponseItem } from "../api/projectApi";
 import api from "../api/axiosInstance";
-
-// 실 서비스라면 아래처럼 username을 동적으로 받아오세요
-// import { useParams } from "react-router-dom";
-// const { username } = useParams<{ username: string }>();
 
 const MAX_WIDTH = 1440;
 const PANEL_WIDTH = 440;
@@ -24,163 +20,298 @@ const PROJECT_WIDE = 1440;
 const PROJECT_NARROW = 1050;
 const ACTIONBAR_WIDTH = 80;
 
+function normalizeUrl(u?: string | null): string {
+    return String(u || "").trim().toLowerCase().replace(/[#?].*$/, "");
+}
+
 export default function OtherProjectPage() {
     const [commentOpen, setCommentOpen] = useState(false);
     const projectWidth = commentOpen ? PROJECT_NARROW : PROJECT_WIDE;
     const { isLoggedIn } = useContext(AuthContext);
+    const nav = useNavigate();
+    const location = useLocation();
+    const forcePage = !!(location.state as any)?.page; // 상세페이지로 이동에서만 true
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-    // 경로 파라미터에서 실제 ownerId / projectId 수신
     const { ownerId: ownerIdParam, projectId: projectIdParam } = useParams<{ ownerId?: string; projectId?: string }>();
     const ownerId = ownerIdParam ? Number(ownerIdParam) : undefined;
     const projectId = projectIdParam ? Number(projectIdParam) : undefined;
 
     const [projectDetail, setProjectDetail] = useState<ProjectDetailResponse | null>(null);
-    const [ownerNickname, setOwnerNickname] = useState<string>("");
+    const [ownerProfile, setOwnerProfile] = useState<{ id: number; nickname?: string; email?: string; profileImage?: string | null }>({ id: 0 });
+    const [contents, setContents] = useState<ProjectContentResponseItem[]>([]);
 
     useEffect(() => {
         if (ownerId && projectId) {
-            fetchProjectDetail(ownerId, projectId).then(setProjectDetail).catch(() => {
-                // 실패 시에도 페이지는 동작하도록 무시
-            });
+            fetchProjectDetail(ownerId, projectId).then(setProjectDetail).catch(() => {});
+            fetchProjectContents(ownerId, projectId).then(setContents).catch(() => setContents([]));
         }
     }, [ownerId, projectId]);
 
-    // ownerId 기준으로 공개 프로필 조회 → 닉네임 세팅
     useEffect(() => {
-        async function loadOwnerNickname(id?: number) {
-            if (!id) {
-                setOwnerNickname("");
-                return;
+        async function loadOwnerAndMe(id?: number) {
+            try {
+                if (id) {
+                    const { data } = await api.get<{ id: number; nickname?: string; email?: string; profileImage?: string }>(`/users/${id}`);
+                    setOwnerProfile({ id: data?.id || id, nickname: data?.nickname, email: data?.email, profileImage: (data as any)?.profileImage });
+                } else {
+                    setOwnerProfile({ id: 0 });
+                }
+            } catch {
+                if (id) setOwnerProfile({ id, nickname: "" }); else setOwnerProfile({ id: 0 });
             }
             try {
-                const { data } = await api.get<{ id: number; nickname: string }>(`/users/${id}`);
-                setOwnerNickname(data?.nickname || "");
+                const token = (typeof window !== 'undefined') ? (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) : null;
+                const { data: me } = await api.get<{ id: number }>(`/users/me`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+                setCurrentUserId(me?.id ?? null);
             } catch {
-                setOwnerNickname("");
+                setCurrentUserId(null);
             }
         }
-        loadOwnerNickname(ownerId);
+        loadOwnerAndMe(ownerId);
     }, [ownerId]);
 
-    // ✅ 실제 프로젝트 API 응답이라고 가정 (데모 기본값 + 파라미터 우선 적용)
+    const headerSummary = useMemo(() => {
+        const html = projectDetail?.description || "";
+        try {
+            const div = document.createElement("div");
+            div.innerHTML = html;
+            const text = (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
+            return text.length > 140 ? text.slice(0, 140) + "…" : text;
+        } catch { return ""; }
+    }, [projectDetail?.description]);
+
+    const headerCategories = useMemo(() => {
+        const toolsCsv = projectDetail?.tools || "";
+        return toolsCsv.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 2);
+    }, [projectDetail?.tools]);
+
+    const headerDate = useMemo(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}.${m}.${day}`;
+    }, []);
+
+    const isOwner = useMemo(() => {
+        if (!currentUserId || !ownerId) return false;
+        return currentUserId === ownerId;
+    }, [currentUserId, ownerId]);
+
+    const normalizedContents = useMemo(() => {
+        const cover = normalizeUrl(projectDetail?.coverUrl || projectDetail?.image);
+        return (contents || [])
+            .filter((it) => {
+                if (!it?.data) return false;
+                if (it.type === 'TEXT' && typeof it.data === 'string' && it.data.startsWith('<!--PM_META')) return false;
+                if (it.type === "IMAGE") {
+                    let imgSrc = it.data;
+                    try { const o = JSON.parse(it.data); if (o && o.src) imgSrc = String(o.src); } catch {}
+                    return normalizeUrl(imgSrc) !== cover;
+                }
+                if (it.type === "TEXT") {
+                    const match = /src=\"([^\"]+)\"/i.exec(it.data || "");
+                    if (match && match[1]) return normalizeUrl(match[1]) !== cover;
+                    return true;
+                }
+                return true;
+            })
+            .sort((a, b) => a.order - b.order);
+    }, [contents, projectDetail?.coverUrl, projectDetail?.image]);
+
+    const joinedHtml = useMemo(() => {
+        const esc = (s: string) => String(s || '').replace(/\"/g, '&quot;');
+        return normalizedContents.map((it) => {
+            if (it.type === 'IMAGE') {
+                let src = it.data; let pad = 0; let full = false; let padded = false;
+                try { const o = JSON.parse(it.data); src = o.src || src; pad = Number(o.pad || 0); full = !!o.full; padded = !!o.padded; } catch {}
+                const cls = `${padded ? 'pm-embed-padded' : ''}${full ? ' pm-embed-full' : ''}`.trim();
+                const style = padded ? ` style=\"--pm-pad: ${pad}px\"` : '';
+                return `<img src=\"${esc(src)}\"${cls ? ` class=\"${cls}\"` : ''}${style} />`;
+            }
+            if (it.type === 'VIDEO') {
+                let src = it.data; let pad = 0; let full = true; let padded = false;
+                try { const o = JSON.parse(it.data); src = o.src || src; pad = Number(o.pad || 0); full = (o.full ?? true); padded = !!o.padded; } catch {}
+                const cls = `ql-video${padded ? ' pm-embed-padded' : ''}${full ? ' pm-embed-full' : ''}`;
+                const style = padded ? ` style=\"--pm-pad: ${pad}px; margin-top: 0\"` : ` style=\"margin-top: 0\"`;
+                return `<iframe class=\"${cls}\" src=\"${esc(src)}\"${style} allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe>`;
+            }
+            if (it.type === 'TEXT') {
+                const html = String(it.data || '').trim();
+                const collapsed = html
+                    .replace(/<p>\s*<br\s*\/?>(\s|&nbsp;|\u00a0)*<\/p>/gi, '')
+                    .replace(/<p>\s*(?:&nbsp;|\u00a0|\s)*<\/p>/gi, '')
+                    .trim();
+                return collapsed;
+            }
+            return it.data || '';
+        }).filter(Boolean).join('\n');
+    }, [normalizedContents]);
+
     const project = {
-        qrImageUrl: projectDetail?.qrImageUrl ?? "https://your-bucket.s3.amazonaws.com/qr/sample.png",
-        username: "sampleuser", // 실제 서비스에서는 동적으로!
-        id: projectId ?? 123, // 파라미터 없으면 데모 값
+        qrImageUrl: projectDetail?.qrImageUrl ?? "",
+        username: ownerProfile.nickname || "user",
+        id: projectId ?? 0,
         name: projectDetail?.title ?? "프로젝트 이름",
-        owner: ownerNickname || "사용자", // 공개 프로필 닉네임 사용
-        category: "UI·UX",
-        ownerId: ownerId ?? 0, // 파라미터 없으면 0 (팔로우 대상 없음)
+        owner: ownerProfile.nickname || "사용자",
+        category: headerCategories.join("/") || "",
+        ownerId: ownerId ?? 0,
+        ownerEmail: ownerProfile.email,
+        ownerImageUrl: (ownerProfile as any)?.profileImage as string | undefined,
         shareUrl: projectDetail?.shareUrl,
         coverUrl: projectDetail?.coverUrl,
-    };
+        isOwner,
+    } as const;
 
-    return (
-        <div className="min-h-screen w-full bg-[#6c7178] font-gmarketsans">
-            <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-12">
-                {/* 중앙 컨테이너 */}
-                <div
-                    className="flex flex-row items-start w-full relative"
-                    style={{ maxWidth: MAX_WIDTH }}
-                >
-                    {/* 프로젝트 + 액션바 랩퍼 */}
-                    <div className="flex flex-row items-start">
-                        {/* 프로젝트 패널 */}
-                        <section
-                            className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300"
-                            style={{
-                                width: projectWidth,
-                                minWidth: 360,
-                                maxWidth: PROJECT_WIDE,
-                                marginRight: 0,
-                                transition: "all 0.4s cubic-bezier(.62,.01,.3,1)",
-                                boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)",
-                            }}
-                        >
-                            <ProjectTopInfo
-                                projectName={project.name}
-                                userName={project.owner}
-                                intro="프로젝트 한줄 소개"
-                                ownerId={project.ownerId}
-                            />
-                            <div className="mb-6">
-                                <ProjectThumbnail imgUrl={project.coverUrl || QueenImg} />
-                            </div>
-                            <TagList tags={["포트폴리오", "프론트엔드", "백엔드", "알고리즘", "디자인"]} />
-                            <div className="mb-8">
-                                <ProjectStatsBox
-                                    likes={0}
-                                    views={0}
-                                    comments={0}
-                                    projectName={project.name}
-                                    date="2025.5.11"
-                                    category={project.category}
-                                />
-                            </div>
-                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} />
-                            <ProjectGrid
-                                works={[
-                                    { id: 1, title: "작업 1", thumbUrl: "/work-thumb1.jpg" },
-                                    { id: 2, title: "작업 2", thumbUrl: "/work-thumb2.jpg" },
-                                    { id: 3, title: "작업 3", thumbUrl: "/work-thumb3.jpg" },
-                                    { id: 4, title: "작업 4", thumbUrl: "/work-thumb4.jpg" },
-                                ]}
-                            />
-                        </section>
+    // 사용자 설정 메타: 배경/간격
+    const metaFromContents = useMemo(() => {
+        try {
+            const first = (contents || []).find(
+                (c) => c.type === 'TEXT' && typeof c.data === 'string' && c.data.startsWith('<!--PM_META')
+            );
+            if (first) {
+                const json = first.data.replace(/^<!--PM_META/, '').replace(/-->$/, '');
+                return JSON.parse(json);
+            }
+        } catch {}
+        return {} as any;
+    }, [contents]);
+    const pageBg = (metaFromContents as any)?.bg || '#ffffff';
+    const gapPx = typeof (metaFromContents as any)?.gap === 'number' ? (metaFromContents as any).gap : 10;
+    const styles = (
+        <style>
+            {`
+            .pm-preview-content { --pm-gap: ${gapPx}px; }
+            .pm-preview-content .ql-editor { padding: 0; width: 100%; max-width: none; margin-left: 0; margin-right: 0; overflow: visible; }
+            .pm-preview-content .ql-editor > * + * { margin-top: var(--pm-gap) !important; }
+            .pm-preview-content .ql-editor p:has(> br:only-child) { margin: 0 !important; height: 0; line-height: 0; padding: 0; }
+            .pm-preview-content .ql-editor p:has(> img:only-child) + p:has(> br:only-child),
+            .pm-preview-content .ql-editor p:has(> iframe:only-child) + p:has(> br:only-child) { margin-top: 0 !important; }
+            .pm-preview-content .ql-editor h1,
+            .pm-preview-content .ql-editor h2,
+            .pm-preview-content .ql-editor h3,
+            .pm-preview-content .ql-editor h4,
+            .pm-preview-content .ql-editor h5,
+            .pm-preview-content .ql-editor h6,
+            .pm-preview-content .ql-editor p,
+            .pm-preview-content .ql-editor blockquote,
+            .pm-preview-content .ql-editor ul,
+            .pm-preview-content .ql-editor ol,
+            .pm-preview-content .ql-editor pre,
+            .pm-preview-content .ql-editor table,
+            .pm-preview-content .ql-editor figure { margin: 0; }
+            .pm-preview-content img, .pm-preview-content iframe { display: block; margin-left: auto; margin-right: auto; }
+            .pm-preview-content img { height: auto !important; max-width: 100% !important; width: auto !important; }
+            .pm-preview-content iframe { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+            .pm-preview-content iframe.ql-video { width: 100% !important; max-width: none !important; height: auto !important; aspect-ratio: 16 / 9; display: block; }
+            .pm-preview-content .ql-editor > p,
+            .pm-preview-content .ql-editor > h1,
+            .pm-preview-content .ql-editor > h2,
+            .pm-preview-content .ql-editor > h3,
+            .pm-preview-content .ql-editor > h4,
+            .pm-preview-content .ql-editor > h5,
+            .pm-preview-content .ql-editor > h6,
+            .pm-preview-content .ql-editor > blockquote,
+            .pm-preview-content .ql-editor > pre { margin-left: 80px; margin-right: 80px; }
+            .pm-preview-content .ql-editor > p:has(> img:only-child),
+            .pm-preview-content .ql-editor > p:has(> iframe:only-child) { margin-left: 0; margin-right: 0; }
+            .pm-preview-content img.pm-embed-padded,
+            .pm-preview-content iframe.pm-embed-padded { padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px); margin-bottom: calc(-1 * var(--pm-pad, 0px)); background: transparent; box-sizing: border-box; }
+            .pm-preview-content img.pm-embed-padded + *,
+            .pm-preview-content iframe.pm-embed-padded + *,
+            .pm-preview-content .ql-editor p:has(> img.pm-embed-padded:only-child) + *,
+            .pm-preview-content .ql-editor p:has(> iframe.pm-embed-padded:only-child) + * { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
+            .pm-preview-content .ql-editor img + img,
+            .pm-preview-content .ql-editor img + iframe,
+            .pm-preview-content .ql-editor iframe + img,
+            .pm-preview-content .ql-editor iframe + iframe { margin-top: var(--pm-gap) !important; }
+            .pm-preview-content img.pm-embed-padded[style*="--pm-pad: 0"] { width: 100% !important; max-width: none !important; }
+            `}
+        </style>
+    );
 
-                        {/* 항상 프로젝트 '옆'에 고정된 액션바 */}
-                        {!commentOpen && (
-                            <div
-                                className="hidden lg:flex flex-col"
-                                style={{
-                                    width: ACTIONBAR_WIDTH,
-                                    minWidth: ACTIONBAR_WIDTH,
-                                    marginLeft: GAP,
-                                    height: "100%",
-                                    position: "relative",
-                                }}
-                            >
-                                <ActionBar
-                                    onCommentClick={() => setCommentOpen(true)}
-                                    project={project} // ✅ QR 코드 URL 전달 + ownerId 전달
-                                />
+    // forcePage=true일 때만 페이지 형식, 그 외(기본)는 모달
+    if (forcePage) {
+        return (
+            <div className="min-h-screen w-full bg-[#f5f6f8] font-gmarketsans">
+                {styles}
+                <style>{`.op-actionbar, .op-actionbar * { color: #000 !important; }`}</style>
+                <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-12">
+                    <div className="flex flex-row items-start w-full relative" style={{ maxWidth: MAX_WIDTH }}>
+                        <div className="flex flex-row items-start">
+                            <section className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300" style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
+                                <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} />
+                                <div className="mt-6 -mx-8 mb-8">
+                                    <div className="rounded-xl overflow-hidden" style={{ background: pageBg }}>
+                                        <div className="px-0 py-8">
+                                            <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
+                                                <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <TagList tags={headerCategories} />
+                                <div className="mb-8">
+                                    <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                                </div>
+                                <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} />
+                            </section>
+                            {!commentOpen && (
+                                <div className={`hidden lg:flex flex-col ${forcePage ? 'op-actionbar' : ''}`} style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }}>
+                                    <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} />
+                                </div>
+                            )}
+                        </div>
+                        {commentOpen && (
+                            <div style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                                <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
                             </div>
                         )}
                     </div>
+                </main>
+            </div>
+        );
+    }
 
-                    {/* 댓글 패널 */}
+    // 기본: 모달 레이아웃
+    return (
+        <div className="fixed inset-0 z-[10000] font-gmarketsans">
+            {styles}
+            <div className="absolute inset-0 bg-black/70" onClick={() => { try { nav(-1); } catch { nav('/search'); } }} />
+            <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-12" onClick={() => { try { nav(-1); } catch { nav('/search'); } }}>
+                <div className="flex flex-row items-start w-full relative px-4" style={{ maxWidth: MAX_WIDTH }}>
+                    <div className="flex flex-row items-start">
+                        <section className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300" style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                            <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} />
+                            <div className="mt-6 -mx-8 mb-8">
+                                <div className="rounded-xl overflow-hidden" style={{ background: pageBg }}>
+                                    <div className="px-0 py-8">
+                                        <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
+                                            <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <TagList tags={headerCategories} />
+                            <div className="mb-8">
+                                <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                            </div>
+                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} />
+                        </section>
+                        {!commentOpen && (
+                            <div className="hidden lg:flex flex-col" style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+                                <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} />
+                            </div>
+                        )}
+                    </div>
                     {commentOpen && (
-                        <div
-                            style={{
-                                width: PANEL_WIDTH,
-                                minWidth: PANEL_WIDTH,
-                                maxWidth: PANEL_WIDTH,
-                                borderRadius: "24px",
-                                boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)",
-                                borderLeft: "1px solid #eee",
-                                background: "white",
-                                overflow: "hidden",
-                                marginLeft: GAP,
-                                height: "100%",
-                                transition: "all 0.4s cubic-bezier(.62,.01,.3,1)",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "stretch",
-                            }}
-                        >
-                            <CommentPanel
-                                onClose={() => setCommentOpen(false)}
-                                username={project.username}   // ⭐️ username 반드시 전달!
-                                projectId={project.id}
-                                projectName={project.name}
-                                category={project.category}
-                                width={PANEL_WIDTH}
-                                isLoggedIn={isLoggedIn} // AuthContext에서 로그인 상태 가져오기
-                            />
+                        <div style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }} onClick={(e) => e.stopPropagation()}>
+                            <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
                         </div>
                     )}
                 </div>
-            </main>
+            </div>
         </div>
     );
 }

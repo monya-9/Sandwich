@@ -20,6 +20,14 @@ public class ProjectContentController {
 
     private final ProjectContentService contentService;
 
+    @GetMapping
+    public ResponseEntity<?> listContents(
+            @PathVariable Long userId,
+            @PathVariable Long projectId
+    ) {
+        return ResponseEntity.ok(contentService.getContents(userId, projectId));
+    }
+
     @PatchMapping("/reorder")
     public ResponseEntity<Void> reorderContents(
             @PathVariable Long userId,

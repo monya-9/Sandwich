@@ -13,28 +13,29 @@ interface ActionBarProps {
   project: {
     id: number;
     qrImageUrl: string;
-
     name: string;
     owner: string;
     category: string;
     ownerId: number; // 팔로우 대상 사용자 ID
-
     shareUrl?: string;
     coverUrl?: string;
+    isOwner?: boolean;
+    ownerEmail?: string;
+    ownerImageUrl?: string;
   };
 }
 
 export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
+  const { isOwner } = project;
   return (
     <aside className="flex flex-col items-center gap-4">
-      <ProfileAction targetUserId={project.ownerId} userName={project.owner} />
-      <SuggestAction targetUserId={project.ownerId} />
+      <ProfileAction targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} />
+      {!isOwner && <SuggestAction targetUserId={project.ownerId} />}
       <LikeAction targetType="PROJECT" targetId={project.id} />
       <CollectionAction />
       <CommentAction onClick={onCommentClick} />
       <ShareAction shareUrl={project.shareUrl} thumbnailUrl={project.coverUrl} title={project.name} />
-      {/* ✅ QR 코드 액션에 project의 qrImageUrl 전달 */}
-      <QrCodeAction qrImageUrl={project.qrImageUrl} />
+      <QrCodeAction qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} />
       <LiveDemoAction />
     </aside>
   );

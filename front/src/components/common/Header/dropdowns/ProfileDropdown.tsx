@@ -21,7 +21,7 @@ const ProfileDropdown = ({ email, username, onLogout }: Props) => {
             <hr className="border-gray-200 mb-4 -mx-6" />
 
             <ul className="space-y-2 text-sm mb-4 -mx-2">
-                <li><Link to="/project/sample" className="hover:text-green-600">새로운 작업 업로드</Link></li>
+                <li><Link to="/project/edit" className="hover:text-green-600">새로운 작업 업로드</Link></li>
                 <li><Link to="/profile" className="hover:text-green-600">나의 포트폴리오</Link></li>
                 <li><Link to="/mypage" className="hover:text-green-600">마이 페이지</Link></li>
             </ul>

@@ -3,15 +3,20 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import LoginPrompt from "./LoginPrompt";
 import Toast from "../common/Toast";
+import { deleteProject as apiDeleteProject } from "../../api/projectApi";
 
 type Props = {
   projectName: string;
   userName: string;
   intro: string;
   ownerId?: number;
+  ownerEmail?: string;
+  ownerImageUrl?: string;
+  isOwner?: boolean;
+  projectId?: number;
 };
 
-export default function ProjectTopInfo({ projectName, userName, intro, ownerId }: Props) {
+export default function ProjectTopInfo({ projectName, userName, intro, ownerId, ownerEmail, ownerImageUrl, isOwner, projectId }: Props) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
   const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
@@ -43,7 +48,6 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     })();
   }, [ownerId]);
 
-
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { userId?: number; isFollowing?: boolean };
@@ -72,39 +76,37 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     if (!ensureLogin()) return;
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) {
-      setErrorToast({
-        visible: true,
-        message: "대상 사용자를 확인할 수 없습니다."
-      });
+      setErrorToast({ visible: true, message: "대상 사용자를 확인할 수 없습니다." });
       return;
     }
     try {
       if (isFollowing) {
-        await axios.delete(`/api/users/${ownerId}/unfollow`, {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axios.delete(`/api/users/${ownerId}/unfollow`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
         setIsFollowing(false);
         setToast("unfollow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: false } }));
       } else {
-        await axios.post(`/api/users/${ownerId}/follow`, null, {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axios.post(`/api/users/${ownerId}/follow`, null, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
         setIsFollowing(true);
         setToast("follow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: true } }));
       }
     } catch (e: any) {
-      if (e.response?.status === 401) {
-        setShowLoginPrompt(true);
-        return;
-      }
-      setErrorToast({
-        visible: true,
-        message: "팔로우 처리 중 오류가 발생했습니다."
-      });
+      if (e.response?.status === 401) { setShowLoginPrompt(true); return; }
+      setErrorToast({ visible: true, message: "팔로우 처리 중 오류가 발생했습니다." });
+    }
+  };
+
+
+  const onEdit = () => { if (ownerId && projectId) navigate(`/project/edit/${ownerId}/${projectId}`); };
+  const onDelete = async () => {
+    if (!ownerId || !projectId) return;
+    if (!window.confirm("정말 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    try {
+      await apiDeleteProject(ownerId, projectId);
+      navigate(`/users/${ownerId}`);
+    } catch (e: any) {
+      setErrorToast({ visible: true, message: e?.message || "삭제 실패" });
     }
   };
 
@@ -114,51 +116,43 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     </svg>
   );
 
+  // 아바타 계산: 이미지 우선, 없으면 이메일 이니셜
+  const avatar = ownerImageUrl ? (
+    <img src={ownerImageUrl} alt="avatar" className="w-14 h-14 rounded-full object-cover" />
+  ) : (
+    <div className="w-14 h-14 rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
+      {(ownerEmail?.[0] || userName?.[0] || "?").toUpperCase()}
+    </div>
+  );
+
   return (
     <>
-      <Toast
-        visible={!!toast}
-        message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."}
-        type={toast === "follow" ? "success" : "info"}
-        size="medium"
-        autoClose={3000}
-        closable={true}
-        onClose={() => setToast(null)}
-        icon={CheckIcon}
-      />
-      <Toast
-        visible={errorToast.visible}
-        message={errorToast.message}
-        type="error"
-        size="medium"
-        autoClose={3000}
-        closable={true}
-        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
-      />
+      <Toast visible={!!toast} message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."} type={toast === "follow" ? "success" : "info"} size="medium" autoClose={3000} closable={true} onClose={() => setToast(null)} icon={CheckIcon} />
+      <Toast visible={errorToast.visible} message={errorToast.message} type="error" size="medium" autoClose={3000} closable={true} onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))} />
       <div className="w-full flex items-start gap-4 mb-8">
         {showLoginPrompt && (
-        <LoginPrompt
-          onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }}
-          onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }}
-          onClose={() => setShowLoginPrompt(false)}
-        />
+          <LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />
         )}
-        <div
-          role="button"
-          className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0 cursor-pointer"
-          onClick={() => ownerId && navigate(`/users/${ownerId}`)}
-          title="프로필 보기"
-        />
+        <div role="button" className="w-14 h-14 rounded-full flex-shrink-0 cursor-pointer overflow-hidden" onClick={() => ownerId && navigate(((Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0')) === ownerId) ? '/profile' : `/users/${ownerId}`)} title="프로필 보기">
+          {avatar}
+        </div>
         <div>
+          <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl font-bold text-black">{projectName}</h1>
+            {isOwner && (
+              <div className="flex items-center gap-2 ml-20">
+                <button className="bg-white border border-[#E5E7EB] text-gray-700 hover:bg-gray-50 rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onEdit}>수정하기</button>
+                <button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onDelete}>삭제하기</button>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-gray-600 text-base mt-1">
             <span>{userName}</span>
-            <span
-              className="font-bold text-green-700 ml-2 cursor-pointer hover:underline"
-              onClick={handleToggleFollow}
-            >
+            {!isOwner && (
+              <span className="font-bold text-green-700 ml-2 cursor-pointer hover:underline" onClick={handleToggleFollow}>
               {isFollowing ? "팔로잉" : "팔로우"}
             </span>
+            )}
           </div>
           <div className="text-gray-500 text-base mt-1">{intro}</div>
         </div>

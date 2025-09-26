@@ -14,10 +14,11 @@ export default function AppLayout() {
         const hasNickname =
             (storage.getItem("userNickname") || "").trim().length > 0 ||
             (storage.getItem("userProfileName") || "").trim().length > 0;
+        const hasUserId = !!(storage.getItem("userId") || "").trim();
 
         const email = storage.getItem("userEmail") || "";
 
-        if (!hasNickname) {
+        if (!hasUserId || !hasNickname) {
             ensureNicknameInStorage(token, email, storage);
         }
     }, []);

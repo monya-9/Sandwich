@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import { UserApi, UserProfileResponse } from "../../api/userApi";
 import WorkFieldModal from "./WorkFieldModal";
 import InterestFieldModal from "./InterestFieldModal";
-import SkillFieldModal from "./SkillFieldModal";
+
 import { positionMap, interestMap } from "../../constants/position";
 import Toast from "../common/Toast";
 
@@ -101,11 +101,8 @@ const MyPageSettingPage: React.FC = () => {
 		const raw = localStorage.getItem("interestFields") || sessionStorage.getItem("interestFields");
 		try { return raw ? JSON.parse(raw) : []; } catch { return []; }
 	});
-	const [showSkillModal, setShowSkillModal] = useState(false);
-	const [skillFields, setSkillFields] = useState<string[]>(() => {
-		const raw = localStorage.getItem("skillFields") || sessionStorage.getItem("skillFields");
-		try { return raw ? JSON.parse(raw) : []; } catch { return []; }
-	});
+
+
 
 	// 읽기 전용 사용자 이름 표시값: 서버값 > 스토리지 > 로컬 슬러그
 	const usernameDisplay = useMemo(() => {
@@ -141,9 +138,7 @@ const MyPageSettingPage: React.FC = () => {
 				const serverInterests = Array.isArray(me.interests) ? me.interests.map((i)=>i.name) : [];
 				setInterestFields(serverInterests);
 				try { localStorage.setItem("interestFields", JSON.stringify(serverInterests)); sessionStorage.setItem("interestFields", JSON.stringify(serverInterests)); } catch {}
-				const serverSkills = (me.skills || "").split(",").map(s=>s.trim()).filter(Boolean);
-				setSkillFields(serverSkills);
-				try { localStorage.setItem("skillFields", JSON.stringify(serverSkills)); sessionStorage.setItem("skillFields", JSON.stringify(serverSkills)); } catch {}
+
 				// 한 줄 프로필 및 URL 슬러그 초기화
 				const storedOneLine = (localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "").slice(0, MAX20);
 				if (storedOneLine !== oneLineProfile) setOneLineProfile(storedOneLine);
@@ -163,7 +158,7 @@ const MyPageSettingPage: React.FC = () => {
 	}, [email, scopedKey]);
 
 	const onOpenWorkModal = () => setShowWorkModal(true);
-	const onOpenSkillModal = () => setShowSkillModal(true);
+
 	const onOpenInterestModal = () => setShowInterestModal(true);
 
 	const handleUploadClick = () => fileInputRef.current?.click();
@@ -500,15 +495,7 @@ const MyPageSettingPage: React.FC = () => {
 		await persistProfilePartial({ interestIds: ids });
 		setShowInterestModal(false);
 	};
-	const onConfirmSkillFields = async (values: string[]) => {
-		setSkillFields(values);
-		try {
-			localStorage.setItem("skillFields", JSON.stringify(values));
-			sessionStorage.setItem("skillFields", JSON.stringify(values));
-		} catch {}
-		await persistProfilePartial({ skills: values.join(", ") });
-		setShowSkillModal(false);
-	};
+
 
 	return (
 		<>
@@ -671,14 +658,8 @@ const MyPageSettingPage: React.FC = () => {
 							</div>
 							<div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
 								{interestFields.length === 0 ? "선택된 관심 분야가 없습니다." : interestFields.join(", ")}
-							</div>
+														</div>
 
-							{/* 지식/기술 */}
-							<div className="mt-0 mb-2 flex items-center justify-between">
-								<FieldLabel>지식/기술</FieldLabel>
-								<button onClick={onOpenSkillModal} className="text-[13px] text-[#068334] hover:underline">지식/기술 설정</button>
-							</div>
-							<div className={`text-[13px] ${skillFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>{skillFields.length === 0 ? "선택된 지식/기술이 없습니다." : skillFields.join(", ")}</div>
 
 							<div className="mt-8 mb-3"><FieldLabel>소개</FieldLabel></div>
 							<textarea
@@ -697,8 +678,7 @@ const MyPageSettingPage: React.FC = () => {
 				<WorkFieldModal open={showWorkModal} initial={workFields as any} onClose={()=>setShowWorkModal(false)} onConfirm={(vals)=>onConfirmWorkFields(vals as any)} />
 				{/* 관심 분야 모달 */}
 				<InterestFieldModal open={showInterestModal} initial={interestFields as any} onClose={()=>setShowInterestModal(false)} onConfirm={(vals)=>onConfirmInterestFields(vals as any)} />
-				{/* 지식/기술 모달 */}
-				<SkillFieldModal open={showSkillModal} initial={skillFields as any} onClose={()=>setShowSkillModal(false)} onConfirm={(vals)=>onConfirmSkillFields(vals as any)} />
+
 			</div>
 		</div>
 		</>

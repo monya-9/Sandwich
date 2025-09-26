@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
 import org.springframework.data.domain.Pageable;
 
 @RestController
@@ -41,6 +42,27 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{userId}/{id}")
+    public ResponseEntity<Void> updateProject(
+            @PathVariable Long userId,
+            @PathVariable Long id,
+            @RequestBody ProjectRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        projectService.updateProject(userId, id, request, userDetails.getUser());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{userId}/{id}")
+    public ResponseEntity<Void> deleteProject(
+            @PathVariable Long userId,
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        projectService.deleteProject(userId, id, userDetails.getUser());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{userId}/{id}")
     public ResponseEntity<ProjectDetailResponse> getProject(
             @PathVariable Long userId,
@@ -59,7 +81,8 @@ public class ProjectController {
     }
 
     @GetMapping
-    public PageResponse<ProjectListItemResponse> getAllProjects(
+    public PageResponse<ProjectListItemResponse>
+            list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(required = false) String q,

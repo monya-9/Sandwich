@@ -62,9 +62,11 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
 
     // 포트폴리오 상세 페이지로 이동
     const handleCardClick = () => {
-        // ownerId는 authorId를 우선 사용, 없으면 username 사용
-        const ownerId = project.authorId || project.username || 'unknown';
-        navigate(`/other-project/${ownerId}/${project.id}`);
+        // ownerId는 백엔드 owner.id 우선, 없으면 authorId 사용 (숫자만 허용)
+        const ownerId = (project.owner && typeof project.owner.id === 'number' ? project.owner.id : (project.authorId || 0));
+        if (ownerId) {
+            navigate(`/other-project/${ownerId}/${project.id}`);
+        }
     };
     
 
