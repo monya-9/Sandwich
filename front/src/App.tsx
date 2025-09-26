@@ -97,7 +97,6 @@ function App() {
                                 <Route path="l/:ownerId/:projectId" element={<ProjectDetailLightboxPage />} />
                                 <Route path="search" element={<ProjectFeedPage />} />
                                 
-
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
 

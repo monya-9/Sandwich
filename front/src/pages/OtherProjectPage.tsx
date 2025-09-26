@@ -21,7 +21,7 @@ const PROJECT_NARROW = 1050;
 const ACTIONBAR_WIDTH = 80;
 
 function normalizeUrl(u?: string | null): string {
-    return String(u || "").trim().toLowerCase().replace(/[#?].*$/, "");
+    return String(u || "").trim().toLowerCase().replace(/[?#].*$/, "");
 }
 
 export default function OtherProjectPage() {
