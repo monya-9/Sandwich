@@ -172,13 +172,13 @@ export type ProjectContentItem = {
 };
 
 export async function createGithubBranchAndPR(projectId: number, params: { owner: string; repo: string; baseBranch: string; token: string }, baseUrl: string = ""): Promise<string> {
-  const url = `${baseUrl}/api/github/${projectId}/branches-with-file-and-pr`.replace(/\/+/ , "/");
+  const url = `${baseUrl}/api/github/${projectId}/branches-with-file-and-pr`.replace(/\/+/, "/");
   const token = getToken();
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       "X-GitHub-Token": params.token,
     },

@@ -12,6 +12,7 @@ interface ProfileActionProps {
   profileImageUrl?: string;
   email?: string;
   isOwner?: boolean;
+  initialIsFollowing?: boolean;
 }
 
 export default function ProfileAction({
@@ -21,10 +22,11 @@ export default function ProfileAction({
   profileImageUrl,
   email,
   isOwner = false,
+  initialIsFollowing,
 }: ProfileActionProps = {}) {
   const [hover, setHover] = useState(false);
   const [tooltipHover, setTooltipHover] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing ?? false);
   const [followBtnHover, setFollowBtnHover] = useState(false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
   const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
@@ -45,6 +47,13 @@ export default function ProfileAction({
   };
 
   useEffect(() => {
+    if (typeof initialIsFollowing === "boolean") {
+      setIsFollowing(initialIsFollowing);
+    }
+  }, [initialIsFollowing]);
+
+  useEffect(() => {
+    if (typeof initialIsFollowing === "boolean") return;
     const fetchFollowStatus = async () => {
       try {
         const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
@@ -54,7 +63,7 @@ export default function ProfileAction({
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     };
     fetchFollowStatus();
-  }, [targetUserId]);
+  }, [targetUserId, initialIsFollowing]);
 
   useEffect(() => {
     if (!hover && !tooltipHover) return;

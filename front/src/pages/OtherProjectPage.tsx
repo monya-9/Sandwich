@@ -21,7 +21,28 @@ const PROJECT_NARROW = 1050;
 const ACTIONBAR_WIDTH = 80;
 
 function normalizeUrl(u?: string | null): string {
-    return String(u || "").trim().toLowerCase().replace(/[#?].*$/, "");
+    return String(u || "").trim().toLowerCase().replace(/[?#].*$/, "");
+}
+
+// 캐시 유틸: userId별 프로필 정보를 저장/조회 (24h TTL)
+const USER_CACHE_PREFIX = "userCache:";
+const USER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+function loadCachedUser(userId?: number) {
+    try {
+        if (!userId) return null;
+        const raw = localStorage.getItem(USER_CACHE_PREFIX + userId);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.ts !== "number" || !parsed.data) return null;
+        if (Date.now() - parsed.ts > USER_CACHE_TTL_MS) return null;
+        return parsed.data as { id: number; nickname?: string; email?: string; profileImage?: string };
+    } catch { return null; }
+}
+function saveCachedUser(data?: { id: number; nickname?: string; email?: string; profileImage?: string }) {
+    try {
+        if (!data || !data.id) return;
+        localStorage.setItem(USER_CACHE_PREFIX + data.id, JSON.stringify({ ts: Date.now(), data }));
+    } catch {}
 }
 
 export default function OtherProjectPage() {
@@ -31,15 +52,16 @@ export default function OtherProjectPage() {
     const nav = useNavigate();
     const location = useLocation();
     const forcePage = !!(location.state as any)?.page; // 상세페이지로 이동에서만 true
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
     const { ownerId: ownerIdParam, projectId: projectIdParam } = useParams<{ ownerId?: string; projectId?: string }>();
     const ownerId = ownerIdParam ? Number(ownerIdParam) : undefined;
     const projectId = projectIdParam ? Number(projectIdParam) : undefined;
 
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [projectDetail, setProjectDetail] = useState<ProjectDetailResponse | null>(null);
-    const [ownerProfile, setOwnerProfile] = useState<{ id: number; nickname?: string; email?: string; profileImage?: string | null }>({ id: 0 });
+    const [ownerProfile, setOwnerProfile] = useState<{ id: number; nickname?: string; email?: string; profileImage?: string | null }>(() => ({ id: ownerId || 0 }));
     const [contents, setContents] = useState<ProjectContentResponseItem[]>([]);
+    const [initialFollow, setInitialFollow] = useState<boolean | undefined>(undefined);
 
     useEffect(() => {
         if (ownerId && projectId) {
@@ -49,23 +71,63 @@ export default function OtherProjectPage() {
     }, [ownerId, projectId]);
 
     useEffect(() => {
+        // 1) 즉시 스토리지에서 me.id를 읽어 초기 렌더에 소유자 버튼을 최대한 빨리 노출
+        try {
+            const storedId = Number(localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0");
+            if (storedId) setCurrentUserId(storedId);
+        } catch {}
+
+        // 1.5) 작성자 캐시 즉시 반영
+        try {
+            if (ownerId) {
+                // 내 자신이면 로컬 스토리지의 닉네임/이메일 선반영
+                const myId = Number(localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0");
+                if (myId && myId === ownerId) {
+                    const nick = localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || undefined;
+                    const email = localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || undefined;
+                    const profileImage = localStorage.getItem("userProfileImage") || sessionStorage.getItem("userProfileImage") || undefined;
+                    setOwnerProfile(prev => ({ id: ownerId, nickname: nick || prev.nickname, email: email || prev.email, profileImage: (profileImage as any) ?? prev.profileImage }));
+                }
+                const cached = loadCachedUser(ownerId);
+                if (cached) setOwnerProfile(prev => ({ id: ownerId, nickname: cached.nickname || prev.nickname, email: cached.email || prev.email, profileImage: (cached.profileImage as any) ?? prev.profileImage }));
+            }
+        } catch {}
+
         async function loadOwnerAndMe(id?: number) {
             try {
-                if (id) {
-                    const { data } = await api.get<{ id: number; nickname?: string; email?: string; profileImage?: string }>(`/users/${id}`);
-                    setOwnerProfile({ id: data?.id || id, nickname: data?.nickname, email: data?.email, profileImage: (data as any)?.profileImage });
+                const token = (typeof window !== 'undefined') ? (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) : null;
+                // 2) owner, me, follow-status를 병렬로 조회 (가능한 경우)
+                const ownerReq = id ? api.get<{ id: number; nickname?: string; email?: string; profileImage?: string }>(`/users/${id}`) : Promise.resolve({ data: undefined } as any);
+                const meReq = api.get<{ id: number }>(`/users/me`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+                const followReq = (token && id) ? api.get<{ isFollowing: boolean }>(`/users/${id}/follow-status`) : Promise.resolve({ data: { isFollowing: false } } as any);
+
+                const [ownerRes, meRes, followRes] = await Promise.allSettled([ownerReq, meReq, followReq]);
+
+                if (ownerRes.status === 'fulfilled' && ownerRes.value?.data) {
+                    const d: any = ownerRes.value.data;
+                    const next = { id: d?.id || id || 0, nickname: d?.nickname, email: d?.email, profileImage: d?.profileImage };
+                    setOwnerProfile(next);
+                    saveCachedUser(next);
                 } else {
-                    setOwnerProfile({ id: 0 });
+                    setOwnerProfile(id ? { id, nickname: ownerProfile.nickname } : { id: 0 });
+                }
+
+                if (meRes.status === 'fulfilled') {
+                    const me = (meRes.value as any).data as { id: number };
+                    setCurrentUserId(me?.id ?? null);
+                } else {
+                    setCurrentUserId((prev) => prev ?? null);
+                }
+
+                if (followRes.status === 'fulfilled') {
+                    setInitialFollow(!!((followRes.value as any).data?.isFollowing));
+                } else {
+                    setInitialFollow(false);
                 }
             } catch {
-                if (id) setOwnerProfile({ id, nickname: "" }); else setOwnerProfile({ id: 0 });
-            }
-            try {
-                const token = (typeof window !== 'undefined') ? (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) : null;
-                const { data: me } = await api.get<{ id: number }>(`/users/me`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
-                setCurrentUserId(me?.id ?? null);
-            } catch {
-                setCurrentUserId(null);
+                setCurrentUserId((prev) => prev ?? null);
+                if (id) setOwnerProfile(prev => ({ id, nickname: prev.nickname })); else setOwnerProfile({ id: 0 });
+                setInitialFollow(false);
             }
         }
         loadOwnerAndMe(ownerId);
@@ -95,8 +157,9 @@ export default function OtherProjectPage() {
     }, []);
 
     const isOwner = useMemo(() => {
-        if (!currentUserId || !ownerId) return false;
-        return currentUserId === ownerId;
+        if (!ownerId) return false;
+        // currentUserId는 스토리지 선반영 + API 갱신으로 점진적 보정
+        return (currentUserId ?? 0) === ownerId;
     }, [currentUserId, ownerId]);
 
     const normalizedContents = useMemo(() => {
@@ -140,7 +203,7 @@ export default function OtherProjectPage() {
             if (it.type === 'TEXT') {
                 const html = String(it.data || '').trim();
                 const collapsed = html
-                    .replace(/<p>\s*<br\s*\/?>(\s|&nbsp;|\u00a0)*<\/p>/gi, '')
+                    .replace(/<p>\s*<br\s*\/?>((\s|&nbsp;|\u00a0)*)<\/p>/gi, '')
                     .replace(/<p>\s*(?:&nbsp;|\u00a0|\s)*<\/p>/gi, '')
                     .trim();
                 return collapsed;
@@ -162,6 +225,7 @@ export default function OtherProjectPage() {
         shareUrl: projectDetail?.shareUrl,
         coverUrl: projectDetail?.coverUrl,
         isOwner,
+        initialIsFollowing: initialFollow,
     } as const;
 
     // 사용자 설정 메타: 배경/간격
@@ -241,7 +305,7 @@ export default function OtherProjectPage() {
                     <div className="flex flex-row items-start w-full relative" style={{ maxWidth: MAX_WIDTH }}>
                         <div className="flex flex-row items-start">
                             <section className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300" style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
-                                <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} />
+                                <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                                 <div className="mt-6 -mx-8 mb-8">
                                     <div className="rounded-xl overflow-hidden" style={{ background: pageBg }}>
                                         <div className="px-0 py-8">
@@ -255,7 +319,7 @@ export default function OtherProjectPage() {
                                 <div className="mb-8">
                                     <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
                                 </div>
-                                <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} />
+                                <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                             </section>
                             {!commentOpen && (
                                 <div className={`hidden lg:flex flex-col ${forcePage ? 'op-actionbar' : ''}`} style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }}>
@@ -283,7 +347,7 @@ export default function OtherProjectPage() {
                 <div className="flex flex-row items-start w-full relative px-4" style={{ maxWidth: MAX_WIDTH }}>
                     <div className="flex flex-row items-start">
                         <section className="bg-white rounded-2xl shadow-2xl px-8 py-8 transition-all duration-300" style={{ width: projectWidth, minWidth: 360, maxWidth: PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-                            <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} />
+                            <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                             <div className="mt-6 -mx-8 mb-8">
                                 <div className="rounded-xl overflow-hidden" style={{ background: pageBg }}>
                                     <div className="px-0 py-8">
@@ -297,7 +361,7 @@ export default function OtherProjectPage() {
                             <div className="mb-8">
                                 <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
                             </div>
-                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} />
+                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                         </section>
                         {!commentOpen && (
                             <div className="hidden lg:flex flex-col" style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>

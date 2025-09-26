@@ -1538,6 +1538,54 @@ export default function ProjectMangeSampleForm() {
                      const isEdit = !!(editOwnerId && editProjectId);
                      const pathUserId = isEdit && editOwnerId ? editOwnerId : currentUid;
                      await persistContents(pathUserId, createdProjectId, isEdit);
+
+                     // 1) 내 작업 캐시 즉시 갱신 (WorkTab 사용 캐시)
+                     try {
+                        const raw = localStorage.getItem('my_projects_cache_v1');
+                        const cached = raw ? JSON.parse(raw) as { updatedAt: number; items: any[] } : null;
+                        const ownerNickname = (localStorage.getItem('userNickname') || sessionStorage.getItem('userNickname') || '') || '나';
+                        const ownerEmail = (localStorage.getItem('userEmail') || sessionStorage.getItem('userEmail') || '') || '';
+                        const ownerUsername = (localStorage.getItem('userUsername') || sessionStorage.getItem('userUsername') || '') || '';
+                        const stub = {
+                           id: createdProjectId,
+                           title: previewTitle || '새 프로젝트',
+                           description: previewSummary || '',
+                           coverUrl: (previewCoverUrl || null),
+                           shareUrl: previewUrl || undefined,
+                           owner: { id: pathUserId, nickname: ownerNickname, email: ownerEmail, avatarUrl: null, username: ownerUsername },
+                           authorId: pathUserId,
+                           categories: Array.isArray(previewCategories) ? previewCategories.slice(0, 2) : [],
+                           uploadDate: new Date().toISOString(),
+                        };
+                        const nextItems = (() => {
+                           const base = Array.isArray(cached?.items) ? cached!.items.slice(0, 199) : [];
+                           // 동일 id 제거 후 맨 앞에 추가
+                           const filtered = base.filter((p: any) => p && p.id !== createdProjectId);
+                           return [stub, ...filtered];
+                        })();
+                        localStorage.setItem('my_projects_cache_v1', JSON.stringify({ updatedAt: Date.now(), items: nextItems }));
+                     } catch {}
+
+                     // 2) 상세 페이지 초기 렌더용 최근 업로드 정보 저장 (3분 TTL)
+                     try {
+                        const ownerNickname = (localStorage.getItem('userNickname') || sessionStorage.getItem('userNickname') || '') || '나';
+                        const ownerEmail = (localStorage.getItem('userEmail') || sessionStorage.getItem('userEmail') || '') || '';
+                        const profileImage = (localStorage.getItem('userProfileImage') || sessionStorage.getItem('userProfileImage') || null);
+                        const payload = {
+                           ownerId: pathUserId,
+                           projectId: createdProjectId,
+                           project: {
+                              title: previewTitle || '새 프로젝트',
+                              tools: (Array.isArray(previewCategories) ? previewCategories.slice(0, 2).join(',') : ''),
+                              coverUrl: (previewCoverUrl || null),
+                              shareUrl: previewUrl || undefined,
+                              description: getEditorHtml(),
+                           },
+                           owner: { id: pathUserId, nickname: ownerNickname, email: ownerEmail, profileImage },
+                           ts: Date.now(),
+                        };
+                        localStorage.setItem('lastUploadedProject', JSON.stringify(payload));
+                     } catch {}
                   } catch (e:any) {
                      console.warn('persistContents error:', e?.message);
                   }

@@ -13,6 +13,7 @@ export interface ProjectFeedParams {
   followingOnly?: boolean; // 팔로우 회원만
   uploadedWithin?: '24h' | '7d' | '1m' | '3m'; // 업로드 기간
   sort?: 'latest' | 'popular' | 'recommended'; // 정렬 방식
+  authorId?: number; // 선택적: 특정 작성자
 }
 
 // 프로젝트 피드 응답
@@ -39,7 +40,8 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
     q,
     followingOnly,
     uploadedWithin,
-    sort = 'latest'
+    sort = 'latest',
+    authorId,
   } = params;
 
   // 파라미터 추가
@@ -62,9 +64,23 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
     searchParams.append('sort', sort);
   }
 
+  if (authorId) {
+    searchParams.append('authorId', String(authorId));
+  }
+
   const url = `/projects?${searchParams.toString()}`;
   const response = await api.get(url);
   return response.data;
+};
+
+/** 사용자별 프로젝트 목록 (우선 /projects?authorId=, 실패 시 /projects/user/) */
+export const fetchUserProjects = async (userId: number, page = 0, size = 20): Promise<ProjectFeedResponse> => {
+  try {
+    return await fetchProjectFeed({ authorId: userId, page, size, sort: 'latest' });
+  } catch {
+    const response = await api.get(`/projects/user/${userId}?page=${page}&size=${size}`);
+    return response.data;
+  }
 };
 
 /**

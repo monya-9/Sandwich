@@ -88,9 +88,14 @@ public class ProjectController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) UploadWindow uploadedWithin,
             @RequestParam(defaultValue = "false") boolean followingOnly,
+            @RequestParam(required = false) Long authorId,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
         Pageable pageable = PageRequest.of(page, size);
+
+        if (authorId != null) {
+            return projectService.findProjectsByAuthor(authorId, pageable);
+        }
 
         Long currentUserId = null;
         if (followingOnly) {
@@ -106,6 +111,16 @@ public class ProjectController {
         }
 
         return projectService.findAllProjects(q, uploadedWithin, followingOnly, currentUserId, pageable);
+    }
+
+    @GetMapping("/user/{userId}")
+    public PageResponse<ProjectListItemResponse> listByUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return projectService.findProjectsByAuthor(userId, pageable);
     }
 
     @GetMapping("/{id}/views")

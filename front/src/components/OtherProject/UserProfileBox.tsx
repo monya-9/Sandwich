@@ -6,6 +6,7 @@ import Toast from "../common/Toast";
 
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
 
+
 type Props = {
   userName: string;
   ownerId?: number;
@@ -15,6 +16,7 @@ type Props = {
   email?: string;
   profileImageUrl?: string | null;
   projectId?: number;
+  initialIsFollowing?: boolean;
 };
 
 export default function UserProfileBox({
@@ -26,8 +28,9 @@ export default function UserProfileBox({
   email,
   profileImageUrl,
   projectId,
+  initialIsFollowing,
 }: Props) {
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing ?? false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
   const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
   const [followBtnHover, setFollowBtnHover] = useState(false);
@@ -36,6 +39,13 @@ export default function UserProfileBox({
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
+    if (typeof initialIsFollowing === "boolean") {
+      setIsFollowing(initialIsFollowing);
+    }
+  }, [initialIsFollowing]);
+
+  useEffect(() => {
+    if (typeof initialIsFollowing === "boolean") return;
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token || !ownerId || ownerId <= 0) { setIsFollowing(false); return; }
     (async () => {
@@ -44,7 +54,7 @@ export default function UserProfileBox({
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     })();
-  }, [ownerId]);
+  }, [ownerId, initialIsFollowing]);
 
   useEffect(() => {
     const handler = (e: Event) => {
