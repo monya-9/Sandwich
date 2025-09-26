@@ -161,6 +161,22 @@ public class ProjectService {
         return PageResponse.of(mapped);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectListItemResponse> findProjectsByAuthor(Long authorId, Pageable pageable) {
+        Specification<Project> spec = Specification.where(ProjectSpecs.always())
+                .and(ProjectSpecs.authorIn(java.util.Set.of(authorId)));
+
+        Pageable byLatest = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Project> page = projectRepository.findAll(spec, byLatest);
+        Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
+        return PageResponse.of(mapped);
+    }
+
     @Transactional
     public void updateProject(Long userId, Long id, ProjectRequest request, User actor) {
         Project project = projectRepository.findByIdAndUserId(id, userId)

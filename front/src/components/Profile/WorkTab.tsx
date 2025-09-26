@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 // import { dummyProjects } from "../../data/dummyProjects";
 import type { Project } from "../../types/Project";
 import { resolveCover, swapJpgPng } from "../../utils/getProjectCover";
-import { fetchProjectFeed } from "../../api/projects";
+import { fetchUserProjects } from "../../api/projects";
 import api from "../../api/axiosInstance";
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
 import ConfirmModal from "../common/ConfirmModal";
@@ -35,26 +35,26 @@ const WorkTab: React.FC = () => {
 			}
 		} catch {}
 
-		// 2) 백그라운드 새로고침 (빠른 페이징)
+		// 2) 백그라운드 새로고침 (백엔드 사용자별 목록)
 		(async () => {
 			try {
-				const me = (await api.get<{ id: number }>("/users/me")).data;
-				const myId = me?.id;
+				let myId = 0;
+				try { myId = Number(localStorage.getItem("userId") || sessionStorage.getItem("userId") || '0'); } catch {}
+				if (!myId) {
+					try { const me = (await api.get<{ id: number }>("/users/me")).data; myId = me?.id || 0; } catch { myId = 0; }
+				}
 				if (!myId) { if (mounted && projects.length === 0) setLoading(false); return; }
 
-				let page = 0; 
-				const size = 100; // 큰 페이지로 왕복 횟수 최소화
-				let last = false; 
+				let page = 0;
+				const size = 100;
+				let last = false;
 				const collected: Project[] = [];
-				let miss = 0; // 연속 미스 페이지 수
-				const MAX_PAGES = 10; // 안전 가드
+				const MAX_PAGES = 10;
 
-				while (!last && page < MAX_PAGES && miss < 3) {
-					const res = await fetchProjectFeed({ page, size, sort: 'latest' });
+				while (!last && page < MAX_PAGES) {
+					const res = await fetchUserProjects(myId, page, size);
 					const pageItems = res.content || [];
-					const mine = pageItems.filter(p => (p.owner && (p.owner as any).id === myId) || (p.authorId === myId));
-					if (mine.length === 0) miss += 1; else miss = 0;
-					collected.push(...mine);
+					collected.push(...pageItems);
 					last = !!res.last || (page >= (res.totalPages || 0) - 1);
 					page += 1;
 				}

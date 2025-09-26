@@ -22,6 +22,7 @@ interface ActionBarProps {
     isOwner?: boolean;
     ownerEmail?: string;
     ownerImageUrl?: string;
+    initialIsFollowing?: boolean;
   };
 }
 
@@ -37,7 +38,7 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
 
   return (
     <aside className="flex flex-col items-center gap-4">
-      <ProfileAction targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} />
+      <ProfileAction targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} initialIsFollowing={project.initialIsFollowing} />
       {!isOwner && <SuggestAction targetUserId={project.ownerId} />}
       <LikeAction targetType="PROJECT" targetId={project.id} />
       <CollectionAction />

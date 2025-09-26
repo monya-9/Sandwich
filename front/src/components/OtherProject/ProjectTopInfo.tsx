@@ -5,6 +5,7 @@ import LoginPrompt from "./LoginPrompt";
 import Toast from "../common/Toast";
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
 
+
 type Props = {
   projectName: string;
   userName: string;
@@ -14,10 +15,11 @@ type Props = {
   ownerImageUrl?: string;
   isOwner?: boolean;
   projectId?: number;
+  initialIsFollowing?: boolean;
 };
 
-export default function ProjectTopInfo({ projectName, userName, intro, ownerId, ownerEmail, ownerImageUrl, isOwner, projectId }: Props) {
-  const [isFollowing, setIsFollowing] = useState(false);
+export default function ProjectTopInfo({ projectName, userName, intro, ownerId, ownerEmail, ownerImageUrl, isOwner, projectId, initialIsFollowing }: Props) {
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing ?? false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
   const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
@@ -28,6 +30,13 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
 
 
   useEffect(() => {
+    if (typeof initialIsFollowing === "boolean") {
+      setIsFollowing(initialIsFollowing);
+    }
+  }, [initialIsFollowing]);
+
+  useEffect(() => {
+    if (typeof initialIsFollowing === "boolean") return;
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token || !ownerId || ownerId <= 0) {
       setIsFollowing(false);
@@ -46,7 +55,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
         }
       }
     })();
-  }, [ownerId]);
+  }, [ownerId, initialIsFollowing]);
 
   useEffect(() => {
     const handler = (e: Event) => {

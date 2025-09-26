@@ -12,7 +12,6 @@ import MainPage from "./pages/MainPage";
 import JoinPage from "./pages/Auth/JoinPage";
 import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
-import ProjectForm from "./components/ProjectManage/ProjectForm";
 import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
 import MessagesPage from "./pages/Messages/MessagesPage";
 
@@ -85,7 +84,7 @@ function App() {
                                 <Route index element={<MainPage />} />
                                 {/* Notefolio 스타일 상세 경로 */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
-                                <Route path="project/new" element={<ProjectForm />} />
+                            
 
                                 {/* 신규/편집 업로드 경로 */}
                                 <Route path="/project/edit" element={<ProjectMangeSampleForm />} />

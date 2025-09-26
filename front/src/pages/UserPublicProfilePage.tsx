@@ -6,7 +6,6 @@ import PublicLikesGrid from "../components/Profile/PublicLikesGrid";
 import PublicCollectionsGrid from "../components/Profile/PublicCollectionsGrid";
 import SuggestAction from "../components/OtherProject/ActionBar/SuggestAction";
 import Toast from "../components/common/Toast";
-import { FaCommentDots } from "react-icons/fa6";
 
 // 공개 프로필 응답 타입(백엔드에 email 추가됨)
  type PublicProfile = {
@@ -33,6 +32,16 @@ export default function UserPublicProfilePage() {
   const [toast, setToast] = useState<{ type: "success" | "info" | "error"; message: string } | null>(null);
   const [followBtnHover, setFollowBtnHover] = useState(false);
 
+  const myId = Number((typeof window !== 'undefined' && (localStorage.getItem('userId') || sessionStorage.getItem('userId'))) || '0');
+  const isSelf = myId > 0 && myId === userId;
+
+  // 자신 프로필의 공개 경로로 들어오면 내 프로필로 리다이렉트
+  useEffect(() => {
+    if (isSelf) {
+      navigate('/profile', { replace: true });
+    }
+  }, [isSelf, navigate]);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -56,19 +65,19 @@ export default function UserPublicProfilePage() {
     (async () => {
       try {
         const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (!token || !userId) return setIsFollowing(false);
+        if (!token || !userId || isSelf) return setIsFollowing(false);
         const r = await api.get<{ isFollowing: boolean }>(`/users/${userId}/follow-status`);
         setIsFollowing(Boolean((r as any).data?.isFollowing));
       } catch {
         setIsFollowing(false);
       }
     })();
-  }, [userId]);
+  }, [userId, isSelf]);
 
   const toggleFollow = async () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) return navigate("/login");
-    if (!userId) return;
+    if (!userId || isSelf) return;
     try {
       if (isFollowing) {
         await api.delete(`/users/${userId}/unfollow`);
@@ -140,38 +149,39 @@ export default function UserPublicProfilePage() {
 
             {/* 버튼: 팔로우 / 제안하기 */}
             <div className="mt-6 space-y-3">
-              <button
-                onClick={toggleFollow}
-                onMouseEnter={() => setFollowBtnHover(true)}
-                onMouseLeave={() => setFollowBtnHover(false)}
-                className={`w-full h-[46px] md:h-[48px] rounded-[30px] flex items-center justify-center gap-2 ${
-                  isFollowing
-                    ? (followBtnHover
+              {!isSelf && (
+                <button
+                  onClick={toggleFollow}
+                  onMouseEnter={() => setFollowBtnHover(true)}
+                  onMouseLeave={() => setFollowBtnHover(false)}
+                  className={`w-full h-[46px] md:h-[48px] rounded-[30px] flex items-center justify-center gap-2 ${
+                    isFollowing
+                      ? (followBtnHover
                         ? "bg-[#F6323E] text-white border-2 border-[#F6323E]"
                         : "bg-white border-2 border-black text-black")
-                    : "bg-white border-2 border-black text-black"
-                } text-[16px] md:text-[18px]`}
-              >
-                {/* 아이콘: 팔로잉이면 체크, 아니면 + / hover취소시 텍스트만 유지 */}
-                {isFollowing ? (
-                  followBtnHover ? null : (
+                      : "bg-white border-2 border-black text-black"
+                  } text-[16px] md:text-[18px]`}
+                >
+                  {isFollowing ? (
+                    followBtnHover ? null : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+                        <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" strokeWidth="3" />
+                      </svg>
+                    )
+                  ) : (
                     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-                      <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" strokeWidth="3" />
+                      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" fill="none" />
                     </svg>
-                  )
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" fill="none" />
-                  </svg>
-                )}
-                <span>{isFollowing ? (followBtnHover ? "팔로우 취소" : "팔로잉") : "팔로우"}</span>
-              </button>
+                  )}
+                  <span>{isFollowing ? (followBtnHover ? "팔로우 취소" : "팔로잉") : "팔로우"}</span>
+                </button>
+              )}
 
               <button
                 onClick={suggest}
                 className="w-full h-[46px] md:h-[48px] rounded-[30px] bg-[#068334] hover:bg-[#05702C] text-white text-[16px] md:text-[18px] flex items-center justify-center gap-2"
               >
-                <FaCommentDots className="w-[18px] h-[18px]" />
+                <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
                 <span>제안하기</span>
               </button>
             </div>
@@ -179,9 +189,7 @@ export default function UserPublicProfilePage() {
             {/* 소개/커리어 */}
             <div className="mt-20" />
             <div className="mt-2 text-[14px] md:text-[16px]">
-              <div className="flex items-center justify-between">
-                <div className="text-black/90">커리어</div>
-              </div>
+              <div className="text-black/90">커리어</div>
               {/* 공개 API가 없으므로 우선 메시지 표시. 추후 공개 API 연결 시 목록으로 교체 */}
               <div className="mt-4 text-center text-black/60">설정된 대표 커리어가 없습니다.</div>
             </div>
@@ -214,7 +222,7 @@ export default function UserPublicProfilePage() {
               </div>
             </div>
 
-            {activeTab === "work" && <PublicWorkGrid />}
+            {activeTab === "work" && <PublicWorkGrid userId={userId} />}
             {activeTab === "like" && <PublicLikesGrid />}
             {activeTab === "collection" && <PublicCollectionsGrid />}
 
