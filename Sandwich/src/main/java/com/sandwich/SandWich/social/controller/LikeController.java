@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Page;
+
 import org.springframework.data.domain.Pageable;
 
 @RestController
@@ -48,12 +48,12 @@ public class LikeController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<Page<LikedUserResponse>> getLikedUsers(
+    public ResponseEntity<org.springframework.data.domain.Page<LikedUserResponse>> getLikedUsers(
             @RequestParam LikeTargetType targetType,
             @RequestParam Long targetId,
             Pageable pageable
     ) {
-        Page<LikedUserResponse> response = likeService.getLikedUsers(targetType, targetId, pageable);
+        org.springframework.data.domain.Page<LikedUserResponse> response = likeService.getLikedUsers(targetType, targetId, pageable);
         return ResponseEntity.ok(response);
     }
 }

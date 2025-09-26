@@ -47,6 +47,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
+import CollectionDetailPage from "./pages/CollectionDetailPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -112,6 +113,7 @@ function App() {
                                 <Route path="/profile/work" element={<ProfilePage />} />
                                 <Route path="/profile/likes" element={<ProfilePage />} />
                                 <Route path="/profile/collections" element={<ProfilePage />} />
+                                <Route path="/collections/:id" element={<CollectionDetailPage />} />
                                 <Route path="/profile/drafts" element={<ProfilePage />} />
                                 <Route path="/profile/careers" element={<CareerDetailsPage />} />
                                 {/* ✅ 챌린지 라우팅 */}

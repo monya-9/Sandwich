@@ -137,7 +137,7 @@ public class CollectionServiceImpl implements CollectionService {
                 .orElseThrow(CollectionFolderNotFoundException::new);
 
         // 비공개 제한 처리
-        if (folder.isPrivate() && !folder.getUser().equals(user)) {
+        if (folder.isPrivate() && (user == null || !folder.getUser().equals(user))) {
             throw new ForbiddenAccessException();
         }
 
@@ -165,7 +165,6 @@ public class CollectionServiceImpl implements CollectionService {
         );
     }
 
-
     @Override
     @Transactional
     public void updateFolder(User user, Long folderId, CollectionFolderRequest request) {
@@ -192,5 +191,17 @@ public class CollectionServiceImpl implements CollectionService {
         }
 
         folderRepository.delete(folder); // items는 cascade = REMOVE
+    }
+
+    @Override
+    public List<CollectionFolderResponse> listPublicFoldersOfUser(Long userId) {
+        return folderRepository.findByUserIdAndIsPrivateFalse(userId).stream()
+                .map(folder -> new CollectionFolderResponse(
+                        folder.getId(),
+                        folder.getTitle(),
+                        folder.getDescription(),
+                        folder.isPrivate(),
+                        folder.getItems().size()
+                )).collect(Collectors.toList());
     }
 }

@@ -41,7 +41,7 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
       <ProfileAction targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} initialIsFollowing={project.initialIsFollowing} />
       {!isOwner && <SuggestAction targetUserId={project.ownerId} />}
       <LikeAction targetType="PROJECT" targetId={project.id} />
-      <CollectionAction />
+      <CollectionAction projectId={project.id} />
       <CommentAction onClick={onCommentClick} />
       <ShareAction shareUrl={shareUrlFinal} thumbnailUrl={project.coverUrl} title={project.name} />
       <QrCodeAction qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} />

@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface CollectionFolderRepository extends JpaRepository<CollectionFolder, Long> {
     List<CollectionFolder> findByUser(User user);
+    List<CollectionFolder> findByUserIdAndIsPrivateFalse(Long userId);
 }
 
