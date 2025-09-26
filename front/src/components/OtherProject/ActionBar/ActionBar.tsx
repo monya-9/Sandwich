@@ -43,7 +43,7 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
       <LikeAction targetType="PROJECT" targetId={project.id} />
       <CollectionAction projectId={project.id} />
       <CommentAction onClick={onCommentClick} />
-      <ShareAction shareUrl={shareUrlFinal} thumbnailUrl={project.coverUrl} title={project.name} />
+      <ShareAction thumbnailUrl={project.coverUrl} title={project.name} />
       <QrCodeAction qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} />
       <LiveDemoAction url={liveUrl} />
     </aside>
