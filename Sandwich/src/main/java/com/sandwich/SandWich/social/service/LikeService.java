@@ -19,6 +19,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.sandwich.SandWich.project.domain.Project;
+import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
+import com.sandwich.SandWich.user.repository.UserRepository;
+import com.sandwich.SandWich.common.dto.PageResponse;
+import org.springframework.data.domain.PageImpl;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +39,8 @@ public class LikeService {
     private final LikeRepository likeRepository;
     private final LikeTargetResolver targetResolver;
     private final ApplicationEventPublisher events;
+    private final ProjectRepository projectRepository;
+    private final UserRepository userRepository;
 
     @Value("${app.system.user-id}")
     private Long systemUserId;
@@ -78,5 +92,33 @@ public class LikeService {
                     User user = like.getUser();
                     return new LikedUserResponse(user.getId(), user.getNickname(), user.getProfileImageUrl());
                 });
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectListItemResponse> getLikedProjectsByUserId(Long userId, Pageable pageable) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        Page<Like> likes = likeRepository.findAllByUserAndTargetType(user, LikeTargetType.PROJECT, pageable);
+        List<Long> projectIds = likes.getContent().stream()
+                .map(Like::getTargetId)
+                .collect(Collectors.toList());
+
+        if (projectIds.isEmpty()) {
+            Page<Project> empty = Page.empty(pageable);
+            return PageResponse.of(empty.map(ProjectListItemResponse::new));
+        }
+
+        List<Project> projects = projectRepository.findAllById(projectIds);
+        Map<Long, Project> projectById = projects.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Project::getId, Function.identity(), (a, b) -> a));
+
+        List<Project> ordered = projectIds.stream()
+                .map(projectById::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        Page<Project> page = new PageImpl<>(ordered, pageable, likes.getTotalElements());
+        return PageResponse.of(page.map(ProjectListItemResponse::new));
     }
 }
