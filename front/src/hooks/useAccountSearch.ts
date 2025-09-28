@@ -36,19 +36,17 @@ export const useAccountSearch = () => {
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
     setCurrentPage(0);
-    performSearch({ q: term, page: 0, size: 20 });
+    performSearch({ q: term, page: 0, size: 10 }); // ✅ 사이즈를 10으로 변경
   }, [performSearch]);
 
   const handlePageChange = useCallback((page: number) => {
-    if (searchTerm.trim()) {
-      setCurrentPage(page);
-      performSearch({ q: searchTerm, page, size: 20 });
-    }
+    setCurrentPage(page);
+    performSearch({ q: searchTerm, page, size: 10 }); // ✅ 검색어 조건 제거
   }, [searchTerm, performSearch]);
 
   // 초기 로딩만 수행 (디바운스 제거)
   useEffect(() => {
-    performSearch({ q: '', page: 0, size: 20 });
+    performSearch({ q: '', page: 0, size: 10 }); // ✅ 사이즈를 10으로 변경
   }, [performSearch]);
 
   return {

@@ -168,7 +168,14 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
             <ProjectPagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={handlePageChange}
+              onPageChange={(page: number) => {
+                handlePageChange(page);
+                // ✅ URL 파라미터 업데이트 (page는 0-based이므로 +1)
+                const params = new URLSearchParams();
+                if (searchTerm) params.set('q', searchTerm);
+                if (page > 0) params.set('page', (page + 1).toString()); // ✅ UI 페이지 번호로 변환
+                window.history.pushState({}, '', `/search?${params.toString()}`);
+              }}
             />
           </div>
         )}

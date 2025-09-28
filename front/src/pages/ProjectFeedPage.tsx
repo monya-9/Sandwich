@@ -8,13 +8,14 @@ const ProjectFeedPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [searchType, setSearchType] = useState<'PORTFOLIO' | 'ACCOUNT'>('PORTFOLIO');
   
-  // URL에서 초기 검색어 가져오기 (검색 타입이 변경되면 초기화)
+  // URL에서 초기 검색어와 페이지 가져오기
   const initialSearchTerm = searchParams.get('q') || '';
+  const initialPage = parseInt(searchParams.get('page') || '0', 10);
 
   // 검색 타입 변경 핸들러
   const handleSearchTypeChange = (type: 'PORTFOLIO' | 'ACCOUNT') => {
     setSearchType(type);
-    // 검색 타입 변경 시 URL에서 검색어 제거
+    // 검색 타입 변경 시 URL에서 검색어와 페이지 제거
     window.history.pushState({}, '', '/search');
   };
 
