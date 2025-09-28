@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useContext } from 'react';
 import AccountCardGrid from './AccountCardGrid';
 import { useAccountSearch } from '../../hooks/useAccountSearch';
 import { ProjectPagination } from '../ProjectFeed/ProjectPagination';
@@ -6,6 +6,7 @@ import { Search, RotateCcw } from 'lucide-react';
 import { SearchTypeDropdown } from '../ProjectFeed/SearchTypeDropdown';
 import { saveRecentSearch } from '../../api/recentSearch';
 import { useSearchParams } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 interface AccountSearchContainerProps {
   initialSearchTerm?: string;
@@ -19,6 +20,9 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
   onSearchTypeChange
 }) => {
   const [, setSearchParams] = useSearchParams();
+  
+  // ✅ 로그인 상태 확인
+  const { isLoggedIn } = useContext(AuthContext);
   
   const {
     accounts,
@@ -42,8 +46,8 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
       setSearchParams({});
     }
     
-    // 검색어가 있고 빈 문자열이 아닌 경우에만 최근 검색어 저장
-    if (term.trim()) {
+    // ✅ 로그인한 사용자만 최근 검색어 저장
+    if (term.trim() && isLoggedIn) {
       try {
         await saveRecentSearch(term, 'ACCOUNT');
       } catch (error) {
@@ -51,7 +55,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
         // 에러가 발생해도 검색은 계속 진행
       }
     }
-  }, [originalHandleSearch, setSearchParams]);
+  }, [originalHandleSearch, setSearchParams, isLoggedIn]);
 
   // 검색어 입력 상태 관리
   const [inputValue, setInputValue] = useState(searchTerm);

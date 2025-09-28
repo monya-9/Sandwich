@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecentSearches } from '../../../hooks/useRecentSearches';
+import { AuthContext } from '../../../context/AuthContext';
 
 const SearchBar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
     const dropdownRef = useRef<HTMLDivElement>(null);
+    
+    // ✅ 로그인 상태 확인
+    const { isLoggedIn } = useContext(AuthContext);
 
     // 최근 검색어 훅 사용
     const {
@@ -23,22 +27,34 @@ const SearchBar = () => {
     // 드롭다운 열릴 때 최근 검색어 새로고침
     const handleDropdownOpen = () => {
         setIsOpen(true);
-        refreshSearches(); // 드롭다운이 열릴 때마다 최근 검색어 새로고침
+        // ✅ 로그인한 사용자만 최근 검색어 새로고침
+        if (isLoggedIn) {
+            refreshSearches();
+        }
     };
 
     // 최근 검색어 저장 (새로운 훅 사용)
     const handleSaveRecentSearch = async (term: string) => {
-        await saveSearch(term, 'PORTFOLIO');
+        // ✅ 로그인한 사용자만 최근 검색어 저장
+        if (isLoggedIn) {
+            await saveSearch(term, 'PORTFOLIO');
+        }
     };
 
     // 검색어 삭제 (새로운 훅 사용)
     const handleDeleteRecentSearch = async (id: number) => {
-        await deleteSearch(id);
+        // ✅ 로그인한 사용자만 최근 검색어 삭제
+        if (isLoggedIn) {
+            await deleteSearch(id);
+        }
     };
 
     // 모든 검색어 삭제 (새로운 훅 사용)
     const handleClearAllRecentSearches = async () => {
-        await clearAllSearches('PORTFOLIO');
+        // ✅ 로그인한 사용자만 최근 검색어 전체 삭제
+        if (isLoggedIn) {
+            await clearAllSearches('PORTFOLIO');
+        }
     };
 
     // 검색 실행
@@ -129,8 +145,8 @@ const SearchBar = () => {
                             </div>
                         </div>
 
-                        {/* 최근 검색어 */}
-                        {recentSearches.length > 0 && (
+                        {/* 최근 검색어 - 로그인한 사용자만 표시 */}
+                        {isLoggedIn && recentSearches.length > 0 && (
                             <div className="p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-sm font-medium text-gray-900">최근 검색어</h3>

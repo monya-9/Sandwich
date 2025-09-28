@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { 
   getRecentSearches, 
   saveRecentSearch, 
@@ -6,6 +6,7 @@ import {
   clearAllRecentSearches,
   RecentSearchItem 
 } from '../api/recentSearch';
+import { AuthContext } from '../context/AuthContext';
 
 interface UseRecentSearchesReturn {
   recentSearches: RecentSearchItem[];
@@ -23,9 +24,19 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastLoadTime, setLastLoadTime] = useState<number>(0);
+  
+  // ✅ 로그인 상태 확인
+  const { isLoggedIn } = useContext(AuthContext);
 
   // 최근 검색어 로드 (캐시 적용)
   const loadRecentSearches = useCallback(async (forceRefresh = false) => {
+    // ✅ 로그인하지 않은 사용자는 API 호출하지 않음
+    if (!isLoggedIn) {
+      setRecentSearches([]);
+      setIsLoading(false);
+      return;
+    }
+    
     const now = Date.now();
     const CACHE_DURATION = 30000; // 30초 캐시
 
@@ -48,11 +59,14 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [recentSearches.length, lastLoadTime]);
+  }, [isLoggedIn, recentSearches.length, lastLoadTime]);
 
   // 검색어 저장
   const saveSearch = useCallback(async (term: string, type: 'PORTFOLIO' | 'ACCOUNT') => {
     if (!term.trim()) return;
+    
+    // ✅ 로그인하지 않은 사용자는 저장하지 않음
+    if (!isLoggedIn) return;
 
     try {
       await saveRecentSearch(term, type);
@@ -62,10 +76,13 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
       console.error('최근 검색어 저장 실패:', err);
       setError(err instanceof Error ? err.message : '최근 검색어 저장에 실패했습니다.');
     }
-  }, [loadRecentSearches]);
+  }, [isLoggedIn, loadRecentSearches]);
 
   // 검색어 삭제 (낙관적 업데이트)
   const deleteSearch = useCallback(async (id: number) => {
+    // ✅ 로그인하지 않은 사용자는 삭제하지 않음
+    if (!isLoggedIn) return;
+    
     // 낙관적 업데이트: UI에서 먼저 제거
     setRecentSearches(prev => prev.filter(item => item.id !== id));
 
@@ -77,10 +94,13 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
       await loadRecentSearches(true);
       setError(err instanceof Error ? err.message : '최근 검색어 삭제에 실패했습니다.');
     }
-  }, [loadRecentSearches]);
+  }, [isLoggedIn, loadRecentSearches]);
 
   // 전체 삭제 (낙관적 업데이트)
   const clearAllSearches = useCallback(async (type: 'PORTFOLIO' | 'ACCOUNT' = 'PORTFOLIO') => {
+    // ✅ 로그인하지 않은 사용자는 삭제하지 않음
+    if (!isLoggedIn) return;
+    
     // 낙관적 업데이트: UI에서 먼저 제거
     setRecentSearches([]);
 
@@ -92,7 +112,7 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
       await loadRecentSearches(true);
       setError(err instanceof Error ? err.message : '전체 최근 검색어 삭제에 실패했습니다.');
     }
-  }, [loadRecentSearches]);
+  }, [isLoggedIn, loadRecentSearches]);
 
   // 새로고침 (강제 로드)
   const refreshSearches = useCallback(async () => {
