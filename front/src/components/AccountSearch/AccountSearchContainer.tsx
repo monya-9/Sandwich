@@ -31,6 +31,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
     searchTerm,
     currentPage,
     totalPages,
+    totalElements,
     handleSearch: originalHandleSearch,
     handlePageChange
   } = useAccountSearch();
@@ -111,7 +112,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
-                placeholder="계정 검색 (닉네임, 소개, 스킬, 포지션, 관심사) - 엔터키로 검색"
+                placeholder="계정을 검색해주세요 - 엔터키로 검색"
                 className="w-full px-4 py-3 pl-12 pr-12 rounded-lg outline-none border-0 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
               />
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -160,6 +161,8 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
           searchTerm={searchTerm}
           loading={loading}
           error={error}
+          currentPage={currentPage}
+          totalElements={totalElements}
         />
 
         {/* 페이지네이션 - 로딩 중이 아닐 때만 표시 */}
