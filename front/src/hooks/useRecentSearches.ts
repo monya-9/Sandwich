@@ -96,23 +96,21 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
     }
   }, [isLoggedIn, loadRecentSearches]);
 
-  // 전체 삭제 (낙관적 업데이트)
+  // 전체 삭제 (API 성공 후 상태 업데이트)
   const clearAllSearches = useCallback(async (type: 'PORTFOLIO' | 'ACCOUNT' = 'PORTFOLIO') => {
     // ✅ 로그인하지 않은 사용자는 삭제하지 않음
     if (!isLoggedIn) return;
     
-    // 낙관적 업데이트: UI에서 먼저 제거
-    setRecentSearches([]);
-
     try {
+      // ✅ API 호출 먼저 실행
       await clearAllRecentSearches(type);
+      // ✅ API 성공 후에만 로컬 상태 업데이트
+      setRecentSearches([]);
     } catch (err) {
       console.error('전체 최근 검색어 삭제 실패:', err);
-      // 실패 시 원래 상태로 복원
-      await loadRecentSearches(true);
       setError(err instanceof Error ? err.message : '전체 최근 검색어 삭제에 실패했습니다.');
     }
-  }, [isLoggedIn, loadRecentSearches]);
+  }, [isLoggedIn]);
 
   // 새로고침 (강제 로드)
   const refreshSearches = useCallback(async () => {
