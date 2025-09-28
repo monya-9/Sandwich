@@ -11,6 +11,7 @@ type AuthContextType = {
     login: (hintEmail?: string) => Promise<void>; // 로그인 직후 호출
     logout: () => void;
     refreshProfile: () => Promise<void>;          // 앱 부팅/프로필 저장 후 호출
+    clearState: () => void;                       // 즉시 상태 초기화 (깜빡임 방지)
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ export const AuthContext = createContext<AuthContextType>({
     login: async () => {},
     logout: () => {},
     refreshProfile: async () => {},
+    clearState: () => {},
 });
 
 interface Props { children: ReactNode }
@@ -85,8 +87,15 @@ export const AuthProvider = ({ children }: Props) => {
         clearAllUserData();
     };
 
+    const clearState = () => {
+        // ✅ 즉시 React 상태만 초기화 (스토리지는 삭제하지 않음)
+        setIsLoggedIn(false);
+        setEmail(null);
+        setNickname(null);
+    };
+
     return (
-        <AuthContext.Provider value={{ isLoggedIn, email, nickname, login, logout, refreshProfile }}>
+        <AuthContext.Provider value={{ isLoggedIn, email, nickname, login, logout, refreshProfile, clearState }}>
             {children}
         </AuthContext.Provider>
     );

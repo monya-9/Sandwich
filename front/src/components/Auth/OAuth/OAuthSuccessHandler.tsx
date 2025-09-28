@@ -14,7 +14,7 @@ type Me = {
 
 const OAuthSuccessHandler: React.FC = () => {
     const isHandled = useRef(false);
-    const { login } = useContext(AuthContext);
+    const { login, clearState } = useContext(AuthContext);
 
     useEffect(() => {
         if (isHandled.current) return;
@@ -36,7 +36,10 @@ const OAuthSuccessHandler: React.FC = () => {
             // ✅ 1. 기존 모든 사용자 데이터 완전 삭제
             clearAllUserData();
 
-            // ✅ 2. 새 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
+            // ✅ 2. React 상태 즉시 초기화 (깜빡임 방지)
+            clearState(); // React 상태만 즉시 초기화
+
+            // ✅ 3. 새 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
             setToken(token, true); // => accessToken을 localStorage에
             if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
             if (provider) localStorage.setItem("lastLoginMethod", provider);
@@ -46,10 +49,10 @@ const OAuthSuccessHandler: React.FC = () => {
             window.history.replaceState(null, "", "/oauth2/success");
 
             try {
-                // ✅ 3. 내 정보 조회 (⚠️ baseURL이 /api라서 여기서는 '/users/me' 만!)
+                // ✅ 4. 내 정보 조회 (⚠️ baseURL이 /api라서 여기서는 '/users/me' 만!)
                 const me: Me = (await api.get("/users/me")).data;
 
-                // ✅ 4. 새 사용자 정보 저장
+                // ✅ 5. 새 사용자 정보 저장
                 const display =
                     (me.nickname && me.nickname.trim()) ||
                     (me.profileName && me.profileName.trim()) ||
@@ -65,10 +68,10 @@ const OAuthSuccessHandler: React.FC = () => {
                 if (me.profileName) localStorage.setItem("userProfileName", me.profileName);
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
 
-                // ✅ 5. 컨텍스트 갱신
+                // ✅ 6. 컨텍스트 갱신
                 login(me.email || emailFromUrl);
 
-                // ✅ 6. 닉네임 존재 여부에 따라 이동 (없으면 프로필 스텝)
+                // ✅ 7. 닉네임 존재 여부에 따라 이동 (없으면 프로필 스텝)
                 window.location.replace(display ? "/" : "/oauth/profile-step");
             } catch {
                 // 실패 시에도 최소한 로그인 컨텍스트는 갱신
@@ -76,7 +79,7 @@ const OAuthSuccessHandler: React.FC = () => {
                 window.location.replace(isProfileSetFlag ? "/" : "/oauth/profile-step");
             }
         })();
-    }, [login]);
+    }, [login, clearState]);
 
     return (
         <div className="text-center mt-10 text-green-600">로그인 중입니다…</div>
