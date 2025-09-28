@@ -62,7 +62,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
     const prevBodyWidth = body.style.width;
     const lockY = window.scrollY;
 
-    html.style.overflowY = "scroll";
+    html.style.overflowY = "hidden";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
     body.style.top = `-${lockY}px`;

@@ -73,7 +73,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
     const prevBodyWidth = body.style.width;
     const lockY = window.scrollY;
 
-    html.style.overflowY = "scroll"; // 스크롤바 표시 유지
+    html.style.overflowY = "hidden"; // 페이지 스크롤 완전 잠금
     body.style.overflow = "hidden";  // 배경 스크롤 동작 차단
     // 물리적 스크롤까지 완전히 차단 (모바일 포함)
     body.style.position = "fixed";

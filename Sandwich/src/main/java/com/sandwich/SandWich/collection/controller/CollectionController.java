@@ -34,6 +34,12 @@ public class CollectionController {
         return ResponseEntity.ok(collectionService.getMyFolders(userDetails.getUser()));
     }
 
+    // 특정 사용자 공개 컬렉션 목록
+    @GetMapping("/folders/user/{userId}")
+    public ResponseEntity<List<CollectionFolderResponse>> listPublicFoldersOfUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(collectionService.listPublicFoldersOfUser(userId));
+    }
+
     @PostMapping
     public ResponseEntity<Void> addProjectToFolders(
             @RequestBody AddToCollectionRequest request,
@@ -57,7 +63,8 @@ public class CollectionController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
-        return ResponseEntity.ok(collectionService.getFolderDetail(userDetails.getUser(), id));
+        User user = (userDetails != null) ? userDetails.getUser() : null;
+        return ResponseEntity.ok(collectionService.getFolderDetail(user, id));
     }
 
     @PutMapping("/folders/{id}")

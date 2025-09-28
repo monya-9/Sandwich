@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import { UserApi, type UserProfileResponse, type RepresentativeCareer } from "../../api/userApi";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { HiCheckCircle } from "react-icons/hi2";
 import WorkTab from "./WorkTab";
 import LikesTab from "./LikesTab";
@@ -21,6 +21,15 @@ export default function ProfilePage() {
   const [showOfferSavedBanner, setShowOfferSavedBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<"work" | "like" | "collection" | "draft">("work");
   const [repCareers, setRepCareers] = useState<RepresentativeCareer[]>([]);
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith("/likes")) setActiveTab("like");
+    else if (path.endsWith("/collections")) setActiveTab("collection");
+    else if (path.endsWith("/drafts")) setActiveTab("draft");
+    else setActiveTab("work");
+  }, [location.pathname]);
 
   useEffect(() => {
     let mounted = true;

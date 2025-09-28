@@ -25,7 +25,8 @@ interface PreviewActionBarProps {
 
 export default function PreviewActionBar({ onCommentClick, project }: PreviewActionBarProps) {
 	const cloudfrontBase = (process.env.REACT_APP_CLOUDFRONT_BASE || "").replace(/\/$/, "");
-	const cfUrl = cloudfrontBase && project.ownerId && project.id ? `${cloudfrontBase}/${project.ownerId}/${project.id}/` : undefined;
+	const numericPath = project.ownerId && project.id ? `/${project.ownerId}/${project.id}/` : undefined;
+	const cfUrl = numericPath ? (cloudfrontBase ? `${cloudfrontBase}${numericPath}` : numericPath) : undefined;
 	const serverShare = project.shareUrl || undefined;
 	const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
 	const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);

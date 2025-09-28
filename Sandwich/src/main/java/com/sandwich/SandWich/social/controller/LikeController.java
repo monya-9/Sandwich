@@ -13,8 +13,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Page;
+
 import org.springframework.data.domain.Pageable;
+import com.sandwich.SandWich.common.dto.PageResponse;
+import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
 
 @RestController
 @RequiredArgsConstructor
@@ -48,12 +50,29 @@ public class LikeController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<Page<LikedUserResponse>> getLikedUsers(
+    public ResponseEntity<org.springframework.data.domain.Page<LikedUserResponse>> getLikedUsers(
             @RequestParam LikeTargetType targetType,
             @RequestParam Long targetId,
             Pageable pageable
     ) {
-        Page<LikedUserResponse> response = likeService.getLikedUsers(targetType, targetId, pageable);
+        org.springframework.data.domain.Page<LikedUserResponse> response = likeService.getLikedUsers(targetType, targetId, pageable);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me/projects")
+    public ResponseEntity<PageResponse<ProjectListItemResponse>> getMyLikedProjects(Pageable pageable,
+                                                                                   @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        PageResponse<ProjectListItemResponse> page = likeService.getLikedProjectsByUserId(userDetails.getId(), pageable);
+        return ResponseEntity.ok(page);
+    }
+
+    @GetMapping("/users/{userId}/projects")
+    public ResponseEntity<PageResponse<ProjectListItemResponse>> getUserLikedProjects(@PathVariable Long userId,
+                                                                                      Pageable pageable) {
+        PageResponse<ProjectListItemResponse> page = likeService.getLikedProjectsByUserId(userId, pageable);
+        return ResponseEntity.ok(page);
     }
 }

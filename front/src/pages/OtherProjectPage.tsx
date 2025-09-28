@@ -78,7 +78,7 @@ export default function OtherProjectPage() {
         } catch {}
 
         // 1.5) 작성자 캐시 즉시 반영
-        try {
+            try {
             if (ownerId) {
                 // 내 자신이면 로컬 스토리지의 닉네임/이메일 선반영
                 const myId = Number(localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0");
@@ -114,7 +114,7 @@ export default function OtherProjectPage() {
 
                 if (meRes.status === 'fulfilled') {
                     const me = (meRes.value as any).data as { id: number };
-                    setCurrentUserId(me?.id ?? null);
+                setCurrentUserId(me?.id ?? null);
                 } else {
                     setCurrentUserId((prev) => prev ?? null);
                 }
@@ -317,7 +317,7 @@ export default function OtherProjectPage() {
                                 </div>
                                 <TagList tags={headerCategories} />
                                 <div className="mb-8">
-                                    <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                                    <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
                                 </div>
                                 <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                             </section>
@@ -359,7 +359,7 @@ export default function OtherProjectPage() {
                             </div>
                             <TagList tags={headerCategories} />
                             <div className="mb-8">
-                                <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                                <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
                             </div>
                             <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                         </section>

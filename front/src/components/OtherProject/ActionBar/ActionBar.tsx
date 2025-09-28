@@ -30,7 +30,8 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
   const { isOwner } = project;
   // 라이브/공유 URL 우선순위: 서버 제공 shareUrl(이미 CF 또는 숫자 경로면 유지) > CloudFront 기본 경로 구성
   const cloudfrontBase = (process.env.REACT_APP_CLOUDFRONT_BASE || "").replace(/\/$/, "");
-  const cfUrl = cloudfrontBase && project.ownerId && project.id ? `${cloudfrontBase}/${project.ownerId}/${project.id}/` : undefined;
+  const numericPath = project.ownerId && project.id ? `/${project.ownerId}/${project.id}/` : undefined;
+  const cfUrl = numericPath ? (cloudfrontBase ? `${cloudfrontBase}${numericPath}` : numericPath) : undefined;
   const serverShare = project.shareUrl || undefined;
   const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
   const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
@@ -41,9 +42,9 @@ export default function ActionBar({ onCommentClick, project }: ActionBarProps) {
       <ProfileAction targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} initialIsFollowing={project.initialIsFollowing} />
       {!isOwner && <SuggestAction targetUserId={project.ownerId} />}
       <LikeAction targetType="PROJECT" targetId={project.id} />
-      <CollectionAction />
+      <CollectionAction projectId={project.id} />
       <CommentAction onClick={onCommentClick} />
-      <ShareAction shareUrl={shareUrlFinal} thumbnailUrl={project.coverUrl} title={project.name} />
+      <ShareAction thumbnailUrl={project.coverUrl} title={project.name} />
       <QrCodeAction qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} />
       <LiveDemoAction url={liveUrl} />
     </aside>
