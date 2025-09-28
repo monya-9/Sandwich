@@ -17,6 +17,7 @@ import UploadDoneModal from "./UploadDoneModal";
 import Toast from "../common/Toast";
 import SettingsPanel from "./SettingsPanel";
 import RightPanelActions from "./RightPanelActions";
+import api from "../../api/axiosInstance";
 
 // Quill size whitelist to show pt values like 16pt
 const SizeAttributor = Quill.import("attributors/style/size");
@@ -1536,7 +1537,16 @@ export default function ProjectMangeSampleForm() {
                      const uidStr = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
                      const currentUid = Number(uidStr) || 0;
                      const isEdit = !!(editOwnerId && editProjectId);
-                     const pathUserId = isEdit && editOwnerId ? editOwnerId : currentUid;
+                     let pathUserId = isEdit && editOwnerId ? editOwnerId : currentUid;
+                     if (!pathUserId || !Number.isFinite(pathUserId) || pathUserId <= 0) {
+                        try {
+                           const me = (await api.get('/users/me')).data as { id?: number };
+                           if (me && typeof me.id === 'number' && me.id > 0) {
+                              pathUserId = me.id;
+                              try { localStorage.setItem('userId', String(me.id)); } catch {}
+                           }
+                        } catch {}
+                     }
                      await persistContents(pathUserId, createdProjectId, isEdit);
 
                      // 1) 내 작업 캐시 즉시 갱신 (WorkTab 사용 캐시)
