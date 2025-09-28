@@ -1,7 +1,7 @@
 // src/components/Auth/OAuth/OAuthSuccessHandler.tsx
 import React, { useEffect, useRef, useContext } from "react";
 import { AuthContext } from "../../../context/AuthContext";
-import { setToken } from "../../../utils/tokenStorage";
+import { setToken, clearAllUserData } from "../../../utils/tokenStorage";
 import api from "../../../api/axiosInstance";
 
 type Me = {
@@ -33,7 +33,10 @@ const OAuthSuccessHandler: React.FC = () => {
                 return;
             }
 
-            // 1) 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
+            // ✅ 1. 기존 모든 사용자 데이터 완전 삭제
+            clearAllUserData();
+
+            // ✅ 2. 새 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
             setToken(token, true); // => accessToken을 localStorage에
             if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
             if (provider) localStorage.setItem("lastLoginMethod", provider);
@@ -43,10 +46,10 @@ const OAuthSuccessHandler: React.FC = () => {
             window.history.replaceState(null, "", "/oauth2/success");
 
             try {
-                // 2) 내 정보 조회 (⚠️ baseURL이 /api라서 여기서는 '/users/me' 만!)
+                // ✅ 3. 내 정보 조회 (⚠️ baseURL이 /api라서 여기서는 '/users/me' 만!)
                 const me: Me = (await api.get("/users/me")).data;
 
-                // 3) 표시용 이름 우선순위: nickname > profileName > username
+                // ✅ 4. 새 사용자 정보 저장
                 const display =
                     (me.nickname && me.nickname.trim()) ||
                     (me.profileName && me.profileName.trim()) ||
@@ -62,10 +65,10 @@ const OAuthSuccessHandler: React.FC = () => {
                 if (me.profileName) localStorage.setItem("userProfileName", me.profileName);
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
 
-                // 컨텍스트 갱신
+                // ✅ 5. 컨텍스트 갱신
                 login(me.email || emailFromUrl);
 
-                // 4) 닉네임 존재 여부에 따라 이동 (없으면 프로필 스텝)
+                // ✅ 6. 닉네임 존재 여부에 따라 이동 (없으면 프로필 스텝)
                 window.location.replace(display ? "/" : "/oauth/profile-step");
             } catch {
                 // 실패 시에도 최소한 로그인 컨텍스트는 갱신

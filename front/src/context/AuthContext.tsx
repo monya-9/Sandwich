@@ -1,6 +1,7 @@
 // context/AuthContext.tsx
 import React, { createContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { ensureNicknameInStorage } from "../utils/profile"; // 네 함수 경로
+import { clearAllUserData } from "../utils/tokenStorage";
 // 토큰 저장/조회 유틸이 따로 있으면 써도 OK
 
 type AuthContextType = {
@@ -75,25 +76,13 @@ export const AuthProvider = ({ children }: Props) => {
     };
 
     const logout = () => {
+        // ✅ React 상태 초기화
         setIsLoggedIn(false);
         setEmail(null);
         setNickname(null);
 
-        localStorage.removeItem("accessToken");
-        sessionStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        sessionStorage.removeItem("refreshToken");
-
-        localStorage.removeItem("userEmail");
-        sessionStorage.removeItem("userEmail");
-        localStorage.removeItem("userNickname");
-        sessionStorage.removeItem("userNickname");
-        localStorage.removeItem("userUsername");
-        sessionStorage.removeItem("userUsername");
-        localStorage.removeItem("userProfileName");
-        sessionStorage.removeItem("userProfileName");
-        localStorage.removeItem("userId");
-        sessionStorage.removeItem("userId");
+        // ✅ 모든 사용자 데이터 완전 삭제
+        clearAllUserData();
     };
 
     return (
