@@ -23,6 +23,7 @@ const MainPage = () => {
   // 추천 상태
   const [recoProjects, setRecoProjects] = useState<Project[] | null>(null);
   const [loadingReco, setLoadingReco] = useState(false);
+  const [recoError, setRecoError] = useState<string | null>(null);
 
   // 로그인 상태
   const { isLoggedIn } = useContext(AuthContext);
@@ -52,6 +53,7 @@ const MainPage = () => {
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
     setLoadingReco(true);
+    setRecoError(null);
     fetchUserRecommendations(userId)
       .then(async (items) => {
         const top10 = [...items].sort((a, b) => b.score - a.score).slice(0, 10);
@@ -64,7 +66,8 @@ const MainPage = () => {
         }
       })
       .catch(() => {
-        // 실패 시 기존 캐시 유지
+        // 실패 시 에러 메시지 표시
+        setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       })
       .finally(() => setLoadingReco(false));
   }, [userId, isLoggedIn, cacheKey]);
@@ -134,8 +137,8 @@ const MainPage = () => {
   const heroProjects = (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
   const gridMore = hasReco ? (recoProjects!.slice(10)) : sortedProjects.slice(10);
 
-  // 그리드 제목: 추천이 준비되었을 때만 AI 추천으로 변경
-  const gridTitle = hasReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+  // 그리드 제목: 로그인 시에는 항상 AI 추천으로 표기, 비로그인은 기존 카테고리 제목
+  const gridTitle = isLoggedIn ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
 
   return (
     <div className="min-h-screen">
@@ -150,8 +153,18 @@ const MainPage = () => {
           />
         </div>
 
-        {/* 메인 그리드: 기본 리스트를 먼저 보여주고, 추천이 준비되면 제목/리스트만 교체 */}
-        <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+        {/* 메인 그리드: 로그인 시 추천 준비 전에는 안내 문구, 준비되면 추천 노출 */}
+        {isLoggedIn ? (
+          hasReco ? (
+            <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+          ) : (
+            <div className="text-center text-gray-500 py-[50px] text-lg">
+              {recoError ? recoError : 'AI 추천을 불러오는 중입니다…'}
+            </div>
+          )
+        ) : (
+          <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+        )}
 
         {/* 다른 섹션은 항상 표시 */}
         <MainDeveloperHighlight projects={hasReco ? (recoProjects || []) : sortedProjects} />
