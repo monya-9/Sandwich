@@ -1,5 +1,5 @@
 //MainPage.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState, useContext } from 'react';
 import MainHeroSection from '../components/Main/MainHeroSection';
 import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
@@ -7,6 +7,9 @@ import MainDeveloperHighlight from '../components/Main/MainDeveloperHighlight';
 import SortModal from '../components/Main/SortModal';
 import { dummyProjects } from '../data/dummyProjects';
 import { Project, Category } from '../types/Project';
+import { fetchUserRecommendations } from '../api/reco';
+import { fetchProjectFeed } from '../api/projects';
+import { AuthContext } from '../context/AuthContext';
 
 const MainPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | '전체'>('전체');
@@ -16,6 +19,55 @@ const MainPage = () => {
 
   const [tempSelectedSort, setTempSelectedSort] = useState(selectedSort);
   const [tempSelectedUploadTime, setTempSelectedUploadTime] = useState(selectedUploadTime);
+
+  // 추천 상태
+  const [recoProjects, setRecoProjects] = useState<Project[] | null>(null);
+  const [loadingReco, setLoadingReco] = useState(false);
+
+  // 로그인 상태
+  const { isLoggedIn } = useContext(AuthContext);
+
+  // 로그인 사용자 ID (스토리지 저장 규칙 준수)
+  const userId = useMemo(() => {
+    const idStr = (typeof window !== 'undefined') && (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+    return idStr ? Number(idStr) : undefined;
+  }, []);
+
+  const cacheKey = useMemo(() => (isLoggedIn && userId ? `reco:projects:${userId}` : null), [isLoggedIn, userId]);
+
+  // 세션 캐시 즉시 복원 (깜빡임 방지)
+  useEffect(() => {
+    if (!cacheKey) return;
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Project[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setRecoProjects(parsed);
+        }
+      }
+    } catch {}
+  }, [cacheKey]);
+
+  useEffect(() => {
+    if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
+    setLoadingReco(true);
+    fetchUserRecommendations(userId)
+      .then(async (items) => {
+        const top10 = [...items].sort((a, b) => b.score - a.score).slice(0, 10);
+        const feed = await fetchProjectFeed({ page: 0, size: 500, sort: 'latest' });
+        const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
+        const mapped: Project[] = top10.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
+        setRecoProjects(mapped);
+        if (cacheKey) {
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); } catch {}
+        }
+      })
+      .catch(() => {
+        // 실패 시 기존 캐시 유지
+      })
+      .finally(() => setLoadingReco(false));
+  }, [userId, isLoggedIn, cacheKey]);
 
   const handleOpenSortModal = () => {
     setTempSelectedSort(selectedSort);
@@ -51,7 +103,7 @@ const MainPage = () => {
     }
   };
 
-  // 카테고리 + 업로드 시간 필터 적용
+  // 카테고리 + 업로드 시간 필터 적용 (더미 전용)
   const filteredProjects: Project[] = dummyProjects.filter((project) => {
     const matchesCategory =
       selectedCategory === '전체' || project.categories?.includes(selectedCategory);
@@ -59,7 +111,7 @@ const MainPage = () => {
     return matchesCategory && matchesUploadTime;
   });
 
-  // 정렬 로직 적용
+  // 정렬 로직 적용 (더미 전용)
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     if (selectedSort === '최신순') {
       return new Date(b.uploadDate || '2025-01-01').getTime() - new Date(a.uploadDate || '2025-01-01').getTime();
@@ -75,40 +127,37 @@ const MainPage = () => {
     return 0;
   });
 
+  // 추천 사용 조건: 로그인 + 추천 데이터가 준비된 경우에만 적용
+  const hasReco = isLoggedIn && !!(recoProjects && recoProjects.length > 0);
+  // 렌더 소스 선택: 추천이 준비되기 전에는 기존 리스트를 그대로 노출
+  const gridPrimary = hasReco ? recoProjects!.slice(0, 10) : sortedProjects.slice(0, 10);
+  const heroProjects = (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
+  const gridMore = hasReco ? (recoProjects!.slice(10)) : sortedProjects.slice(10);
+
+  // 그리드 제목: 추천이 준비되었을 때만 AI 추천으로 변경
+  const gridTitle = hasReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+
   return (
     <div className="min-h-screen">
-       <main className="px-8 py-6">
-        <MainHeroSection projects={dummyProjects.slice(0, 7)} />
+      <main className="px-8 py-6">
+        <MainHeroSection projects={heroProjects.length > 0 ? heroProjects : dummyProjects.slice(0, 7)} />
 
-         <div className="mb-10">
-            <MainCategoryFilter
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-              onOpenSortModal={handleOpenSortModal}
-            />
-         </div>
+        <div className="mb-10">
+          <MainCategoryFilter
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            onOpenSortModal={handleOpenSortModal}
+          />
+        </div>
 
-        {sortedProjects.length === 0 ? (
-          <div className="text-center text-gray-500 py-[50px] text-lg">
-            해당 조건에 맞는 프로젝트가 없어요 😥<br />
-            필터를 변경해 다시 시도해보세요!
-          </div>
-        ) : (
-          <>
-            <MainProjectGrid
-              title={`"${selectedCategory}" 카테고리 프로젝트`}
-              projects={sortedProjects.slice(0, 10)}
-            />
+        {/* 메인 그리드: 기본 리스트를 먼저 보여주고, 추천이 준비되면 제목/리스트만 교체 */}
+        <MainProjectGrid title={gridTitle} projects={gridPrimary} />
 
-            <MainDeveloperHighlight projects={sortedProjects} />
+        {/* 다른 섹션은 항상 표시 */}
+        <MainDeveloperHighlight projects={hasReco ? (recoProjects || []) : sortedProjects} />
 
-            {sortedProjects.length > 10 && (
-              <MainProjectGrid
-                title="계속해서 프로젝트를 살펴보세요!"
-                projects={sortedProjects.slice(10)}
-              />
-            )}
-          </>
+        {gridMore.length > 0 && (
+          <MainProjectGrid title="계속해서 프로젝트를 살펴보세요!" projects={gridMore} />
         )}
 
         {isSortModalOpen && (
