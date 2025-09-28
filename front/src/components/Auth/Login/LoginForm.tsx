@@ -46,6 +46,9 @@ const LoginForm = () => {
             const storage = keepLogin ? localStorage : sessionStorage;
             const effectiveEmail = serverEmail || email;
             storage.setItem("userEmail", effectiveEmail);
+            
+            // ✅ 최근 로그인 방법 저장 (이메일 로그인)
+            localStorage.setItem("lastLoginMethod", "local");
 
             // ✅ 5. 로그인 직후 프로필/닉네임 보강
             await ensureNicknameInStorage(accessToken, effectiveEmail, storage);

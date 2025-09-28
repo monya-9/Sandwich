@@ -54,14 +54,18 @@ export const clearAllUserData = () => {
         "userNickname", 
         "userUsername",
         "userProfileName",
-        "userId",
-        "lastLoginMethod"
+        "userId"
+        // lastLoginMethod는 브라우저 설정이므로 삭제하지 않음
     ];
     
     keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
     });
+    
+    // ✅ 프로젝트 캐시도 삭제 (깜빡임 방지)
+    localStorage.removeItem("my_projects_cache_v1");
+    localStorage.removeItem("profile_work_order");
     
     emitAccessTokenChange(null);
 };
