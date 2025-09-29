@@ -22,7 +22,7 @@ services:
       SANDWICH_USER_AWS_SECRET_ACCESS_KEY: ${SANDWICH_USER_AWS_SECRET_ACCESS_KEY}
       PUSH_FCM_ENABLED: "true"
       FIREBASE_CREDENTIALS_PATH: /app/creds/firebase-service-account.json
-      APP_WEB_BASE_URL: http://localhost
+      APP_WEB_BASE_URL: http://localhost:3000
     volumes:
       - ./firebase-service-account.json:/app/creds/firebase-service-account.json:ro
     networks:

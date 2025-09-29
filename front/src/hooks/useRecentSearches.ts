@@ -119,8 +119,12 @@ export const useRecentSearches = (): UseRecentSearchesReturn => {
 
   // 컴포넌트 마운트 시 로드
   useEffect(() => {
-    loadRecentSearches();
-  }, [loadRecentSearches]);
+    if (isLoggedIn) {
+      loadRecentSearches();
+    } else {
+      setRecentSearches([]);
+    }
+  }, [isLoggedIn]); // 로그인 상태만 의존성으로 설정
 
   return {
     recentSearches,

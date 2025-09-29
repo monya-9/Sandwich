@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 
 interface LikedUser {
   userId: number;
@@ -27,7 +27,7 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
     
     setLoading(true);
     try {
-      const response = await axios.get(`/api/likes/users`, {
+      const response = await api.get(`/likes/users`, {
         params: {
           targetType,
           targetId,

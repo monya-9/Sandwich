@@ -119,10 +119,18 @@ export async function deleteProject(userId: number, projectId: number, baseUrl: 
 export type ProjectContentResponseItem = { id: number; type: "IMAGE" | "TEXT" | "VIDEO"; data: string; order: number };
 
 export async function fetchProjectContents(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectContentResponseItem[]> {
-  const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents`.replace(/\/+/, "/");
-  const res = await fetch(url, { credentials: "include" });
-  if (!res.ok) throw new Error(`콘텐츠 조회 실패: ${res.status}`);
-  return res.json();
+  // baseUrl이 있으면 직접 fetch 사용 (외부 API 호출)
+  if (baseUrl) {
+    const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents`.replace(/\/+/, "/");
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) throw new Error(`콘텐츠 조회 실패: ${res.status}`);
+    return res.json();
+  }
+  
+  // baseUrl이 없으면 api 인스턴스 사용 (리프레시 토큰 적용)
+  const api = (await import("./axiosInstance")).default;
+  const res = await api.get(`/projects/${userId}/${projectId}/contents`);
+  return res.data;
 }
 
 export async function deleteAllProjectContents(userId: number, projectId: number, baseUrl: string = ""): Promise<void> {
