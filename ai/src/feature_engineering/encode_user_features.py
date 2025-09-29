@@ -12,14 +12,8 @@ DATA = BASE / "data"
 MAPD = DATA / "mappings"
 NPY  = DATA / "user_skills.npy"
 VOC  = DATA / "user_vocab.json"
-def is_missing(x):
-    try:
-        return x is None or pd.isna(x)
-    except Exception:
-        return x is None
 
 def truthy(x):
-    # pd.NA / None / 공백 문자열 모두 False 처리
     try:
         if x is None or pd.isna(x):
             return False
@@ -29,7 +23,6 @@ def truthy(x):
     return bool(str(x).strip())
 
 def tokenize(text):
-    # pd.NA, None, 빈 문자열 모두 처리
     if text is None:
         return []
     try:
@@ -44,7 +37,6 @@ def tokenize(text):
     return [t for t in toks if t]
 
 def to_list(val):
-    # interests가 NA/None/문자열(JSON)/리스트 모두 안전 처리
     if val is None:
         return []
     try:
@@ -55,74 +47,69 @@ def to_list(val):
     if isinstance(val, (list, tuple)):
         return list(val)
     if isinstance(val, str):
-        val = val.strip()
-        if not val:
+        s = val.strip()
+        if not s:
             return []
         try:
-            parsed = json.loads(val)
+            parsed = json.loads(s)
             return parsed if isinstance(parsed, list) else []
         except Exception:
-            return [val]  # 그냥 단일 문자열로 취급
+            return [s]
     return []
 
 def main():
     ai = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
     df = pd.read_sql("SELECT user_id, skills, interests, position FROM raw_user_features", ai)
-
-    # 결측치 정리: pd.NA -> None 로 통일
     df = df.replace({pd.NA: None})
-    # (선택) 문자열 칼럼은 strip 적용을 원한다면:
     for col in ["skills", "position"]:
         if col in df.columns:
             df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
+    # u_idx == user_id mapping loaded
     u2i = load_json(MAPD / "users.json", {})
-    users_order = sorted(u2i.items(), key=lambda x: x[1])  # (uid, idx) by idx
+    if not u2i:
+        raise RuntimeError("users.json is empty. Run mapping generation first.")
 
-    # vocab 수집
+    # Build vocab from user features
     vocab = {}
     def add_tok(tok: str):
         if tok and tok not in vocab:
             vocab[tok] = len(vocab)
 
-    # dtype 보정
-    if "skills" in df.columns:
-        df["skills"] = df["skills"].astype("string").where(df["skills"].notna(), None)
-    if "position" in df.columns:
-        df["position"] = df["position"].astype("string").where(df["position"].notna(), None)
-
-    # 사전화: Series → dict 로 바꿔 Truthiness 문제 제거
     by_uid = {}
     for _, row in df.iterrows():
         uid = int(row["user_id"])
-        by_uid[uid] = {
-            "skills": row.get("skills"),
-            "interests": row.get("interests"),
-            "position": row.get("position"),
-        }
-        # vocab 업데이트
-        for t in tokenize(row.get("skills")): add_tok(t)
-        for t in [str(x).lower() for x in to_list(row.get("interests"))]: add_tok(t)
-        pos = row.get("position")
-        if truthy(pos):
-            add_tok(str(pos).strip().lower())
-
-    if not vocab:
-        vocab["__none__"] = 0
-
-    U = np.zeros((len(u2i), len(vocab)), dtype=np.float32)
-
-    for uid, idx in users_order:
-        uid = int(uid)
-        row = by_uid.get(uid)
-        if row is None:
-            continue  # ← 여기! Series가 아니니 안전
         toks = []
         toks += tokenize(row.get("skills"))
         toks += [str(x).lower() for x in to_list(row.get("interests"))]
         pos = row.get("position")
         if truthy(pos):
             toks.append(str(pos).strip().lower())
+        by_uid[uid] = toks
+        for t in toks:
+            add_tok(t)
+
+    if not vocab:
+        vocab["__none__"] = 0
+
+    # Allocate rows by max u_idx + 1 to satisfy identity indexing
+    idx_values = [int(v) for v in u2i.values()]
+    max_idx = max(idx_values) if idx_values else -1
+    rows = (max_idx + 1) if max_idx >= 0 else 0
+    U = np.zeros((rows, len(vocab)), dtype=np.float32)
+
+    # Fill using identity index
+    for uid_str, idx in u2i.items():
+        idx = int(idx)
+        uid = int(uid_str)
+        toks = by_uid.get(uid, [])
+        if idx >= rows:
+            # safety, should not happen due to rows=max_idx+1
+            continue
+        for t in toks:
+            j = vocab.get(t)
+            if j is not None:
+                U[idx, j] = 1.0
 
     ensure_dir(NPY)
     np.save(NPY, U)
