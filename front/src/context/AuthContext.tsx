@@ -1,6 +1,7 @@
 // context/AuthContext.tsx
 import React, { createContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { ensureNicknameInStorage } from "../utils/profile"; // 네 함수 경로
+import { clearAllUserData } from "../utils/tokenStorage";
 // 토큰 저장/조회 유틸이 따로 있으면 써도 OK
 
 type AuthContextType = {
@@ -10,6 +11,7 @@ type AuthContextType = {
     login: (hintEmail?: string) => Promise<void>; // 로그인 직후 호출
     logout: () => void;
     refreshProfile: () => Promise<void>;          // 앱 부팅/프로필 저장 후 호출
+    clearState: () => void;                       // 즉시 상태 초기화 (깜빡임 방지)
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -19,6 +21,7 @@ export const AuthContext = createContext<AuthContextType>({
     login: async () => {},
     logout: () => {},
     refreshProfile: async () => {},
+    clearState: () => {},
 });
 
 interface Props { children: ReactNode }
@@ -75,29 +78,24 @@ export const AuthProvider = ({ children }: Props) => {
     };
 
     const logout = () => {
+        // ✅ React 상태 초기화
         setIsLoggedIn(false);
         setEmail(null);
         setNickname(null);
 
-        localStorage.removeItem("accessToken");
-        sessionStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        sessionStorage.removeItem("refreshToken");
+        // ✅ 모든 사용자 데이터 완전 삭제
+        clearAllUserData();
+    };
 
-        localStorage.removeItem("userEmail");
-        sessionStorage.removeItem("userEmail");
-        localStorage.removeItem("userNickname");
-        sessionStorage.removeItem("userNickname");
-        localStorage.removeItem("userUsername");
-        sessionStorage.removeItem("userUsername");
-        localStorage.removeItem("userProfileName");
-        sessionStorage.removeItem("userProfileName");
-        localStorage.removeItem("userId");
-        sessionStorage.removeItem("userId");
+    const clearState = () => {
+        // ✅ 즉시 React 상태만 초기화 (스토리지는 삭제하지 않음)
+        setIsLoggedIn(false);
+        setEmail(null);
+        setNickname(null);
     };
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, email, nickname, login, logout, refreshProfile }}>
+        <AuthContext.Provider value={{ isLoggedIn, email, nickname, login, logout, refreshProfile, clearState }}>
             {children}
         </AuthContext.Provider>
     );

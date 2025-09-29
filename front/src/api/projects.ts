@@ -36,7 +36,7 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
   // 기본값 설정
   const {
     page = 0,
-    size = 20,
+    size = 20, // ✅ 사이즈를 20으로 변경
     q,
     followingOnly,
     uploadedWithin,

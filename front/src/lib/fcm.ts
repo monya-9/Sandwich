@@ -17,7 +17,6 @@ const VAPID_KEY =
     "BPfv2mducX32XZ2U3xb_DSkGCY_TRU-SwHpmRjTn43NjA1CRmhU6lKNpPWG5XbMdX5XeaxjgKEQUjTllnNake4E";
 
 let cachedFcmToken: string | null = null;
-let isTokenRegistered = false; // 중복 등록 방지
 
 async function registerWebPush(token: string, accessToken: string) {
     try {
@@ -122,8 +121,11 @@ export async function initFCM() {
             const url = (() => {
                 const raw = d.deepLink || (d.roomId ? `/messages/${d.roomId}` : "/");
                 try {
-                    return new URL(raw, window.location.origin).toString();
-                } catch {
+                    // ✅ 현재 페이지의 전체 URL을 사용하여 포트 번호 포함
+                    const currentOrigin = window.location.protocol + '//' + window.location.host;
+                    return new URL(raw, currentOrigin).toString();
+                } catch (error) {
+                    console.warn('[FCM] URL generation failed:', error);
                     return raw;
                 }
             })();
@@ -132,10 +134,7 @@ export async function initFCM() {
                 body: d.body || d.preview || "메시지가 도착했어요",
                 data: { url, raw: d },
                 icon: d.icon || "/logo192.png",
-                image: d.image,
                 tag: notificationTag, // 고유 태그로 중복 방지
-                renotify: true,
-                timestamp: Date.now(),
                 silent: false,
             });
         });
