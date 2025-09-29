@@ -56,10 +56,10 @@ const MainPage = () => {
     setRecoError(null);
     fetchUserRecommendations(userId)
       .then(async (items) => {
-        const top10 = [...items].sort((a, b) => b.score - a.score).slice(0, 10);
+        const sortedByScore = [...items].sort((a, b) => b.score - a.score);
         const feed = await fetchProjectFeed({ page: 0, size: 500, sort: 'latest' });
         const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
-        const mapped: Project[] = top10.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
+        const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
         setRecoProjects(mapped);
         if (cacheKey) {
           try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); } catch {}
@@ -134,8 +134,12 @@ const MainPage = () => {
   const hasReco = isLoggedIn && !!(recoProjects && recoProjects.length > 0);
   // 렌더 소스 선택: 추천이 준비되기 전에는 기존 리스트를 그대로 노출
   const gridPrimary = hasReco ? recoProjects!.slice(0, 10) : sortedProjects.slice(0, 10);
-  const heroProjects = (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
-  const gridMore = hasReco ? (recoProjects!.slice(10)) : sortedProjects.slice(10);
+  const heroProjects = hasReco
+    ? recoProjects!.slice(0, 7)
+    : (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
+  const gridMore = hasReco
+    ? (recoProjects!.length > 10 ? recoProjects!.slice(10) : sortedProjects.slice(10))
+    : sortedProjects.slice(10);
 
   // 그리드 제목: 로그인 시에는 항상 AI 추천으로 표기, 비로그인은 기존 카테고리 제목
   const gridTitle = isLoggedIn ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
@@ -170,7 +174,7 @@ const MainPage = () => {
         <MainDeveloperHighlight projects={hasReco ? (recoProjects || []) : sortedProjects} />
 
         {gridMore.length > 0 && (
-          <MainProjectGrid title="계속해서 프로젝트를 살펴보세요!" projects={gridMore} />
+          <MainProjectGrid title={isLoggedIn ? 'AI 추천 프로젝트 계속 보기' : '계속해서 프로젝트를 살펴보세요!'} projects={gridMore} />
         )}
 
         {isSortModalOpen && (

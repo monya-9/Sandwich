@@ -161,7 +161,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       onTitleChange?.(initialDetail.title || "");
       onSummaryChange?.(initialDetail.summary || initialDetail.description || "");
       const toolsCsv = initialDetail.tools || "";
-      const arr = String(toolsCsv).split(",").map((s: string) => s.trim()).filter(Boolean).slice(0, 2);
+      const arr = String(toolsCsv).split(",").map((s: string) => s.trim()).filter(Boolean);
       setTools(arr);
       onCategoriesChange?.(arr);
       if (initialDetail.startYear) setStartYear(Number(initialDetail.startYear));
@@ -200,6 +200,8 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   );
 
   const months: string[] = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
+  const currentYear = new Date().getFullYear();
+  const years: number[] = Array.from({ length: 51 }, (_, i) => currentYear - i);
   // 추가: 기술 스택 옵션 및 토글 헬퍼
   const toolOptions: string[] = [
     "JavaScript","Python","Java","C / C ++","C#","Android","iOS","Docker",
@@ -211,10 +213,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     setTools(prev => {
       const has = prev.includes(name);
       if (has) return prev.filter(t => t !== name);
-      if (prev.length >= 2) {
-        setErrorToast({ visible: true, message: "카테고리는 최대 2개까지 선택할 수 있습니다." });
-        return prev;
-      }
       return [...prev, name];
     });
   };
@@ -473,11 +471,18 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 mb-3">프로젝트 진행 기간</div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <input className="border border-[#ADADAD] rounded px-4 h-12 w-32 text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="시작년도" value={startYear} onChange={e=>setStartYear(e.target.value === '' ? '' : Number(e.target.value))} />
+                                     <select className="border border-[#ADADAD] rounded h-12 px-3 w-40 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={startYear === '' ? '' : Number(startYear)} onChange={e=>setStartYear(e.target.value === '' ? '' : Number(e.target.value))}>
+                     <option value="">년도</option>
+                     {years.map(y => <option key={y} value={y}>{y}</option>)}
+                   </select>
                   <select className="border border-[#ADADAD] rounded h-12 px-3 w-20 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={startMonth} onChange={e=>setStartMonth(e.target.value)}>
                     {months.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
-                  <input className="border border-[#ADADAD] rounded px-4 h-12 w-32 text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="종료년도" value={endYear} onChange={e=>setEndYear(e.target.value === '' ? '' : Number(e.target.value))} />
+                  <span className="text-gray-400">-</span>
+                  <select className="border border-[#ADADAD] rounded h-12 px-3 w-40 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={endYear === '' ? '' : Number(endYear)} onChange={e=>setEndYear(e.target.value === '' ? '' : Number(e.target.value))}>
+                    <option value="">년도</option>
+                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
                   <select className="border border-[#ADADAD] rounded h-12 px-3 w-20 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={endMonth} onChange={e=>setEndMonth(e.target.value)}>
                     {months.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -493,8 +498,15 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                     <input type="checkbox" className="scale-110 accent-black" checked={isTeam} onChange={(e)=>setIsTeam(e.target.checked)} /> 팀 프로젝트
                   </label>
                   <div className="flex items-center gap-3">
-                    <span className="text-gray-900">팀원 구성원 수</span>
-                    <select className="border border-[#ADADAD] rounded h-12 px-3 w-24 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={teamSize === '' ? '01' : String(teamSize).padStart(2,'0')} onChange={e=>setTeamSize(Number(e.target.value))}>
+                    <span className={isTeam ? "text-gray-900" : "text-gray-400"}>팀원 구성원 수</span>
+                    <select
+                      className={`border border-[#ADADAD] rounded h-12 px-3 w-24 text-[16px] focus:outline-none ${isTeam ? 'focus:ring-2 focus:ring-black/15 focus:border-black bg-white' : 'bg-[#F3F4F6] text-gray-400 cursor-not-allowed opacity-70'}`}
+                      value={teamSize === '' ? '01' : String(teamSize).padStart(2,'0')}
+                      onChange={e=>setTeamSize(Number(e.target.value))}
+                      disabled={!isTeam}
+                      aria-disabled={!isTeam}
+                      title={isTeam ? '팀원 수를 선택하세요' : '팀 프로젝트를 선택하면 설정할 수 있어요'}
+                    >
                       {Array.from({length:20},(_,i)=>String(i+1).padStart(2,'0')).map(n=> <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>

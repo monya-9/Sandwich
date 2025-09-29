@@ -145,7 +145,7 @@ export default function OtherProjectPage() {
 
     const headerCategories = useMemo(() => {
         const toolsCsv = projectDetail?.tools || "";
-        return toolsCsv.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 2);
+        return toolsCsv.split(",").map((s) => s.trim()).filter(Boolean);
     }, [projectDetail?.tools]);
 
     const headerDate = useMemo(() => {
