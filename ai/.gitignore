@@ -4,3 +4,11 @@
 .venv
 ./nginx_secrets/ai_api_key.conf
 .data/apps
+cloudflared
+.wrangler
+wrangler.toml
+.env.local
+nginx
+.dev.vars
+logs
+node_modules

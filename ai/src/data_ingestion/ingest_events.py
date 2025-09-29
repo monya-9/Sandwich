@@ -58,45 +58,39 @@ def main():
             if stmt.strip():
                 conn.execute(text(stmt))
 
-    # === 데이터 적재 시작 ===
+    # === 데이터 적재 ===
     with ai.begin() as aconn, hp.begin() as hconn:
-        # 1) likes (프로젝트당 유저 1 like 기준: DISTINCT user_id 집계는 나중 창 집계 단계에서 반영)
         like_rows = hconn.execute(text("""
             SELECT l.id, l.user_id, l.target_id AS project_id, l.created_at
             FROM likes l
             WHERE l.target_type='PROJECT'
               AND l.user_id IS NOT NULL
         """)).fetchall()
-        payload = [
+        _batch_insert(aconn, SQL_INS_LIKES, [
             {"id": r.id, "uid": r.user_id, "pid": r.project_id, "ts": r.created_at}
             for r in like_rows
-        ]
-        _batch_insert(aconn, SQL_INS_LIKES, payload)
+        ])
 
-        # 2) comments (여러 개 허용 → 개수 그대로 저장)
         comment_rows = hconn.execute(text("""
             SELECT c.id, c.user_id, c.commentable_id AS project_id, c.created_at
             FROM comment c
             WHERE c.commentable_type='PROJECT'
         """)).fetchall()
-        payload = [
+        _batch_insert(aconn, SQL_INS_COMMENTS, [
             {"id": r.id, "uid": r.user_id, "pid": r.project_id, "ts": r.created_at}
             for r in comment_rows
-        ]
-        _batch_insert(aconn, SQL_INS_COMMENTS, payload)
+        ])
 
-        # 3) views (유저별 최근 본 시각+count 스냅샷 보관)
         view_rows = hconn.execute(text("""
             SELECT v.id, v.viewer_id, v.project_id, v.viewed_at, v.count
             FROM project_views v
         """)).fetchall()
-        payload = [
+        _batch_insert(aconn, SQL_INS_VIEWS, [
             {"id": r.id, "vid": r.viewer_id, "pid": r.project_id, "ts": r.viewed_at, "cnt": r.count}
             for r in view_rows
-        ]
-        _batch_insert(aconn, SQL_INS_VIEWS, payload)
+        ])
 
-    print("✅ events_* ingested into AI DB (read-only from homepage DB).")
+    print("events_* ingested.")
 
 if __name__ == "__main__":
     main()

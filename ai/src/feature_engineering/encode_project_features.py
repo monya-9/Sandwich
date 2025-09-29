@@ -15,7 +15,6 @@ NPY  = DATA / "project_tools.npy"
 VOC  = DATA / "item_vocab.json"
 
 def tokenize(text):
-    # pd.NA / None / 공백 문자열 모두 안전 처리
     if text is None:
         return []
     try:
@@ -30,7 +29,6 @@ def tokenize(text):
     return [t for t in toks if t]
 
 def to_list(val):
-    # JSON 문자열 또는 리스트/튜플/단일 문자열 모두 처리
     if val is None:
         return []
     try:
@@ -54,33 +52,24 @@ def to_list(val):
 def main():
     ai = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
     df = pd.read_sql("SELECT project_id, tools, hashtags FROM raw_project_features", ai)
-
-    # 결측/문자열 정리
     df = df.replace({pd.NA: None})
     if "tools" in df.columns:
         df["tools"] = df["tools"].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
-    # 인덱스 매핑 로드
     p2i = load_json(MAPD / "projects.json", {})
-    projs_order = sorted(p2i.items(), key=lambda x: x[1])  # (project_id, idx) by idx
+    projs_order = sorted(p2i.items(), key=lambda x: int(x[1]))  # (project_id, idx)
 
-    # vocab 수집
     vocab = {}
     def add_tok(tok: str):
         if tok and tok not in vocab:
             vocab[tok] = len(vocab)
 
-    # Series → dict 캐시로 변환(Truthiness 문제 제거)
     by_pid = {}
     for _, row in df.iterrows():
         pid = int(row["project_id"])
         tools = row.get("tools")
         hashtags = row.get("hashtags")
-        by_pid[pid] = {
-            "tools": tools,
-            "hashtags": hashtags,
-        }
-        # vocab 업데이트
+        by_pid[pid] = {"tools": tools, "hashtags": hashtags}
         for t in tokenize(tools): add_tok(t)
         for h in [str(x).lower() for x in to_list(hashtags)]: add_tok(h)
 
@@ -90,7 +79,7 @@ def main():
     I = np.zeros((len(p2i), len(vocab)), dtype=np.float32)
 
     for pid, idx in projs_order:
-        pid = int(pid)
+        pid = int(pid); idx = int(idx)
         row = by_pid.get(pid)
         if row is None:
             continue
