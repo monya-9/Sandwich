@@ -101,7 +101,17 @@ export default function CollectionPickerModal({ open, onClose, projectId, initia
     });
   };
 
-  const canSave = selectedIds.size > 0 && !!projectId && !saving;
+  // 변경 여부가 있는지 판단 (추가 또는 제거 모두 포함)
+  const hasChanges = (() => {
+    const orig = new Set(initialSelectedIds);
+    // 크기만으로도 변화 감지 가능 (모두 해제 등)
+    if (orig.size !== selectedIds.size) return true;
+    // 원래 없던 선택이 생겼거나, 원래 있던 선택이 사라진 경우
+    for (const id of Array.from(selectedIds)) if (!orig.has(id)) return true;
+    for (const id of initialSelectedIds) if (!selectedIds.has(id)) return true;
+    return false;
+  })();
+  const canSave = !!projectId && !saving && hasChanges;
 
   const performSave = async () => {
     if (!projectId || saving) return;

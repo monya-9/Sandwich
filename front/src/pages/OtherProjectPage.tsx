@@ -62,6 +62,9 @@ export default function OtherProjectPage() {
     const [ownerProfile, setOwnerProfile] = useState<{ id: number; nickname?: string; email?: string; profileImage?: string | null }>(() => ({ id: ownerId || 0 }));
     const [contents, setContents] = useState<ProjectContentResponseItem[]>([]);
     const [initialFollow, setInitialFollow] = useState<boolean | undefined>(undefined);
+    // 카운트 상태 (뷰는 API가 별도 없으므로 일단 0 유지)
+    const [likesCount, setLikesCount] = useState(0);
+    const [commentsCount, setCommentsCount] = useState(0);
 
     useEffect(() => {
         if (ownerId && projectId) {
@@ -69,6 +72,35 @@ export default function OtherProjectPage() {
             fetchProjectContents(ownerId, projectId).then(setContents).catch(() => setContents([]));
         }
     }, [ownerId, projectId]);
+
+    // 좋아요 카운트 불러오기
+    useEffect(() => {
+        if (!projectId) return;
+        (async () => {
+            try {
+                const res = await api.get(`/likes`, { params: { targetType: "PROJECT", targetId: projectId } });
+                setLikesCount(res.data?.likeCount || 0);
+            } catch {
+                setLikesCount(0);
+            }
+        })();
+    }, [projectId]);
+
+    // 댓글 카운트 불러오기 (username 필요)
+    useEffect(() => {
+        if (!ownerProfile?.nickname || !projectId) return;
+        (async () => {
+            try {
+                const { fetchComments } = await import("../api/commentApi");
+                const res = await fetchComments(ownerProfile.nickname as string, projectId);
+                const list: any[] = res?.data || [];
+                const total = list.reduce((acc, c) => acc + 1 + ((c?.subComments?.length as number) || 0), 0);
+                setCommentsCount(total);
+            } catch {
+                setCommentsCount(0);
+            }
+        })();
+    }, [ownerProfile?.nickname, projectId]);
 
     useEffect(() => {
         // 1) 즉시 스토리지에서 me.id를 읽어 초기 렌더에 소유자 버튼을 최대한 빨리 노출
@@ -317,7 +349,7 @@ export default function OtherProjectPage() {
                                 </div>
                                 <TagList tags={headerCategories} />
                                 <div className="mb-8">
-                                    <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
+                                    <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
                                 </div>
                                 <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                             </section>
@@ -359,7 +391,7 @@ export default function OtherProjectPage() {
                             </div>
                             <TagList tags={headerCategories} />
                             <div className="mb-8">
-                                <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
+                                <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
                             </div>
                             <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                         </section>
