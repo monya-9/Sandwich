@@ -349,7 +349,7 @@ export default function OtherProjectPage() {
                                 </div>
                                 <TagList tags={headerCategories} />
                                 <div className="mb-8">
-                                    <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
+                                    <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} projectId={project.id} />
                                 </div>
                                 <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                             </section>
@@ -391,7 +391,7 @@ export default function OtherProjectPage() {
                             </div>
                             <TagList tags={headerCategories} />
                             <div className="mb-8">
-                                <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} />
+                                <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} projectId={project.id} />
                             </div>
                             <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                         </section>

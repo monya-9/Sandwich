@@ -42,14 +42,26 @@ export default function CollectionAction({ projectId }: { projectId?: number } =
     loadMembership();
   }, [projectId]);
 
-  const handleClick = () => {
+  const openPickerWithAuth = () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) {
       setShowLoginPrompt(true);
-      return;
+      return false;
     }
     setOpenPicker(true);
+    return true;
   };
+
+  const handleClick = () => {
+    openPickerWithAuth();
+  };
+
+  // 외부에서 모달 열기 이벤트 처리
+  useEffect(() => {
+    const onOpen = () => { openPickerWithAuth(); };
+    window.addEventListener("collection:open", onOpen as any);
+    return () => window.removeEventListener("collection:open", onOpen as any);
+  }, []);
 
   return (
     <div className="relative">
@@ -74,7 +86,7 @@ export default function CollectionAction({ projectId }: { projectId?: number } =
         <div className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 ${hasCollected ? "bg-[#068334] text-white" : "bg-white"}`}>
           <FaFolderMinus className="w-6 h-6" />
         </div>
-        		<span className={`text-xs font-semibold text-center ${hasCollected ? "text-white/90" : "text-white"}`}>컬렉션</span>
+        <span className={`text-xs font-semibold text-center ${hasCollected ? "text-white/90" : "text-white"}`}>컬렉션</span>
       </button>
     </div>
   );
