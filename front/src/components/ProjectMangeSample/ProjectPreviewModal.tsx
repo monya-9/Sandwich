@@ -269,7 +269,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "í”„ë
 								/>
 							</div>
 							<div className="px-8">
-                        <UserProfileBox userName={finalOwnerName} email={storedEmail} />
+                        <UserProfileBox userName={finalOwnerName} email={storedEmail} isOwner={true} />
 							</div>
 						</div>
 

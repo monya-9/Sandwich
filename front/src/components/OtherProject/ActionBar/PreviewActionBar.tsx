@@ -43,7 +43,7 @@ export default function PreviewActionBar({ onCommentClick, project }: PreviewAct
 
 	const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
 	const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
-	const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl);
+	const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl) || (typeof window !== "undefined" ? window.location.href : "#");
 
 	return (
 		<aside className="flex flex-col items-center gap-4">

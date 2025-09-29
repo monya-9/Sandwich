@@ -1564,7 +1564,7 @@ export default function ProjectMangeSampleForm() {
                            shareUrl: previewUrl || undefined,
                            owner: { id: pathUserId, nickname: ownerNickname, email: ownerEmail, avatarUrl: null, username: ownerUsername },
                            authorId: pathUserId,
-                           categories: Array.isArray(previewCategories) ? previewCategories.slice(0, 2) : [],
+                           categories: Array.isArray(previewCategories) ? previewCategories : [],
                            uploadDate: new Date().toISOString(),
                         };
                         const nextItems = (() => {
@@ -1586,7 +1586,7 @@ export default function ProjectMangeSampleForm() {
                            projectId: createdProjectId,
                            project: {
                               title: previewTitle || '새 프로젝트',
-                              tools: (Array.isArray(previewCategories) ? previewCategories.slice(0, 2).join(',') : ''),
+                              tools: (Array.isArray(previewCategories) ? previewCategories.join(',') : ''),
                               coverUrl: (previewCoverUrl || null),
                               shareUrl: previewUrl || undefined,
                               description: getEditorHtml(),
@@ -1617,7 +1617,7 @@ export default function ProjectMangeSampleForm() {
                onClose={() => setIsPreviewOpen(false)}
                projectName={previewTitle}
                summary={previewSummary}
-               category={(previewCategories[0] && previewCategories[1]) ? `${previewCategories[0]} / ${previewCategories[1]}` : (previewCategories[0] || "")}
+               category={Array.isArray(previewCategories) ? previewCategories.filter(Boolean).join(' / ') : ''}
                coverUrl={previewCoverUrl}
                backgroundColor={backgroundColor}
                contentGapPx={contentGapPx}

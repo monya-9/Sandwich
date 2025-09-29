@@ -425,7 +425,7 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
         </div>
         <div className="p-5 space-y-6">
           <div>
-            <div className="text-sm mb-2">1. 정사각형 커버를 지정해주세요.</div>
+            <div className="text-sm mb-2">정사각형 커버를 지정해주세요.</div>
             <div className="relative bg-white rounded-none border border-[#E5E7EB] overflow-hidden" style={{ width: stage.w, height: stage.h }}>
               {img && (
                 <img src={img.src} alt="source1" draggable={false} className="select-none" style={{ position:'absolute', left: offset.x, top: offset.y, width: imgW, height: imgH }} />
@@ -435,19 +435,6 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
               </div>
             </div>
           </div>
-          <div className="h-px bg-gray-200" />
-          <div>
-            <div className="text-sm mb-2">2. 직사각형 커버를 지정해주세요.</div>
-            <div className="relative bg-white rounded-none border border-[#E5E7EB] overflow-hidden" style={{ width: stage.w, height: stage.h }}>
-              {img && (
-                <img src={img.src} alt="source2" draggable={false} className="select-none" style={{ position:'absolute', left: offset.x, top: offset.y, width: imgW, height: imgH }} />
-              )}
-              <div className={`absolute border-2 ${activeCrop==='rect' ? 'border-[#00C2A8]' : 'border-white'} shadow-[0_0_0_20000px_rgba(0,0,0,0.35)] box-border`} style={{ left: boxRect.x, top: boxRect.y, width: boxRect.w, height: boxRect.h, cursor:'move' }} onMouseDown={handleDownRect}>
-                {renderHandles(onDownRect)}
-              </div>
-            </div>
-          </div>
-          <div className="h-px bg-gray-200" />
         </div>
         <div className="px-5 py-3 border-t flex justify-end gap-2">
           <button type="button" className="h-10 px-4 border rounded" onClick={onClose}>취소</button>

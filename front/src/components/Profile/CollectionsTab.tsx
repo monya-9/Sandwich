@@ -202,6 +202,13 @@ const CollectionsTab: React.FC = () => {
 													<img src={coversByFolderId[f.id][3]} alt="thumb4" className="w-full h-full object-cover" />
 												</div>
 											)}
+											{/* 중앙 구분선 */}
+											{(coversByFolderId[f.id]?.length ?? 0) > 0 && (
+												<>
+													<div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 w-[2px] h-full bg-white/90" />
+													<div className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-white/90" />
+												</>
+											)}
 										</div>
 									</div>
 									{/* 하단 그라데이션 오버레이 */}
