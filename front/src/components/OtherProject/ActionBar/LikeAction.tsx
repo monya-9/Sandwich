@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FaHeart } from "react-icons/fa";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 import LikedUsersModal from "./LikedUsersModal";
 import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
@@ -31,14 +31,8 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   useEffect(() => {
     const fetchLike = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        
-        const res = await axios.get(`/api/likes`, {
+        const res = await api.get(`/likes`, {
           params: { targetType, targetId },
-          withCredentials: true,
-          headers: token ? {
-            Authorization: `Bearer ${token}`,
-          } : {},
         });
         setLiked(res.data.likedByMe || false);
         setCount(res.data.likeCount || 0);
@@ -67,15 +61,9 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
         return;
       }
 
-      const res = await axios.post(
-        "/api/likes",
-        { targetType, targetId },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await api.post(
+        "/likes",
+        { targetType, targetId }
       );
       setLiked(res.data.likedByMe);
       setCount(res.data.likeCount);

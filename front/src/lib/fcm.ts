@@ -120,10 +120,19 @@ export async function initFCM() {
             
             const url = (() => {
                 const raw = d.deepLink || (d.roomId ? `/messages/${d.roomId}` : "/");
+                console.log('[FCM][DEBUG] raw deepLink:', raw);
                 try {
-                    // ✅ 현재 페이지의 전체 URL을 사용하여 포트 번호 포함
-                    const currentOrigin = window.location.protocol + '//' + window.location.host;
-                    return new URL(raw, currentOrigin).toString();
+                    // 절대 URL인 경우 그대로 사용, 상대 URL인 경우만 현재 origin과 조합
+                    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+                        console.log('[FCM][DEBUG] absolute URL, using as-is:', raw);
+                        return raw; // 절대 URL은 그대로 사용
+                    } else {
+                        // 상대 URL인 경우에만 현재 origin과 조합
+                        const currentOrigin = window.location.protocol + '//' + window.location.host;
+                        const result = new URL(raw, currentOrigin).toString();
+                        console.log('[FCM][DEBUG] relative URL, combining with origin:', currentOrigin, '->', result);
+                        return result;
+                    }
                 } catch (error) {
                     console.warn('[FCM] URL generation failed:', error);
                     return raw;

@@ -134,20 +134,17 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     loadProjects(clearedFilters);
   }, [loadProjects]);
 
-  // 초기 검색어 처리 및 초기 로딩 (한 번만 실행)
+  // 초기 검색어 처리 및 초기 로딩
   useEffect(() => {
-    if (hasInitialized.current) return; // 이미 초기화되었으면 무시
-    
-    hasInitialized.current = true;
-    
     if (initialSearchTerm && initialSearchTerm.trim()) {
       // 초기 검색어가 있으면 검색 실행
-      const searchParams = { page: 0, size: 20, q: initialSearchTerm }; // ✅ size를 20으로 변경
-      loadProjects(searchParams); // ✅ loadProjects만 호출
-    } else {
-      // 초기 검색어가 없으면 전체 프로젝트 로드
-      const defaultParams = { page: 0, size: 20 }; // ✅ size를 20으로 변경
-      loadProjects(defaultParams); // ✅ loadProjects만 호출
+      const searchParams = { page: 0, size: 20, q: initialSearchTerm };
+      loadProjects(searchParams);
+    } else if (!hasInitialized.current) {
+      // 초기 검색어가 없고 아직 초기화되지 않았으면 전체 프로젝트 로드
+      hasInitialized.current = true;
+      const defaultParams = { page: 0, size: 20 };
+      loadProjects(defaultParams);
     }
   }, [initialSearchTerm, loadProjects]);
 

@@ -15,8 +15,12 @@ const ProjectFeedPage: React.FC = () => {
   // 검색 타입 변경 핸들러
   const handleSearchTypeChange = (type: 'PORTFOLIO' | 'ACCOUNT') => {
     setSearchType(type);
-    // 검색 타입 변경 시 URL에서 검색어와 페이지 제거
-    window.history.pushState({}, '', '/search');
+    // 검색 타입 변경 시 해당 라우트로 이동
+    if (type === 'ACCOUNT') {
+      window.location.href = '/search/accounts';
+    } else {
+      window.location.href = '/search';
+    }
   };
 
   return (

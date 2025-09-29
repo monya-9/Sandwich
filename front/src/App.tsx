@@ -46,6 +46,7 @@ import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
+import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
 import PublicCollectionDetailPage from "./pages/PublicCollectionDetailPage";
@@ -97,6 +98,7 @@ function App() {
                                 <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
                                 <Route path="l/:ownerId/:projectId" element={<ProjectDetailLightboxPage />} />
                                 <Route path="search" element={<ProjectFeedPage />} />
+                                <Route path="search/accounts" element={<AccountSearchPage />} />
                                 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
