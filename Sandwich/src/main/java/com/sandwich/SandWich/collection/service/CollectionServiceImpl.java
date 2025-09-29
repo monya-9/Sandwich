@@ -153,7 +153,8 @@ public class CollectionServiceImpl implements CollectionService {
                             p.getCoverUrl(),
                             likeCount,
                             p.getViewCount().intValue(),
-                            commentCount
+                            commentCount,
+                            (p.getUser() != null ? p.getUser().getId() : null)
                     );
                 }).collect(Collectors.toList());
 

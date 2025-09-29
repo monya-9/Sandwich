@@ -79,7 +79,7 @@ export default function PublicCollectionsGrid() {
   return (
     <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {folders.map((f) => (
-        <div key={f.id} className="relative rounded-xl border border-[#E5E7EB] overflow-hidden cursor-pointer group bg-white" onClick={() => navigate(`/collections/${f.id}`)}>
+        <div key={f.id} className="relative rounded-xl border border-[#E5E7EB] overflow-hidden cursor-pointer group bg-white" onClick={() => navigate(`/users/${userId}/collections/${f.id}`)}>
           <div className="relative w-full aspect-[4/3] bg-gray-200">
             <div className="absolute inset-0">
               {coversById[f.id]?.[0] && (
