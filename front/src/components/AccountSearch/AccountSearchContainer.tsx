@@ -40,7 +40,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
   const handleSearch = useCallback(async (term: string) => {
     originalHandleSearch(term);
     
-    // URL 업데이트
+    // URL 업데이트 (계정 검색 전용 라우트)
     if (term.trim()) {
       setSearchParams({ q: term });
     } else {
