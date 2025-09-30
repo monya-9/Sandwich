@@ -45,7 +45,6 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     fetchLike();
   }, [targetType, targetId]);
 
-
   const handleLike = async () => {
     if (!isLoggedIn) {
       setShowLoginPrompt(true);
@@ -83,6 +82,21 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     }
   };
 
+  // 외부에서 트리거되는 좋아요 토글 이벤트 처리
+  useEffect(() => {
+    const onToggle = (e: any) => {
+      try {
+        const detail = e?.detail || {};
+        const typeMatches = !detail?.targetType || detail.targetType === targetType;
+        const idMatches = !detail?.targetId || detail.targetId === targetId;
+        if (typeMatches && idMatches) {
+          handleLike();
+        }
+      } catch {}
+    };
+    window.addEventListener("like:toggle", onToggle as any);
+    return () => window.removeEventListener("like:toggle", onToggle as any);
+  }, [targetType, targetId, isLoggedIn, loading]);
 
   return (
     <>
@@ -140,18 +154,18 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
                   ${liked ? "text-white" : "text-gray-800"}`}
             />
           </div>
-          		  <span
-						className="text-xs text-white font-semibold text-center"
-						onClick={(e) => {
-							if (count > 0) {
-								e.stopPropagation();
-								setShowLikedUsers(true);
-							}
-						}}
-						style={{ cursor: count > 0 ? "pointer" : "default" }}
-					  >
-						{count > 0 ? count : "좋아요"}
-					  </span>
+          <span
+            className="text-xs text-white font-semibold text-center"
+            onClick={(e) => {
+              if (count > 0) {
+                e.stopPropagation();
+                setShowLikedUsers(true);
+              }
+            }}
+            style={{ cursor: count > 0 ? "pointer" : "default" }}
+          >
+            {count > 0 ? count : "좋아요"}
+          </span>
         </button>
       </div>
     </>

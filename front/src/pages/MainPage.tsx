@@ -130,9 +130,11 @@ const MainPage = () => {
     return 0;
   });
 
-  // 추천 사용 조건: 로그인 + 추천 데이터가 준비된 경우에만 적용
-  const hasReco = isLoggedIn && !!(recoProjects && recoProjects.length > 0);
-  // 렌더 소스 선택: 추천이 준비되기 전에는 기존 리스트를 그대로 노출
+  // 정렬 옵션에 따라 AI 추천 적용 여부 결정
+  const useReco = isLoggedIn && selectedSort === '샌드위치 픽';
+  const hasReco = useReco && !!(recoProjects && recoProjects.length > 0);
+
+  // 렌더 소스 선택
   const gridPrimary = hasReco ? recoProjects!.slice(0, 10) : sortedProjects.slice(0, 10);
   const heroProjects = hasReco
     ? recoProjects!.slice(0, 7)
@@ -141,8 +143,8 @@ const MainPage = () => {
     ? (recoProjects!.length > 10 ? recoProjects!.slice(10) : sortedProjects.slice(10))
     : sortedProjects.slice(10);
 
-  // 그리드 제목: 로그인 시에는 항상 AI 추천으로 표기, 비로그인은 기존 카테고리 제목
-  const gridTitle = isLoggedIn ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+  // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
+  const gridTitle = useReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
 
   return (
     <div className="min-h-screen">
@@ -157,8 +159,8 @@ const MainPage = () => {
           />
         </div>
 
-        {/* 메인 그리드: 로그인 시 추천 준비 전에는 안내 문구, 준비되면 추천 노출 */}
-        {isLoggedIn ? (
+        {/* 메인 그리드 */}
+        {useReco ? (
           hasReco ? (
             <MainProjectGrid title={gridTitle} projects={gridPrimary} />
           ) : (
@@ -174,7 +176,7 @@ const MainPage = () => {
         <MainDeveloperHighlight projects={hasReco ? (recoProjects || []) : sortedProjects} />
 
         {gridMore.length > 0 && (
-          <MainProjectGrid title={isLoggedIn ? 'AI 추천 프로젝트 계속 보기' : '계속해서 프로젝트를 살펴보세요!'} projects={gridMore} />
+          <MainProjectGrid title={useReco ? 'AI 추천 프로젝트 계속 보기' : '계속해서 프로젝트를 살펴보세요!'} projects={gridMore} />
         )}
 
         {isSortModalOpen && (

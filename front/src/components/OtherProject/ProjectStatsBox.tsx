@@ -12,9 +12,11 @@ type Props = {
   category?: string;
   badge?: string;
   hasCollected?: boolean;
+  // 액션 타겟 지정용
+  projectId?: number;
 };
 
-export default function ProjectStatsBox({ likes, views, comments, projectName, date, category, badge, hasCollected = false, }: Props) {
+export default function ProjectStatsBox({ likes, views, comments, projectName, date, category, badge, hasCollected = false, projectId, }: Props) {
   const displayName = (projectName || "").trim();
   const hasCategory = !!(category && category.trim().length > 0);
   const [collected, setCollected] = useState<boolean>(hasCollected);
@@ -31,12 +33,19 @@ export default function ProjectStatsBox({ likes, views, comments, projectName, d
       window.dispatchEvent(new CustomEvent("collection:open"));
     } catch {}
   };
+
+  const toggleLike = () => {
+    try {
+      window.dispatchEvent(new CustomEvent("like:toggle", { detail: { targetType: "PROJECT", targetId: projectId } } as any));
+    } catch {}
+  };
+
   return (
     <div className="-mx-8 bg-black text-white w-auto mb-8">
       <div className="max-w-[1800px] mx-auto py-10 px-6 flex flex-col items-center">
         {/* 버튼 영역 (가로 넓은 타원형 + 세로정렬 아이콘/텍스트) */}
         <div className="flex justify-center gap-8 mb-8">
-          <button className="
+          <button onClick={toggleLike} className="
             flex flex-col items-center justify-center
             bg-[#ff668a] text-white
             w-[300px] py-7 rounded-full
@@ -50,7 +59,7 @@ export default function ProjectStatsBox({ likes, views, comments, projectName, d
             flex flex-col items-center justify-center
             w-[300px] py-7 rounded-full text-2xl font-bold shadow transition
             ${collected ? "bg-[#068334] text-white hover:bg-[#05702C]" : "bg-white border-2 border-black text-black hover:bg-gray-100"}
-          `}>
+         `}>
             <FaFolderMinus className="w-8 h-8 mb-2" />
             컬렉션 저장
           </button>

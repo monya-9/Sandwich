@@ -97,7 +97,7 @@ export default function ProjectDetailLightboxPage() {
                 <div className="ql-editor" dangerouslySetInnerHTML={{ __html: normalizedHtml }} />
               </div>
               <div className="mt-6">
-                <ProjectStatsBox likes={0} views={0} comments={0} projectName={projectDetail?.title || ""} date={new Date().toLocaleDateString()} category={projectDetail?.tools || ""} />
+                <ProjectStatsBox likes={0} views={0} comments={0} projectName={projectDetail?.title || ""} date={new Date().toLocaleDateString()} category={projectDetail?.tools || ""} projectId={projectId} />
               </div>
               {/* 작성자 하단 섹션 */}
               <div className="mt-12 border-t pt-8">
