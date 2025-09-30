@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -108,6 +109,7 @@ public class UserService {
                 .toList().size();
 
         return new UserProfileResponse(
+                user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 profile != null ? profile.getNickname()   : null,
@@ -317,6 +319,26 @@ public class UserService {
         }
     }
 
+    public PublicProfileResponse getPublicProfile(Long userId) {
+        var user = userRepository.findByIdWithDetails(userId)
+                .orElseThrow(UserNotFoundException::new);
 
+        String posName = (user.getUserPosition() != null && user.getUserPosition().getPosition() != null)
+                ? user.getUserPosition().getPosition().getName()
+                : null;
 
+        var interestNames = user.getInterests().stream()
+                .map(ui -> ui.getInterest() != null ? ui.getInterest().getName() : null)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return new PublicProfileResponse(
+                user.getId(),
+                user.getProfile() != null ? user.getProfile().getNickname() : null,
+                user.getUsername(),
+                user.getEmail(),
+                posName,
+                interestNames
+        );
+    }
 }

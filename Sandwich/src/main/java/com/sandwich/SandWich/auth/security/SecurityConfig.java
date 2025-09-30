@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/error", "/error/**").permitAll()
                         // 인증/문서/OAuth 콜백 등
                         // ===== 공개 라우트들 =====
                         .requestMatchers(
@@ -59,6 +60,13 @@ public class SecurityConfig {
                                 "/swagger-ui.html", "/webjars/**", "/api/upload/image",
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
+                        // 하네스/정적 html 허용
+                        .requestMatchers(
+                                "/", "/recaptcha-v2.html", "/recaptcha-v3.html", "/favicon.ico"
+                        ).permitAll()
+                        // 필요시 정적 폴더 패턴도 추가
+                        .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
@@ -70,9 +78,13 @@ public class SecurityConfig {
                         .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
                         .requestMatchers("/api/emojis/**").permitAll()
 
+                        // ===== 댓글 공개 GET =====
+                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
+
                         // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)
+                        .requestMatchers(HttpMethod.GET, "/api/projects/*/*/contents").permitAll() // 상세 콘텐츠 목록
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/author/**").permitAll()// 작성자 다른 작품(캐러셀)
 
                         // ===== 챌린지 공개 GET  =====
@@ -85,6 +97,19 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/*/following").permitAll()
                         .requestMatchers("/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+
+                        // 사용자 보안 세분화 =====
+                        // 1) 내 프로필은 반드시 인증
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        // 2) 개별 보호 엔드포인트는 계속 잠금 (GET이라도 잠금 유지)
+                        .requestMatchers(HttpMethod.GET, "/api/users/position").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/interests/**").authenticated()
+                        // 닉네임 중복 확인은 회원가입 단계에서 쓸 수 있게 공개해두는 게 일반적
+                        .requestMatchers(HttpMethod.GET, "/api/users/check-nickname").permitAll()
+                        // 3) 타인 공개 프로필: /api/users/{id} 만 열기
+                        //    Ant의 "/api/users/*"는 한 세그먼트만 매칭 → {id}에만 해당.
+                        //    위에서 /me/position/interests/** 를 먼저 선언해 잠가두었기 때문에 이 줄이 그들을 열어버리지 않음.
+                        .requestMatchers(HttpMethod.GET, "/api/users/*").permitAll()
 
                         // ===== 보호 구간 (여기부터 인증 필요) =====
                         .requestMatchers(HttpMethod.GET, "/api/users/*/project-views").hasAnyRole("USER","ADMIN","AI")
@@ -131,13 +156,14 @@ public class SecurityConfig {
         var failureHandler = oAuth2FailureHandlerProvider.getIfAvailable();
 
         if (repo != null && userService != null && successHandler != null && failureHandler != null) {
-            http.oauth2Login(oauth -> oauth
-                    .authorizationEndpoint(endpoint -> endpoint.baseUri("/oauth2/authorization"))
-                    .userInfoEndpoint(userInfo -> userInfo.userService(userService))
-                    .successHandler(successHandler)
-                    .failureHandler(failureHandler)
-            );
+            http
+                    .oauth2Login(oauth -> oauth
+                            .userInfoEndpoint(u -> u.userService(userService))
+                            .successHandler(successHandler)
+                            .failureHandler(failureHandler)
+                    );
         }
+
         return http.build();
     }
 }

@@ -8,8 +8,10 @@ export const getTopDevelopers = (topN: number = 10) => {
   const scoreMap: Record<number, number> = {};
 
   dummyProjects.forEach((project) => {
-    const score = project.likes + project.views;
-    scoreMap[project.authorId] = (scoreMap[project.authorId] || 0) + score;
+    if (project.authorId) {
+      const score = (project.likes || 0) + (project.views || 0);
+      scoreMap[project.authorId] = (scoreMap[project.authorId] || 0) + score;
+    }
   });
 
   const sortedAuthorIds = Object.entries(scoreMap)

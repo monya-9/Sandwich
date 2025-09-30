@@ -13,5 +13,8 @@ public interface CollectionService {
     CollectionFolderDetailResponse getFolderDetail(User user, Long folderId);
     void updateFolder(User user, Long folderId, CollectionFolderRequest request);
     void deleteFolder(User user, Long folderId);
+
+    // 공개 컬렉션 목록(마이페이지에서 타인이 볼 때)
+    List<CollectionFolderResponse> listPublicFoldersOfUser(Long userId);
 }
 

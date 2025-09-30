@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaShareAlt, FaTwitter, FaFacebook, FaPinterest, FaBlogger } from "react-icons/fa";
+import Toast from "../../common/Toast";
 
 type ShareActionProps = {
   shareUrl?: string;
@@ -27,6 +28,10 @@ const KakaoIcon = () => (
 
 export default function ShareAction({ shareUrl, thumbnailUrl, title }: ShareActionProps) {
   const [open, setOpen] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
 
   const finalShareUrl = shareUrl || (typeof window !== "undefined" ? window.location.href : "");
   const finalTitle = title || "프로젝트 이름";
@@ -35,20 +40,33 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title }: ShareActi
   const handleCopy = () => {
     if (!finalShareUrl) return;
     navigator.clipboard.writeText(finalShareUrl);
-    alert("URL이 복사되었습니다!");
+    setToast({
+      visible: true,
+      message: "URL이 복사되었습니다!"
+    });
   };
 
   return (
-    <div className="relative font-gmarket">
+    <>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type="success"
+        size="medium"
+        autoClose={2000}
+        closable={true}
+        onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+      />
+      <div className="relative font-gmarket">
       {/* 공유 버튼 (사이드바, 크기 그대로) */}
       <button
         className="flex flex-col items-center gap-1 group"
         onClick={() => setOpen(true)}
       >
-        <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-          <FaShareAlt className="w-6 h-6" />
-        </div>
-        <span className="text-xs text-gray-800 font-semibold text-center">공유하기</span>
+        		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
+			<FaShareAlt className="w-6 h-6" />
+		</div>
+		<span className="text-xs text-white font-semibold text-center">공유하기</span>
       </button>
 
       {/* 모달 */}
@@ -181,5 +199,6 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title }: ShareActi
         </>
       )}
     </div>
+    </>
   );
 }

@@ -1,9 +1,12 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import {
   fetchComments, postComment, updateComment, deleteComment,
   CommentResponse
 } from "../../../api/commentApi";
 import CommentLikeAction from "./CommentLikeAction";
+import Toast from "../../common/Toast";
+import ConfirmModal from "../../common/ConfirmModal";
+import { AuthContext } from "../../../context/AuthContext";
 
 interface CommentPanelProps {
   onClose: () => void;
@@ -26,6 +29,20 @@ export default function CommentPanel({
   const [loading, setLoading] = useState(false);
   const [edit, setEdit] = useState<EditState>(null);
   const [reply, setReply] = useState<ReplyState>(null);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
+  const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; commentId: number | null }>({
+    visible: false,
+    commentId: null
+  });
+  const { nickname } = useContext(AuthContext);
+  const myNickname = nickname || localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "";
 
   // username, projectId 의존성 추가!
   const loadComments = useCallback(async () => {
@@ -33,8 +50,16 @@ export default function CommentPanel({
     try {
       const res = await fetchComments(username, projectId);
       setComments(res.data);
-    } catch {
-      alert("댓글을 불러올 수 없습니다");
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 401 || status === 404) {
+        setComments([]);
+      } else {
+        setErrorToast({
+          visible: true,
+          message: "댓글을 불러올 수 없습니다"
+        });
+      }
     }
     setLoading(false);
   }, [username, projectId]);
@@ -46,26 +71,90 @@ export default function CommentPanel({
   // 댓글 작성/대댓글/수정/삭제 (로그인 상태에서만 동작)
   const handlePost = async () => {
     if (!input.trim() || !isLoggedIn) return;
-    await postComment({ username, projectId, comment: input });
-    setInput("");
-    loadComments();
+    try {
+      await postComment({ username, projectId, comment: input });
+      setInput("");
+      loadComments();
+      setSuccessToast({
+        visible: true,
+        message: "댓글이 작성되었습니다!"
+      });
+    } catch (e: any) {
+      setErrorToast({
+        visible: true,
+        message: "댓글 작성에 실패했습니다."
+      });
+    }
   };
   const handleReply = async (parentId: number, value: string) => {
     if (!value.trim() || !isLoggedIn) return;
-    await postComment({ username, projectId, comment: value, parentCommentId: parentId });
-    setReply(null);
-    loadComments();
+    try {
+      await postComment({ username, projectId, comment: value, parentCommentId: parentId });
+      setReply(null);
+      loadComments();
+      setSuccessToast({
+        visible: true,
+        message: "답글이 작성되었습니다!"
+      });
+    } catch (e: any) {
+      setErrorToast({
+        visible: true,
+        message: "답글 작성에 실패했습니다."
+      });
+    }
   };
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("정말 삭제할까요?") || !isLoggedIn) return;
-    await deleteComment(id);
-    loadComments();
+  const handleDeleteClick = (id: number) => {
+    if (!isLoggedIn) return;
+    setDeleteConfirm({
+      visible: true,
+      commentId: id
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.commentId) return;
+    try {
+      await deleteComment(deleteConfirm.commentId);
+      loadComments();
+      setSuccessToast({
+        visible: true,
+        message: "댓글이 삭제되었습니다."
+      });
+    } catch (e: any) {
+      setErrorToast({
+        visible: true,
+        message: "댓글 삭제에 실패했습니다."
+      });
+    } finally {
+      setDeleteConfirm({
+        visible: false,
+        commentId: null
+      });
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({
+      visible: false,
+      commentId: null
+    });
   };
   const handleEdit = async () => {
     if (edit && edit.value.trim() && isLoggedIn) {
-      await updateComment({ commentId: edit.id, comment: edit.value });
-      setEdit(null);
-      loadComments();
+      try {
+        await updateComment({ commentId: edit.id, comment: edit.value });
+        setEdit(null);
+        loadComments();
+        setSuccessToast({
+          visible: true,
+          message: "댓글이 수정되었습니다!"
+        });
+      } catch (e: any) {
+        setErrorToast({
+          visible: true,
+          message: "댓글 수정에 실패했습니다."
+        });
+      }
     }
   };
 
@@ -101,16 +190,20 @@ export default function CommentPanel({
           disabled={!isLoggedIn}
           className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : ""}
         >답글</button>
-        <button
-          onClick={() => isLoggedIn ? setEdit({ id: c.id, value: c.comment }) : undefined}
-          disabled={!isLoggedIn}
-          className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : ""}
-        >수정</button>
-        <button
-          className={"text-red-500" + (!isLoggedIn ? " text-gray-300 cursor-not-allowed" : "")}
-          onClick={() => isLoggedIn ? handleDelete(c.id) : undefined}
-          disabled={!isLoggedIn}
-        >삭제</button>
+        {isLoggedIn && myNickname && c.username === myNickname && (
+          <>
+            <button
+              onClick={() => isLoggedIn ? setEdit({ id: c.id, value: c.comment }) : undefined}
+              disabled={!isLoggedIn}
+              className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : ""}
+            >수정</button>
+            <button
+              className={"text-red-500" + (!isLoggedIn ? " text-gray-300 cursor-not-allowed" : "")}
+              onClick={() => isLoggedIn ? handleDeleteClick(c.id) : undefined}
+              disabled={!isLoggedIn}
+            >삭제</button>
+          </>
+        )}
       </div>
 
       {reply?.parentId === c.id && isLoggedIn && (
@@ -136,8 +229,37 @@ export default function CommentPanel({
   );
 
   return (
-    <aside
-      className="bg-white shadow-2xl border border-gray-200 flex flex-col z-40 transition-all rounded-2xl"
+    <>
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
+      <Toast
+        visible={successToast.visible}
+        message={successToast.message}
+        type="success"
+        size="medium"
+        autoClose={2000}
+        closable={true}
+        onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+      />
+      <ConfirmModal
+        visible={deleteConfirm.visible}
+        title="댓글 삭제"
+        message="정말 삭제할까요?"
+        confirmText="삭제"
+        cancelText="취소"
+        confirmButtonColor="red"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
+      <aside
+        className="bg-white shadow-2xl border border-gray-200 flex flex-col z-40 transition-all rounded-2xl"
       style={{
         width,
         minWidth: 320,
@@ -196,5 +318,6 @@ export default function CommentPanel({
         )}
       </div>
     </aside>
+    </>
   );
 }

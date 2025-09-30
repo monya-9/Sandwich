@@ -13,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sandwich.SandWich.user.domain.User;
 import org.springframework.security.access.AccessDeniedException;
 import java.util.List;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import com.sandwich.SandWich.project.dto.ProjectContentDto;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,16 @@ public class ProjectContentService {
 
     private final ProjectRepository projectRepository;
     private final ProjectContentRepository contentRepository;
+
+    @Transactional(readOnly = true)
+    public List<ProjectContentDto> getContents(Long userId, Long projectId) {
+        Project project = projectRepository.findByIdAndUserId(projectId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트가 존재하지 않습니다."));
+        return project.getContents().stream()
+                .sorted(Comparator.comparingInt(ProjectContent::getContentOrder))
+                .map(pc -> new ProjectContentDto(pc.getId(), pc.getType(), pc.getData(), pc.getContentOrder()))
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public void saveContents(Long userId, Long projectId, List<ProjectContentRequest> requestList, User user) {

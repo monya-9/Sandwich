@@ -1,57 +1,50 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
-import ReactDOM from "react-dom";
+import LoginPrompt from "./LoginPrompt";
+import Toast from "../common/Toast";
+import { deleteProject as apiDeleteProject } from "../../api/projectApi";
+
 
 type Props = {
   projectName: string;
   userName: string;
   intro: string;
   ownerId?: number;
+  ownerEmail?: string;
+  ownerImageUrl?: string;
+  isOwner?: boolean;
+  projectId?: number;
+  initialIsFollowing?: boolean;
 };
 
-export default function ProjectTopInfo({ projectName, userName, intro, ownerId }: Props) {
-  const [isFollowing, setIsFollowing] = useState(false);
+export default function ProjectTopInfo({ projectName, userName, intro, ownerId, ownerEmail, ownerImageUrl, isOwner, projectId, initialIsFollowing }: Props) {
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing ?? false);
   const [toast, setToast] = useState<null | "follow" | "unfollow">(null);
+  const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: ''
+  });
   const navigate = useNavigate();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
 
   useEffect(() => {
-    if (!document.getElementById("toast-style")) {
-      const style = document.createElement("style");
-      style.id = "toast-style";
-      style.innerHTML = `
-      .follow-toast {
-        position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-        background: #222; color: #fff; font-size: 1.2rem;
-        border-radius: 20px; padding: 18px 38px; z-index: 9999;
-        box-shadow: 0px 2px 12px rgba(0,0,0,0.13);
-        display: flex; align-items: center; gap: 24px;
-        font-family: 'Gmarket Sans', sans-serif;
-      }
-      .toast-check {
-        display: flex; align-items: center; justify-content: center;
-        width: 46px; height: 46px; border-radius: 50%;
-        background: #46ce6b; font-size: 2rem;
-      }
-      .follow-toast.unfollow { background: #222; }
-      .follow-toast.unfollow .toast-check { background: #F6323E; }
-      `;
-      document.head.appendChild(style);
+    if (typeof initialIsFollowing === "boolean") {
+      setIsFollowing(initialIsFollowing);
     }
-  }, []);
+  }, [initialIsFollowing]);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    if (typeof initialIsFollowing === "boolean") return;
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token || !ownerId || ownerId <= 0) {
       setIsFollowing(false);
       return;
     }
     (async () => {
       try {
-        const res = await axios.get(`/api/users/${ownerId}/follow-status`, {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get(`/users/${ownerId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) {
         if (e.response?.status === 401) {
@@ -59,13 +52,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
         }
       }
     })();
-  }, [ownerId]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  }, [ownerId, initialIsFollowing]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -82,74 +69,108 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId }
     };
   }, [ownerId]);
 
-  const handleToggleFollow = async () => {
-    const token = localStorage.getItem("accessToken");
+  const ensureLogin = () => {
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) {
-      alert("로그인이 필요합니다.");
-      navigate("/login");
-      return;
+      setShowLoginPrompt(true);
+      return false;
     }
+    return true;
+  };
+
+  const handleToggleFollow = async () => {
+    if (!ensureLogin()) return;
     if (!ownerId || ownerId <= 0) {
-      alert("대상 사용자를 확인할 수 없습니다.");
+      setErrorToast({ visible: true, message: "대상 사용자를 확인할 수 없습니다." });
       return;
     }
     try {
       if (isFollowing) {
-        await axios.delete(`/api/users/${ownerId}/unfollow`, {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.delete(`/users/${ownerId}/unfollow`);
         setIsFollowing(false);
         setToast("unfollow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: false } }));
       } else {
-        await axios.post(`/api/users/${ownerId}/follow`, null, {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.post(`/users/${ownerId}/follow`, null);
         setIsFollowing(true);
         setToast("follow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: true } }));
       }
     } catch (e: any) {
-      if (e.response?.status === 401) {
-        alert("로그인이 필요합니다.");
-        navigate("/login");
-        return;
-      }
-      alert("팔로우 처리 중 오류가 발생했습니다.");
+      if (e.response?.status === 401) { setShowLoginPrompt(true); return; }
+      setErrorToast({ visible: true, message: "팔로우 처리 중 오류가 발생했습니다." });
     }
   };
 
-  const renderToast = toast && ReactDOM.createPortal(
-    <div className={`follow-toast${toast === "unfollow" ? " unfollow" : ""}`}>
-      <span className="toast-check">
-        <svg width="24" height="24" viewBox="0 0 24 24">
-          <polyline points="20 6 9 17 4 12" fill="none" stroke="#fff" strokeWidth="3"/>
-        </svg>
-      </span>
-      {toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."}
-    </div>,
-    document.body
+
+  const onEdit = () => { if (ownerId && projectId) navigate(`/project/edit/${ownerId}/${projectId}`); };
+  const onDelete = async () => {
+    if (!ownerId || !projectId) return;
+    if (!window.confirm("정말 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    try {
+      await apiDeleteProject(ownerId, projectId);
+      navigate(`/users/${ownerId}`);
+    } catch (e: any) {
+      setErrorToast({ visible: true, message: e?.message || "삭제 실패" });
+    }
+  };
+
+  const CheckIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <polyline points="20 6 9 17 4 12" fill="none" stroke="#fff" strokeWidth="3"/>
+    </svg>
+  );
+
+  // 아바타 계산: 이미지 우선, 없으면 이메일 이니셜
+  const avatar = ownerImageUrl ? (
+    <img src={ownerImageUrl} alt="avatar" className="w-14 h-14 rounded-full object-cover" />
+  ) : (
+    <div className="w-14 h-14 rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
+      {(ownerEmail?.[0] || userName?.[0] || "?").toUpperCase()}
+    </div>
   );
 
   return (
-    <div className="w-full flex items-start gap-4 mb-8">
-      {renderToast}
-      <div className="w-14 h-14 rounded-full bg-green-600 flex-shrink-0" />
-      <div>
-        <h1 className="text-2xl font-bold text-black">{projectName}</h1>
-        <div className="flex items-center gap-2 text-gray-600 text-base mt-1">
-          <span>{userName}</span>
-          <span
-            className="font-bold text-green-700 ml-2 cursor-pointer hover:underline"
-            onClick={handleToggleFollow}
-          >
-            {isFollowing ? "팔로잉" : "팔로우"}
-          </span>
+    <>
+      <Toast visible={!!toast} message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."} type={toast === "follow" ? "success" : "info"} size="medium" autoClose={3000} closable={true} onClose={() => setToast(null)} icon={CheckIcon} />
+      <Toast visible={errorToast.visible} message={errorToast.message} type="error" size="medium" autoClose={3000} closable={true} onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))} />
+      <div className="w-full flex items-start gap-4 mb-8">
+        {showLoginPrompt && (
+          <LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />
+        )}
+        <div role="button" className="w-14 h-14 rounded-full flex-shrink-0 cursor-pointer overflow-hidden" onClick={() => ownerId && navigate(((Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0')) === ownerId) ? '/profile' : `/users/${ownerId}`)} title="프로필 보기">
+          {avatar}
         </div>
-        <div className="text-gray-500 text-base mt-1">{intro}</div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold text-black">{projectName}</h1>
+            {isOwner && (
+              <div className="flex items-center gap-2 ml-20">
+                <button className="bg-white border border-[#E5E7EB] text-gray-700 hover:bg-gray-50 rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onEdit}>수정하기</button>
+                <button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onDelete}>삭제하기</button>
+              </div>
+            )}
+          </div>
+          {/* 소개 말풍선 (한줄 소개가 있을 때만 표시) */}
+          {!!(intro && intro.trim()) && (
+            <div className="mt-2 relative">
+              <div className="inline-flex relative bg-white text-gray-900 text-[15px] px-4 py-2 rounded-3xl border border-gray-200 shadow-sm max-w-[640px] min-w-[72px] min-h-[36px] items-center justify-center text-center break-words">
+                {intro}
+                <div className="absolute left-4 -bottom-1 w-3 h-3 bg-white rotate-45 shadow-sm border-r border-b border-gray-200"></div>
+              </div>
+            </div>
+          )}
+          {/* 닉네임/팔로우 */}
+          <div className="flex items-center gap-2 text-gray-600 text-base mt-2">
+            <span>{userName}</span>
+            {!isOwner && (
+              <span className="font-bold text-green-700 ml-2 cursor-pointer hover:underline" onClick={handleToggleFollow}>
+              {isFollowing ? "팔로잉" : "팔로우"}
+            </span>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

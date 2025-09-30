@@ -14,16 +14,17 @@ export default function AppLayout() {
         const hasNickname =
             (storage.getItem("userNickname") || "").trim().length > 0 ||
             (storage.getItem("userProfileName") || "").trim().length > 0;
+        const hasUserId = !!(storage.getItem("userId") || "").trim();
 
         const email = storage.getItem("userEmail") || "";
 
-        if (!hasNickname) {
+        if (!hasUserId || !hasNickname) {
             ensureNicknameInStorage(token, email, storage);
         }
     }, []);
 
     return (
-        <div className="min-h-dvh bg-white">
+        <div className="min-h-dvh">
             <Header />
             <div className="h-20 md:h-20" />
             <main className="mx-auto w-full">

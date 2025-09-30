@@ -1,150 +1,193 @@
 package com.sandwich.SandWich.message.util;
 
-import com.sandwich.SandWich.message.attach.util.DefaultThumbnailResolver;
 import com.sandwich.SandWich.message.attach.util.ThumbnailResolver;
 import com.sandwich.SandWich.message.domain.Message;
 import com.sandwich.SandWich.message.dto.MessageType;
-import java.text.AttributedString;
-import java.text.AttributedCharacterIterator;
-import java.awt.font.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.awt.*;
+import java.awt.font.*;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.text.AttributedCharacterIterator;
+import java.text.AttributedString;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.ByteArrayOutputStream;
 import javax.imageio.ImageIO;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import java.awt.geom.RoundRectangle2D;
 
 public class ChatScreenshotRenderer {
 
     private static final ObjectMapper M = new ObjectMapper();
 
-    private static Font loadKoreanFont(float size) {
+    // -------------------- Font Loader --------------------
+    private static java.awt.Font loadKoreanFont(float size) {
         try (var is = ChatScreenshotRenderer.class.getResourceAsStream("/fonts/NotoSansKR-Regular.ttf")) {
-            Font base = Font.createFont(Font.TRUETYPE_FONT, is);
+            java.awt.Font base = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, is);
             return base.deriveFont(size);
         } catch (Exception e) {
-            // 폰트가 없으면 시스템 SansSerif로 폴백
-            return new Font("SansSerif", Font.PLAIN, (int) size);
+            return new java.awt.Font("SansSerif", java.awt.Font.PLAIN, (int) size);
         }
     }
-
-    private static Font loadEmojiFont(float size) {
+    private static java.awt.Font loadEmojiFont(float size) {
         try (var is = ChatScreenshotRenderer.class.getResourceAsStream("/fonts/OpenMoji-black-glyf.ttf")) {
-            Font base = Font.createFont(Font.TRUETYPE_FONT, is);
+            java.awt.Font base = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, is);
             return base.deriveFont(size);
         } catch (Exception e) {
-            return new Font("SansSerif", Font.PLAIN, (int) size);
+            return new java.awt.Font("SansSerif", java.awt.Font.PLAIN, (int) size);
         }
     }
 
-
+    // -------------------- Emoji Helpers --------------------
     private static boolean isEmojiCodePoint(int cp) {
-        // BMP 범위 일부 (해/구름/별 등 기호, 딩뱃)
         if ((cp >= 0x2600 && cp <= 0x26FF) || (cp >= 0x2700 && cp <= 0x27BF)) return true;
-
-        // 기본 이모지 평면들
-        if ((cp >= 0x1F300 && cp <= 0x1F5FF)) return true; // Misc Symbols & Pictographs
-        if ((cp >= 0x1F600 && cp <= 0x1F64F)) return true; // Emoticons
-        if ((cp >= 0x1F680 && cp <= 0x1F6FF)) return true; // Transport & Map
-        if ((cp >= 0x1F900 && cp <= 0x1F9FF)) return true; // Supplemental Symbols & Pictographs
-        if ((cp >= 0x1FA70 && cp <= 0x1FAFF)) return true; // Symbols & Pictographs Ext-A
-
-        // 국기(Regional Indicators)
+        if ((cp >= 0x1F300 && cp <= 0x1F5FF)) return true;
+        if ((cp >= 0x1F600 && cp <= 0x1F64F)) return true;
+        if ((cp >= 0x1F680 && cp <= 0x1F6FF)) return true;
+        if ((cp >= 0x1F900 && cp <= 0x1F9FF)) return true;
+        if ((cp >= 0x1FA70 && cp <= 0x1FAFF)) return true;
         if (cp >= 0x1F1E6 && cp <= 0x1F1FF) return true;
-
-        // 성별 기호 등 (이모지 조합에 자주 쓰임)
         if (cp == 0x2640 || cp == 0x2642) return true;
-
         return false;
     }
-
     private static boolean isEmojiJoinerOrModifier(int cp) {
-        // ZWJ
-        if (cp == 0x200D) return true;
-        // Variation Selector-16 (emoji presentation)
-        if (cp == 0xFE0F) return true;
-        // Fitzpatrick modifiers
-        if (cp >= 0x1F3FB && cp <= 0x1F3FF) return true;
-        return false;
+        return cp == 0x200D || cp == 0xFE0F || (cp >= 0x1F3FB && cp <= 0x1F3FF);
     }
 
-    /** 텍스트(한글 폰트)와 이모지(이모지 폰트) 구간을 코드포인트 기준으로 분할해 AttributedString 생성 */
-    private static AttributedCharacterIterator buildAttrRuns(String text, Font textFont, Font emojiFont) {
+    /** 텍스트/이모지 구간별 폰트 적용 */
+    private static AttributedCharacterIterator buildAttrRuns(String text, java.awt.Font textFont, java.awt.Font emojiFont) {
         if (text == null) text = "";
-
         AttributedString as = new AttributedString(text);
         int len = text.length();
-
-        // 코드포인트 단위로 스캔하면서, "이모지 런"과 "텍스트 런"을 나눔
         int charIndex = 0;
         boolean currentEmoji = false;
         int runStart = 0;
-
         while (charIndex < len) {
             final int cp = text.codePointAt(charIndex);
             final boolean emojiish = isEmojiCodePoint(cp) || isEmojiJoinerOrModifier(cp);
-
-            // 상태 전환 시 기존 런에 폰트 적용
             if (charIndex == 0) {
                 currentEmoji = emojiish;
             } else if (emojiish != currentEmoji) {
-                as.addAttribute(java.awt.font.TextAttribute.FONT,
-                        currentEmoji ? emojiFont : textFont, runStart, charIndex);
+                as.addAttribute(TextAttribute.FONT, currentEmoji ? emojiFont : textFont, runStart, charIndex);
                 runStart = charIndex;
                 currentEmoji = emojiish;
             }
             charIndex += Character.charCount(cp);
         }
-
-        // 마지막 런 적용
-        as.addAttribute(java.awt.font.TextAttribute.FONT,
-                currentEmoji ? emojiFont : textFont, runStart, len);
-
+        as.addAttribute(TextAttribute.FONT, currentEmoji ? emojiFont : textFont, runStart, len);
         return as.getIterator();
     }
 
+    // -------------------- Rendering Utils --------------------
     private static void enableQuality(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
     }
-
-    public static byte[] renderPng(List<Message> messages, Long meId) throws Exception {
-        return renderPng(messages, meId, null);
+    private static List<TextLayout> layoutLines(Graphics2D g, AttributedCharacterIterator it, int maxWidth) {
+        FontRenderContext frc = g.getFontRenderContext();
+        LineBreakMeasurer measurer = new LineBreakMeasurer(it, frc);
+        List<TextLayout> lines = new ArrayList<>();
+        int end = it.getEndIndex();
+        while (measurer.getPosition() < end) {
+            lines.add(measurer.nextLayout(maxWidth));
+        }
+        return lines;
+    }
+    private static int linesHeight(List<TextLayout> lines, int lineGap) {
+        int h = 0;
+        for (TextLayout tl : lines) {
+            h += tl.getAscent() + tl.getDescent() + tl.getLeading() + lineGap;
+        }
+        return h;
+    }
+    private static int maxLineWidth(List<TextLayout> lines) {
+        int w = 0;
+        for (TextLayout tl : lines) {
+            w = Math.max(w, (int) tl.getAdvance());
+        }
+        return w;
+    }
+    private static void drawLayouts(Graphics2D g, List<TextLayout> lines, int x, int y, int lineGap) {
+        int curY = y;
+        for (TextLayout tl : lines) {
+            curY += tl.getAscent();
+            tl.draw(g, x, curY);
+            curY += tl.getDescent() + tl.getLeading() + lineGap;
+        }
     }
 
+    // -------------------- Color Parser --------------------
+    private static Color parseColor(String s) {
+        if (s == null) return Color.WHITE;
+        s = s.trim().toLowerCase();
+        try {
+            if (s.startsWith("#")) {
+                int r = Integer.valueOf(s.substring(1, 3), 16);
+                int g = Integer.valueOf(s.substring(3, 5), 16);
+                int b = Integer.valueOf(s.substring(5, 7), 16);
+                return new Color(r, g, b);
+            }
+            if (s.startsWith("rgba")) {
+                String[] p = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",");
+                int r = Integer.parseInt(p[0].trim());
+                int g = Integer.parseInt(p[1].trim());
+                int b = Integer.parseInt(p[2].trim());
+                float a = Float.parseFloat(p[3].trim());
+                return new Color(r, g, b, Math.round(a * 255));
+            }
+            if (s.startsWith("rgb")) {
+                String[] p = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",");
+                int r = Integer.parseInt(p[0].trim());
+                int g = Integer.parseInt(p[1].trim());
+                int b = Integer.parseInt(p[2].trim());
+                return new Color(r, g, b);
+            }
+        } catch (Exception ignore) {}
+        return Color.WHITE;
+    }
 
-    // 간단한 말풍선 렌더링 (텍스트만, 첨부/이모지는 content로)
-    public static byte[] renderPng(List<Message> messages, Long meId,
-                                   ThumbnailResolver thumbResolver) throws Exception {
-        final int width = 900;          // 전체 이미지 가로
-        final int padding = 20;         // 바깥 여백
-        final int bubblePadding = 12;   // 말풍선 내부 패딩
-        final int gap = 12;             // 말풍선 간격
-        final int timestampArea = 16;   // 타임스탬프 높이 여유
-        final int rightGutter = 200;    // 오른쪽 정렬 여유
+    // -------------------- Public API --------------------
+    public static byte[] renderPngWithTokensJson(List<Message> messages, Long meId,
+                                                 ThumbnailResolver thumbResolver, String tokensJson) throws Exception {
+        return renderPng(messages, meId, thumbResolver, DesignTokens.fromJson(tokensJson));
+    }
+    public static byte[] renderPng(List<Message> messages, Long meId) throws Exception {
+        return renderPng(messages, meId, null, DesignTokens.defaults());
+    }
+    public static byte[] renderPng(List<Message> messages, Long meId, ThumbnailResolver thumbResolver) throws Exception {
+        return renderPng(messages, meId, thumbResolver, DesignTokens.defaults());
+    }
+
+    // -------------------- Core Render --------------------
+    private static byte[] renderPng(List<Message> messages, Long meId,
+                                    ThumbnailResolver thumbResolver, DesignTokens t) throws Exception {
+        final int width = 900;
+        final int padding = 20;
+        final int bubblePaddingX = t.spacing.bubblePaddingX;
+        final int bubblePaddingY = t.spacing.bubblePaddingY;
+        final int gap = t.spacing.gap;
+        final int radius = t.radius;
+        final int timestampArea = 18;
+        final int rightGutter = 200;
         final int contentWidth = width - padding * 2 - rightGutter;
 
-        Font font  = loadKoreanFont(16f);
-        Font emoji = loadEmojiFont(16f);           // <- NotoColorEmoji 사용
-        Font small = loadKoreanFont(12f);
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        // AWT 폰트는 java.awt.Font로 명시
+        java.awt.Font font  = loadKoreanFont((float) t.font.size);
+        java.awt.Font emoji = loadEmojiFont((float) t.font.size);
+        java.awt.Font small = loadKoreanFont(Math.max(11, t.font.size - 2));
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern(t.timestampFormat);
 
-        // 1) 총 높이 계산(프리패스)
-        BufferedImage tmpImg = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        // --- Pre-pass ---
+        BufferedImage tmpImg = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D tg = tmpImg.createGraphics();
         enableQuality(tg);
 
-        // 첨부 썸네일 가로/세로 (고정 프리뷰 영역)
-        final int thumbW = 160;
-        final int thumbH = 160;
-
-        // 메시지별 사전 계산 값
+        final int thumbW = 160, thumbH = 160;
         List<Integer> preHeights = new ArrayList<>(messages.size());
         List<Integer> preWidths  = new ArrayList<>(messages.size());
         List<Boolean> hasThumb   = new ArrayList<>(messages.size());
@@ -152,46 +195,46 @@ public class ChatScreenshotRenderer {
         int totalHeight = padding;
         for (Message m : messages) {
             String text = getDisplayText(m);
-            AttributedCharacterIterator it = buildAttrRuns(text, font, emoji);
-            List<TextLayout> lines = layoutLines(tg, it, contentWidth - bubblePadding * 2);
+            var it = buildAttrRuns(text, font, emoji);
+            List<TextLayout> lines = layoutLines(tg, it, contentWidth - bubblePaddingX * 2);
 
             int textHeight = linesHeight(lines, 2);
             int maxLineW   = maxLineWidth(lines);
 
-            boolean isAttachment = m.getType() == MessageType.ATTACHMENT;
             boolean showThumb = false;
-            if (isAttachment && thumbResolver != null) {
-                try {
-                    showThumb = (thumbResolver.resolveFor(m) != null);
-                } catch (Exception ignore) {}
+            if (m.getType() == MessageType.ATTACHMENT && thumbResolver != null) {
+                try { showThumb = (thumbResolver.resolveFor(m) != null); } catch (Exception ignore) {}
             }
             hasThumb.add(showThumb);
 
-            int bubbleH = textHeight + bubblePadding * 2 + timestampArea;
-            int bubbleW = Math.min(contentWidth, maxLineW + bubblePadding * 2);
+            int bubbleH = textHeight + bubblePaddingY * 2 + timestampArea;
+            int bubbleW = Math.min(contentWidth, maxLineW + bubblePaddingX * 2);
 
             if (showThumb) {
-                // 썸네일 공간만큼 세로/가로 보정
-                bubbleH = Math.max(bubbleH, thumbH + bubblePadding * 2 + timestampArea);
-                bubbleW = Math.max(bubbleW, thumbW + bubblePadding * 2);
+                bubbleH = Math.max(bubbleH, thumbH + bubblePaddingY * 2 + timestampArea);
+                bubbleW = Math.max(bubbleW, thumbW + bubblePaddingX * 2);
             }
 
             preHeights.add(bubbleH);
             preWidths.add(bubbleW);
-
             totalHeight += bubbleH + gap;
         }
         tg.dispose();
         totalHeight += padding;
 
-        // 2) 실제 그리기
-        BufferedImage img = new BufferedImage(width, Math.max(totalHeight, 200), BufferedImage.TYPE_INT_RGB);
+        // --- Draw ---
+        BufferedImage img = new BufferedImage(width, Math.max(totalHeight, 200), BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         enableQuality(g);
 
-        // 배경
-        g.setColor(new Color(245, 247, 250));
+        g.setColor(parseColor(t.colors.bg));
         g.fillRect(0, 0, width, totalHeight);
+
+        Color meBg = parseColor(t.colors.meBubble);
+        Color otherBg = parseColor(t.colors.youBubble);
+        Color border = parseColor(t.colors.border);
+        Color textColor = parseColor(t.colors.text);
+        Color tsColor = parseColor(t.colors.timestamp);
 
         int y = padding;
         for (int i = 0; i < messages.size(); i++) {
@@ -199,50 +242,31 @@ public class ChatScreenshotRenderer {
             boolean mine = m.getSender().getId().equals(meId);
             String preview = getDisplayText(m);
 
-            AttributedCharacterIterator it = buildAttrRuns(preview, font, emoji);
-            List<TextLayout> lines = layoutLines(g, it, contentWidth - bubblePadding * 2);
+            var it = buildAttrRuns(preview, font, emoji);
+            List<TextLayout> lines = layoutLines(g, it, contentWidth - bubblePaddingX * 2);
 
             int bubbleW = preWidths.get(i);
             int bubbleH = preHeights.get(i);
             int x = mine ? (width - padding - bubbleW) : padding;
 
-            // 말풍선
-            g.setColor(mine ? new Color(210, 233, 255) : Color.WHITE);
-            g.fillRoundRect(x, y, bubbleW, bubbleH, 16, 16);
-            g.setColor(new Color(220, 226, 235));
-            g.drawRoundRect(x, y, bubbleW, bubbleH, 16, 16);
+            // Bubble
+            g.setColor(mine ? meBg : otherBg);
+            g.fillRoundRect(x, y, bubbleW, bubbleH, radius, radius);
+            g.setColor(border);
+            g.drawRoundRect(x, y, bubbleW, bubbleH, radius, radius);
 
-            int contentX = x + bubblePadding;
-            int contentY = y + bubblePadding;
-
-            // 첨부 썸네일
-            boolean showThumb = hasThumb.get(i);
-            if (m.getType() == MessageType.ATTACHMENT && showThumb) {
-                try {
-                    BufferedImage thumb = thumbResolver.resolveFor(m);
-                    if (thumb != null) {
-                        // 둥근 모서리 마스크(선택)
-                        Shape oldClip = g.getClip();
-                        RoundRectangle2D rr = new RoundRectangle2D.Float(contentX, contentY, thumbW, thumbH, 12, 12);
-                        g.setClip(rr);
-                        g.drawImage(thumb, contentX, contentY, thumbW, thumbH, null);
-                        g.setClip(oldClip);
-
-                        // 썸네일 오른쪽/아래 텍스트 여백
-                        contentX += thumbW + 12;
-                    }
-                } catch (Exception ignore) {}
-            }
+            int contentX = x + bubblePaddingX;
+            int contentY = y + bubblePaddingY;
 
             // 텍스트
-            g.setColor(Color.DARK_GRAY);
+            g.setColor(textColor);
             drawLayouts(g, lines, contentX, contentY, 2);
 
             // 타임스탬프
             g.setFont(small);
-            g.setColor(new Color(100, 110, 120));
+            g.setColor(tsColor);
             String ts = dtf.format(m.getCreatedAt());
-            g.drawString(ts, x + bubblePadding, y + bubbleH - 6);
+            g.drawString(ts, x + bubblePaddingX, y + bubbleH - 6);
             g.setFont(font);
 
             y += bubbleH + gap;
@@ -254,103 +278,73 @@ public class ChatScreenshotRenderer {
         return baos.toByteArray();
     }
 
-
-    private static List<TextLayout> layoutLines(Graphics2D g, AttributedCharacterIterator it, int maxWidth) {
-        FontRenderContext frc = g.getFontRenderContext();
-        LineBreakMeasurer measurer = new LineBreakMeasurer(it, frc);
-        List<TextLayout> lines = new ArrayList<>();
-        int end = it.getEndIndex();
-        while (measurer.getPosition() < end) {
-            lines.add(measurer.nextLayout(maxWidth));
-        }
-        return lines;
-    }
-
-    private static int linesHeight(List<TextLayout> lines, int lineGap) {
-        int h = 0;
-        for (TextLayout tl : lines) {
-            h += tl.getAscent() + tl.getDescent() + tl.getLeading() + lineGap;
-        }
-        return h;
-    }
-
-
-    private static int maxLineWidth(List<TextLayout> lines) {
-        int w = 0;
-        for (TextLayout tl : lines) {
-            w = Math.max(w, (int) tl.getAdvance());
-        }
-        return w;
-    }
-
-
-    private static void drawLayouts(Graphics2D g, List<TextLayout> lines, int x, int y, int lineGap) {
-        int curY = y;
-        for (TextLayout tl : lines) {
-            curY += tl.getAscent();
-            tl.draw(g, x, curY);
-            curY += tl.getDescent() + tl.getLeading() + lineGap;
-        }
-    }
-
-
+    // -------------------- Message Text --------------------
     private static String getDisplayText(Message m) {
         MessageType t = m.getType();
         if (t == MessageType.GENERAL || t == MessageType.EMOJI) {
             return m.getContent() == null ? "" : m.getContent();
         }
-        if (t == MessageType.JOB_OFFER) {
-            return "[채용 제안] " +
-                    ns(m.getCompanyName()) + " / " +
-                    ns(m.getPosition()) +
-                    (Boolean.TRUE.equals(m.getIsNegotiable()) ? " / 연봉 협의"
-                            : (m.getSalary() != null ? " / " + m.getSalary() : "")) +
-                    (m.getLocation() != null ? " / " + m.getLocation() : "") +
-                    (m.getCardDescription() != null ? " — " + m.getCardDescription() : "");
-        }
-        if (t == MessageType.PROJECT_OFFER) {
-            return "[프로젝트 제안] " +
-                    ns(m.getTitle()) + " / 예산:" + ns(m.getBudget()) +
-                    (Boolean.TRUE.equals(m.getIsNegotiable()) ? "(협의)" : "") +
-                    (m.getContact() != null ? " / " + m.getContact() : "") +
-                    (m.getCardDescription() != null ? " — " + m.getCardDescription() : "");
-        }
         if (t == MessageType.ATTACHMENT) {
             String name = jval(m.getPayload(), "name");
-            String mime = jval(m.getPayload(), "mime");
-            String sizeStr = jval(m.getPayload(), "size");
-            long size = 0L;
-            try { if (sizeStr != null) size = Long.parseLong(sizeStr); } catch (Exception ignore) {}
-
-            StringBuilder sb = new StringBuilder("[첨부파일] ");
-            if (name != null) sb.append(name); else sb.append("");
-            List<String> meta = new ArrayList<>();
-            if (mime != null && !mime.isBlank()) meta.add(mime);
-            if (size > 0) meta.add(humanSize(size));
-            if (!meta.isEmpty()) sb.append(" — ").append(String.join(" · ", meta));
-            return sb.toString();
+            return "[첨부파일] " + (name != null ? name : "");
         }
         return "";
     }
-
-    private static String ns(String s) { return s == null ? "" : s; }
-
     private static String jval(String json, String key) {
         if (json == null) return null;
         try {
             JsonNode n = M.readTree(json);
             JsonNode v = n.get(key);
             return v == null ? null : v.asText();
-        } catch (Exception e) {
-            return null;
-        }
+        } catch (Exception e) { return null; }
     }
 
-    private static String humanSize(long bytes) {
-        if (bytes <= 0) return "0 B";
-        final String[] u = {"B","KB","MB","GB","TB"};
-        int i = (int) Math.floor(Math.log(bytes)/Math.log(1024));
-        double v = bytes / Math.pow(1024, i);
-        return String.format((v < 10 ? "%.1f %s" : "%.0f %s"), v, u[i]);
+    // -------------------- Tokens (Font 이름 충돌 방지: UiFont 사용) --------------------
+    static final class DesignTokens {
+        Colors colors; UiFont font; int radius; Spacing spacing; String timestampFormat;
+        static DesignTokens defaults() {
+            DesignTokens t = new DesignTokens();
+            t.colors = new Colors("#ffffff", "#f0fdf4", "#f3f4f6", "#1f2937", "#9ca3af", "#e5e7eb");
+            t.font = new UiFont("'Gmarket Sans', sans-serif", 14, 1.4);
+            t.radius = 16;
+            t.spacing = new Spacing(16, 12, 8, 12);
+            t.timestampFormat = "yyyy.MM.dd HH:mm";
+            return t;
+        }
+        static DesignTokens fromJson(String json) {
+            try {
+                ObjectMapper om = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                DesignTokens in = om.readValue(json, DesignTokens.class);
+                DesignTokens base = defaults();
+                if (in.colors == null) in.colors = base.colors;
+                if (in.font == null) in.font = base.font;
+                if (in.radius == 0) in.radius = base.radius;
+                if (in.spacing == null) in.spacing = base.spacing;
+                if (in.timestampFormat == null) in.timestampFormat = base.timestampFormat;
+                return in;
+            } catch (Exception e) { return defaults(); }
+        }
+    }
+    static final class Colors {
+        public String bg, meBubble, youBubble, text, timestamp, border;
+        public Colors() {}
+        public Colors(String bg, String meBubble, String youBubble, String text, String timestamp, String border) {
+            this.bg = bg; this.meBubble = meBubble; this.youBubble = youBubble;
+            this.text = text; this.timestamp = timestamp; this.border = border;
+        }
+    }
+    static final class UiFont {   // ← 이름 변경
+        public String family; public int size; public double lineHeight;
+        public UiFont() {}
+        public UiFont(String family, int size, double lineHeight) {
+            this.family = family; this.size = size; this.lineHeight = lineHeight;
+        }
+    }
+    static final class Spacing {
+        public int bubblePaddingX, bubblePaddingY, gap, messageMargin;
+        public Spacing() {}
+        public Spacing(int x, int y, int gap, int msg) {
+            this.bubblePaddingX = x; this.bubblePaddingY = y; this.gap = gap; this.messageMargin = msg;
+        }
     }
 }

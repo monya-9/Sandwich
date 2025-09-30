@@ -1,19 +1,34 @@
-import React from "react";
+// src/components/KeepLoginCheck.tsx
+import React, { useState } from "react";
 
 interface Props {
-    checked: boolean;
+    /** 컨트롤드로 쓰고 싶을 때 전달 (생략하면 내부 state 사용) */
+    checked?: boolean;
+    /** 언컨트롤드일 때의 초기 체크 상태 (기본값: true) */
+    defaultChecked?: boolean;
     onChange: (checked: boolean) => void;
 }
 
-const KeepLoginCheck = ({ checked, onChange }: Props) => {
+const KeepLoginCheck: React.FC<Props> = ({
+                                             checked,
+                                             defaultChecked = true,
+                                             onChange,
+                                         }) => {
+    const isControlled = checked !== undefined;
+    const [internal, setInternal] = useState<boolean>(defaultChecked);
+    const value = isControlled ? (checked as boolean) : internal;
+
     return (
         <div className="w-full flex items-center justify-start mt-2 px-[1px]">
             <input
                 type="checkbox"
                 id="keepLogin"
                 className="accent-green-600 mr-2"
-                checked={checked}
-                onChange={(e) => onChange(e.target.checked)}
+                checked={value}
+                onChange={(e) => {
+                    if (!isControlled) setInternal(e.target.checked);
+                    onChange(e.target.checked);
+                }}
             />
             <label
                 htmlFor="keepLogin"

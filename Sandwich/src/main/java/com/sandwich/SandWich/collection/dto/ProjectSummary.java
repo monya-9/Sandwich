@@ -14,5 +14,6 @@ public class ProjectSummary {
     private int likeCount;
     private int viewCount;
     private int commentCount;
+    private Long ownerId; // 프로젝트 작성자 ID
 }
 

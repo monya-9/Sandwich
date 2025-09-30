@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <title>reCAPTCHA v2 local harness</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 24px; }
+        input, button { padding: 8px; margin: 6px 0; }
+        .row { margin-bottom: 12px; }
+        #out { white-space: pre-wrap; background: #f6f8fa; padding: 12px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+<h2>reCAPTCHA v2 E2E (로컬)</h2>
+
+<div class="row">
+    <label>이메일</label><br/>
+    <input id="email" type="email" placeholder="you@example.com" value="test@example.com" style="width: 320px;">
+</div>
+
+<div class="g-recaptcha" data-sitekey="6Ld2WccrAAAAAC4UWoM8OaGuFd3uhVIZzyYmGJLM"></div>
+
+<div class="row">
+    <button id="btnSend">/api/email/send 테스트</button>
+    <button id="btnReset" type="button">리캡차 초기화</button>
+</div>
+
+<div id="out"></div>
+
+<script>
+    const $ = (s)=>document.querySelector(s);
+    const out = $('#out');
+    function log(x){ out.textContent = (typeof x === 'string') ? x : JSON.stringify(x, null, 2); }
+
+    $('#btnReset').onclick = () => grecaptcha.reset();
+
+    $('#btnSend').onclick = async (e) => {
+      e.preventDefault();
+      const email = $('#email').value.trim();
+      if(!email){ return log('이메일을 입력하세요.'); }
+
+      const token = grecaptcha.getResponse();
+      if(!token){ return log('reCAPTCHA 체크박스를 먼저 완료하세요.'); }
+
+      try {
+        const res = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // 서버에서 헤더로 읽어 검증
+            'X-Recaptcha-Token': token
+          },
+          body: JSON.stringify({ email })
+        });
+        const text = await res.text();
+        log({ status: res.status, body: safeParse(text) });
+      } catch (err) {
+        log(err);
+      }
+    };
+
+    function safeParse(t){ try{ return JSON.parse(t); } catch{ return t; } }
+</script>
+</body>
+</html>
