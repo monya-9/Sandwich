@@ -61,9 +61,9 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
   styleTag.innerHTML = `
     .suggest-blur-bg {
       position: fixed; inset: 0;
-      background: rgba(0, 0, 0, 0.65);  
-      z-index: 9000;
-       backdrop-filter: blur(0px);
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 20000; /* 최상위로 */
+      backdrop-filter: blur(2px);
       pointer-events: auto;
     }
   `;
@@ -201,7 +201,7 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
       {isModalOpen && !proposalOpen && !jobOfferOpen && !generalOpen && ReactDOM.createPortal(
         <>
           <div className="suggest-blur-bg" />
-          <div ref={modalRef} className="fixed left-1/2 top-1/2 z-[10001] w-[480px] max-w-[92vw] h-[480px] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center overflow-hidden bg-white rounded-[12px] shadow-2xl px-0 py-6" tabIndex={-1} role="dialog">
+          <div ref={modalRef} className="fixed left-1/2 top-1/2 z-[20001] w-[480px] max-w-[92vw] h-[480px] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center overflow-hidden bg-white rounded-[12px] shadow-2xl px-0 py-6" tabIndex={-1} role="dialog">
             <button className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none" onClick={() => setIsModalOpen(false)} aria-label="닫기">×</button>
             <div className="mt-8 mb-6">
               <div className="mx-auto w-[72px] h-[72px] rounded-full bg-gray-200 ring-1 ring-gray-300 overflow-hidden flex items-center justify-center">

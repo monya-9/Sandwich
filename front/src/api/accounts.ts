@@ -46,7 +46,7 @@ export interface AccountSearchParams {
 
 // 계정 검색 API 호출
 export const searchAccounts = async (params: AccountSearchParams): Promise<AccountSearchResponse> => {
-  const { q, page = 0, size = 20, followingOnly } = params;
+  const { q, page = 0, size = 20, followingOnly } = params; // ✅ 기본 size를 20으로 변경
   
   const searchParams = new URLSearchParams();
   

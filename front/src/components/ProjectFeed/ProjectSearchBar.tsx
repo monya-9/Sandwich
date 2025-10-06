@@ -1,10 +1,11 @@
 // 프로젝트 검색바 컴포넌트
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { SearchTypeDropdown } from './SearchTypeDropdown';
 import { SortDropdown } from './SortDropdown';
 import { useRecentSearches } from '../../hooks/useRecentSearches';
+import { AuthContext } from '../../context/AuthContext';
 
 interface ProjectSearchBarProps {
   onSearch: (query: string) => void;
@@ -30,6 +31,9 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(currentQuery);
   
+  // ✅ 로그인 상태 확인
+  const { isLoggedIn } = useContext(AuthContext);
+  
   // 최근 검색어 훅 사용
   const { saveSearch } = useRecentSearches();
 
@@ -54,15 +58,17 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
       // URL 업데이트
       window.history.pushState({}, '', `/search?q=${encodeURIComponent(searchQuery.trim())}`);
       
-      // 최근 검색어 저장
-      try {
-        await saveSearch(searchQuery.trim(), 'PORTFOLIO');
-      } catch (error) {
-        console.error('최근 검색어 저장 실패:', error);
-        // 에러가 발생해도 검색은 계속 진행
+      // ✅ 로그인한 사용자만 최근 검색어 저장
+      if (isLoggedIn) {
+        try {
+          await saveSearch(searchQuery.trim(), 'PORTFOLIO');
+        } catch (error) {
+          console.error('최근 검색어 저장 실패:', error);
+          // 에러가 발생해도 검색은 계속 진행
+        }
       }
     }
-  }, [searchQuery, onSearch, saveSearch]);
+  }, [searchQuery, onSearch, isLoggedIn, saveSearch]);
 
   // 검색어 변경
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

@@ -17,7 +17,6 @@ const VAPID_KEY =
     "BPfv2mducX32XZ2U3xb_DSkGCY_TRU-SwHpmRjTn43NjA1CRmhU6lKNpPWG5XbMdX5XeaxjgKEQUjTllnNake4E";
 
 let cachedFcmToken: string | null = null;
-let isTokenRegistered = false; // 중복 등록 방지
 
 async function registerWebPush(token: string, accessToken: string) {
     try {
@@ -121,9 +120,21 @@ export async function initFCM() {
             
             const url = (() => {
                 const raw = d.deepLink || (d.roomId ? `/messages/${d.roomId}` : "/");
+                console.log('[FCM][DEBUG] raw deepLink:', raw);
                 try {
-                    return new URL(raw, window.location.origin).toString();
-                } catch {
+                    // 절대 URL인 경우 그대로 사용, 상대 URL인 경우만 현재 origin과 조합
+                    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+                        console.log('[FCM][DEBUG] absolute URL, using as-is:', raw);
+                        return raw; // 절대 URL은 그대로 사용
+                    } else {
+                        // 상대 URL인 경우에만 현재 origin과 조합
+                        const currentOrigin = window.location.protocol + '//' + window.location.host;
+                        const result = new URL(raw, currentOrigin).toString();
+                        console.log('[FCM][DEBUG] relative URL, combining with origin:', currentOrigin, '->', result);
+                        return result;
+                    }
+                } catch (error) {
+                    console.warn('[FCM] URL generation failed:', error);
                     return raw;
                 }
             })();
@@ -132,10 +143,7 @@ export async function initFCM() {
                 body: d.body || d.preview || "메시지가 도착했어요",
                 data: { url, raw: d },
                 icon: d.icon || "/logo192.png",
-                image: d.image,
                 tag: notificationTag, // 고유 태그로 중복 방지
-                renotify: true,
-                timestamp: Date.now(),
                 silent: false,
             });
         });

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { FiPlus } from "react-icons/fi";
 import { UserApi, type UserProfileResponse, type RepresentativeCareer } from "../../api/userApi";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { HiCheckCircle } from "react-icons/hi2";
 import WorkTab from "./WorkTab";
 import LikesTab from "./LikesTab";
@@ -11,16 +11,26 @@ import { CareerProjectApi } from "../../api/careerProjectApi";
 import { CareerApi } from "../../api/careerApi";
 import { EducationApi } from "../../api/educationApi";
 import { AwardApi } from "../../api/awardApi";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function ProfilePage() {
+  const { email, nickname } = useContext(AuthContext);
   const [me, setMe] = useState<UserProfileResponse | null>(null);
-  const [showTip, setShowTip] = useState(true);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [allowProjectOffers, setAllowProjectOffers] = useState(true);
   const [allowJobOffers, setAllowJobOffers] = useState(true);
   const [showOfferSavedBanner, setShowOfferSavedBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<"work" | "like" | "collection" | "draft">("work");
   const [repCareers, setRepCareers] = useState<RepresentativeCareer[]>([]);
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.endsWith("/likes")) setActiveTab("like");
+    else if (path.endsWith("/collections")) setActiveTab("collection");
+    else if (path.endsWith("/drafts")) setActiveTab("draft");
+    else setActiveTab("work");
+  }, [location.pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -118,9 +128,10 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const displayName = (me?.nickname && me.nickname.trim()) || (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim() || me?.username || "사용자";
+  // ✅ AuthContext의 nickname을 우선 사용 (깜빡임 방지)
+  const displayName = (me?.nickname && me.nickname.trim()) || nickname || me?.username || "사용자";
   // 계정별 스코프 키를 우선 사용해 새로고침 후에도 동기화 유지
-  const userEmailScoped = (typeof window !== "undefined" && (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail"))) || "";
+  const userEmailScoped = email || "";
   const usernameScopedKey = userEmailScoped ? `userUsername:${userEmailScoped}` : "userUsername";
   const scopedUsernameLocal = (typeof window !== "undefined" && (localStorage.getItem(usernameScopedKey) || sessionStorage.getItem(usernameScopedKey))) || "";
   const profileUrlScopedKey = userEmailScoped ? `profileUrlSlug:${userEmailScoped}` : "profileUrlSlug";

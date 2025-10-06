@@ -129,7 +129,7 @@ const Toast: React.FC<ToastProps> = ({
         top: '20px',
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 9999,
+        zIndex: 20000,
         background: typeStyles.background,
         color: '#fff',
         fontFamily: "'Gmarket Sans', sans-serif",

@@ -211,8 +211,15 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 											<button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onDelete}>삭제하기</button>
 										</div>
 									</div>
-									<div className="text-gray-600 text-sm mt-1 truncate">{finalOwnerName}</div>
-                           <div className="text-gray-500 text-sm mt-0.5 truncate">{summary || "프로젝트 한줄 소개"}</div>
+									{!!(summary && summary.trim()) && (
+                              <div className="mt-2 relative">
+                                 <div className="inline-flex relative bg-white text-gray-900 text-[15px] px-4 py-2 rounded-3xl border border-gray-200 shadow-sm max-w-[640px] min-w-[72px] min-h-[36px] items-center justify-center text-center break-words">
+                                    {summary}
+                                    <div className="absolute left-4 -bottom-1 w-3 h-3 bg-white rotate-45 shadow-sm border-r border-b border-gray-200"></div>
+                                 </div>
+                              </div>
+                           )}
+                           <div className="text-gray-600 text-sm mt-1 truncate">{finalOwnerName}</div>
 								</div>
 							</div>
 						</div>
@@ -269,7 +276,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 								/>
 							</div>
 							<div className="px-8">
-                        <UserProfileBox userName={finalOwnerName} email={storedEmail} />
+                        <UserProfileBox userName={finalOwnerName} email={storedEmail} isOwner={true} />
 							</div>
 						</div>
 

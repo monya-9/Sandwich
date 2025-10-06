@@ -46,7 +46,10 @@ import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
+import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
+import CollectionDetailPage from "./pages/CollectionDetailPage";
+import PublicCollectionDetailPage from "./pages/PublicCollectionDetailPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -84,7 +87,7 @@ function App() {
                                 <Route index element={<MainPage />} />
                                 {/* Notefolio 스타일 상세 경로 */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
-                            
+                                
 
                                 {/* 신규/편집 업로드 경로 */}
                                 <Route path="/project/edit" element={<ProjectMangeSampleForm />} />
@@ -95,6 +98,7 @@ function App() {
                                 <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
                                 <Route path="l/:ownerId/:projectId" element={<ProjectDetailLightboxPage />} />
                                 <Route path="search" element={<ProjectFeedPage />} />
+                                <Route path="search/accounts" element={<AccountSearchPage />} />
                                 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
@@ -112,6 +116,9 @@ function App() {
                                 <Route path="/profile/work" element={<ProfilePage />} />
                                 <Route path="/profile/likes" element={<ProfilePage />} />
                                 <Route path="/profile/collections" element={<ProfilePage />} />
+                                <Route path="/collections/:id" element={<CollectionDetailPage />} />
+                                {/* 타인 프로필용 공개 컬렉션 상세 */}
+                                <Route path="/users/:userId/collections/:id" element={<PublicCollectionDetailPage />} />
                                 <Route path="/profile/drafts" element={<ProfilePage />} />
                                 <Route path="/profile/careers" element={<CareerDetailsPage />} />
                                 {/* ✅ 챌린지 라우팅 */}

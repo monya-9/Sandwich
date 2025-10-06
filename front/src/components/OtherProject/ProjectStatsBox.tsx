@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FaHeart } from "react-icons/fa";
 import { FaFolderMinus } from "react-icons/fa6";
 import { FaEye, FaCommentDots } from "react-icons/fa";
@@ -11,17 +11,41 @@ type Props = {
   date: string;
   category?: string;
   badge?: string;
+  hasCollected?: boolean;
+  // 액션 타겟 지정용
+  projectId?: number;
 };
 
-export default function ProjectStatsBox({ likes, views, comments, projectName, date, category, badge, }: Props) {
+export default function ProjectStatsBox({ likes, views, comments, projectName, date, category, badge, hasCollected = false, projectId, }: Props) {
   const displayName = (projectName || "").trim();
   const hasCategory = !!(category && category.trim().length > 0);
+  const [collected, setCollected] = useState<boolean>(hasCollected);
+
+  useEffect(() => setCollected(hasCollected), [hasCollected]);
+  useEffect(() => {
+    const handler = (e: any) => { try { setCollected(!!e?.detail?.hasCollected); } catch {} };
+    window.addEventListener("collection:membership", handler as any);
+    return () => window.removeEventListener("collection:membership", handler as any);
+  }, []);
+
+  const openCollectionPicker = () => {
+    try {
+      window.dispatchEvent(new CustomEvent("collection:open"));
+    } catch {}
+  };
+
+  const toggleLike = () => {
+    try {
+      window.dispatchEvent(new CustomEvent("like:toggle", { detail: { targetType: "PROJECT", targetId: projectId } } as any));
+    } catch {}
+  };
+
   return (
     <div className="-mx-8 bg-black text-white w-auto mb-8">
       <div className="max-w-[1800px] mx-auto py-10 px-6 flex flex-col items-center">
         {/* 버튼 영역 (가로 넓은 타원형 + 세로정렬 아이콘/텍스트) */}
         <div className="flex justify-center gap-8 mb-8">
-          <button className="
+          <button onClick={toggleLike} className="
             flex flex-col items-center justify-center
             bg-[#ff668a] text-white
             w-[300px] py-7 rounded-full
@@ -31,13 +55,11 @@ export default function ProjectStatsBox({ likes, views, comments, projectName, d
             <FaHeart className="w-8 h-8 mb-2" />
             작업 좋아요
           </button>
-          <button className="
+          <button onClick={openCollectionPicker} className={`
             flex flex-col items-center justify-center
-            bg-white border-2 border-black text-black
-            w-[300px] py-7 rounded-full
-            text-2xl font-bold shadow
-            hover:bg-gray-100 transition
-          ">
+            w-[300px] py-7 rounded-full text-2xl font-bold shadow transition
+            ${collected ? "bg-[#068334] text-white hover:bg-[#05702C]" : "bg-white border-2 border-black text-black hover:bg-gray-100"}
+         `}>
             <FaFolderMinus className="w-8 h-8 mb-2" />
             컬렉션 저장
           </button>
