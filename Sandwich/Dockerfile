@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 1. 파일 경로(/app/creds) 생성
 RUN mkdir -p /app/creds
 # 2. 로컬의 JSON 파일을 컨테이너 내부의 /app/creds 경로로 복사
-COPY firebase-service-account.json /app/creds/firebase-service-account.json
+#COPY firebase-service-account.json /app/creds/firebase-service-account.json
 
 COPY --from=builder /app/build/libs/*.jar /app/app.jar
 
