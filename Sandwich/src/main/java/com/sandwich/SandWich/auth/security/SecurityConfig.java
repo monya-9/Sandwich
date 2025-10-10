@@ -64,6 +64,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/", "/recaptcha-v2.html", "/recaptcha-v3.html", "/favicon.ico"
                         ).permitAll()
+                        // OTP 경로 허용
+                        .requestMatchers("/api/auth/otp/**").permitAll()
                         // 필요시 정적 폴더 패턴도 추가
                         .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
 
