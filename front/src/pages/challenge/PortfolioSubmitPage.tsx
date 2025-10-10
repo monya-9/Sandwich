@@ -2,12 +2,16 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
-import { SectionCard, CTAButton } from "../../components/challenge/common";
+import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
 import { addPortfolioProject } from "../../data/Challenge/submissionsDummy";
 import Toast from "../../components/common/Toast";
+import { useUserInfo } from "../../hooks/useUserInfo";
+import { uploadImage } from "../../api/projectApi";
+import ImageUploadSection, { processImageFile } from "../../components/ProjectMangeSample/ImageUploadSection";
+import CoverCropper from "../../components/ProjectMangeSample/CoverCropper";
 
 type PortfolioSubmitPayload = {
     title: string;
@@ -17,16 +21,9 @@ type PortfolioSubmitPayload = {
     teamType?: "SOLO" | "TEAM";
     teamName?: string;
     membersText?: string;
+    language?: string;
+    coverUrl?: string;
 };
-
-const Row = ({ children }: { children: React.ReactNode }) => <div className="flex flex-col gap-1">{children}</div>;
-const Label = ({ children }: { children: React.ReactNode }) => (
-    <label className="text-[13px] font-semibold text-neutral-800">{children}</label>
-);
-const Help = ({ children }: { children: React.ReactNode }) => <p className="text-[12px] text-neutral-500">{children}</p>;
-const GreenBox = ({ children }: { children: React.ReactNode }) => (
-    <div className="rounded-xl border-2 border-emerald-300/70 bg-white p-3">{children}</div>
-);
 
 export default function PortfolioSubmitPage() {
     const { id: idStr } = useParams();
@@ -36,6 +33,7 @@ export default function PortfolioSubmitPage() {
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
+    const userInfo = useUserInfo();
 
     useEffect(() => { if (!isLoggedIn) setLoginOpen(true); }, [isLoggedIn]);
 
@@ -44,6 +42,8 @@ export default function PortfolioSubmitPage() {
         visible: false,
         message: ''
     });
+    const [cropOpen, setCropOpen] = useState(false);
+    const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [form, setForm] = useState<PortfolioSubmitPayload>({
         title: data.title.replace(/^포트폴리오 챌린지:\s*/, ""),
         repoUrl: data.submitExample?.repoUrl || "",
@@ -52,10 +52,60 @@ export default function PortfolioSubmitPage() {
         teamType: "SOLO",
         teamName: "",
         membersText: "",
+        language: "",
+        coverUrl: "",
     });
 
     // ✅ 제목 또는 설명만 있어도 제출 가능
     const canSubmit = !!form.title.trim() || !!form.desc?.trim();
+
+    // 이미지 크롭 핸들러
+    const handleCropDone = async (
+        square: { blob: Blob; url: string },
+        rect: { blob: Blob; url: string }
+    ) => {
+        try {
+            // 3:4 비율의 직사각형 이미지 사용
+            const file = new File([rect.blob], "cover.jpg", { type: "image/jpeg" });
+            const uploadResult = await uploadImage(file);
+            setForm(prev => ({ ...prev, coverUrl: uploadResult.url }));
+            setSuccessToast({
+                visible: true,
+                message: "커버 이미지가 업로드되었습니다."
+            });
+        } catch (error) {
+            setSuccessToast({
+                visible: true,
+                message: "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+            });
+        }
+        setCropOpen(false);
+        setCropSrc(null);
+    };
+
+    // 이미지 업로드 핸들러 (크롭 모달 열기)
+    const handleImageUpload = async (file: File) => {
+        try {
+            const result = await processImageFile(file);
+            if (!result.ok) {
+                setSuccessToast({
+                    visible: true,
+                    message: "이미지 파일 형식이 올바르지 않거나 용량이 너무 큽니다."
+                });
+                return;
+            }
+            
+            // 크롭 모달 열기
+            const url = URL.createObjectURL(file);
+            setCropSrc(url);
+            setCropOpen(true);
+        } catch (error) {
+            setSuccessToast({
+                visible: true,
+                message: "이미지 처리에 실패했습니다. 다시 시도해주세요."
+            });
+        }
+    };
 
     const handleSubmit = () => {
         if (!canSubmit) return;
@@ -64,10 +114,10 @@ export default function PortfolioSubmitPage() {
             summary: form.desc?.trim() || "설명 미입력",
             demoUrl: form.demoUrl?.trim(),
             repoUrl: form.repoUrl?.trim(),
-            authorInitial: "P",
-            authorName: "허은진",
+            authorInitial: userInfo.authorInitial,
+            authorName: userInfo.authorName,
             teamName: form.teamName?.trim() || undefined,
-            authorRole: "포트폴리오",
+            authorRole: userInfo.authorRole,
         });
         setSuccessToast({
             visible: true,
@@ -141,32 +191,35 @@ export default function PortfolioSubmitPage() {
                                 />
                             </Row>
 
-                            <div className="grid gap-3 md:grid-cols-2">
+                            <Row>
+                                <Label>참여 형태</Label>
+                                <div className="flex gap-4 text-[13.5px]">
+                                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="teamType"
+                                            checked={form.teamType === "SOLO"}
+                                            onChange={() => setForm((f) => ({ ...f, teamType: "SOLO", teamName: "", membersText: "" }))}
+                                            className="w-4 h-4 text-emerald-600 border-neutral-300 focus:ring-emerald-500"
+                                        />
+                                        <span className={form.teamType === "SOLO" ? "text-emerald-600 font-medium" : "text-neutral-700"}>개인</span>
+                                    </label>
+                                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="teamType"
+                                            checked={form.teamType === "TEAM"}
+                                            onChange={() => setForm((f) => ({ ...f, teamType: "TEAM" }))}
+                                            className="w-4 h-4 text-emerald-600 border-neutral-300 focus:ring-emerald-500"
+                                        />
+                                        <span className={form.teamType === "TEAM" ? "text-emerald-600 font-medium" : "text-neutral-700"}>팀</span>
+                                    </label>
+                                </div>
+                            </Row>
+                            
+                            {form.teamType === "TEAM" && (
                                 <Row>
-                                    <Label>참여 형태</Label>
-                                    <div className="flex gap-3 text-[13.5px]">
-                                        <label className="inline-flex items-center gap-1">
-                                            <input
-                                                type="radio"
-                                                name="teamType"
-                                                checked={form.teamType === "SOLO"}
-                                                onChange={() => setForm((f) => ({ ...f, teamType: "SOLO" }))}
-                                            />
-                                            개인
-                                        </label>
-                                        <label className="inline-flex items-center gap-1">
-                                            <input
-                                                type="radio"
-                                                name="teamType"
-                                                checked={form.teamType === "TEAM"}
-                                                onChange={() => setForm((f) => ({ ...f, teamType: "TEAM" }))}
-                                            />
-                                            팀
-                                        </label>
-                                    </div>
-                                </Row>
-                                <Row>
-                                    <Label>팀명(팀일 경우)</Label>
+                                    <Label>팀명</Label>
                                     <input
                                         className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
                                         value={form.teamName}
@@ -174,18 +227,20 @@ export default function PortfolioSubmitPage() {
                                         placeholder="예) 레트로감성조"
                                     />
                                 </Row>
-                            </div>
+                            )}
 
-                            <Row>
-                                <Label>구성원/역할</Label>
-                                <textarea
-                                    rows={4}
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
-                                    value={form.membersText}
-                                    onChange={(e) => setForm((f) => ({ ...f, membersText: e.target.value }))}
-                                    placeholder={"예)\n민준 - 프론트엔드\n소희 - 디자인/UI"}
-                                />
-                            </Row>
+                            {form.teamType === "TEAM" && (
+                                <Row>
+                                    <Label>구성원/역할</Label>
+                                    <textarea
+                                        rows={4}
+                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
+                                        value={form.membersText}
+                                        onChange={(e) => setForm((f) => ({ ...f, membersText: e.target.value }))}
+                                        placeholder={"예)\n민준 - 프론트엔드\n소희 - 디자인/UI"}
+                                    />
+                                </Row>
+                            )}
 
                             <Row>
                                 <Label>GitHub 링크</Label>
@@ -205,6 +260,70 @@ export default function PortfolioSubmitPage() {
                                     onChange={(e) => setForm((f) => ({ ...f, demoUrl: e.target.value }))}
                                     placeholder="https://your-demo.example.com"
                                 />
+                            </Row>
+
+                            <Row>
+                                <Label>기술 스택/언어</Label>
+                                <div className="relative">
+                                    <select
+                                        className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-[13.5px] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 cursor-pointer"
+                                        value={form.language}
+                                        onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
+                                    >
+                                        <option value="">선택해주세요</option>
+                                        <option value="JavaScript">JavaScript</option>
+                                        <option value="TypeScript">TypeScript</option>
+                                        <option value="React">React</option>
+                                        <option value="Vue">Vue</option>
+                                        <option value="Angular">Angular</option>
+                                        <option value="Next.js">Next.js</option>
+                                        <option value="Node.js">Node.js</option>
+                                        <option value="Python">Python</option>
+                                        <option value="Java">Java</option>
+                                        <option value="Spring">Spring</option>
+                                        <option value="PHP">PHP</option>
+                                        <option value="C#">C#</option>
+                                        <option value="C++">C++</option>
+                                        <option value="Go">Go</option>
+                                        <option value="Rust">Rust</option>
+                                        <option value="Kotlin">Kotlin</option>
+                                        <option value="Swift">Swift</option>
+                                        <option value="Flutter">Flutter</option>
+                                        <option value="React Native">React Native</option>
+                                        <option value="기타">기타</option>
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </Row>
+
+                            <Row>
+                                <Label>커버 이미지</Label>
+                                <div className="space-y-3">
+                                    {form.coverUrl && (
+                                        <div className="relative">
+                                            <img 
+                                                src={form.coverUrl} 
+                                                alt="커버 이미지 미리보기" 
+                                                className="w-full max-w-md h-48 object-cover rounded-lg border border-neutral-300"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm(prev => ({ ...prev, coverUrl: "" }))}
+                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    )}
+                                    <ImageUploadSection onAdd={handleImageUpload} />
+                                    <p className="text-xs text-neutral-500">
+                                        권장 사이즈: 4:3 비율, 최대 10MB (JPG, PNG, WebP 지원)
+                                    </p>
+                                </div>
                             </Row>
 
                             <Row>
@@ -233,9 +352,20 @@ export default function PortfolioSubmitPage() {
                                 <div><span className="font-semibold">제목: </span>{form.title || "-"}</div>
                                 <div><span className="font-semibold">참여 형태: </span>{form.teamType === "SOLO" ? "개인" : "팀"}</div>
                                 {form.teamName && <div><span className="font-semibold">팀명: </span>{form.teamName}</div>}
-                                {form.membersText && (
+                                {form.teamType === "TEAM" && form.membersText && (
                                     <div className="whitespace-pre-wrap">
                                         <span className="font-semibold">구성원: </span>{"\n"}{form.membersText}
+                                    </div>
+                                )}
+                                {form.language && <div><span className="font-semibold">기술 스택: </span>{form.language}</div>}
+                                {form.coverUrl && (
+                                    <div>
+                                        <span className="font-semibold">커버 이미지: </span>
+                                        <img 
+                                            src={form.coverUrl} 
+                                            alt="커버 이미지" 
+                                            className="mt-2 w-full max-w-xs h-32 object-cover rounded border"
+                                        />
                                     </div>
                                 )}
                                 {form.repoUrl && <div><span className="font-semibold">GitHub: </span>{form.repoUrl}</div>}
@@ -266,6 +396,19 @@ export default function PortfolioSubmitPage() {
                 </SectionCard>
             </div>
         </div>
+        
+        {/* 크롭 모달 */}
+        {cropOpen && cropSrc && (
+            <CoverCropper 
+                open={cropOpen} 
+                src={cropSrc} 
+                onClose={() => {
+                    setCropOpen(false);
+                    setCropSrc(null);
+                }} 
+                onCropped={handleCropDone} 
+            />
+        )}
         </>
     );
 }

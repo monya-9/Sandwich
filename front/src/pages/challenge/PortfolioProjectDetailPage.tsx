@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { SectionCard, CTAButton } from "../../components/challenge/common";
+import { SectionCard, CTAButton, ChallengePageHeader } from "../../components/challenge/common";
 import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, X } from "lucide-react";
 import {
     getPortfolioProjects,

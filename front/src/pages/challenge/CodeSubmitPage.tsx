@@ -3,12 +3,13 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
-import { SectionCard, CTAButton } from "../../components/challenge/common";
+import { SectionCard, CTAButton, Row, Label, Help, GreenBox } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { addCodeSubmission } from "../../data/Challenge/submissionsDummy";
 import Toast from "../../components/common/Toast";
+import { useUserInfo } from "../../hooks/useUserInfo";
 
 type CodeSubmitPayload = {
     title: string;
@@ -27,19 +28,6 @@ type AiStatus = {
     aiComment?: string;
 };
 
-const Row = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex flex-col gap-1">{children}</div>
-);
-const Label = ({ children }: { children: React.ReactNode }) => (
-    <label className="text-[13px] font-semibold text-neutral-800">{children}</label>
-);
-const Help = ({ children }: { children: React.ReactNode }) => (
-    <p className="text-[12px] text-neutral-500">{children}</p>
-);
-const GreenBox = ({ children }: { children: React.ReactNode }) => (
-    <div className="rounded-xl border-2 border-emerald-300/70 bg-white p-3">{children}</div>
-);
-
 export default function CodeSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 1);
@@ -48,6 +36,7 @@ export default function CodeSubmitPage() {
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
+    const userInfo = useUserInfo();
 
     useEffect(() => {
         if (!isLoggedIn) setLoginOpen(true);
@@ -83,9 +72,9 @@ export default function CodeSubmitPage() {
                     form.note?.trim() ||
                     `repo: ${form.repoUrl || "-"} / ${form.language} ${form.entrypoint}`,
                 snippet: undefined,
-                authorInitial: "L",
-                authorName: "허은진",
-                authorRole: "프론트엔드 개발자",
+                authorInitial: userInfo.authorInitial,
+                authorName: userInfo.authorName,
+                authorRole: userInfo.authorRole,
             });
             setSuccessToast({
                 visible: true,
