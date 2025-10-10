@@ -19,6 +19,7 @@ type PortfolioSubmitPayload = {
     repoUrl?: string;
     demoUrl?: string;
     desc?: string;
+    summary?: string;
     teamType?: "SOLO" | "TEAM";
     teamName?: string;
     membersText?: string;
@@ -305,7 +306,7 @@ export default function PortfolioSubmitPage() {
                                 <div className="space-y-3">
                                     {/* 4:3 비율 컨테이너 */}
                                     <div className="relative w-full max-w-md mx-auto">
-                                        <div className="relative w-full aspect-[4/3] border-2 border-dashed border-neutral-300 rounded-lg overflow-hidden bg-neutral-50">
+                                        <div className={`relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-neutral-50 ${form.coverUrl ? 'border border-neutral-300' : 'border-2 border-dashed border-neutral-300'}`}>
                                             {form.coverUrl ? (
                                                 <>
                                                     <img 
@@ -372,7 +373,7 @@ export default function PortfolioSubmitPage() {
                                                 <img 
                                                     src={imageUrl} 
                                                     alt={`추가 이미지 ${index + 1}`}
-                                                    className="w-full aspect-square object-cover rounded-lg border border-neutral-300"
+                                                    className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-300"
                                                 />
                                                 <button
                                                     type="button"
@@ -443,54 +444,79 @@ export default function PortfolioSubmitPage() {
                 ) : (
                     <SectionCard className="!px-5 !py-5">
                         <h3 className="mb-3 text-[15px] font-bold">🖼️ 미리보기</h3>
-                        <GreenBox>
-                            <div className="space-y-1 text-[13.5px] leading-7">
-                                <div><span className="font-semibold">제목: </span>{form.title || "-"}</div>
-                                <div><span className="font-semibold">참여 형태: </span>{form.teamType === "SOLO" ? "개인" : "팀"}</div>
-                                {form.teamName && <div><span className="font-semibold">팀명: </span>{form.teamName}</div>}
+                        <div className="grid gap-4 md:grid-cols-[2fr_3fr]">
+                            {/* 좌측: 커버 이미지 (폼과 동일 4:3) */}
+                            <div className="relative w-full">
+                                <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg border bg-neutral-50">
+                                    {form.coverUrl ? (
+                                        <img src={form.coverUrl} alt="커버 이미지" className="absolute inset-0 w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-sm">커버 이미지 없음</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 우측: 입력폼과 동일한 정보 구성 */}
+                            <div className="space-y-3 text-[13.5px] leading-7">
+                                <div>
+                                    <div className="text-[16px] font-extrabold tracking-[-0.01em]">{form.title || "제목 미입력"}</div>
+                                    {form.summary && <div className="text-neutral-600 mt-1">{form.summary}</div>}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-full border text-neutral-700">{form.teamType === "TEAM" ? "팀" : "개인"}</span>
+                                    {form.teamType === "TEAM" && form.teamName && (
+                                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">{form.teamName}</span>
+                                    )}
+                                    {form.language && (
+                                        <span className="ml-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 border">{form.language}</span>
+                                    )}
+                                </div>
+
                                 {form.teamType === "TEAM" && form.membersText && (
                                     <div className="whitespace-pre-wrap">
-                                        <span className="font-semibold">구성원: </span>{"\n"}{form.membersText}
+                                        <span className="font-semibold">구성원/역할: </span>{"\n"}{form.membersText}
                                     </div>
                                 )}
-                                {form.language && <div><span className="font-semibold">기술 스택: </span>{form.language}</div>}
-                                {form.coverUrl && (
-                                    <div>
-                                        <span className="font-semibold">커버 이미지: </span>
-                                        <img 
-                                            src={form.coverUrl} 
-                                            alt="커버 이미지" 
-                                            className="mt-2 w-full max-w-xs h-32 object-cover rounded border"
-                                        />
+
+                                <div className="space-y-1">
+                                    {form.repoUrl && (
+                                        <div>
+                                            <span className="font-semibold">GitHub: </span>
+                                            <a className="text-emerald-700 underline break-all" href={form.repoUrl} target="_blank" rel="noreferrer">{form.repoUrl}</a>
+                                        </div>
+                                    )}
+                                    {form.demoUrl && (
+                                        <div>
+                                            <span className="font-semibold">데모: </span>
+                                            <a className="text-emerald-700 underline break-all" href={form.demoUrl} target="_blank" rel="noreferrer">{form.demoUrl}</a>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {form.desc && (
+                                    <div className="whitespace-pre-wrap">
+                                        <span className="font-semibold">설명: </span>{form.desc}
                                     </div>
                                 )}
+
                                 {form.images && form.images.length > 0 && (
                                     <div>
-                                        <span className="font-semibold">추가 이미지: </span>
-                                        <div className="mt-2 grid grid-cols-2 gap-2">
+                                        <div className="font-semibold mb-1">추가 이미지</div>
+                                        <div className="grid grid-cols-3 gap-1.5 md:gap-2">
                                             {form.images.map((imageUrl, index) => (
-                                                <img 
-                                                    key={index}
-                                                    src={imageUrl} 
-                                                    alt={`추가 이미지 ${index + 1}`}
-                                                    className="w-full h-20 object-cover rounded border"
-                                                />
+                                                <div key={index} className="w-full aspect-[4/3] rounded border overflow-hidden">
+                                                    <img src={imageUrl} alt={`추가 이미지 ${index + 1}`} className="w-full h-full object-cover" />
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
                                 )}
-                                {form.repoUrl && <div><span className="font-semibold">GitHub: </span>{form.repoUrl}</div>}
-                                {form.demoUrl && <div><span className="font-semibold">데모: </span>{form.demoUrl}</div>}
-                                {form.desc && (
-                                    <div className="whitespace-pre-wrap"><span className="font-semibold">설명: </span>{form.desc}</div>
-                                )}
                             </div>
-                        </GreenBox>
+                        </div>
 
                         <div className="mt-4 flex justify-end">
-                            <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit}>
-                                제출하기
-                            </CTAButton>
+                            <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit}>제출하기</CTAButton>
                         </div>
                     </SectionCard>
                 )}
