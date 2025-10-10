@@ -315,7 +315,13 @@ export default function PortfolioSubmitPage() {
                                                     />
                                                     <button
                                                         type="button"
-                                                        onClick={() => setForm(prev => ({ ...prev, coverUrl: "" }))}
+                                                        onClick={() => {
+                                                            setForm(prev => ({ ...prev, coverUrl: "" }));
+                                                            setSuccessToast({
+                                                                visible: true,
+                                                                message: "커버 이미지가 제거되었습니다."
+                                                            });
+                                                        }}
                                                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                                                     >
                                                         ×
@@ -335,17 +341,19 @@ export default function PortfolioSubmitPage() {
                                                 </div>
                                             )}
                                             
-                                            {/* 숨겨진 파일 입력 */}
-                                            <input
-                                                type="file"
-                                                accept="image/jpeg,image/jpg,image/png,image/webp"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) handleImageUpload(file);
-                                                    e.currentTarget.value = "";
-                                                }}
-                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            />
+                                            {/* 숨겨진 파일 입력 - 이미지가 없을 때만 활성화 */}
+                                            {!form.coverUrl && (
+                                                <input
+                                                    type="file"
+                                                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleImageUpload(file);
+                                                        e.currentTarget.value = "";
+                                                    }}
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                     
