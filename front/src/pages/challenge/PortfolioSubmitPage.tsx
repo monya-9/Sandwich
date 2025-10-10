@@ -12,6 +12,7 @@ import { useUserInfo } from "../../hooks/useUserInfo";
 import { uploadImage } from "../../api/projectApi";
 import ImageUploadSection, { processImageFile } from "../../components/ProjectMangeSample/ImageUploadSection";
 import CoverCropper from "../../components/ProjectMangeSample/CoverCropper";
+import CustomDropdown from "../../components/common/CustomDropdown";
 
 type PortfolioSubmitPayload = {
     title: string;
@@ -24,6 +25,31 @@ type PortfolioSubmitPayload = {
     language?: string;
     coverUrl?: string;
 };
+
+// 기술 스택 옵션들
+const languageOptions = [
+    "JavaScript",
+    "TypeScript", 
+    "React",
+    "Vue",
+    "Angular",
+    "Next.js",
+    "Node.js",
+    "Python",
+    "Java",
+    "Spring",
+    "PHP",
+    "C#",
+    "C++",
+    "Go",
+    "Rust",
+    "Kotlin",
+    "Swift",
+    "Flutter",
+    "React Native",
+    "기타"
+];
+
 
 export default function PortfolioSubmitPage() {
     const { id: idStr } = useParams();
@@ -264,40 +290,12 @@ export default function PortfolioSubmitPage() {
 
                             <Row>
                                 <Label>기술 스택/언어</Label>
-                                <div className="relative">
-                                    <select
-                                        className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-[13.5px] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all duration-200 cursor-pointer"
-                                        value={form.language}
-                                        onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
-                                    >
-                                        <option value="">선택해주세요</option>
-                                        <option value="JavaScript">JavaScript</option>
-                                        <option value="TypeScript">TypeScript</option>
-                                        <option value="React">React</option>
-                                        <option value="Vue">Vue</option>
-                                        <option value="Angular">Angular</option>
-                                        <option value="Next.js">Next.js</option>
-                                        <option value="Node.js">Node.js</option>
-                                        <option value="Python">Python</option>
-                                        <option value="Java">Java</option>
-                                        <option value="Spring">Spring</option>
-                                        <option value="PHP">PHP</option>
-                                        <option value="C#">C#</option>
-                                        <option value="C++">C++</option>
-                                        <option value="Go">Go</option>
-                                        <option value="Rust">Rust</option>
-                                        <option value="Kotlin">Kotlin</option>
-                                        <option value="Swift">Swift</option>
-                                        <option value="Flutter">Flutter</option>
-                                        <option value="React Native">React Native</option>
-                                        <option value="기타">기타</option>
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <CustomDropdown
+                                    value={form.language || ""}
+                                    onChange={(value) => setForm((f) => ({ ...f, language: value }))}
+                                    options={languageOptions}
+                                    placeholder="선택해주세요"
+                                />
                             </Row>
 
                             <Row>
