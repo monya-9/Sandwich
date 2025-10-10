@@ -8,6 +8,7 @@ export type MonthlyChallengeData = {
   theme: string;
   emoji: string;
   generatedAt: string;
+  ym?: string; // YYYY-MM
   requirements?: string[];
   tips?: string[];
   mustHave?: string[];
@@ -31,6 +32,7 @@ function parseMonthlyChallenge(json: any): MonthlyChallengeData {
       theme: apiData.title || "", // title을 theme으로 사용
       emoji: "🎨", // 기본 이모지
       generatedAt: apiData.updated_at ? new Date(apiData.updated_at * 1000).toISOString() : new Date().toISOString(),
+      ym: json.ym || apiData.ym,
       requirements: apiData.must_have || [],
       tips: [],
       mustHave: apiData.must_have || [],
