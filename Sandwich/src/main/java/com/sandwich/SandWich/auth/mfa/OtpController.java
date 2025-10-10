@@ -33,15 +33,15 @@ public class OtpController {
     private final DeviceTrustService deviceTrustService;
     private final LoginOtpMailService loginOtpMailService;
     private final StringRedisTemplate redis; // 재전송 rate-limit에 사용
+    private final MfaProperties mfaProperties;
 
-    /* ======================
-       B2) OTP 검증
-       ====================== */
+    //OTP 검증
     @PostMapping("/verify")
     public ResponseEntity<?> verify(@RequestBody VerifyReq req,
                                     HttpServletRequest httpReq,
                                     HttpServletResponse httpRes) {
 
+        assertOtpApiOpen();
         String pendingId = req.getPendingId() == null ? null : req.getPendingId().trim();
         String code = req.getCode() == null ? "" : req.getCode().trim();
 
@@ -82,6 +82,7 @@ public class OtpController {
        ====================== */
     @PostMapping("/resend")
     public ResponseEntity<?> resend(@RequestBody ResendReq req) {
+        assertOtpApiOpen();
         String pendingId = req.getPendingId() == null ? null : req.getPendingId().trim();
         if (pendingId == null || pendingId.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "EXPIRED"));
@@ -128,6 +129,13 @@ public class OtpController {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime midnight = now.plusDays(1).toLocalDate().atStartOfDay();
         return Math.max(1, ChronoUnit.SECONDS.between(now, midnight));
+    }
+
+    private void assertOtpApiOpen() {
+        if (mfaProperties.isBlockOtpApis()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "Not Found");
+        }
     }
 
     /* === DTOs === */

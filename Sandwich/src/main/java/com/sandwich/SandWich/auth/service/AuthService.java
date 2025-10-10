@@ -5,6 +5,7 @@ import com.sandwich.SandWich.auth.dto.LoginRequest;
 import com.sandwich.SandWich.auth.dto.MfaRequiredResponse;
 import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.auth.dto.TokenResponse;
+import com.sandwich.SandWich.auth.mfa.MfaProperties;
 import com.sandwich.SandWich.auth.mfa.OtpContext;
 import com.sandwich.SandWich.auth.mfa.OtpService;
 import com.sandwich.SandWich.auth.security.JwtUtil;
@@ -44,6 +45,7 @@ public class AuthService {
     private final DeviceTrustService deviceTrustService;
     private final OtpService otpService;
     private final LoginOtpMailService loginOtpMailService;
+    private final MfaProperties mfaProperties;
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
@@ -115,6 +117,21 @@ public class AuthService {
         // 4) 비밀번호 확인
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new InvalidPasswordException();
+        }
+
+        // === 전역 Feature Flag: 꺼져 있으면 2FA 생략 ===
+        if (!mfaProperties.isEnabled()) {
+            String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
+            String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+            redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
+
+            // (선택) 플래그 BYPASS 상황에서도 '기기 기억' 체크시 쿠키 발급하려면 주석 해제
+            // if (Boolean.TRUE.equals(req.getRememberMe())) {
+            //     deviceTrustService.remember(httpReq, httpRes, user.getId(), "FeatureFlag-Bypass");
+            // }
+
+            log.info("[LOGIN] MFA_ENABLED=false → issue tokens immediately. userId={}", user.getId());
+            return new TokenResponse(accessToken, refreshToken, "local");
         }
 
         // 5) Trusted Device면 즉시 토큰 발급
