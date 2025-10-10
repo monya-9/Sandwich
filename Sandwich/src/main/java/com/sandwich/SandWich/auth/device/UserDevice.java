@@ -30,7 +30,7 @@ public class UserDevice extends BaseEntity {
     private String uaHash; // User-Agent 해시 (브라우저/앱 구분용)
     private String lastIp; // 마지막 로그인 시 IP
 
-    @Column(length = 100)
+    @Column(length = 64)
     private String deviceName; // 사용자가 지정한 디바이스 이름
 
     private OffsetDateTime trustUntil; // 신뢰 만료 시점 (예: 30일 후)

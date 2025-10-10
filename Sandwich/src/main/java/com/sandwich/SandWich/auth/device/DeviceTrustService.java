@@ -71,4 +71,29 @@ public class DeviceTrustService {
         byte[] b=new byte[bytes]; rnd.nextBytes(b);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(b);
     }
+
+    public boolean isTrusted(HttpServletRequest req) {
+        String tdid = readCookie(req,"tdid");
+        String tdt  = readCookie(req,"tdt");
+        if (tdid==null || tdt==null) return false;
+        String ua = String.valueOf(req.getHeader("User-Agent"));
+        String ip = clientIp(req);
+        return isTrusted(tdid, tdt, ua, ip);
+    }
+
+    //전역 필터용: userId 없이 디바이스 자체가 유효/미해지/미만료이고, 비밀이 맞는지만 검사
+    public boolean isTrusted(String deviceId, String deviceToken, String userAgent, String ip) {
+        return repo.findByDeviceIdAndRevokedAtIsNull(deviceId)
+                .filter(d -> d.getTrustUntil()!=null && d.getTrustUntil().isAfter(OffsetDateTime.now()))
+                .filter(d -> encoder.matches(deviceToken, d.getDeviceSecretHash()))
+                .isPresent();
+    }
+
+    private String clientIp(HttpServletRequest req) {
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
+        String realIp = req.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) return realIp.trim();
+        return req.getRemoteAddr();
+    }
 }
