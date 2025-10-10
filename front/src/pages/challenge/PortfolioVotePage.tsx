@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { SectionCard, CTAButton, ChallengePageHeader, SubmissionCard } from "../../components/challenge/common";
-import { Heart, Eye, MessageSquare, ChevronLeft } from "lucide-react";
-import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { CTAButton, ChallengePageHeader, SubmissionCard } from "../../components/challenge/common";
+import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { getPortfolioProjects, toggleLikePortfolio } from "../../data/Challenge/submissionsDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { useLikeToggle } from "../../hooks/useLikeToggle";
@@ -10,14 +9,46 @@ import { useLikeToggle } from "../../hooks/useLikeToggle";
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 2);
-    const detail = useMemo(() => getChallengeDetail(id) as PortfolioChallengeDetail, [id]);
+    
+    // 기본 더미 데이터로 초기화
+    const [detail, setDetail] = useState<PortfolioChallengeDetail>(() => getChallengeDetail(id) as PortfolioChallengeDetail);
+    const [loading, setLoading] = useState(false);
+    
     const nav = useNavigate();
 
     const initialCards = getPortfolioProjects(id).map((c) => ({ ...c, liked: false }));
     const { items: cards, toggleLike } = useLikeToggle(initialCards, toggleLikePortfolio, id);
 
+    // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
+    useEffect(() => {
+        if (id === 2) {
+            setLoading(true);
+            getDynamicChallengeDetail(id)
+                .then((dynamicData) => {
+                    setDetail(dynamicData as PortfolioChallengeDetail);
+                })
+                .catch((err) => {
+                    console.error('월간 챌린지 데이터 로딩 실패:', err);
+                    // 에러 시 기본 더미 데이터 유지
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        }
+    }, [id]);
+
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
+            {/* 로딩 상태 */}
+            {loading && (
+                <div className="mb-6 flex items-center justify-center py-8">
+                    <div className="flex items-center gap-3 text-neutral-600">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                        <span className="text-sm">AI 챌린지 정보를 불러오는 중...</span>
+                    </div>
+                </div>
+            )}
+            
             <ChallengePageHeader
                 title={`샌드위치 챌린지 투표: ${detail.title.replace(/^포트폴리오 챌린지:\s*/, "")}`}
                 onBack={() => nav(`/challenge/portfolio/${id}`)}

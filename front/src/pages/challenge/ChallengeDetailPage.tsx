@@ -1,13 +1,14 @@
-import React, { useMemo, useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     getChallengeDetail,
+    getDynamicChallengeDetail,
     type AnyChallengeDetail,
     type PortfolioChallengeDetail,
     type CodeChallengeDetail,
 } from "../../data/Challenge/challengeDetailDummy";
 import { SectionCard, CTAButton, StatusBadge } from "../../components/challenge/common";
-import { ChevronDown, ChevronLeft, CheckCircle2, Copy, Check } from "lucide-react";
+import { ChevronDown, ChevronLeft, CheckCircle2, Copy, Check, AlertCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 
@@ -189,13 +190,49 @@ function secondaryLabel(type: "CODE" | "PORTFOLIO") {
 export default function ChallengeDetailPage() {
     const params = useParams();
     const id = Number(params.id || 1);
-    const data: AnyChallengeDetail = useMemo(() => getChallengeDetail(id), [id]); // type은 더미/서버가 판단
+    
+    // 기본 더미 데이터로 초기화
+    const [data, setData] = useState<AnyChallengeDetail>(() => getChallengeDetail(id));
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [mustHave, setMustHave] = useState<string[]>([]);
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
 
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
+
+    // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
+    useEffect(() => {
+        if (id === 2) {
+            setLoading(true);
+            setError(null);
+            getDynamicChallengeDetail(id)
+                .then((dynamicData) => {
+                    setData(dynamicData);
+                })
+                .catch((err) => {
+                    console.error('월간 챌린지 데이터 로딩 실패:', err);
+                    setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                    // 에러 시 기본 더미 데이터 유지
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+            
+            // must_have 데이터 별도로 가져오기
+            import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
+                fetchMonthlyChallenge()
+                    .then((monthlyData) => {
+                        setMustHave(monthlyData.mustHave || []);
+                    })
+                    .catch((err) => {
+                        console.error('필수 조건 데이터 로딩 실패:', err);
+                    });
+            });
+        }
+    }, [id]);
 
     const goPrimary = () => {
         const href = primaryHref(data.type, id);
@@ -216,6 +253,26 @@ export default function ChallengeDetailPage() {
     return (
         <div className="mx-auto w-full max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
             <LoginRequiredModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+            
+            {/* 로딩 상태 */}
+            {loading && (
+                <div className="mb-6 flex items-center justify-center py-8">
+                    <div className="flex items-center gap-3 text-neutral-600">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                        <span className="text-sm">AI 챌린지 정보를 불러오는 중...</span>
+                    </div>
+                </div>
+            )}
+            
+            {/* 에러 상태 */}
+            {error && (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-center gap-2 text-red-700">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm">{error}</span>
+                    </div>
+                </div>
+            )}
 
             {/* 헤더 */}
             <div className="mb-4 flex items-center justify-between">
@@ -265,6 +322,21 @@ export default function ChallengeDetailPage() {
                         <SectionTitle>{data.type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
                         <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
                     </div>
+
+                    {/* 필수 조건 (포트폴리오 챌린지만) */}
+                    {data.type === "PORTFOLIO" && mustHave.length > 0 && (
+                        <div className="mb-6">
+                            <SectionTitle>📋 필수 조건</SectionTitle>
+                            <div className="space-y-2">
+                                {mustHave.map((requirement, index) => (
+                                    <div key={index} className="flex items-start gap-2">
+                                        <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
+                                        <span className="text-[13.5px] leading-6 text-neutral-800">{requirement}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* 유형별 */}
                     {data.type === "CODE" ? (

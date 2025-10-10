@@ -1,14 +1,33 @@
 // src/pages/challenge/ChallengeListPage.tsx
-import React from "react";
-import { dummyChallenges } from "../../data/Challenge/dummyChallenges";
+import React, { useState, useEffect } from "react";
+import { dummyChallenges, getDynamicChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
-
+import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ChallengeListPage() {
+    const [challenges, setChallenges] = useState<ChallengeCardData[]>(dummyChallenges);
+    const [loading, setLoading] = useState(false);
+
+    // AI API에서 동적으로 챌린지 데이터 가져오기
+    useEffect(() => {
+        setLoading(true);
+        getDynamicChallenges()
+            .then((dynamicChallenges) => {
+                setChallenges(dynamicChallenges);
+            })
+            .catch((error) => {
+                console.error('챌린지 데이터 로딩 실패:', error);
+                // 에러 시 기본 더미 데이터 유지
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, []);
+
     return (
         <div className="w-full bg-white">
             {/* 오렌지 공지 배너 */}
@@ -30,7 +49,17 @@ export default function ChallengeListPage() {
             <WinnersSection />
 
             <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-                {dummyChallenges.map((item) => (
+                {/* 로딩 상태 */}
+                {loading && (
+                    <div className="mb-6 flex items-center justify-center py-8">
+                        <div className="flex items-center gap-3 text-neutral-600">
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                            <span className="text-sm">AI 챌린지 정보를 불러오는 중...</span>
+                        </div>
+                    </div>
+                )}
+                
+                {challenges.map((item) => (
                     <ChallengeCard key={item.id} item={item} />
                 ))}
 

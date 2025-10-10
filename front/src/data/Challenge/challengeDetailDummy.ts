@@ -168,3 +168,28 @@ export function getChallengeDetail(id: number): AnyChallengeDetail {
     if (id === 2) return portfolioChallengeDetail;
     return challengeDetail; // default id:1
 }
+
+/* ====================================================
+ * API 연동을 위한 동적 데이터 생성 함수
+ * ==================================================== */
+export async function getDynamicChallengeDetail(id: number): Promise<AnyChallengeDetail> {
+    if (id === 2) {
+        // 포트폴리오 챌린지는 AI API에서 동적으로 가져옴
+        const { fetchMonthlyChallenge } = await import('../../api/monthlyChallenge');
+        const monthlyData = await fetchMonthlyChallenge();
+        
+        return {
+            ...portfolioChallengeDetail,
+            title: `포트폴리오 챌린지: ${monthlyData.emoji} ${monthlyData.title}`,
+            description: monthlyData.description,
+            // AI API에서 가져온 필수 요구사항 추가
+            judgeNotes: [
+                "운영 정책/공정성: 챌린지당 1표, 본인 작품 투표 불가, 투표 기간 내에만 가능",
+                "UI/UX, 기술력, 창의성, 기획력의 종합 점수(별점 합산)로 순위 산정",
+                "제출물은 표절/저작권을 침해하지 않도록 주의(참고 출처 표기 권장)",
+                ...(monthlyData.mustHave?.length ? [`필수 요구사항: ${monthlyData.mustHave.join(', ')}`] : [])
+            ],
+        };
+    }
+    return challengeDetail; // 코드 챌린지는 기존 더미 데이터 사용
+}
