@@ -39,36 +39,41 @@ export default function PortfolioVotePage() {
 
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-            {/* 로딩 상태 */}
-            {loading && (
-                <div className="mb-6 flex items-center justify-center py-8">
-                    <div className="flex items-center gap-3 text-neutral-600">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
-                        <span className="text-sm">AI 챌린지 정보를 불러오는 중...</span>
+            {loading ? (
+                /* 로딩 상태 - 전체 화면 */
+                <div className="flex items-center justify-center py-16">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                            <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
+                        </div>
+                        <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
                     </div>
                 </div>
-            )}
-            
-            <ChallengePageHeader
-                title={`샌드위치 챌린지 투표: ${detail.title.replace(/^포트폴리오 챌린지:\s*/, "")}`}
-                onBack={() => nav(`/challenge/portfolio/${id}`)}
-                actionButton={
-                    <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
-                        프로젝트 제출하기
-                    </CTAButton>
-                }
-            />
-
-            <div className="grid gap-5 md:grid-cols-3">
-                {cards.map((c) => (
-                    <SubmissionCard
-                        key={c.id}
-                        submission={c}
-                        onLike={toggleLike}
-                        href={`/challenge/portfolio/${id}/vote/${c.id}`}
+            ) : (
+                <>
+                    <ChallengePageHeader
+                        title={`샌드위치 챌린지 투표: ${detail.title.replace(/^포트폴리오 챌린지:\s*/, "")}`}
+                        onBack={() => nav(`/challenge/portfolio/${id}`)}
+                        actionButton={
+                            <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
+                                프로젝트 제출하기
+                            </CTAButton>
+                        }
                     />
-                ))}
-            </div>
+
+                    <div className="grid gap-5 md:grid-cols-3">
+                        {cards.map((c) => (
+                            <SubmissionCard
+                                key={c.id}
+                                submission={c}
+                                onLike={toggleLike}
+                                href={`/challenge/portfolio/${id}/vote/${c.id}`}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

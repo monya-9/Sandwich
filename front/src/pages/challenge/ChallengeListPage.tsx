@@ -49,19 +49,23 @@ export default function ChallengeListPage() {
             <WinnersSection />
 
             <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-                {/* 로딩 상태 */}
-                {loading && (
-                    <div className="mb-6 flex items-center justify-center py-8">
-                        <div className="flex items-center gap-3 text-neutral-600">
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
-                            <span className="text-sm">AI 챌린지 정보를 불러오는 중...</span>
+                {loading ? (
+                    /* 로딩 상태 - 전체 화면 */
+                    <div className="flex items-center justify-center py-16">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                                <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
+                            </div>
+                            <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
                         </div>
                     </div>
+                ) : (
+                    /* 로딩 완료 - 챌린지 목록 표시 */
+                    challenges.map((item) => (
+                        <ChallengeCard key={item.id} item={item} />
+                    ))
                 )}
-                
-                {challenges.map((item) => (
-                    <ChallengeCard key={item.id} item={item} />
-                ))}
 
                 {/* 지난 대결 보기 - 제목만 */}
                 <h2 className="text-2xl font-bold mb-4 text-left ml-[15px]">지난 대결 보기</h2>

@@ -1,9 +1,9 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
-import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
 import { addPortfolioProject } from "../../data/Challenge/submissionsDummy";
@@ -56,7 +56,10 @@ const languageOptions = [
 export default function PortfolioSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 2);
-    const data = useMemo(() => getChallengeDetail(id) as PortfolioChallengeDetail, [id]);
+    
+    // 기본 더미 데이터로 초기화
+    const [data, setData] = useState<PortfolioChallengeDetail>(() => getChallengeDetail(id) as PortfolioChallengeDetail);
+    const [loading, setLoading] = useState(false);
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
@@ -64,6 +67,24 @@ export default function PortfolioSubmitPage() {
     const userInfo = useUserInfo();
 
     useEffect(() => { if (!isLoggedIn) setLoginOpen(true); }, [isLoggedIn]);
+
+    // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
+    useEffect(() => {
+        if (id === 2) {
+            setLoading(true);
+            getDynamicChallengeDetail(id)
+                .then((dynamicData) => {
+                    setData(dynamicData as PortfolioChallengeDetail);
+                })
+                .catch((err) => {
+                    console.error('월간 챌린지 데이터 로딩 실패:', err);
+                    // 에러 시 기본 더미 데이터 유지
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        }
+    }, [id]);
 
     const [tab, setTab] = useState<"edit" | "preview">("edit");
     const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
@@ -167,19 +188,33 @@ export default function PortfolioSubmitPage() {
                 onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
             />
             <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
-            <LoginRequiredModal open={loginOpen && !isLoggedIn} onClose={() => setLoginOpen(false)} />
-            <div className="mb-4 flex items(center) gap-2">
-                <button
-                    onClick={() => nav(`/challenge/portfolio/${id}`)}
-                    aria-label="뒤로가기"
-                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
-                >
-                    <ChevronLeft className="h-5 w-5" />
-                </button>
-                <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">
-                    {data.title} — 프로젝트 제출
-                </h1>
-            </div>
+                <LoginRequiredModal open={loginOpen && !isLoggedIn} onClose={() => setLoginOpen(false)} />
+                
+                {loading ? (
+                    /* 로딩 상태 - 전체 화면 */
+                    <div className="flex items-center justify-center py-16">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                                <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
+                            </div>
+                            <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="mb-4 flex items(center) gap-2">
+                            <button
+                                onClick={() => nav(`/challenge/portfolio/${id}`)}
+                                aria-label="뒤로가기"
+                                className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
+                            >
+                                <ChevronLeft className="h-5 w-5" />
+                            </button>
+                            <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">
+                                {data.title} — 프로젝트 제출
+                            </h1>
+                        </div>
 
             <SectionCard className="!px-5 !py-5 mb-4">
                 <div className="text-[13.5px] leading-7 text-neutral-800 whitespace-pre-line">{data.description}</div>
@@ -532,20 +567,22 @@ export default function PortfolioSubmitPage() {
                     </GreenBox>
                 </SectionCard>
             </div>
-        </div>
-        
-        {/* 크롭 모달 */}
-        {cropOpen && cropSrc && (
-            <CoverCropper 
-                open={cropOpen} 
-                src={cropSrc} 
-                onClose={() => {
-                    setCropOpen(false);
-                    setCropSrc(null);
-                }} 
-                onCropped={handleCropDone} 
-            />
-        )}
+            
+                        {/* 크롭 모달 */}
+                        {cropOpen && cropSrc && (
+                            <CoverCropper 
+                                open={cropOpen} 
+                                src={cropSrc} 
+                                onClose={() => {
+                                    setCropOpen(false);
+                                    setCropSrc(null);
+                                }} 
+                                onCropped={handleCropDone} 
+                            />
+                        )}
+                    </>
+                )}
+            </div>
         </>
     );
 }
