@@ -21,7 +21,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 /** ====== 환경/리소스 ====== */
-const APP_ORIGIN = 'http://localhost:3000';  // 배포 시 실제 도메인(https)로 교체
+const APP_ORIGIN = process.env.REACT_APP_API_BASE;  // 배포 시 실제 도메인(https)로 교체
 const DEFAULT_ICON_PATH  = '/icons/logo-192.png'; // 정사각 PNG 권장(192x192)
 const DEFAULT_BADGE_PATH = '/icons/logo-192.png';
 
