@@ -19,6 +19,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpMethod;
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -35,6 +42,29 @@ public class SecurityConfig {
     private final ObjectProvider<OAuth2SuccessHandler> oAuth2SuccessHandlerProvider;
     private final ObjectProvider<OAuth2FailureHandler> oAuth2FailureHandlerProvider;
 
+    // [CORS 설정 빈 추가]
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 프론트엔드의 CloudFront 도메인과 로컬 개발 주소를 명시적으로 허용
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "https://d31vlhzf7p5sqr.cloudfront.net",
+                "https://sd-LB-1117689927.ap-northeast-2.elb.amazonaws.com" // 임시 허용
+        ));
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        configuration.setAllowedHeaders(List.of("*")); // 모든 헤더 허용
+        // Authorization 헤더(JWT)를 브라우저가 전송하도록 허용
+        configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration); // 모든 경로에 대해 적용
+        return source;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -48,9 +78,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ObjectProvider<ClientRegistrationRepository> repoProvider) throws Exception {
         http
+                // CORS 빈을 사용하도록 활성화
+                .cors(Customizer.withDefaults())
+
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // ==== 배포 ====
+                        // 로드밸런싱 용 HealthCheck
+                        .requestMatchers(HttpMethod.GET, "/health").permitAll()
+
+                        // 브라우저의 preflight(OPTIONS)를 우선 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // ==== 배포 End ====
+
                         .requestMatchers("/error", "/error/**").permitAll()
                         // 인증/문서/OAuth 콜백 등
                         // ===== 공개 라우트들 =====
