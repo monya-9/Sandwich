@@ -24,6 +24,7 @@ type PortfolioSubmitPayload = {
     membersText?: string;
     language?: string;
     coverUrl?: string;
+    images?: string[]; // 추가 이미지들
 };
 
 // 기술 스택 옵션들
@@ -80,6 +81,7 @@ export default function PortfolioSubmitPage() {
         membersText: "",
         language: "",
         coverUrl: "",
+        images: [],
     });
 
     // ✅ 제목 또는 설명만 있어도 제출 가능
@@ -301,25 +303,113 @@ export default function PortfolioSubmitPage() {
                             <Row>
                                 <Label>커버 이미지</Label>
                                 <div className="space-y-3">
-                                    {form.coverUrl && (
-                                        <div className="relative">
-                                            <img 
-                                                src={form.coverUrl} 
-                                                alt="커버 이미지 미리보기" 
-                                                className="w-full max-w-md h-48 object-cover rounded-lg border border-neutral-300"
+                                    {/* 4:3 비율 컨테이너 */}
+                                    <div className="relative w-full max-w-md mx-auto">
+                                        <div className="relative w-full aspect-[4/3] border-2 border-dashed border-neutral-300 rounded-lg overflow-hidden bg-neutral-50">
+                                            {form.coverUrl ? (
+                                                <>
+                                                    <img 
+                                                        src={form.coverUrl} 
+                                                        alt="커버 이미지 미리보기" 
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setForm(prev => ({ ...prev, coverUrl: "" }))}
+                                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full text-neutral-500">
+                                                    <div className="text-center">
+                                                        <div className="w-12 h-12 mx-auto mb-3 bg-neutral-200 rounded-lg flex items-center justify-center">
+                                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                        </div>
+                                                        <p className="text-sm font-medium mb-1">이미지 추가</p>
+                                                        <p className="text-xs">클릭하여 업로드</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* 숨겨진 파일 입력 */}
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/jpg,image/png,image/webp"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) handleImageUpload(file);
+                                                    e.currentTarget.value = "";
+                                                }}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => setForm(prev => ({ ...prev, coverUrl: "" }))}
-                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                                            >
-                                                ×
-                                            </button>
                                         </div>
-                                    )}
-                                    <ImageUploadSection onAdd={handleImageUpload} />
-                                    <p className="text-xs text-neutral-500">
+                                    </div>
+                                    
+                                    <p className="text-xs text-neutral-500 text-center">
                                         권장 사이즈: 4:3 비율, 최대 10MB (JPG, PNG, WebP 지원)
+                                    </p>
+                                </div>
+                            </Row>
+
+                            <Row>
+                                <Label>추가 이미지</Label>
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {form.images?.map((imageUrl, index) => (
+                                            <div key={index} className="relative">
+                                                <img 
+                                                    src={imageUrl} 
+                                                    alt={`추가 이미지 ${index + 1}`}
+                                                    className="w-full aspect-square object-cover rounded-lg border border-neutral-300"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setForm(prev => ({
+                                                        ...prev,
+                                                        images: prev.images?.filter((_, i) => i !== index) || []
+                                                    }))}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <ImageUploadSection 
+                                        onAdd={async (file) => {
+                                            try {
+                                                const result = await processImageFile(file);
+                                                if (!result.ok) {
+                                                    setSuccessToast({
+                                                        visible: true,
+                                                        message: "이미지 파일 형식이 올바르지 않거나 용량이 너무 큽니다."
+                                                    });
+                                                    return;
+                                                }
+                                                
+                                                const uploadResult = await uploadImage(file);
+                                                setForm(prev => ({
+                                                    ...prev,
+                                                    images: [...(prev.images || []), uploadResult.url]
+                                                }));
+                                                setSuccessToast({
+                                                    visible: true,
+                                                    message: "이미지가 추가되었습니다."
+                                                });
+                                            } catch (error) {
+                                                setSuccessToast({
+                                                    visible: true,
+                                                    message: "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+                                                });
+                                            }
+                                        }}
+                                    />
+                                    <p className="text-xs text-neutral-500">
+                                        프로젝트 스크린샷이나 추가 이미지를 업로드할 수 있습니다.
                                     </p>
                                 </div>
                             </Row>
@@ -364,6 +454,21 @@ export default function PortfolioSubmitPage() {
                                             alt="커버 이미지" 
                                             className="mt-2 w-full max-w-xs h-32 object-cover rounded border"
                                         />
+                                    </div>
+                                )}
+                                {form.images && form.images.length > 0 && (
+                                    <div>
+                                        <span className="font-semibold">추가 이미지: </span>
+                                        <div className="mt-2 grid grid-cols-2 gap-2">
+                                            {form.images.map((imageUrl, index) => (
+                                                <img 
+                                                    key={index}
+                                                    src={imageUrl} 
+                                                    alt={`추가 이미지 ${index + 1}`}
+                                                    className="w-full h-20 object-cover rounded border"
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                                 {form.repoUrl && <div><span className="font-semibold">GitHub: </span>{form.repoUrl}</div>}
