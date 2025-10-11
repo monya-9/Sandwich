@@ -20,7 +20,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ====== (A) ResponseStatusException 그대로 상태 유지 (가장 먼저) ======
+    // ResponseStatusException 그대로 상태 유지
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleRSE(ResponseStatusException ex) {
         int sc = ex.getStatusCode().value();
@@ -31,9 +31,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(sc, code, msg));
     }
 
-    /* =========================
-       1) 인증/로그인 관련 (기존 유지)
-       ========================= */
+    // 1) 인증/로그인 관련
     @ExceptionHandler({ InvalidPasswordException.class, UserNotFoundException.class })
     public ResponseEntity<?> handleCredentialErrors(RuntimeException ex) {
         return ResponseEntity
@@ -55,9 +53,7 @@ public class GlobalExceptionHandler {
                 .body(Map.of("status", 401, "message", "탈퇴된 계정입니다."));
     }
 
-    /* =========================
-       2) 인가(권한) 실패 → 403
-       ========================= */
+    //2) 인가(권한) 실패 → 403
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity
@@ -65,18 +61,14 @@ public class GlobalExceptionHandler {
                 .body(Map.of("status", 403, "message", "접근 권한이 없습니다."));
     }
 
-    /* =========================
-       3) 커스텀 예외 공통 (status/code/message 그대로)
-       ========================= */
+    //3) 커스텀 예외 공통
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex) {
         return ResponseEntity.status(ex.getStatus())
                 .body(new ErrorResponse(ex.getStatus().value(), ex.getCode(), ex.getMessage()));
     }
 
-    /* =========================
-       4) 요청 파싱/검증류 → 400
-       ========================= */
+    //4) 요청 파싱/검증류 → 400
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleBodyMissing(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -105,9 +97,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "BAD_REQUEST", message));
     }
 
-    /* =========================
-       5) DB 무결성 위반 → 409/400
-       ========================= */
+    //5) DB 무결성 위반 → 409/400
     private static final String UQ_VOTE_CH_VOTER = "uq_vote_ch_voter";
     private static final String CK_VOTE_SCORE_RANGE = "chk_vote_score_range";// 실제 제약 이름
     private static final String SQLSTATE_UNIQUE  = "23505";
@@ -134,9 +124,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, "CONSTRAINT_VIOLATION", "무결성 제약 위반"));
     }
-    // =========================
     // 6) 상태/전이 제약 → 400
-    // =========================
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
         String msg = ex.getMessage();
@@ -156,7 +144,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(413, "PAYLOAD_TOO_LARGE", "업로드 가능한 최대 용량을 초과했습니다."));
     }
 
-    // 500 (마지막)
+    // 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOther(Exception ex) {
         return ResponseEntity
