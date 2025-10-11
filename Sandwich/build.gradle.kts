@@ -38,6 +38,7 @@ dependencies {
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	implementation ("org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE")
+	implementation ("org.springframework.boot:spring-boot-starter-webflux")
 	implementation ("me.paulschwarz:spring-dotenv:2.5.4")
 	implementation("com.google.zxing:core:3.5.1")
 	implementation("com.google.zxing:javase:3.5.1")
