@@ -1,67 +1,67 @@
 // src/api/challengeApi.ts
-import api from "./axiosInstance";
+// 챌린지 관련 API
 
-/** 공통 */
-export type SubmissionKind = "CODE" | "PORTFOLIO";
-export type SubmissionStatus = "PENDING" | "RUNNING" | "PASSED" | "FAILED" | "SCORED";
+import api from './axiosInstance';
 
-export type CreateSubmissionPayload =
-    | ({
-    type: "CODE";
-    title: string;
-    repoUrl: string;
-    language: "node" | "python";
-    entrypoint: string;
-    note?: string;
-})
-    | ({
-    type: "PORTFOLIO";
-    title: string;
-    repoUrl?: string;
-    demoUrl?: string;
-    desc?: string;
-    // assets?: { s3Key: string; mime: string }[];
-});
+// ===== 챌린지 관련 타입 정의 =====
 
-export type SubmissionCreated = { id: number; status: SubmissionStatus };
+export type ChallengeType = "CODE" | "PORTFOLIO";
 
-/** 👉 에러났던 필드들 전부 포함 */
-export type SubmissionDetail = {
-    id: number;
-    challengeId: number;
-    type: SubmissionKind;
+export type ChallengeStatus = "DRAFT" | "OPEN" | "VOTING" | "ENDED";
 
-    title: string;
-    repoUrl?: string | null;
-    demoUrl?: string | null;
-    language?: "node" | "python" | string | null;
-    entrypoint?: string | null;
-    note?: string | null;
-
-    status: SubmissionStatus;
-    score?: number | null;
-    passed?: number | null;
-    failed?: number | null;
-    coverage?: number | null;
-    aiComment?: string | null;
-
-    createdAt?: string;
-    updatedAt?: string;
+export type ChallengeListItem = {
+  id: number;
+  type: ChallengeType;
+  title: string;
+  status: ChallengeStatus;
+  startAt: string;
+  endAt: string;
+  voteStartAt?: string;
+  voteEndAt?: string;
+  submissionCount: number;
+  voteCount: number;
 };
 
-export const challengeApi = {
-    async createSubmission(challengeId: number, payload: CreateSubmissionPayload): Promise<SubmissionCreated> {
-        const { data } = await api.post(`/challenges/${challengeId}/submissions`, payload);
-        return data;
-    },
-
-    async getSubmission(submissionId: number): Promise<SubmissionDetail> {
-        const { data } = await api.get(`/submissions/${submissionId}`);
-        return data;
-    },
-
-    async updateSubmission(submissionId: number, patch: Partial<CreateSubmissionPayload>): Promise<SubmissionDetail> {
-        const { data } = await api.patch(`/submissions/${submissionId}`, patch);
-        return data;
-    },
+export type ChallengeListResponse = {
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  content: ChallengeListItem[];
+  number: number;
+  numberOfElements: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 };
+
+// ===== 챌린지 API 함수들 =====
+
+/**
+ * 챌린지 목록 조회
+ */
+export async function fetchChallenges(
+  page: number = 0,
+  size: number = 20,
+  type?: ChallengeType,
+  status?: ChallengeStatus
+): Promise<ChallengeListResponse> {
+  const params: any = { page, size };
+  if (type) params.type = type;
+  if (status) params.status = status;
+  
+  const response = await api.get('/challenges', {
+    params,
+    withCredentials: true,
+  });
+  return response.data;
+}
+
+/**
+ * 특정 챌린지 상세 조회
+ */
+export async function fetchChallengeDetail(challengeId: number): Promise<any> {
+  const response = await api.get(`/challenges/${challengeId}`, {
+    withCredentials: true,
+  });
+  return response.data;
+}

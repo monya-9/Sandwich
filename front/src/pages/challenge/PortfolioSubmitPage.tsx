@@ -6,10 +6,10 @@ import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/c
 import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
-import { addPortfolioProject } from "../../data/Challenge/submissionsDummy";
 import Toast from "../../components/common/Toast";
-import { useUserInfo } from "../../hooks/useUserInfo";
 import { uploadImage } from "../../api/projectApi";
+import { createChallengeSubmission, type SubmissionCreateRequest } from "../../api/submissionApi";
+import { fetchChallengeDetail } from "../../api/challengeApi";
 import ImageUploadSection, { processImageFile } from "../../components/ProjectMangeSample/ImageUploadSection";
 import CoverCropper from "../../components/ProjectMangeSample/CoverCropper";
 import CustomDropdown from "../../components/common/CustomDropdown";
@@ -60,13 +60,32 @@ export default function PortfolioSubmitPage() {
     // 기본 더미 데이터로 초기화
     const [data, setData] = useState<PortfolioChallengeDetail>(() => getChallengeDetail(id) as PortfolioChallengeDetail);
     const [loading, setLoading] = useState(false);
+    const [challengeExists, setChallengeExists] = useState<boolean | null>(null);
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
-    const userInfo = useUserInfo();
 
     useEffect(() => { if (!isLoggedIn) setLoginOpen(true); }, [isLoggedIn]);
+
+    // 챌린지 존재 여부 확인
+    useEffect(() => {
+        const checkChallengeExists = async () => {
+            try {
+                await fetchChallengeDetail(id);
+                setChallengeExists(true);
+            } catch (error: any) {
+                if (error?.response?.status === 404) {
+                    setChallengeExists(false);
+                } else {
+                    console.error('챌린지 확인 실패:', error);
+                    setChallengeExists(false);
+                }
+            }
+        };
+
+        checkChallengeExists();
+    }, [id]);
 
     // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
     useEffect(() => {
@@ -157,23 +176,45 @@ export default function PortfolioSubmitPage() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!canSubmit) return;
-        addPortfolioProject(id, {
-            title: form.title.trim(),
-            summary: form.desc?.trim() || "설명 미입력",
-            demoUrl: form.demoUrl?.trim(),
-            repoUrl: form.repoUrl?.trim(),
-            authorInitial: userInfo.authorInitial,
-            authorName: userInfo.authorName,
-            teamName: form.teamName?.trim() || undefined,
-            authorRole: userInfo.authorRole,
-        });
-        setSuccessToast({
-            visible: true,
-            message: "제출이 접수되었습니다."
-        });
-        nav(`/challenge/portfolio/${id}/vote`, { replace: true });
+        
+        try {
+            const submissionData: SubmissionCreateRequest = {
+                title: form.title.trim(),
+                desc: form.desc?.trim() || "설명 미입력",
+                repoUrl: form.repoUrl?.trim() || "",
+                demoUrl: form.demoUrl?.trim(),
+                coverUrl: form.coverUrl,
+                participationType: form.teamType === "TEAM" ? "TEAM" : "SOLO",
+                teamName: form.teamName?.trim(),
+                membersText: form.membersText?.trim(),
+                assets: form.images?.map(url => ({ url, mime: "image/jpeg" })) || []
+            };
+
+            await createChallengeSubmission(id, submissionData);
+            
+            setSuccessToast({
+                visible: true,
+                message: "제출이 접수되었습니다."
+            });
+            nav(`/challenge/portfolio/${id}/vote`, { replace: true });
+        } catch (error: any) {
+            console.error('제출 실패:', error);
+            
+            let errorMessage = "제출에 실패했습니다. 다시 시도해주세요.";
+            
+            if (error?.response?.status === 404) {
+                errorMessage = "존재하지 않는 챌린지입니다. 챌린지 목록에서 확인해주세요.";
+            } else if (error?.response?.status === 400) {
+                errorMessage = error?.response?.data?.message || "입력 정보를 확인해주세요.";
+            }
+            
+            setSuccessToast({
+                visible: true,
+                message: errorMessage
+            });
+        }
     };
 
     return (
@@ -199,6 +240,21 @@ export default function PortfolioSubmitPage() {
                                 <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
                             </div>
                             <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
+                        </div>
+                    </div>
+                ) : challengeExists === false ? (
+                    /* 챌린지가 존재하지 않는 경우 */
+                    <div className="flex items-center justify-center py-16">
+                        <div className="text-center">
+                            <div className="text-red-600 text-lg font-medium mb-4">
+                                존재하지 않는 챌린지입니다
+                            </div>
+                            <p className="text-gray-600 mb-6">
+                                챌린지 ID {id}가 존재하지 않습니다. 챌린지 목록에서 확인해주세요.
+                            </p>
+                            <CTAButton as="button" onClick={() => nav('/challenge')}>
+                                챌린지 목록으로 돌아가기
+                            </CTAButton>
                         </div>
                     </div>
                 ) : (
