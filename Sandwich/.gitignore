@@ -52,3 +52,4 @@ creds/firebase-service-account.json
 creds/*.b64
 creds/*.json
 nginx/conf.d/*
+Sandwich/nginx/conf.d
