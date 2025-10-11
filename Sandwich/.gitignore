@@ -51,3 +51,4 @@ creds/firebase.b64
 creds/firebase-service-account.json
 creds/*.b64
 creds/*.json
+nginx/conf.d/*
