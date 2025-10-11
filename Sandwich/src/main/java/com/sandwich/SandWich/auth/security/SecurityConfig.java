@@ -4,6 +4,8 @@ import com.sandwich.SandWich.auth.web.RestAccessDeniedHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2FailureHandler;
 import com.sandwich.SandWich.oauth.handler.OAuth2SuccessHandler;
 import com.sandwich.SandWich.oauth.service.CustomOAuth2UserService;
+import com.sandwich.SandWich.auth.device.DeviceTrustService;
+import com.sandwich.SandWich.auth.security.TrustedDeviceFilter;
 import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -27,6 +29,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final DeviceTrustService deviceTrustService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     // OAuth2 (구글/깃허브) 연동
@@ -64,6 +67,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/", "/recaptcha-v2.html", "/recaptcha-v3.html", "/favicon.ico"
                         ).permitAll()
+                        // OTP 경로 허용
+                        .requestMatchers("/api/auth/otp/**").permitAll()
                         // 필요시 정적 폴더 패턴도 추가
                         .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
 
@@ -140,6 +145,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
+                // TrustedDeviceFilter를 jwtFilter보다 먼저
+                .addFilterBefore(new TrustedDeviceFilter(deviceTrustService), UsernamePasswordAuthenticationFilter.class)
                 // JWT 필터 연결
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 

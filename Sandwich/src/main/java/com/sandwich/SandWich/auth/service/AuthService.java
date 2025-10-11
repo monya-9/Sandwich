@@ -1,18 +1,27 @@
 package com.sandwich.SandWich.auth.service;
 
+import com.sandwich.SandWich.auth.device.DeviceTrustService;
 import com.sandwich.SandWich.auth.dto.LoginRequest;
+import com.sandwich.SandWich.auth.dto.MfaRequiredResponse;
 import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.auth.dto.TokenResponse;
+import com.sandwich.SandWich.auth.mfa.MfaProperties;
+import com.sandwich.SandWich.auth.mfa.OtpContext;
+import com.sandwich.SandWich.auth.mfa.OtpService;
 import com.sandwich.SandWich.auth.security.JwtUtil;
 import com.sandwich.SandWich.common.exception.exceptiontype.*;
 import com.sandwich.SandWich.common.util.RedisUtil;
+import com.sandwich.SandWich.email.service.LoginOtpMailService;
 import com.sandwich.SandWich.user.domain.Role;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.user.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +41,12 @@ public class AuthService {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
+
+    private final DeviceTrustService deviceTrustService;
+    private final OtpService otpService;
+    private final LoginOtpMailService loginOtpMailService;
+    private final MfaProperties mfaProperties;
+
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
 
@@ -81,47 +96,83 @@ public class AuthService {
         redisUtil.deleteValue("email:verified:" + req.getEmail());  // 3. 인증 완료 처리
     }
 
-    public TokenResponse login(LoginRequest req) {
-        // 1) 존재 여부 (탈퇴 여부와 무관하게 일단 로드)
+    public Object login(LoginRequest req, HttpServletRequest httpReq, HttpServletResponse httpRes) {
+        // 1) 존재 여부
         User user = userRepository.findByEmail(req.getEmail())
                 .orElseThrow(UserNotFoundException::new);
 
         // 2) provider 체크 (소셜 가입자는 로컬 로그인 불가)
-        if (user.getProvider() == null || !"local".equalsIgnoreCase(user.getProvider())) {
-            throw new IllegalArgumentException("소셜 로그인으로 가입된 계정입니다. 소셜 로그인을 이용해주세요.");
+        if (user.getProvider() != null && !"local".equalsIgnoreCase(user.getProvider())) {
+            throw new BadRequestException("SOCIAL_LOGIN_ONLY", "소셜 로그인으로 가입된 계정입니다. 소셜 로그인을 이용해주세요.");
         }
 
         // 3) 계정 상태 체크
         if (user.isDeleted()) {
-            // 탈퇴 계정
             throw new UserDeletedException();
         }
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
-            // 미인증 계정
             throw new UnverifiedUserException();
         }
 
-        // 4) 비밀번호 확인 (로그 제거!)
+        // 4) 비밀번호 확인
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new InvalidPasswordException();
         }
 
-        // 5) 토큰 발급
-        String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
-        String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+        // === 전역 Feature Flag: 꺼져 있으면 2FA 생략 ===
+        if (!mfaProperties.isEnabled()) {
+            String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
+            String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+            redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
-        // 6) 리프레시 토큰 저장 (네 유틸 정책대로)
-        redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
+            // (선택) 플래그 BYPASS 상황에서도 '기기 기억' 체크시 쿠키 발급하려면 주석 해제
+            // if (Boolean.TRUE.equals(req.getRememberMe())) {
+            //     deviceTrustService.remember(httpReq, httpRes, user.getId(), "FeatureFlag-Bypass");
+            // }
 
-        return new TokenResponse(accessToken, refreshToken, "local");
+            log.info("[LOGIN] MFA_ENABLED=false → issue tokens immediately. userId={}", user.getId());
+            return new TokenResponse(accessToken, refreshToken, "local");
+        }
+
+        // 5) Trusted Device면 즉시 토큰 발급
+        if (deviceTrustService.isTrusted(httpReq, user.getId())) {
+            String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
+            String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+            redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
+            return new TokenResponse(accessToken, refreshToken, "local");
+        }
+
+        // 6) 미신뢰 → MFA_REQUIRED
+        String pendingId = UUID.randomUUID().toString();
+
+        // OTP 컨텍스트 저장
+        OtpContext ctx = OtpContext.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .provider(user.getProvider())
+                .ip(httpReq.getRemoteAddr())
+                .ua(httpReq.getHeader("User-Agent"))
+                .build();
+        otpService.saveContext(pendingId, ctx);
+
+        // 코드 발급 + 메일 전송
+        String code = otpService.issueCode(pendingId);
+        loginOtpMailService.sendLoginOtp(user.getEmail(), code);
+
+        return new MfaRequiredResponse("MFA_REQUIRED", pendingId, ctx.getMaskedEmail());
     }
 
     public void logout(String accessToken) {
         String username = jwtUtil.extractUsername(accessToken);
         User user = userRepository.findByEmailAndIsDeletedFalse(username)
                 .orElseThrow(() -> new UsernameNotFoundException("유저를 찾을 수 없습니다."));
-        String redisKey = "refresh:userId:" + user.getId();
         redisUtil.deleteRefreshToken(String.valueOf(user.getId()));
+    }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 3) return "***" + email.substring(at);
+        return email.substring(0, 3) + "****" + email.substring(at);
     }
 
 }
