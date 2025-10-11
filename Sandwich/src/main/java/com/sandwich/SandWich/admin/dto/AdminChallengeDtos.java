@@ -77,7 +77,7 @@ public class AdminChallengeDtos {
         private String title;
         private String repoUrl;
         private String demoUrl;
-        private String descr;
+        private String desc;
         private String status;
         private int assetCount;
         private BigDecimal totalScore; // null 가능

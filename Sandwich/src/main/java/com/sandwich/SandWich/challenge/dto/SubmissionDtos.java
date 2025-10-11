@@ -5,6 +5,7 @@ import com.sandwich.SandWich.challenge.domain.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.List;
+import org.springframework.lang.Nullable;
 
 public class SubmissionDtos {
 
@@ -14,7 +15,7 @@ public class SubmissionDtos {
         private String title;
 
         @Size(max = 5000)
-        private String descr;
+        private String desc;
 
         @Pattern(regexp="^https?://.*", message="repoUrl must be http/https")
         @org.springframework.lang.Nullable
@@ -26,6 +27,20 @@ public class SubmissionDtos {
         @Size(max = 2048)
         private String demoUrl;
 
+        @Pattern(regexp="^https?://.*", message="coverUrl must be http/https")
+        @Nullable @Size(max=2048)
+        private String coverUrl;
+
+
+        @Nullable
+        private Submission.ParticipationType participationType;
+
+        @Nullable @Size(max=200)
+        private String teamName;
+
+        @Nullable @Size(max=5000)
+        private String membersText;
+
         @Builder.Default
         @jakarta.validation.Valid
         @Size(max = 10, message = "assets can contain up to 10 items")
@@ -34,6 +49,13 @@ public class SubmissionDtos {
         // --- 코드 챌린지용 추가 ---
         @Valid
         private Code code;
+        private Long viewCount;
+        private Long likeCount;
+        private Long commentCount;
+        private java.time.OffsetDateTime createdAt;
+        private Item.Owner owner;
+        private String language;
+        private Double totalScore;
 
 
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -52,6 +74,7 @@ public class SubmissionDtos {
             @NotBlank @Size(max=120)
             @Pattern(regexp = "^[\\w./:-]+$", message = "entrypoint has invalid characters")
             private String entrypoint; // 예: "src/main.py", "app/Main.java", "npm:start"
+            @Nullable
             @Pattern(regexp = "^[0-9a-fA-F]{7,64}$", message = "commitSha must be hex (7-64)")
             private String commitSha;  // optional
         }
@@ -64,10 +87,26 @@ public class SubmissionDtos {
         private String title;
         private String repoUrl;
         private String demoUrl;
-        private String descr;
+        private String desc;
         private SubmissionStatus status;
         private String coverUrl;   // 대표 이미지 1장
         private Integer assetCount; // 총 에셋 수
+        private Long viewCount;
+        private Long likeCount;
+        private Long commentCount;
+        private java.time.OffsetDateTime createdAt;
+        private Owner owner;
+        private String language;
+        private Double totalScore;
+
+        @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class Owner {
+            private Long userId;
+            private String username;
+            private String profileImageUrl;
+            private String position;
+        }
+
 
         public static Item from(Submission s) {
             return Item.builder()
@@ -76,8 +115,10 @@ public class SubmissionDtos {
                     .title(s.getTitle())
                     .repoUrl(s.getRepoUrl())
                     .demoUrl(s.getDemoUrl())
-                    .descr(s.getDescr())
+                    .desc(s.getDesc())
                     .status(s.getStatus())
+                    .createdAt(s.getCreatedAt())
+                    .coverUrl(s.getCoverUrl())
                     .build();
         }
 
