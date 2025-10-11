@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FaHeart } from "react-icons/fa";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 import LikedUsersModal from "./LikedUsersModal";
 import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
@@ -31,14 +31,8 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   useEffect(() => {
     const fetchLike = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        
-        const res = await axios.get(`/api/likes`, {
+        const res = await api.get(`/likes`, {
           params: { targetType, targetId },
-          withCredentials: true,
-          headers: token ? {
-            Authorization: `Bearer ${token}`,
-          } : {},
         });
         setLiked(res.data.likedByMe || false);
         setCount(res.data.likeCount || 0);
@@ -50,7 +44,6 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     };
     fetchLike();
   }, [targetType, targetId]);
-
 
   const handleLike = async () => {
     if (!isLoggedIn) {
@@ -67,15 +60,9 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
         return;
       }
 
-      const res = await axios.post(
-        "/api/likes",
-        { targetType, targetId },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await api.post(
+        "/likes",
+        { targetType, targetId }
       );
       setLiked(res.data.likedByMe);
       setCount(res.data.likeCount);
@@ -95,6 +82,21 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     }
   };
 
+  // 외부에서 트리거되는 좋아요 토글 이벤트 처리
+  useEffect(() => {
+    const onToggle = (e: any) => {
+      try {
+        const detail = e?.detail || {};
+        const typeMatches = !detail?.targetType || detail.targetType === targetType;
+        const idMatches = !detail?.targetId || detail.targetId === targetId;
+        if (typeMatches && idMatches) {
+          handleLike();
+        }
+      } catch {}
+    };
+    window.addEventListener("like:toggle", onToggle as any);
+    return () => window.removeEventListener("like:toggle", onToggle as any);
+  }, [targetType, targetId, isLoggedIn, loading]);
 
   return (
     <>
@@ -152,18 +154,18 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
                   ${liked ? "text-white" : "text-gray-800"}`}
             />
           </div>
-          		  <span
-						className="text-xs text-white font-semibold text-center"
-						onClick={(e) => {
-							if (count > 0) {
-								e.stopPropagation();
-								setShowLikedUsers(true);
-							}
-						}}
-						style={{ cursor: count > 0 ? "pointer" : "default" }}
-					  >
-						{count > 0 ? count : "좋아요"}
-					  </span>
+          <span
+            className="text-xs text-white font-semibold text-center"
+            onClick={(e) => {
+              if (count > 0) {
+                e.stopPropagation();
+                setShowLikedUsers(true);
+              }
+            }}
+            style={{ cursor: count > 0 ? "pointer" : "default" }}
+          >
+            {count > 0 ? count : "좋아요"}
+          </span>
         </button>
       </div>
     </>

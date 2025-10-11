@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 // import { dummyProjects } from "../../data/dummyProjects";
 import type { Project } from "../../types/Project";
@@ -8,12 +8,15 @@ import api from "../../api/axiosInstance";
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
 import ConfirmModal from "../common/ConfirmModal";
 import Toast from "../common/Toast";
+import { AuthContext } from "../../context/AuthContext";
 
 const STORAGE_KEY = "profile_work_order";
 const CACHE_KEY = "my_projects_cache_v1";
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
 
 const WorkTab: React.FC = () => {
+	// ✅ AuthContext에서 사용자 정보 가져오기
+	const { email } = useContext(AuthContext);
+	
 	// 실제: 내 프로젝트 목록
 	const [projects, setProjects] = useState<Project[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -23,19 +26,10 @@ const WorkTab: React.FC = () => {
 	useEffect(() => {
 		let mounted = true;
 
-		// 1) 캐시 즉시 표시 (있으면)
-		try {
-			const raw = localStorage.getItem(CACHE_KEY);
-			if (raw) {
-				const cached = JSON.parse(raw) as { updatedAt: number; items: Project[] };
-				if (cached?.items?.length) {
-					setProjects(cached.items);
-					setLoading(false);
-				}
-			}
-		} catch {}
+		// ✅ 캐시 사용하지 않음 (로그인 시 캐시가 삭제되므로)
+		// 바로 API 호출하여 현재 사용자의 프로젝트만 가져오기
 
-		// 2) 백그라운드 새로고침 (백엔드 사용자별 목록)
+		// 백그라운드 새로고침 (백엔드 사용자별 목록)
 		(async () => {
 			try {
 				let myId = 0;
@@ -43,7 +37,7 @@ const WorkTab: React.FC = () => {
 				if (!myId) {
 					try { const me = (await api.get<{ id: number }>("/users/me")).data; myId = me?.id || 0; } catch { myId = 0; }
 				}
-				if (!myId) { if (mounted && projects.length === 0) setLoading(false); return; }
+				if (!myId) { if (mounted) setLoading(false); return; }
 
 				let page = 0;
 				const size = 100;
@@ -82,12 +76,12 @@ const WorkTab: React.FC = () => {
 					setLoading(false);
 				}
 			} catch {
-				if (mounted && projects.length === 0) setLoading(false);
+				if (mounted) setLoading(false);
 			}
 		})();
 
 		return () => { mounted = false; };
-	}, []);
+	}, [email]); // ✅ email이 변경될 때마다 다시 로드
 
 	// 삭제 실행 핸들러 (모달 확인 시 호출)
 	const handleConfirmDelete = async () => {

@@ -22,6 +22,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #     fonts-noto-cjk fonts-noto-color-emoji \
 #  && rm -rf /var/lib/apt/lists/*
 
+# Firebase 서비스 계정 파일 복사
+# 1. 파일 경로(/app/creds) 생성
+RUN mkdir -p /app/creds
+# 2. 로컬의 JSON 파일을 컨테이너 내부의 /app/creds 경로로 복사
+#COPY firebase-service-account.json /app/creds/firebase-service-account.json
+
 COPY --from=builder /app/build/libs/*.jar /app/app.jar
 
 # 기존 실행 옵션 유지 (graceful shutdown & 안정 실행)

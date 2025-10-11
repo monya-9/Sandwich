@@ -27,6 +27,19 @@ module.exports = function (app) {
         })
     );
 
+    // 외부 공개 추천 API 프록시 (개발 환경 CORS 우회): /ext → https://api.dnutzs.org/api
+    app.use(
+        "/ext",
+        createProxyMiddleware({
+            target: "https://api.dnutzs.org",
+            changeOrigin: true,
+            ws: false,
+            secure: true,
+            pathRewrite: { "^/ext": "/api" },
+            logLevel: "warn",
+        })
+    );
+
     // SockJS/STOMP 전용 프록시
     app.use(
         "/stomp",

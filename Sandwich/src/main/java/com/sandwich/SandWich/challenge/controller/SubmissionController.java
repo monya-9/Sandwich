@@ -5,6 +5,7 @@ import com.sandwich.SandWich.challenge.service.SubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,9 +16,8 @@ public class SubmissionController {
     private final SubmissionService service;
 
     @PostMapping
-    public IdResp create(@PathVariable Long challengeId, @RequestBody @Valid SubmissionDtos.CreateReq req) {
-        Long id = service.create(challengeId, req);
-        return new IdResp(id);
+    public CreatedResp create(@PathVariable Long challengeId, @RequestBody @Valid SubmissionDtos.CreateReq req) {
+        return service.createAndReturn(challengeId, req);
     }
 
     @GetMapping
@@ -33,5 +33,16 @@ public class SubmissionController {
         return service.list(challengeId, pageable);
     }
 
-    public record IdResp(Long id) {}
+    @GetMapping("/{submissionId}")
+    public SubmissionDtos.Item get(
+            @PathVariable Long challengeId,
+            @PathVariable Long submissionId,
+            @org.springframework.lang.Nullable @AuthenticationPrincipal com.sandwich.SandWich.auth.security.UserDetailsImpl user,
+            jakarta.servlet.http.HttpServletRequest request
+    ) {
+        return service.getAndIncreaseView(challengeId, submissionId,
+                (user==null? null : user.getUser().getId()), request);
+    }
+
+    public record CreatedResp(Long id, String status, java.time.OffsetDateTime createdAt) {}
 }

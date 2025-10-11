@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 import LikedUsersModal from "./LikedUsersModal";
 import Toast from "../../common/Toast";
 
@@ -25,14 +25,8 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
   useEffect(() => {
     const fetchLike = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        
-        const res = await axios.get(`/api/likes`, {
+        const res = await api.get(`/likes`, {
           params: { targetType: "COMMENT", targetId: commentId },
-          withCredentials: true,
-          headers: token ? {
-            Authorization: `Bearer ${token}`,
-          } : {},
         });
         setLiked(res.data.likedByMe || false);
         setCount(res.data.likeCount || 0);
@@ -74,15 +68,9 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
         return;
       }
 
-      const res = await axios.post(
-        "/api/likes",
-        { targetType: "COMMENT", targetId: commentId },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await api.post(
+        "/likes",
+        { targetType: "COMMENT", targetId: commentId }
       );
       setLiked(res.data.likedByMe);
       setCount(res.data.likeCount);

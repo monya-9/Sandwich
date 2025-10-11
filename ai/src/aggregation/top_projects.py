@@ -1,229 +1,191 @@
-import hashlib
-import json
-from datetime import datetime, timedelta
+# src/aggregation/top_projects.py
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Optional, List, Tuple
 
 import numpy as np
 import pandas as pd
-import redis
+import requests
 from sqlalchemy import create_engine, text
 
-from src.config import (
-    DATABASE_URL, REDIS_URL,
-    VIEW_W, LIKE_W, COMMENT_W,
-    BLEND_ALPHA_DAILY, BLEND_ALPHA_WEEKLY,
-    EWM_ALPHA, TREND_MIN, TREND_MAX,
-    TIE_BREAK_EPS_TOP, STORE_TOPK_TOP,
-    get_tz,
-)
+# ==== ENV ====
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://ai_user:ai_pw@localhost:5252/ai_db")
+TZ_NAME      = os.getenv("TZ", "Asia/Seoul")
 
-TZ = get_tz()  # None이면 로컬시간 사용
+WORKER_BASE  = os.getenv("WORKER_BASE", "https://api.dnutzs.org")
+AI_HEADER    = os.getenv("AI_HEADER", "X-AI-API-Key")
+AI_API_KEY   = os.getenv("AI_API_KEY", "test")
 
-DDL_TOP_TABLE = """
-CREATE TABLE IF NOT EXISTS top_projects (
-  window_type   VARCHAR(10) NOT NULL,   -- 'day' | 'week'
-  window_start  TIMESTAMP   NOT NULL,
-  window_end    TIMESTAMP   NOT NULL,
-  project_id    BIGINT      NOT NULL,
-  rank          INT         NOT NULL,
-  final_score   DOUBLE PRECISION NOT NULL,
-  meta          JSONB       NULL,
-  PRIMARY KEY (window_type, window_start, project_id)
-);
-"""
+STORE_TOPK_TOP = int(os.getenv("STORE_TOPK_TOP", "200"))
+EVENT_WEIGHTS  = {k.strip().lower(): float(v) for k, v in
+                  (seg.split(":") for seg in os.getenv("EVENT_WEIGHTS", "view:1,like:3,comment:4").split(",") if seg)}
+W_BASE    = float(os.getenv("W_BASE", "0.6"))
+W_PERIOD  = float(os.getenv("W_PERIOD", "0.35"))
+W_RECENCY = float(os.getenv("W_RECENCY", "0.05"))
+RECENCY_HALF_LIFE_DAYS = float(os.getenv("RECENCY_HALF_LIFE_DAYS", "14"))
 
-def _stable_jitter(pid: int, eps: float) -> float:
-    if eps <= 0:
-        return 0.0
-    h = hashlib.blake2b(str(pid).encode("utf-8"), digest_size=8).digest()
-    val = int.from_bytes(h, "big") % 1_000_000
-    return eps * (val / 1_000_000.0)
+# ==== TZ ====
+try:
+    import zoneinfo
+    TZ = zoneinfo.ZoneInfo(TZ_NAME)
+except Exception:
+    TZ = timezone(timedelta(hours=9))
 
-def _now():
-    return datetime.now(TZ) if TZ else datetime.now()
+# ==== Utils ====
+def _detect_col(conn, table: str, candidates: list[str]) -> Optional[str]:
+    rows = conn.execute(
+        text("""
+            SELECT LOWER(column_name)
+            FROM information_schema.columns
+            WHERE LOWER(table_name)=LOWER(:t)
+        """), {"t": table}
+    ).fetchall()
+    cols = {r[0] for r in rows}
+    for c in candidates:
+        if c.lower() in cols:
+            return c
+    return None
 
-def _window_range(kind: str, now=None):
-    now = now or _now()
-    if kind == "day":
-        s = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        e = s + timedelta(days=1)
-    elif kind == "week":
-        weekday = now.weekday()  # Mon=0
-        s = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=weekday)
-        e = s + timedelta(days=7)
+def _norm(arr: np.ndarray) -> np.ndarray:
+    if arr.size == 0:
+        return arr
+    mx = float(np.nanmax(arr))
+    if mx <= 0.0 or np.isnan(mx):
+        return np.zeros_like(arr)
+    return arr / mx
+
+def _today_range():
+    now = datetime.now(TZ)
+    s = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return s, s + timedelta(days=1)
+
+def _thisweek_range():
+    now = datetime.now(TZ)
+    s = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=now.isoweekday() - 1)
+    return s, s + timedelta(days=7)
+
+def _post_json(path: str, payload: dict):
+    url = WORKER_BASE.rstrip("/") + path
+    r = requests.post(url, json=payload, headers={AI_HEADER: AI_API_KEY}, timeout=60)
+    if r.status_code >= 400:
+        raise RuntimeError(f"worker_error status={r.status_code} url={url} body={r.text}")
+    return r.json()
+
+# 집계
+def _aggregate(engine, s_period: datetime, e_period: datetime) -> pd.DataFrame:
+    table = "raw_interactions"
+    with engine.connect() as conn:
+        proj_col = _detect_col(conn, table, ["project_id","pid","project"])
+        user_col = _detect_col(conn, table, ["user_id","viewer_id","uid","user"])
+        ts_col   = _detect_col(conn, table, ["created_at","ts","event_time","event_at","timestamp","createdat","time","dt"])
+        evt_col  = _detect_col(conn, table, ["event_type","type","event","evt"])
+        missing = [n for n,v in {"project_id":proj_col,"user_id":user_col,"timestamp":ts_col,"event_type":evt_col}.items() if v is None]
+        if missing:
+            raise RuntimeError(f"[top_projects] '{table}' missing columns: {', '.join(missing)}")
+
+        q_all = text(f"""
+            SELECT {proj_col} AS project_id, LOWER({evt_col}) AS evt, COUNT(*)::bigint AS cnt
+            FROM {table}
+            GROUP BY {proj_col}, LOWER({evt_col})
+        """)
+        df_all = pd.read_sql(q_all, conn)
+
+        q_period = text(f"""
+            SELECT {proj_col} AS project_id, LOWER({evt_col}) AS evt, COUNT(*)::bigint AS cnt
+            FROM {table}
+            WHERE {ts_col} >= :s AND {ts_col} < :e
+            GROUP BY {proj_col}, LOWER({evt_col})
+        """)
+        df_p = pd.read_sql(q_period, conn, params={"s": s_period, "e": e_period})
+
+        q_last = text(f"""
+            SELECT {proj_col} AS project_id, MAX({ts_col}) AS last_ts
+            FROM {table}
+            GROUP BY {proj_col}
+        """)
+        df_last = pd.read_sql(q_last, conn)
+
+    def weighted_sum(df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return pd.DataFrame(columns=["project_id","score"])
+        wmap = EVENT_WEIGHTS
+        df = df.copy()
+        df["w"] = df["evt"].map(lambda k: wmap.get(str(k).lower(), 0.0)).astype(float)
+        df["ws"] = df["w"] * df["cnt"].astype(float)
+        return df.groupby("project_id", as_index=False)["ws"].sum().rename(columns={"ws":"score"})
+
+    base_df   = weighted_sum(df_all)
+    period_df = weighted_sum(df_p)
+
+    if df_last.empty:
+        rec_df = pd.DataFrame(columns=["project_id","recency"])
     else:
-        raise ValueError("kind must be 'day' or 'week'")
-    return s, e
+        now_ts = datetime.now(TZ).timestamp()
+        half = max(1.0, RECENCY_HALF_LIFE_DAYS) * 86400.0
+        lam = np.log(2.0) / half
+        rec_df = df_last.copy()
+        rec_df["ts_num"] = pd.to_datetime(rec_df["last_ts"], utc=True).astype("int64") / 1e9
+        rec_df["age"] = np.maximum(0.0, now_ts - rec_df["ts_num"])
+        rec_df["recency"] = np.exp(-lam * rec_df["age"])
+        rec_df = rec_df[["project_id","recency"]]
 
-def _buckets_for_history(kind: str, end_exclusive, num_windows=8):
-    buckets = []
-    step = timedelta(days=1 if kind == "day" else 7)
-    e = end_exclusive
-    for _ in range(num_windows):
-        s = e - step
-        buckets.append((s, e))
-        e = s
-    buckets.reverse()
-    return buckets
+    keys = set(map(int, base_df.get("project_id", pd.Series([],dtype="int64")).tolist())) \
+         | set(map(int, period_df.get("project_id", pd.Series([],dtype="int64")).tolist())) \
+         | set(map(int, rec_df.get("project_id", pd.Series([],dtype="int64")).tolist()))
+    if not keys:
+        return pd.DataFrame(columns=["project_id","base","period","recency","final"])
 
-def _fetch_counts(ai, s, e):
-    q_view = text("""
-        SELECT project_id, COUNT(DISTINCT viewer_id) AS views
-        FROM events_view
-        WHERE ts >= :s AND ts < :e
-        GROUP BY project_id
-    """)
-    q_like = text("""
-        SELECT project_id, COUNT(DISTINCT user_id) AS likes
-        FROM events_like
-        WHERE ts >= :s AND ts < :e
-        GROUP BY project_id
-    """)
-    q_comment = text("""
-        SELECT project_id, COUNT(*) AS comments
-        FROM events_comment
-        WHERE ts >= :s AND ts < :e
-        GROUP BY project_id
-    """)
-    dfv = pd.read_sql(q_view, ai, params={"s": s, "e": e})
-    dfl = pd.read_sql(q_like, ai, params={"s": s, "e": e})
-    dfc = pd.read_sql(q_comment, ai, params={"s": s, "e": e})
+    out = pd.DataFrame({"project_id": sorted(keys)})
+    out = out.merge(base_df.rename(columns={"score":"base"}), on="project_id", how="left")
+    out = out.merge(period_df.rename(columns={"score":"period"}), on="project_id", how="left")
+    out = out.merge(rec_df, on="project_id", how="left")
+    out[["base","period","recency"]] = out[["base","period","recency"]].fillna(0.0).infer_objects(copy=False)
 
-    df = dfv.merge(dfl, on="project_id", how="outer").merge(dfc, on="project_id", how="outer")
+    base_n   = _norm(out["base"].to_numpy(dtype=float))
+    period_n = _norm(out["period"].to_numpy(dtype=float))
+    rec_n    = _norm(out["recency"].to_numpy(dtype=float))
 
-    # 숫자 컬럼 보장 (FutureWarning 없이)
-    for col in ("views", "likes", "comments"):
-        if col not in df.columns:
-            df[col] = 0
-    num_cols = ["views", "likes", "comments"]
-    num = df[num_cols].apply(pd.to_numeric, errors="coerce").fillna(0).astype(np.int64)
-    df[num_cols] = num
-
-    return df[["project_id", "views", "likes", "comments"]]
-
-def _score_now(df_now: pd.DataFrame, alpha: float):
-    if df_now.empty:
-        return pd.DataFrame(columns=["project_id","final","raw","eng","trend"])
-    df_now = df_now.copy()
-    df_now["raw"] = (VIEW_W*df_now["views"].astype(float)
-                     + LIKE_W*df_now["likes"].astype(float)
-                     + COMMENT_W*df_now["comments"].astype(float))
-    eng = np.log1p(df_now["raw"].values)
-    p95 = np.percentile(eng, 95) if eng.size > 0 else 1.0
-    p95 = p95 if p95 > 0 else 1.0
-    norm_eng = np.clip(eng / p95, 0.0, 1.0)
-
-    df_now["eng"] = norm_eng
-    df_now["trend"] = 0.0
-    df_now["final"] = alpha*df_now["eng"] + (1-alpha)*df_now["trend"]
-    return df_now[["project_id","final","raw","eng","trend"]].copy()
-
-def _compute_trend(ai, kind: str, now_s, now_e, df_now_scored: pd.DataFrame, alpha: float):
-    past = _buckets_for_history(kind, end_exclusive=now_s, num_windows=8)
-    frames = []
-    for s,e in past:
-        dfp = _fetch_counts(ai, s, e)
-        if dfp.empty:
-            continue
-        dfp = dfp.copy()
-        dfp["raw"] = (VIEW_W*dfp["views"].astype(float)
-                      + LIKE_W*dfp["likes"].astype(float)
-                      + COMMENT_W*dfp["comments"].astype(float))
-        dfp["bucket_start"] = s
-        frames.append(dfp[["project_id","raw","bucket_start"]])
-
-    if not frames:
-        return df_now_scored
-
-    hist = pd.concat(frames, ignore_index=True).sort_values("bucket_start")
-    def _ewm_last(s: pd.Series) -> float:
-        return float(s.ewm(alpha=EWM_ALPHA, adjust=False).mean().iloc[-1])
-    base = (
-        hist.groupby("project_id", as_index=False)
-            .agg(baseline=("raw", _ewm_last))
-    )
-
-    now_raw = df_now_scored[["project_id","raw"]]
-    merged = now_raw.merge(base, on="project_id", how="left").fillna({"baseline": 0.0})
-    growth = merged["raw"].values / (merged["baseline"].values + 1e-6)
-    growth = np.clip(growth, TREND_MIN, TREND_MAX)
-    trend = (growth - TREND_MIN) / (TREND_MAX - TREND_MIN)
-
-    out = df_now_scored.copy()
-    out["trend"] = trend
-    out["final"]  = alpha*out["eng"] + (1-alpha)*out["trend"]
+    out["final"] = (W_BASE * base_n + W_PERIOD * period_n + W_RECENCY * rec_n).astype(float)
+    # 동점 미세 분산
+    out["final"] = out["final"] + (np.arange(len(out)) % 997) * 1e-12
     return out
 
-def _apply_tie_break(df: pd.DataFrame):
-    if df.empty or TIE_BREAK_EPS_TOP <= 0:
-        return df
-    jitters = df["project_id"].apply(lambda x: _stable_jitter(int(x), TIE_BREAK_EPS_TOP)).values
-    df = df.copy()
-    df["final"] = np.clip(df["final"].values + jitters, 0.0, None)
-    return df
+def _upsert_top_day(ymd: str, items: List[Tuple[int,float]]):
+    return _post_json("/api/reco/admin/upsert/top/day",
+                      {"ymd": ymd, "items": [{"project_id": p, "score": s} for p, s in items]})
 
-def _save(ai, kind: str, s, e, df: pd.DataFrame):
-    df = df.sort_values(["final","raw","eng","trend"], ascending=False)
-    topk = df.head(STORE_TOPK_TOP)
+def _upsert_top_week(week: str, items: List[Tuple[int,float]]):
+    # Worker는 week/iso 둘 다 지원하지만, DB 컬럼은 week 이므로 여기서 week로 보냄
+    return _post_json("/api/reco/admin/upsert/top/week",
+                      {"week": week, "items": [{"project_id": p, "score": s} for p, s in items]})
 
-    # Redis 저장은 동일 ...
-    client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
-    pipe = client.pipeline(transaction=True)
-    key = f"top:day:{s.strftime('%Y%m%d')}" if kind == "day" else (
-        lambda ys, w: f"top:week:{ys}W{w:02d}"
-    )(*s.isocalendar()[:2])
-    pipe.delete(key)
-    if not topk.empty:
-        mapping = {str(int(r.project_id)): float(r.final) for r in topk.itertuples(index=False)}
-        pipe.zadd(key, mapping)
-    pipe.execute()
-
-    # DB 저장
-    from sqlalchemy import text, create_engine
-    with ai.begin() as conn:
-        conn.execute(text(DDL_TOP_TABLE))
-        conn.execute(text("""
-            DELETE FROM top_projects
-            WHERE window_type=:t AND window_start=:s
-        """), {"t": kind, "s": s})
-
-        rows = []
-        rank = 1
-        for r in topk.itertuples(index=False):
-            meta_json = json.dumps({
-                "raw": float(r.raw), "eng": float(r.eng), "trend": float(r.trend)
-            }, ensure_ascii=False)
-            rows.append({
-                "t": kind, "s": s, "e": e,
-                "pid": int(r.project_id), "rank": rank,
-                "score": float(r.final),
-                "meta": meta_json,   # 문자열로 바인딩
-            })
-            rank += 1
-
-        if rows:
-            conn.execute(text("""
-                INSERT INTO top_projects(
-                    window_type, window_start, window_end,
-                    project_id, rank, final_score, meta
-                )
-                VALUES (:t, :s, :e, :pid, :rank, :score, CAST(:meta AS JSONB))
-            """), rows)
-
-def run(kind: str):
+def run(mode: str):
     ai = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
-    now_s, now_e = _window_range(kind)
-    alpha = BLEND_ALPHA_DAILY if kind == "day" else BLEND_ALPHA_WEEKLY
 
-    df_now = _fetch_counts(ai, now_s, now_e)
-    df_score = _score_now(df_now, alpha)
-    df_score = _compute_trend(ai, kind, now_s, now_e, df_score, alpha)
-    df_score = _apply_tie_break(df_score)
-    _save(ai, kind, now_s, now_e, df_score)
+    if mode == "day":
+        s, e = _today_range()
+        df = _aggregate(ai, s, e).sort_values(["final","project_id"], ascending=[False, True])
+        if STORE_TOPK_TOP > 0: df = df.head(STORE_TOPK_TOP)
+        items = [(int(r.project_id), float(r.final)) for r in df.itertuples(index=False)]
+        _upsert_top_day(s.strftime("%Y%m%d"), items)
+
+    elif mode == "week":
+        s, e = _thisweek_range()
+        df = _aggregate(ai, s, e).sort_values(["final","project_id"], ascending=[False, True])
+        if STORE_TOPK_TOP > 0: df = df.head(STORE_TOPK_TOP)
+        iso_year, iso_week, _ = s.isocalendar()
+        week = f"{iso_year}W{iso_week:02d}"
+        items = [(int(r.project_id), float(r.final)) for r in df.itertuples(index=False)]
+        _upsert_top_week(week, items)
+
+    else:
+        raise ValueError("mode must be 'day' or 'week'")
 
 def main():
+    print(f"[top_projects] DB={DATABASE_URL} -> {WORKER_BASE} ({AI_HEADER})")
     run("day")
     run("week")
-    print("✅ top_projects (day & week) computed/saved.")
+    print("[top_projects] done")
 
 if __name__ == "__main__":
     main()

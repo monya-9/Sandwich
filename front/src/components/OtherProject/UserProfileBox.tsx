@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import api from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import LoginPrompt from "./LoginPrompt";
 import Toast from "../common/Toast";
@@ -50,7 +50,7 @@ export default function UserProfileBox({
     if (!token || !ownerId || ownerId <= 0) { setIsFollowing(false); return; }
     (async () => {
       try {
-        const res = await axios.get(`/api/users/${ownerId}/follow-status`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        const res = await api.get(`/users/${ownerId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     })();
@@ -77,16 +77,15 @@ export default function UserProfileBox({
 
   const handleToggle = async () => {
     if (!ensureLogin()) return;
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) { setErrorToast({ visible: true, message: "대상 사용자를 확인할 수 없습니다." }); return; }
     try {
       if (isFollowing) {
-        await axios.delete(`/api/users/${ownerId}/unfollow`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        await api.delete(`/users/${ownerId}/unfollow`);
         setIsFollowing(false);
         setToast("unfollow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: false } }));
       } else {
-        await axios.post(`/api/users/${ownerId}/follow`, null, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        await api.post(`/users/${ownerId}/follow`, null);
         setIsFollowing(true);
         setToast("follow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: true } }));

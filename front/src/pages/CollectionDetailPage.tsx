@@ -5,6 +5,7 @@ import ConfirmModal from "../components/common/ConfirmModal";
 import Toast from "../components/common/Toast";
 import ReactDOM from "react-dom";
 import { X } from "lucide-react";
+import { fetchProjectFeed } from "../api/projects";
 
 export default function CollectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -101,10 +102,23 @@ export default function CollectionDetailPage() {
     );
   }
 
-  const projectsRaw: Array<{ id: number; title: string; thumbnailUrl?: string }> = Array.isArray((detail as any)?.projects) ? (detail as any).projects : [];
+  const projectsRaw: Array<{ id: number; title: string; thumbnailUrl?: string; ownerId?: number }> = Array.isArray((detail as any)?.projects) ? (detail as any).projects : [];
   // 최신이 왼쪽으로 오도록 최신순 정렬(응답이 오래→최신 순이라 가정하여 역순 처리)
   const projects = projectsRaw.slice().reverse();
-  const ownerId = Number((typeof window !== "undefined" && (localStorage.getItem("userId") || sessionStorage.getItem("userId"))) || "0");
+
+  const goProject = async (p: { id: number; ownerId?: number }) => {
+    const direct = Number(p.ownerId || 0);
+    if (direct > 0) { navigate(`/other-project/${direct}/${p.id}`); return; }
+    // 보강: 최신 피드에서 해당 프로젝트의 owner 탐색
+    try {
+      const feed = await fetchProjectFeed({ page: 0, size: 200, sort: 'latest' });
+      const match = (feed.content || []).find((it: any) => it?.id === p.id);
+      const resolved = (match as any)?.owner?.id || (match as any)?.authorId;
+      if (resolved) { navigate(`/other-project/${resolved}/${p.id}`); return; }
+    } catch {}
+    setBanner("작성자 정보를 찾을 수 없습니다.");
+    setTimeout(() => setBanner(null), 2000);
+  };
 
   return (
     <div className="w-full flex justify-center">
@@ -135,7 +149,7 @@ export default function CollectionDetailPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-10">
               {projects.map((p) => (
-                <div key={p.id} className="relative rounded-xl overflow-hidden cursor-pointer group" onClick={() => navigate(`/other-project/${ownerId || 0}/${p.id}`)}>
+                <div key={p.id} className="relative rounded-xl overflow-hidden cursor-pointer group" onClick={() => goProject(p)}>
                   <div className="relative w-full aspect-[4/3] bg-gray-200">
                     {p.thumbnailUrl && (
                       <img src={p.thumbnailUrl} alt={p.title} className="absolute inset-0 w-full h-full object-cover" />

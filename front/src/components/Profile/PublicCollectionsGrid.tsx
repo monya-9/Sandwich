@@ -79,7 +79,7 @@ export default function PublicCollectionsGrid() {
   return (
     <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {folders.map((f) => (
-        <div key={f.id} className="relative rounded-xl border border-[#E5E7EB] overflow-hidden cursor-pointer group bg-white" onClick={() => navigate(`/collections/${f.id}`)}>
+        <div key={f.id} className="relative rounded-xl border border-[#E5E7EB] overflow-hidden cursor-pointer group bg-white" onClick={() => navigate(`/users/${userId}/collections/${f.id}`)}>
           <div className="relative w-full aspect-[4/3] bg-gray-200">
             <div className="absolute inset-0">
               {coversById[f.id]?.[0] && (
@@ -101,6 +101,13 @@ export default function PublicCollectionsGrid() {
                 <div className="absolute left-1/2 top-1/2 w-1/2 h-1/2 overflow-hidden">
                   <img src={coversById[f.id][3]} alt="thumb4" className="w-full h-full object-cover" />
                 </div>
+              )}
+              {/* 중앙 구분선 */}
+              {(coversById[f.id]?.length ?? 0) > 0 && (
+                <>
+                  <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 w-[2px] h-full bg-white/90" />
+                  <div className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-white/90" />
+                </>
               )}
             </div>
           </div>

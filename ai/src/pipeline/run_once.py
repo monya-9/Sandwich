@@ -1,14 +1,25 @@
 import os, sys, logging, argparse, time
 from pathlib import Path
+# 위쪽에 추가
+import re, time
+
+def mask_dsn(url: str) -> str:
+    if not url: return ""
+    # postgresql+psycopg2://user:pass@host:5432/db?... → 비번 마스킹
+    return re.sub(r'(://[^:/\s]+:)[^@]+(@)', r'\1****\2', url)
+
+# SQLAlchemy/urllib 상세 로그
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)   # SQL 로그 원하면 DEBUG
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # --- 부트스트랩: 경로/환경 세팅
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))  # src/를 최우선으로
-try:
-    from dotenv import load_dotenv
-    load_dotenv(ROOT / ".env")
-except Exception:
-    pass
+# run_once.py 상단 부트스트랩 교체
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / ".env.local", override=True)  # 추가
+
 
 # --- 로깅
 LOG_DIR = ROOT / "logs"

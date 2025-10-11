@@ -46,4 +46,8 @@ out/
 .vscode/
 
 firebase-service-account.json
+creds/*.jsonSandwich/creds/firebase.b64
+creds/firebase.b64
+creds/firebase-service-account.json
+creds/*.b64
 creds/*.json

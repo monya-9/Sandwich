@@ -5,6 +5,7 @@ import DesktopNav from './DesktopNav';
 import MobileNav from './MobileNav';
 import SidebarMenu from './SidebarMenu';
 import Toast from '../Toast';
+import api from '../../../api/axiosInstance';
 
 const Header = () => {
     const { logout } = useContext(AuthContext);
@@ -27,28 +28,15 @@ const Header = () => {
     /** ✅ 최종 handleLogout */
     const handleLogout = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                const res = await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (res.ok) {
-                    console.log('프론트: 로그아웃 요청 성공');
-                } else {
-                    console.warn('프론트: 로그아웃 요청 실패', res.status);
-                }
-            }
+            // api 인스턴스 사용 (리프레시 토큰 적용)
+            await api.post('/auth/logout');
+            console.log('프론트: 로그아웃 요청 성공');
         } catch (err) {
             console.error('백엔드 로그아웃 실패:', err);
         }
 
-        // 프론트 상태 초기화
+        // 프론트 상태 초기화 (clearAllUserData가 모든 토큰을 삭제하므로 중복 삭제 제거)
         logout();
-        localStorage.removeItem('accessToken');
         setSuccessToast({
             visible: true,
             message: '로그아웃 되었습니다'

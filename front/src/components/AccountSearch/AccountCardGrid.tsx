@@ -9,13 +9,17 @@ interface AccountCardGridProps {
   searchTerm: string;
   loading: boolean;
   error: string | null;
+  currentPage: number; // ✅ 현재 페이지 추가
+  totalElements: number; // ✅ 전체 계정 수 추가
 }
 
 const AccountCardGrid: React.FC<AccountCardGridProps> = ({ 
   accounts, 
   searchTerm, 
-  loading, 
-  error 
+  loading,
+  error,
+  currentPage,
+  totalElements
 }) => {
   if (loading) {
     return (
@@ -49,10 +53,18 @@ const AccountCardGrid: React.FC<AccountCardGridProps> = ({
       {/* 검색 결과 헤더 - 스크린샷과 동일한 스타일 */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {searchTerm ? `'${searchTerm}'에 대한 검색 결과` : '전체 계정'}
+          {searchTerm ? 
+            `'${searchTerm}'에 대한 검색 결과` : 
+            currentPage === 0 ? '전체 계정' : null
+          }
         </h2>
         <p className="text-gray-600 text-lg">
-          {searchTerm ? `${accounts.length}명의 계정을 발견하였습니다.` : `총 ${accounts.length}명의 계정이 있습니다.`}
+          {searchTerm ? 
+            `${accounts.length}명의 계정을 발견하였습니다.` : 
+            currentPage === 0 ? 
+              `총 ${totalElements}명의 계정이 있습니다.` : 
+              null
+          }
         </p>
       </div>
 

@@ -28,7 +28,8 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
     setFilters,
     clearFilters,
     searchProjects,
-    refresh
+    refresh,
+    loadProjects
   } = useProjectFeed({}, initialSearchTerm);
 
   // 정렬 타입 상태
@@ -45,7 +46,7 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
 
   // 검색어 초기화 함수
   const handleClearSearch = () => {
-    const clearedFilters = { page: 0, size: 20, q: undefined }; // q 필드를 명시적으로 undefined로 설정
+    const clearedFilters = { page: 0, size: 20, q: undefined }; // ✅ 사이즈를 20으로 변경
     setFilters(clearedFilters);
     setCurrentSearchQuery(''); // 검색어 입력창 초기화
     // loadProjects는 useEffect에서 자동으로 호출됨
@@ -103,11 +104,20 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
         />
         
         {/* 페이지네이션 - 로딩 중이 아닐 때만 표시 */}
-        {projects.length > 0 && !isLoading && !isInitialLoading && (
+        {projects.length > 0 && !isLoading && !isInitialLoading && totalElements > 20 && (
           <ProjectPagination 
             currentPage={filters.page || 0}
             totalPages={Math.ceil(totalElements / (filters.size || 20))}
-            onPageChange={(page: number) => setFilters({ ...filters, page })}
+            onPageChange={(page: number) => {
+              const newFilters = { ...filters, page };
+              // ✅ URL 파라미터 업데이트
+              const params = new URLSearchParams();
+              if (newFilters.q) params.set('q', newFilters.q);
+              if (page > 0) params.set('page', page.toString());
+              window.history.pushState({}, '', `/search?${params.toString()}`);
+              // ✅ 직접 loadProjects 호출 (상태 업데이트와 API 호출 분리)
+              loadProjects(newFilters);
+            }}
           />
         )}
       </div>

@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: ai_postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ai_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_db}
+    ports: ["${AI_DB_HOST_PORT:-5252}:5432"]
+    volumes: [ai_pgdata:/var/lib/postgresql/data]
+    networks: [sandwich-net]
+
+  redis:
+    image: redis:6-alpine
+    container_name: ai_redis
+    command: ["redis-server","--appendonly","yes"]
+    ports: ["${AI_REDIS_HOST_PORT:-4242}:6379"]
+    volumes: [ai_redisdata:/data]
+    networks: [sandwich-net]
+
+  # 작성용 유틸 실행 컨테이너(쓰기 파이프라인이 여기서 돌면 필수)
+  tools:
+    build: .
+    container_name: ai_tools
+    volumes: [ .:/app ]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://ai_redis:6379/0
+      DATABASE_URL: postgresql://ai_user:ai_pw@ai_postgres:5432/ai_db
+      MAIN_DB_URL: postgresql://ai_user:ai_pw@ai_postgres:5432/main_db
+    networks: [sandwich-net]
+    profiles: ["dev"]
+
+  api-redis:
+    build:
+      context: .
+      dockerfile: Dockerfile.api-redis
+    command: ["python","-m","uvicorn","src.api_redis.main:app","--host","0.0.0.0","--port","8010"]
+    container_name: ai-api-redis-1
+    ports: ["8010:8010"]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://ai_redis:6379/0
+      DATABASE_URL: postgresql://ai_user:ai_pw@ai_postgres:5432/ai_db
+      MAIN_DB_URL: postgresql://ai_user:ai_pw@ai_postgres:5432/main_db
+    depends_on: [redis, db]
+    networks: [sandwich-net]
+
+  webdis:
+    image: nicolas/webdis:latest
+    container_name: ai_webdis
+    restart: always
+    environment:
+      REDIS_HOST: ai_redis
+      REDIS_PORT: 6379
+    networks: [sandwich-net]
+
+  ai-redis-gw:
+    image: nginx:alpine
+    container_name: ai_redis_gateway
+    restart: always
+    ports: ["9010:80"]
+    volumes:
+      - ./nginx/redis-gateway.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ai_api_key.conf:/etc/nginx/secrets/ai_api_key.conf:ro
+    depends_on: [webdis, api-redis]
+    networks: [sandwich-net]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cf_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    volumes:
+      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+    networks: [sandwich-net]
+
+networks:
+  sandwich-net:
+    external: true
+    name: sandwich_sandwich-net
+
+volumes:
+  ai_pgdata:
+  ai_redisdata:

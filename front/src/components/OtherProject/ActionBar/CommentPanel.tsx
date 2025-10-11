@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import {
   fetchComments, postComment, updateComment, deleteComment,
   CommentResponse
@@ -6,6 +6,7 @@ import {
 import CommentLikeAction from "./CommentLikeAction";
 import Toast from "../../common/Toast";
 import ConfirmModal from "../../common/ConfirmModal";
+import { AuthContext } from "../../../context/AuthContext";
 
 interface CommentPanelProps {
   onClose: () => void;
@@ -40,6 +41,8 @@ export default function CommentPanel({
     visible: false,
     commentId: null
   });
+  const { nickname } = useContext(AuthContext);
+  const myNickname = nickname || localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "";
 
   // username, projectId 의존성 추가!
   const loadComments = useCallback(async () => {
@@ -187,16 +190,20 @@ export default function CommentPanel({
           disabled={!isLoggedIn}
           className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : ""}
         >답글</button>
-        <button
-          onClick={() => isLoggedIn ? setEdit({ id: c.id, value: c.comment }) : undefined}
-          disabled={!isLoggedIn}
-          className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : ""}
-        >수정</button>
-        <button
-          className={"text-red-500" + (!isLoggedIn ? " text-gray-300 cursor-not-allowed" : "")}
-          onClick={() => isLoggedIn ? handleDeleteClick(c.id) : undefined}
-          disabled={!isLoggedIn}
-        >삭제</button>
+        {isLoggedIn && myNickname && c.username === myNickname && (
+          <>
+            <button
+              onClick={() => isLoggedIn ? setEdit({ id: c.id, value: c.comment }) : undefined}
+              disabled={!isLoggedIn}
+              className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : ""}
+            >수정</button>
+            <button
+              className={"text-red-500" + (!isLoggedIn ? " text-gray-300 cursor-not-allowed" : "")}
+              onClick={() => isLoggedIn ? handleDeleteClick(c.id) : undefined}
+              disabled={!isLoggedIn}
+            >삭제</button>
+          </>
+        )}
       </div>
 
       {reply?.parentId === c.id && isLoggedIn && (

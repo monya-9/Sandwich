@@ -28,7 +28,7 @@ export default function ProjectDetailPanel({ isShrink }: { isShrink: boolean }) 
       </div>
       <TagList tags={["포트폴리오", "프론트엔드"]} />
       <div className="-mx-4 sm:-mx-6 md:-mx-10 lg:-mx-16 mb-8">
-        <ProjectStatsBox likes={0} views={0} comments={0} projectName="프로젝트 이름" date="2025.5.11" category="UI/UX" />
+        <ProjectStatsBox likes={0} views={0} comments={0} projectName="프로젝트 이름" date="2025.5.11" category="UI/UX" projectId={0} />
       </div>
       <UserProfileBox userName="사용자 이름" />
       <ProjectGrid works={[]} />

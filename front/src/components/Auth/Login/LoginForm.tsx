@@ -10,12 +10,12 @@ import SNSLogin from "./SNSLogin";
 import LoginActions from "./LoginActions";
 import RecentLogin from "../RecentLogin";
 import api from "../../../api/axiosInstance";
-import { setToken, setRefreshToken } from "../../../utils/tokenStorage";
+import { setToken, setRefreshToken, clearAllUserData } from "../../../utils/tokenStorage";
 import { ensureNicknameInStorage } from "../../../utils/profile";
 
 const LoginForm = () => {
     const navigate = useNavigate();
-    const { login } = useContext(AuthContext);
+    const { login, clearState } = useContext(AuthContext);
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -25,6 +25,12 @@ const LoginForm = () => {
 
     const handleLogin = async () => {
         try {
+            // ✅ 1. 기존 모든 사용자 데이터 완전 삭제
+            clearAllUserData();
+
+            // ✅ 2. React 상태 즉시 초기화 (깜빡임 방지)
+            clearState(); // React 상태만 즉시 초기화
+
             const res = await api.post("/auth/login", { email, password });
             const {
                 accessToken,
@@ -32,19 +38,22 @@ const LoginForm = () => {
                 email: serverEmail,
             } = res.data || {};
 
-            // 토큰 저장 (keepLogin=true → localStorage, false → sessionStorage)
+            // ✅ 3. 새 토큰 저장 (keepLogin=true → localStorage, false → sessionStorage)
             setToken(accessToken, keepLogin);
             setRefreshToken(refreshToken ?? null, keepLogin); // ⬅️ 중요!
 
-            // 이메일 결정 + 저장
+            // ✅ 4. 새 사용자 정보 저장
             const storage = keepLogin ? localStorage : sessionStorage;
             const effectiveEmail = serverEmail || email;
             storage.setItem("userEmail", effectiveEmail);
+            
+            // ✅ 최근 로그인 방법 저장 (이메일 로그인)
+            localStorage.setItem("lastLoginMethod", "local");
 
-            // 로그인 직후 프로필/닉네임 보강
+            // ✅ 5. 로그인 직후 프로필/닉네임 보강
             await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
 
-            // 컨텍스트엔 이메일만
+            // ✅ 6. 컨텍스트 업데이트
             login(effectiveEmail);
 
             setLoginFailed(false);

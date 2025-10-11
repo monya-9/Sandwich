@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaUser } from "react-icons/fa";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 import { useNavigate, useParams } from "react-router-dom";
 import LoginPrompt from "../LoginPrompt";
 import Toast from "../../common/Toast";
@@ -58,7 +58,7 @@ export default function ProfileAction({
       try {
         const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
         if (!token || !targetUserId || targetUserId <= 0) { setIsFollowing(false); return; }
-        const res = await axios.get(`/api/users/${targetUserId}/follow-status`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        const res = await api.get(`/users/${targetUserId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     };
@@ -107,7 +107,7 @@ export default function ProfileAction({
     try {
       const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) return requireLogin();
-      await axios.post(`/api/users/${targetUserId}/follow`, null, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/users/${targetUserId}/follow`, null);
       setIsFollowing(true);
       setToast("follow");
       setFollowBtnHover(false);
@@ -125,7 +125,7 @@ export default function ProfileAction({
     try {
       const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) return requireLogin();
-      await axios.delete(`/api/users/${targetUserId}/unfollow`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+      await api.delete(`/users/${targetUserId}/unfollow`);
       setIsFollowing(false);
       setToast("unfollow");
       setFollowBtnHover(false);

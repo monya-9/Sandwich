@@ -44,6 +44,9 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       setIsLoading(true);
       setError(null);
       
+      // ✅ 필터 상태도 함께 업데이트
+      setFilters(params);
+      
       const response = await fetchProjectFeed(params);
       
       
@@ -59,7 +62,7 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       setIsLoading(false);
       setIsInitialLoading(false); // 초기 로딩 완료
     }
-  }, []);
+  }, [setFilters]);
 
   // 더 많은 프로젝트 로드 (무한 스크롤용)
   const loadMore = useCallback(async () => {
@@ -71,7 +74,7 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       const response = await fetchProjectFeed({
         ...filters,
         page: nextPage,
-        size: 20
+        size: 20 // ✅ 사이즈를 20으로 변경
       });
       
       setProjects(prev => [...prev, ...response.content]);
@@ -107,45 +110,40 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
     setTotalPages(0);
     setCurrentPage(0);
     
-    setFilters(searchParams);
+    // ✅ loadProjects만 호출 (setFilters는 loadProjects 내부에서 처리)
     await loadProjects(searchParams);
   }, [filters, loadProjects]);
 
   // 필터 변경
   const handleSetFilters = useCallback((newFilters: ProjectFeedParams) => {
-    const updatedFilters = { ...filters, ...newFilters, page: 0 };
+    const updatedFilters = { ...filters, ...newFilters }; // ✅ page: 0 강제 설정 제거
     
     // q 필드가 undefined이면 완전히 제거
     if (newFilters.q === undefined) {
       delete updatedFilters.q;
     }
     
-    setFilters(updatedFilters);
+    // ✅ loadProjects만 호출 (setFilters는 loadProjects 내부에서 처리)
     loadProjects(updatedFilters);
   }, [filters, loadProjects]);
 
   // 필터 초기화
   const clearFilters = useCallback(() => {
-    const clearedFilters = { page: 0, size: 20 };
-    setFilters(clearedFilters);
+    const clearedFilters = { page: 0, size: 20 }; // ✅ size를 20으로 변경
+    // ✅ loadProjects만 호출 (setFilters는 loadProjects 내부에서 처리)
     loadProjects(clearedFilters);
   }, [loadProjects]);
 
-  // 초기 검색어 처리 및 초기 로딩 (한 번만 실행)
+  // 초기 검색어 처리 및 초기 로딩
   useEffect(() => {
-    if (hasInitialized.current) return; // 이미 초기화되었으면 무시
-    
-    hasInitialized.current = true;
-    
     if (initialSearchTerm && initialSearchTerm.trim()) {
       // 초기 검색어가 있으면 검색 실행
       const searchParams = { page: 0, size: 20, q: initialSearchTerm };
-      setFilters(searchParams);
       loadProjects(searchParams);
-    } else {
-      // 초기 검색어가 없으면 전체 프로젝트 로드
+    } else if (!hasInitialized.current) {
+      // 초기 검색어가 없고 아직 초기화되지 않았으면 전체 프로젝트 로드
+      hasInitialized.current = true;
       const defaultParams = { page: 0, size: 20 };
-      setFilters(defaultParams);
       loadProjects(defaultParams);
     }
   }, [initialSearchTerm, loadProjects]);

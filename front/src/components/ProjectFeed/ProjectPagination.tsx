@@ -13,13 +13,22 @@ export const ProjectPagination: React.FC<ProjectPaginationProps> = ({
   totalPages,
   onPageChange
 }) => {
-  // 페이지 번호 생성 (1~5까지만 표시)
+  // 페이지 번호 생성 (최대 10개까지 표시)
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 5;
+    const maxVisiblePages = 10; // ✅ 5에서 10으로 변경
     
-    // 항상 1~5까지만 표시
-    for (let i = 0; i < Math.min(maxVisiblePages, totalPages); i++) {
+    // 현재 페이지 기준으로 앞뒤 페이지 계산
+    let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+    
+    // 끝 페이지가 조정되면 시작 페이지도 조정
+    if (endPage - startPage < maxVisiblePages - 1) {
+      startPage = Math.max(0, endPage - maxVisiblePages + 1);
+    }
+    
+    // 페이지 번호 배열 생성
+    for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
     
@@ -65,18 +74,15 @@ export const ProjectPagination: React.FC<ProjectPaginationProps> = ({
       </button>
 
       {/* 페이지 번호들 */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         {pageNumbers.map((page) => (
           <button
             key={page}
             onClick={() => handlePageClick(page)}
-            disabled={page > 0} // 2,3,4,5 페이지 비활성화
-            className={`px-3 py-2 rounded-lg transition-colors ${
+            className={`px-2 py-1 text-sm rounded-lg transition-colors ${
               currentPage === page
-                ? 'bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center' // 동그라미 모양
-                : page > 0 
-                  ? 'text-gray-400 cursor-not-allowed' // 비활성화된 페이지
-                  : 'hover:bg-gray-50' // 활성화된 페이지 (1페이지만)
+                ? 'bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center' // ✅ 더 작은 동그라미
+                : 'hover:bg-gray-50' // 모든 페이지 활성화
             }`}
           >
             {page + 1}
@@ -87,7 +93,7 @@ export const ProjectPagination: React.FC<ProjectPaginationProps> = ({
       {/* 다음 버튼 */}
       <button
         onClick={handleNextPage}
-        disabled={true} // 다음 버튼 비활성화
+        disabled={currentPage >= totalPages - 1} // ✅ 마지막 페이지에서만 비활성화
         className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <span>다음</span>

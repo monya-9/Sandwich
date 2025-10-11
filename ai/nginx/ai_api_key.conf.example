@@ -1,5 +1,0 @@
-# Copy this file to ai/nginx/ai_api_key.conf and set your actual secret key.
-# This file is included by redis-gateway.conf to validate X-API-Key header.
-# Format must define the EXPECTED_KEY variable as below:
-
-set $EXPECTED_KEY "change-me-very-secret";
