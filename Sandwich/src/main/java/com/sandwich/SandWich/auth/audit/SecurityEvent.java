@@ -14,9 +14,9 @@ public class SecurityEvent extends BaseEntity {
     private Long id;
 
     @Column(nullable=false) private String type; // OTP_ISSUE, OTP_VERIFY_OK, OTP_VERIFY_INVALID, OTP_VERIFY_EXPIRED, OTP_VERIFY_LOCKED, LOGIN_BYPASS ...
-    private Long userId;
+    @Column(name = "user_id") private Long userId;
     private String email;
-    private String pendingId;
+    @Column(name = "pending_id") private String pendingId;
     private String ip;
     private String ua;
     @Column(columnDefinition = "text")

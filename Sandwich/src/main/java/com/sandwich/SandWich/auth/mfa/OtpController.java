@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.auth.mfa;
 
+import com.sandwich.SandWich.auth.audit.SecurityAuditService;
 import com.sandwich.SandWich.auth.device.DeviceTrustService;
 import com.sandwich.SandWich.auth.dto.TokenResponse;
 import com.sandwich.SandWich.auth.mfa.metrics.OtpMetrics;
@@ -37,6 +38,7 @@ public class OtpController {
     private final StringRedisTemplate redis; // 재전송 rate-limit에 사용
     private final MfaProperties mfaProperties;
     private final OtpMetrics metrics;
+    private final SecurityAuditService audit;
 
     //OTP 검증
     @PostMapping("/verify")
@@ -55,6 +57,7 @@ public class OtpController {
                 // 컨텍스트는 pop해 한 번 쓰고 지움
                 OtpContext ctx = otpService.popContext(pendingId);
                 if (ctx == null) {
+                    audit.record("OTP_VERIFY_EXPIRED", null, null, pendingId, "ctx=null", httpReq);
                     return ResponseEntity.badRequest().body(Map.of("error", "EXPIRED"));
                 }
 
@@ -71,11 +74,21 @@ public class OtpController {
                     deviceTrustService.remember(httpReq, httpRes, user.getId(), deviceName);
                 }
 
+                audit.record("OTP_VERIFY_OK", user.getId(), user.getEmail(), pendingId, null, httpReq);
                 return ResponseEntity.ok(new TokenResponse(accessToken, refreshToken, user.getProvider()));
             }
-            case INVALID -> { return ResponseEntity.badRequest().body(Map.of("error", "INVALID_CODE")); }
-            case EXPIRED -> { return ResponseEntity.badRequest().body(Map.of("error", "EXPIRED")); }
-            case LOCKED  -> { return ResponseEntity.status(423).body(Map.of("error", "LOCKED")); }
+            case INVALID -> {
+                audit.record("OTP_VERIFY_INVALID", null, null, pendingId, null, httpReq);
+                return ResponseEntity.badRequest().body(Map.of("error", "INVALID_CODE"));
+            }
+            case EXPIRED -> {
+                audit.record("OTP_VERIFY_EXPIRED", null, null, pendingId, null, httpReq);
+                return ResponseEntity.badRequest().body(Map.of("error", "EXPIRED"));
+            }
+            case LOCKED  -> {
+                audit.record("OTP_VERIFY_LOCKED", null, null, pendingId, null, httpReq);
+                return ResponseEntity.status(423).body(Map.of("error", "LOCKED"));
+            }
         }
         return ResponseEntity.badRequest().body(Map.of("error", "UNKNOWN"));
     }
@@ -128,11 +141,18 @@ public class OtpController {
 
         // 성공 지표 + 성공 로그
         metrics.incResendOk();
-        log.info("otp.resend ok pid={} email={}", pendingId, ctx.getEmail());
+        log.info("otp.resend ok pid={} email={}", pendingId, maskEmail(ctx.getEmail()));
 
         // 6) 본문 없음(204) 권장
         return ResponseEntity.noContent().build();
     }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 3) return "***" + email.substring(at);
+        return email.substring(0,3) + "****" + email.substring(at);
+    }
+
 
 
     private long secondsUntilMidnight() {
