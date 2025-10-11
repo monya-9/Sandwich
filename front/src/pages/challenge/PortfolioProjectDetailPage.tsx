@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { SectionCard, CTAButton, ChallengePageHeader } from "../../components/challenge/common";
+import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, X } from "lucide-react";
 import {
     getPortfolioProjects,
@@ -117,6 +117,7 @@ export default function PortfolioProjectDetailPage() {
                 <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
             </div>
 
+
             <SectionCard className="!px-5 !py-5">
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2">
@@ -131,6 +132,15 @@ export default function PortfolioProjectDetailPage() {
                         <div className="text-[12.5px] text-neutral-600">{item.authorRole}</div>
                     </div>
                 </div>
+
+                {/* 기술 스택 */}
+                {item.language && (
+                    <div className="mb-3">
+                        <span className="inline-block px-3 py-1 text-[12px] bg-emerald-50 text-emerald-700 rounded-full font-medium">
+                            {item.language}
+                        </span>
+                    </div>
+                )}
 
                 <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{item.summary}</p>
 
@@ -156,6 +166,25 @@ export default function PortfolioProjectDetailPage() {
                         </a>
                     )}
                 </div>
+
+                {/* 추가 이미지들 */}
+                {item.images && item.images.length > 0 && (
+                    <div className="mt-6">
+                        <h3 className="mb-3 text-[14px] font-semibold text-neutral-900">추가 이미지</h3>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                            {item.images.map((imageUrl, index) => (
+                                <div key={index} className="aspect-[4/3] overflow-hidden rounded-lg">
+                                    <img 
+                                        src={imageUrl} 
+                                        alt={`${item.title} 이미지 ${index + 1}`}
+                                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                                        onClick={() => window.open(imageUrl, '_blank')}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* 메트릭 */}
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
