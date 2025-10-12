@@ -23,8 +23,8 @@ services:
       FIREBASE_CREDENTIALS_PATH: /app/creds/firebase-service-account.json
       FIREBASE_CREDENTIALS_JSON_B64: ${FIREBASE_CREDENTIALS_JSON_B64}
       APP_WEB_BASE_URL: http://localhost
-      MFA_ENABLED: "false"
-      MFA_BLOCK_OTP_APIS: "true"
+      MFA_ENABLED: "true"
+      MFA_BLOCK_OTP_APIS: "false"
     entrypoint:
       - /bin/sh
       - -lc
@@ -70,8 +70,33 @@ services:
         exec nginx -g 'daemon off;'
     networks: [sandwich-net]
 
+  prometheus:
+    build:
+      context: .
+      dockerfile: Dockerfile.prom
+    container_name: sandwich_prometheus
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "9091:9090"
+    networks: [sandwich-net]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sandwich_grafana
+    restart: always
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    networks: [sandwich-net]
+
 volumes:
   pgdata: {}
+  grafana-data: {}
 
 networks:
   sandwich-net:

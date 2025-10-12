@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.auth.service;
 
+import com.sandwich.SandWich.auth.audit.SecurityAuditService;
 import com.sandwich.SandWich.auth.device.DeviceTrustService;
 import com.sandwich.SandWich.auth.dto.LoginRequest;
 import com.sandwich.SandWich.auth.dto.MfaRequiredResponse;
@@ -47,6 +48,7 @@ public class AuthService {
     private final OtpService otpService;
     private final LoginOtpMailService loginOtpMailService;
     private final MfaProperties mfaProperties;
+    private final SecurityAuditService audit;
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
@@ -168,6 +170,9 @@ public class AuthService {
         // 코드 발급 + 메일 전송
         String code = otpService.issueCode(pendingId);
         loginOtpMailService.sendLoginOtp(user.getEmail(), code);
+
+        audit.record("OTP_ISSUE", user.getId(), user.getEmail(), pendingId,
+                "issued=true", httpReq);
 
         return new MfaRequiredResponse("MFA_REQUIRED", pendingId, ctx.getMaskedEmail());
     }

@@ -21,6 +21,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.core.annotation.Order;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -38,6 +41,19 @@ public class SecurityConfig {
     private final ObjectProvider<CustomOAuth2UserService> customOAuth2UserServiceProvider;
     private final ObjectProvider<OAuth2SuccessHandler> oAuth2SuccessHandlerProvider;
     private final ObjectProvider<OAuth2FailureHandler> oAuth2FailureHandlerProvider;
+
+    @Bean
+    @Order(0)
+    public SecurityFilterChain actuatorChain(HttpSecurity http) throws Exception {
+        return http
+                .securityMatcher(request -> request.getServerPort() == 9090) // 관리 포트 한정
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health/**","/actuator/prometheus").permitAll()
+                        .anyRequest().denyAll() // 그 외 액추에이터는 차단
+                )
+                .build();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
