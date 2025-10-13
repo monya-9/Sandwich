@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useContext, useRef, useEffect, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { HiOutlineArrowUpTray } from "react-icons/hi2";
 import Sidebar from "./Sidebar";
@@ -21,6 +22,17 @@ const Counter: React.FC<{ value: number; max?: number }> = ({ value, max = MAX20
 );
 
 const MyPageSettingPage: React.FC = () => {
+    const navigate = useNavigate();
+    const { search } = useLocation();
+    const query = useMemo(() => new URLSearchParams(search), [search]);
+    const view = query.get("view") || "";
+    const [isNarrow, setIsNarrow] = useState<boolean>(false);
+    useEffect(() => {
+        const update = () => setIsNarrow(window.innerWidth < 1024); // lg breakpoint
+        update();
+        window.addEventListener("resize", update);
+        return () => window.removeEventListener("resize", update);
+    }, []);
 	const { email } = useContext(AuthContext);
 	const scopedKey = useCallback((key: string) => (email ? `${key}:${email}` : key), [email]);
 	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
@@ -519,25 +531,31 @@ const MyPageSettingPage: React.FC = () => {
 			/>
 			<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				<div className="flex gap-6">
+				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					{/* 좌측 사이드 카드 */}
-					<aside className="w-[320px] shrink-0">
+					<aside className={`${(isNarrow && view === "profile") ? "hidden" : "block"} w-full lg:w-[320px] shrink-0`}>
 						<Sidebar />
 					</aside>
 
 					{/* 우측 콘텐츠 */}
-					<main className="flex-1 space-y-0">
+						<main className={`${(isNarrow && view !== "profile") ? "hidden" : "flex-1 space-y-0"}`}>
+							{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
+							<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
+								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+								<div className="justify-self-center text-[16px] font-medium text-center">프로필 설정</div>
+								<span />
+							</div>
 						{/* 기본 정보 카드 */}
-						<section className="bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w/full max-w-[1400px] mx-auto">
+						<section className="bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto">
 							<div className="text-[16px] font-medium text-[#111827] mb-6">기본 정보</div>
 
 							{/* 프로필 + 업로드 */}
-							<div className="flex items-center gap-6 mb-6">
+							<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-6">
 								<div className="w-[120px] flex flex-col items-center">
 									<div className="relative w-[100px] h-[100px] group">
 										<div className="w-full h-full rounded-full bg-[#F3F4F6] text-black flex items-center justify-center text-[28px] overflow-hidden">
 											{avatarUrl ? (
-												<img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+												<img src={avatarUrl} alt="프로필 이미지" loading="lazy" decoding="async" className="w-full h-full object-cover" />
 											) : (
 												<span>{initialLetter}</span>
 											)}
@@ -556,7 +574,7 @@ const MyPageSettingPage: React.FC = () => {
 
 								</div>
 								<div className="flex flex-col">
-									<button type="button" onClick={handleUploadClick} className="h-[36px] px-4 rounded-full border text-[13px] flex items-center gap-2 border-green-500 text-green-500 hover:bg-green-50 w-fit">
+									<button type="button" aria-label="프로필 사진 업로드" onClick={handleUploadClick} className="h-[36px] px-4 rounded-full border text-[13px] flex items-center gap-2 border-green-500 text-green-500 hover:bg-green-50 w-fit">
 										<HiOutlineArrowUpTray className="w-4 h-4" />
 										<span>프로필 사진 업로드</span>
 									</button>
@@ -573,21 +591,25 @@ const MyPageSettingPage: React.FC = () => {
 									</span>
 								</FieldLabel>
 								<div className="relative">
-															<input
+												<input
 							type="text"
 							value={userName}
 							onChange={(e)=>{ setUserName(e.target.value.slice(0, MAX20)); setUserNameError(null); }}
 							onBlur={() => { const v = userNameRef.current.trim(); if (v) checkAndSaveUserName(v); }}
-							className={`w-full h-[55px] py-0 leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${(userInitialized && isUserNameEmpty) ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
+							aria-label="닉네임"
+							maxLength={MAX20}
+							aria-invalid={userInitialized && (!!userNameError || isUserNameEmpty)}
+							aria-describedby={(userInitialized && (!!userNameError || isUserNameEmpty)) ? 'nickname-error' : undefined}
+							className={`w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${(userInitialized && isUserNameEmpty) ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
 						/>
 									<Counter value={userName.length} />
 								</div>
-								{userInitialized && isUserNameEmpty && (
-									<p className="mt-2 text-[12px] text-[#DB2E2E]">필수 항목입니다.</p>
-								)}
-								{userInitialized && userNameError ? (
-									<p className="mt-2 text-[12px] text-[#DB2E2E]">{userNameError}</p>
-								) : null}
+										{userInitialized && isUserNameEmpty && (
+											<p id="nickname-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">필수 항목입니다.</p>
+										)}
+										{userInitialized && userNameError ? (
+											<p id="nickname-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">{userNameError}</p>
+										) : null}
 							</div>
 
 							{/* 사용자 이름 (읽기 전용) */}
@@ -599,7 +621,8 @@ const MyPageSettingPage: React.FC = () => {
 										value={usernameDisplay}
 										readOnly
 										disabled
-										className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] text-[#6B7280]"
+											aria-label="사용자 이름"
+											className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] text-[#6B7280]"
 									/>
 								</div>
 							</div>
@@ -607,8 +630,8 @@ const MyPageSettingPage: React.FC = () => {
 							{/* 샌드위치 URL (뒷부분 슬러그 편집) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-								<div className={`flex rounded-[10px] overflow-hidden h-[55px] border ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}>
-									<div className="px-4 flex items-center text-[14px] text-[#6B7280] bg-[#F3F4F6] border-r border-[#E5E7EB] whitespace-nowrap">sandwich.com/</div>
+									<div className={`flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border min-w-0 ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}>
+										<div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] bg-[#F3F4F6] border-r border-[#E5E7EB] whitespace-nowrap">sandwich.com/</div>
 									<input
 										type="text"
 										value={urlSlug}
@@ -619,12 +642,19 @@ const MyPageSettingPage: React.FC = () => {
 										placeholder="URL 입력란"
 										pattern="^[a-z0-9_]{3,20}$"
 										title="소문자/숫자/언더스코어만 입력 가능합니다 (3~20자)"
-										className={`flex-1 h-[55px] py-0 leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white`}
+											aria-label="샌드위치 URL 슬러그"
+											spellCheck={false}
+											autoComplete="off"
+											inputMode="text"
+											maxLength={20}
+											aria-invalid={!!(slugInitialized && slugError)}
+											aria-describedby={(slugInitialized && slugError) ? 'slug-error' : undefined}
+											className={`flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white min-w-0`}
 									/>
 								</div>
-								{slugInitialized && slugError && (
-									<p className="mt-2 text-[12px] text-[#DB2E2E]">{slugError}</p>
-								)}
+									{slugInitialized && slugError && (
+										<p id="slug-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">{slugError}</p>
+									)}
 							</div>
 
 							{/* 한 줄 프로필 */}
@@ -636,7 +666,9 @@ const MyPageSettingPage: React.FC = () => {
 										value={oneLineProfile}
 										onChange={onOneLineChange}
 										placeholder="띄어쓰기 포함 20자 이내로 입력해주세요."
-										className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+											aria-label="한 줄 프로필"
+											maxLength={MAX20}
+											className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 									/>
 									<Counter value={oneLineProfile.length} />
 								</div>
@@ -645,7 +677,7 @@ const MyPageSettingPage: React.FC = () => {
 							{/* 작업 분야 */}
 							<div className="mb-2 flex items-center justify-between">
 								<FieldLabel>작업 분야</FieldLabel>
-								<button onClick={onOpenWorkModal} className="text-[13px] text-[#068334] hover:underline">작업 분야 설정</button>
+								<button onClick={onOpenWorkModal} aria-label="작업 분야 설정" className="text-[13px] text-[#068334] hover:underline">작업 분야 설정</button>
 							</div>
 							<div className={`text-[13px] mb-7 ${workFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
 								{workFields.length === 0 ? "선택된 작업 분야가 없습니다." : workFields.join(", ")}
@@ -654,7 +686,7 @@ const MyPageSettingPage: React.FC = () => {
 							{/* 관심 분야 */}
 							<div className="mb-2 flex items-center justify-between">
 								<FieldLabel>관심 분야</FieldLabel>
-								<button onClick={onOpenInterestModal} className="text-[13px] text-[#068334] hover:underline">관심 분야 설정</button>
+								<button onClick={onOpenInterestModal} aria-label="관심 분야 설정" className="text-[13px] text-[#068334] hover:underline">관심 분야 설정</button>
 							</div>
 							<div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
 								{interestFields.length === 0 ? "선택된 관심 분야가 없습니다." : interestFields.join(", ")}
@@ -667,6 +699,7 @@ const MyPageSettingPage: React.FC = () => {
 								onChange={onBioChange}
 								rows={5}
 								placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
+								aria-label="소개"
 								className="w-full rounded-[10px] border border-[#E5E7EB] p-3 outline-none text-[14px] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 							/>
 						</section>

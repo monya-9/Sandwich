@@ -153,23 +153,19 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 			{/* 재학 기간 */}
 			<div>
 				<label className="block text-[13px] text-[#6B7280] mb-2">재학 기간 <span className="text-green-500">*</span></label>
-				<div className="flex items-start gap-6 flex-nowrap">
-					<div className="flex items-start gap-4">
-						<div className="relative">
-							<input type="text" maxLength={4} value={enterYear} onChange={(e)=>setEnterYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-[250px] min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${enterYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="입학년도" aria-invalid={!!enterYearError} />
-							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{enterYear.length}/4</span>
-							{enterYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{enterYearError}</p>}
-						</div>
-						<div className="flex items-center self-center">
-							<span className="text-[#6B7280] text-[14px] mx-3">-</span>
-						</div>
-						<div className="relative">
-							<input type="text" maxLength={4} value={graduateYear} onChange={(e)=>setGraduateYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-[250px] min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${graduateYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="졸업년도" aria-invalid={!!graduateYearError} />
-							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{graduateYear.length}/4</span>
-							{graduateYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{graduateYearError}</p>}
-						</div>
-						<SelectDropdown value={status} options={statuses} onChange={setStatus} className="w-[250px]" />
+				<div className="grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)] gap-2 md:grid-cols-[minmax(180px,1fr)_auto_minmax(180px,1fr)_minmax(200px,auto)] md:gap-x-3 md:gap-y-0 items-start">
+					<div className="relative min-w-0">
+						<input type="text" maxLength={4} value={enterYear} onChange={(e)=>setEnterYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${enterYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="입학년도" aria-invalid={!!enterYearError} />
+						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{enterYear.length}/4</span>
+						{enterYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{enterYearError}</p>}
 					</div>
+					<span className="hidden md:flex items-center justify-center self-center text-[#6B7280] text-[14px] px-1">-</span>
+					<div className="relative min-w-0">
+						<input type="text" maxLength={4} value={graduateYear} onChange={(e)=>setGraduateYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${graduateYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="졸업년도" aria-invalid={!!graduateYearError} />
+						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{graduateYear.length}/4</span>
+						{graduateYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{graduateYearError}</p>}
+					</div>
+					<SelectDropdown value={status} options={statuses} onChange={setStatus} className="col-span-2 md:col-span-1 w-full lg:w-[200px] lg:flex-none" />
 				</div>
 			</div>
 

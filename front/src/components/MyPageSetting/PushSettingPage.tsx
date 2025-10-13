@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
+import { useNavigate } from "react-router-dom";
 import { NotificationPrefsApi } from "../../api/notificationPrefsApi";
 
 const ACTIVE_COLOR = "#22C55E";
@@ -64,6 +65,7 @@ const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
 );
 
 const PushSettingPage: React.FC = () => {
+    const navigate = useNavigate();
 	const [prefs, setPrefs] = useState<PushPrefs>(defaults);
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -120,9 +122,16 @@ const PushSettingPage: React.FC = () => {
 	return (
 		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				<div className="flex gap-6">
-					<aside className="w-[320px] shrink-0"><Sidebar /></aside>
-					<main className="flex-1 space-y-6">
+				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+					<aside className="hidden lg:block w-full lg:w-[320px] shrink-0"><Sidebar /></aside>
+					<main className="flex-1 space-y-0">
+						{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
+						<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
+							<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+							<div className="justify-self-center text-[16px] font-medium text-center">푸시 알림(APP)</div>
+							<span />
+						</div>
+						<div className="space-y-6">
 						{/* 계정 활동 알림 — 좋아요/컬렉션/팔로우/작업 댓글/커뮤니티 댓글 */}
 						<Card title="계정 활동 알림">
 							<Row title="좋아요" desc="내 작업을 다른 사람이 좋아했을 때 알림을 받겠습니다." value={prefs.like} onChange={setField("like")} />
@@ -154,6 +163,7 @@ const PushSettingPage: React.FC = () => {
 						<Card title="이벤트 알림">
 							<Row title="이벤트 혜택/정보" desc="창작자와 디자이너에게 도움이 되는 다양한 소식과 혜택 정보를 받겠습니다." value={prefs.eventNewsletter} onChange={setField("eventNewsletter")} />
 						</Card>
+						</div>
 					</main>
 				</div>
 			</div>
