@@ -2,20 +2,33 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { postMessage } from "../../../api/messages";
 import Toast from "../../common/Toast";
+import api from "../../../api/axiosInstance";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onBackToMenu?: () => void;
   targetUserId?: number;
+  initialProfile?: { id: number; nickname?: string | null; username?: string | null; email?: string | null; profileImage?: string | null } | null;
 };
 
 /** 일반 메시지: Proposal/JobOffer 스타일 공통 프레임을 사용하는 모달 */
-export default function GeneralMessageAction({ open, onClose, onBackToMenu, targetUserId }: Props) {
-  const safeGet = (k: string) => { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ""; } catch { return ""; } };
-  const storedEmail = safeGet("userEmail");
-  const displayName = (safeGet("userNickname").trim()) || (safeGet("userUsername").trim()) || "사용자";
-  const avatarInitial = ((storedEmail || displayName || "?").trim()[0] || "U").toUpperCase();
+export default function GeneralMessageAction({ open, onClose, onBackToMenu, targetUserId, initialProfile }: Props) {
+  type PublicProfile = { id: number; nickname?: string | null; username?: string | null; email?: string | null; profileImage?: string | null };
+  const [profile, setProfile] = React.useState<PublicProfile | null>(initialProfile ?? null);
+  React.useEffect(() => {
+    let alive = true;
+    if (!open || !targetUserId) { setProfile(initialProfile ?? null); return; }
+    setProfile((prev) => prev || (initialProfile ?? null));
+    (async () => {
+      try { const { data } = await api.get<PublicProfile>(`/users/${targetUserId}`); if (alive) setProfile(data); }
+      catch { if (alive) setProfile(null); }
+    })();
+    return () => { alive = false; };
+  }, [open, targetUserId, initialProfile]);
+
+  const targetInitial = ((profile?.email || profile?.nickname || profile?.username || "?") as string).trim().charAt(0).toUpperCase() || "U";
+  const targetName = (profile?.nickname || profile?.username || "사용자") as string;
 
   const [message, setMessage] = React.useState("");
   const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
@@ -132,8 +145,12 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
                 ‹
               </button>
               <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800">
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[12px]">{avatarInitial}</div>
-                <div className="text-[14px] font-medium">{displayName}</div>
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[12px]">{targetInitial}</div>
+                )}
+                <div className="text-[14px] font-medium">{targetName}</div>
               </div>
               <button
                 className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"

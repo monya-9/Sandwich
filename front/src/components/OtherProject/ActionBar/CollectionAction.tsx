@@ -84,9 +84,9 @@ export default function CollectionAction({ projectId }: { projectId?: number } =
         onClick={handleClick}
       >
         <div className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 ${hasCollected ? "bg-[#068334] text-white" : "bg-white"}`}>
-          <FaFolderMinus className="w-6 h-6" />
+          <FaFolderMinus className="w-7 h-7" />
         </div>
-        <span className={`text-xs font-semibold text-center ${hasCollected ? "text-white/90" : "text-white"}`}>컬렉션</span>
+        <span className={`text-sm font-semibold text-center text-white`} style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>컬렉션</span>
       </button>
     </div>
   );
