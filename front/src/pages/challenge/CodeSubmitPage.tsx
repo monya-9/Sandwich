@@ -6,6 +6,7 @@ import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal
 import { SectionCard, CTAButton, Row, Label, Help, GreenBox } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import { ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { addCodeSubmission } from "../../data/Challenge/submissionsDummy";
 import Toast from "../../components/common/Toast";
@@ -31,6 +32,13 @@ type AiStatus = {
 export default function CodeSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 1);
+    
+    // AI 주간 챌린지 데이터 상태
+    const [weeklyData, setWeeklyData] = useState<any>(null);
+    const [loadingWeekly, setLoadingWeekly] = useState(false);
+    const [weeklyError, setWeeklyError] = useState<string | null>(null);
+    
+    // 더미 데이터를 기본값으로 사용
     const data = useMemo(() => getChallengeDetail(id) as CodeChallengeDetail, [id]);
 
     const { isLoggedIn } = useContext(AuthContext);
@@ -41,6 +49,23 @@ export default function CodeSubmitPage() {
     useEffect(() => {
         if (!isLoggedIn) setLoginOpen(true);
     }, [isLoggedIn]);
+
+    // AI 주간 챌린지 데이터 로드
+    useEffect(() => {
+        setLoadingWeekly(true);
+        setWeeklyError(null);
+        fetchWeeklyLatest()
+            .then((weekly) => {
+                setWeeklyData(weekly);
+            })
+            .catch((err) => {
+                console.error('주간 챌린지 데이터 로딩 실패:', err);
+                setWeeklyError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                setLoadingWeekly(false);
+            });
+    }, []);
 
     const [tab, setTab] = useState<"edit" | "preview">("edit");
     const [form, setForm] = useState<CodeSubmitPayload>({
@@ -110,15 +135,24 @@ export default function CodeSubmitPage() {
                     <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">
-                    {data.title} — 코드 제출
+                    {weeklyData?.title || data.title} — 코드 제출
                 </h1>
             </div>
 
             {/* 문제 설명 */}
             <SectionCard className="!px-5 !py-5 mb-4">
-                <div className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">
-                    {data.description}
-                </div>
+                {loadingWeekly ? (
+                    <div className="flex items-center gap-2 text-neutral-600">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-[13.5px]">AI 챌린지 정보를 불러오는 중...</span>
+                    </div>
+                ) : weeklyError ? (
+                    <div className="text-red-600 text-[13.5px]">{weeklyError}</div>
+                ) : (
+                    <div className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">
+                        {weeklyData?.summary || data.description}
+                    </div>
+                )}
             </SectionCard>
 
             {/* 탭 */}

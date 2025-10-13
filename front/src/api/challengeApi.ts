@@ -72,6 +72,34 @@ export type AiSyncResponse = {
   [k: string]: any;
 };
 
+// ===== INTERNAL AI Batch (Machine → Backend) =====
+export type AiBatchItem = {
+  title: string;
+  type: ChallengeType; // "CODE" | "PORTFOLIO"
+  summary: string;
+  must?: string[];
+  md?: string;
+  startAt?: string; // ISO8601
+  endAt?: string;   // ISO8601
+};
+
+export type AiBatchPayload = {
+  month: string; // YYYY-MM
+  items: AiBatchItem[];
+};
+
+/**
+ * INTERNAL 배치 업서트 (AI 서버 전용). 일반 프런트에서 직접 호출하지 않는 용도.
+ * 필요한 경우 API 키/멱등키를 인자로 전달.
+ */
+export async function internalAiChallengesBatch(payload: AiBatchPayload, opts?: { apiKey?: string; idemKey?: string }): Promise<any> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (opts?.apiKey) headers['X-AI-API-Key'] = opts.apiKey;
+  if (opts?.idemKey) headers['Idempotency-Key'] = opts.idemKey;
+  const res = await api.post('/internal/ai/challenges/batch', payload, { headers, withCredentials: true });
+  return res.data;
+}
+
 // ===== 챌린지 API 함수들 =====
 
 /**

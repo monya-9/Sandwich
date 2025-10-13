@@ -30,16 +30,43 @@ export const dummyChallenges: ChallengeCardData[] = [
     },
 ];
 
-// AI API에서 동적으로 가져오는 포트폴리오 챌린지 데이터
+// AI API에서 동적으로 가져오는 챌린지 데이터
 export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
     try {
-        const { fetchMonthlyChallenge } = await import('../../api/monthlyChallenge');
-        const monthlyData = await fetchMonthlyChallenge();
+        const [monthlyData, weeklyData, backendChallenges] = await Promise.all([
+            import('../../api/monthlyChallenge').then(m => m.fetchMonthlyChallenge()),
+            import('../../api/weeklyChallenge').then(w => w.fetchWeeklyLatest()),
+            import('../../api/challengeApi').then(c => c.fetchChallenges(0, 10)) // 최신 10개 챌린지 가져오기
+        ]);
+        
+        // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
+        const codeChallenge = backendChallenges.content?.find(c => c.type === "CODE");
+        const portfolioChallenge = backendChallenges.content?.find(c => c.type === "PORTFOLIO");
         
         return [
-            dummyChallenges[0], // 코드 챌린지는 그대로 유지
             {
-                id: 2,
+                id: codeChallenge?.id || 1, // 백엔드 ID 사용, 없으면 기본값
+                type: "CODE",
+                title: "이번 주 코드 챌린지",
+                subtitle: weeklyData.title,
+                description: (
+                    <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
+                        <p>📣 {weeklyData.summary || 'AI가 생성한 주간 코드 챌린지입니다.'}</p>
+                        <p className="text-[13px]">조건: 자동 채점 지원 · 중복 제출 가능</p>
+                        {weeklyData.must && weeklyData.must.length > 0 && (
+                            <div className="py-1">
+                                <p className="text-[12px] text-neutral-600">
+                                    📋 <b>필수 요구사항:</b> {weeklyData.must.slice(0, 3).join(', ')}
+                                    {weeklyData.must.length > 3 && ` 외 ${weeklyData.must.length - 3}개`}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                ),
+                ctaLabel: "참여하러 가기",
+            },
+            {
+                id: portfolioChallenge?.id || 2, // 백엔드 ID 사용, 없으면 기본값
                 type: "PORTFOLIO",
                 title: "이번 달 포트폴리오 챌린지",
                 subtitle: `${monthlyData.emoji} ${monthlyData.title}`,
@@ -61,7 +88,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             },
         ];
     } catch (error) {
-        console.error('월간 챌린지 데이터 로딩 실패:', error);
+        console.error('챌린지 데이터 로딩 실패:', error);
         return dummyChallenges; // 에러 시 기본 더미 데이터 반환
     }
 }

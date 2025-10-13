@@ -40,19 +40,8 @@ function parseMonthlyChallenge(json: any): MonthlyChallengeData {
     };
   }
   
-  // 기본값 반환
-  return {
-    id: 1,
-    title: "포트폴리오 챌린지: 🎨 레트로 감성의 개발자 블로그",
-    description: "AI 모델이 자동 생성한 테마 기반의 월간 챌린지입니다.\n이번 테마는 \"레트로 감성의 개발자 블로그\". 80~90년대 무드를 현대적으로 재해석해 포트폴리오를 제작해 보세요.\n팀/개인 모두 가능하며, 결과는 사용자 투표 100%로 결정됩니다.",
-    theme: "레트로 감성의 개발자 블로그",
-    emoji: "🎨",
-    generatedAt: new Date().toISOString(),
-    requirements: [],
-    tips: [],
-    mustHave: [],
-    summary: "",
-  };
+  // 유효한 응답이 아니면 파싱 실패 처리 (더미 금지)
+  throw new Error("Invalid monthly challenge response shape");
 }
 
 /**
@@ -65,26 +54,17 @@ export async function fetchMonthlyChallenge(baseUrl?: string): Promise<MonthlyCh
   if (isLocalDev) {
     // 로컬 개발에서는 프록시만 사용 (외부 직접 호출 금지: CORS 방지)
     const res = await fetch(`/ext/reco/monthly`, { credentials: "omit" });
-    if (!res.ok) {
-      console.warn(`월간 챌린지 프록시 조회 실패: ${res.status}, 기본값 사용`);
-      return parseMonthlyChallenge({});
-    }
+    if (!res.ok) throw new Error(`월간 챌린지 프록시 조회 실패: ${res.status}`);
     const json = await res.json();
     return parseMonthlyChallenge(json);
   }
 
   // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용; 기본값 없음)
   const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
-  if (!AI_BASE) {
-    console.warn("AI base URL is not configured (REACT_APP_AI_API_BASE)");
-    return parseMonthlyChallenge({});
-  }
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
   const directUrl = `${AI_BASE}/api/reco/monthly`;
   const res = await fetch(directUrl, { credentials: "omit" });
-  if (!res.ok) {
-    console.warn(`월간 챌린지 조회 실패: ${res.status}, 기본값 사용`);
-    return parseMonthlyChallenge({});
-  }
+  if (!res.ok) throw new Error(`월간 챌린지 조회 실패: ${res.status}`);
   const json = await res.json();
   return parseMonthlyChallenge(json);
 }

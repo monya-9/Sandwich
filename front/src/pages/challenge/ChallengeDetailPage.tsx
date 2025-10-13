@@ -7,8 +7,8 @@ import {
     type PortfolioChallengeDetail,
     type CodeChallengeDetail,
 } from "../../data/Challenge/challengeDetailDummy";
-import { SectionCard, CTAButton, StatusBadge } from "../../components/challenge/common";
-import { ChevronDown, ChevronLeft, CheckCircle2, Copy, Check, AlertCircle } from "lucide-react";
+import { SectionCard, CTAButton } from "../../components/challenge/common";
+import { ChevronDown, ChevronLeft, AlertCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 
@@ -24,33 +24,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
         <div className="mb-2 flex items-center gap-2">
             <span className="text-[15px] font-bold">{children}</span>
-        </div>
-    );
-}
-function Copyable({ title, value }: { title: string; value: string }) {
-    const [copied, setCopied] = useState(false);
-    const onCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(value);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-        } catch {}
-    };
-    return (
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-                <span className="font-semibold text-neutral-900">{title}</span>
-                <button
-                    onClick={onCopy}
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[12px] hover:bg-neutral-50"
-                >
-                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? "복사됨" : "복사"}
-                </button>
-            </div>
-            <GreenBox>
-                <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-6">{value}</pre>
-            </GreenBox>
         </div>
     );
 }
@@ -203,36 +176,96 @@ export default function ChallengeDetailPage() {
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
 
-    // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
+    // 백엔드 챌린지 상세 + AI API에서 동적으로 데이터 가져오기
     useEffect(() => {
-        if (id === 2) {
-            setLoading(true);
-            setError(null);
-            getDynamicChallengeDetail(id)
-                .then((dynamicData) => {
-                    setData(dynamicData);
+        setLoading(true);
+        setError(null);
+        
+        // 1. 백엔드에서 챌린지 상세 정보 가져오기
+        import('../../api/challengeApi').then(({ fetchChallengeDetail }) => {
+            fetchChallengeDetail(id)
+                .then((backendChallenge) => {
+                    console.log('백엔드 챌린지 데이터:', backendChallenge);
+                    
+                    // 2. 챌린지 타입에 따라 AI 데이터 가져오기
+                    if (backendChallenge.type === "PORTFOLIO") {
+                        // 포트폴리오 챌린지 - 월간 AI 데이터
+                        getDynamicChallengeDetail(id)
+                            .then((dynamicData) => {
+                                setData(dynamicData);
+                            })
+                            .catch((err) => {
+                                console.error('월간 챌린지 데이터 로딩 실패:', err);
+                                setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                            });
+                        
+                        // must_have 데이터 별도로 가져오기
+                        import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
+                            fetchMonthlyChallenge()
+                                .then((monthlyData) => {
+                                    setMustHave(monthlyData.mustHave || []);
+                                })
+                                .catch((err) => {
+                                    console.error('필수 조건 데이터 로딩 실패:', err);
+                                });
+                        });
+                    } else if (backendChallenge.type === "CODE") {
+                        // 코드 챌린지 - 주간 AI 데이터
+                        const week = backendChallenge.ruleJson?.week; // 백엔드에서 week 필드 가져오기
+                        
+                        if (week) {
+                            // 특정 주차 데이터 가져오기
+                            import('../../api/weeklyChallenge').then(({ fetchWeeklyByKey }) => {
+                                fetchWeeklyByKey(week)
+                                    .then((weeklyData) => {
+                                        console.log('주간 AI 데이터:', weeklyData);
+                                        // 주간 데이터로 코드 챌린지 정보 업데이트 (기본 더미 데이터 기반)
+                                        const baseData = getChallengeDetail(id);
+                                        const updatedData = {
+                                            ...baseData,
+                                            title: `코드 챌린지: ${weeklyData.title}`,
+                                            description: weeklyData.summary || baseData.description,
+                                        };
+                                        setData(updatedData);
+                                        setMustHave(weeklyData.must || []);
+                                    })
+                                    .catch((err) => {
+                                        console.error('주간 챌린지 데이터 로딩 실패:', err);
+                                        setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                                    });
+                            });
+                        } else {
+                            // week가 없으면 최신 주간 데이터 가져오기
+                            import('../../api/weeklyChallenge').then(({ fetchWeeklyLatest }) => {
+                                fetchWeeklyLatest()
+                                    .then((weeklyData) => {
+                                        console.log('최신 주간 AI 데이터:', weeklyData);
+                                        const baseData = getChallengeDetail(id);
+                                        const updatedData = {
+                                            ...baseData,
+                                            title: `코드 챌린지: ${weeklyData.title}`,
+                                            description: weeklyData.summary || baseData.description,
+                                        };
+                                        setData(updatedData);
+                                        setMustHave(weeklyData.must || []);
+                                    })
+                                    .catch((err) => {
+                                        console.error('주간 챌린지 데이터 로딩 실패:', err);
+                                        setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                                    });
+                            });
+                        }
+                    }
                 })
                 .catch((err) => {
-                    console.error('월간 챌린지 데이터 로딩 실패:', err);
-                    setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
-                    // 에러 시 기본 더미 데이터 유지
+                    console.error('백엔드 챌린지 상세 로딩 실패:', err);
+                    setError('챌린지 정보를 불러오는 중 오류가 발생했습니다.');
                 })
                 .finally(() => {
                     setLoading(false);
                 });
-            
-            // must_have 데이터 별도로 가져오기
-            import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
-                fetchMonthlyChallenge()
-                    .then((monthlyData) => {
-                        setMustHave(monthlyData.mustHave || []);
-                    })
-                    .catch((err) => {
-                        console.error('필수 조건 데이터 로딩 실패:', err);
-                    });
-            });
-        }
-    }, [id]);
+        });
+    }, [id]); // data 의존성 제거로 무한 루프 방지
 
     const goPrimary = () => {
         const href = primaryHref(data.type, id);
@@ -326,8 +359,8 @@ export default function ChallengeDetailPage() {
                         <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
                     </div>
 
-                    {/* 필수 조건 (포트폴리오 챌린지만) */}
-                    {data.type === "PORTFOLIO" && mustHave.length > 0 && (
+                    {/* 필수 조건 (모든 챌린지 타입) */}
+                    {mustHave.length > 0 && (
                         <div className="mb-6">
                             <SectionTitle>📋 필수 조건</SectionTitle>
                             <div className="space-y-2">
@@ -344,47 +377,6 @@ export default function ChallengeDetailPage() {
                     {/* 유형별 */}
                     {data.type === "CODE" ? (
                         <>
-                            <div className="mb-6 grid gap-6 md:grid-cols-2">
-                                <div>
-                                    <SectionTitle>🔶 입력 형식</SectionTitle>
-                                    <GreenBox>
-                    <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-6">
-                      {(data as CodeChallengeDetail).inputSpec}
-                    </pre>
-                                    </GreenBox>
-                                </div>
-                                <div>
-                                    <SectionTitle>🔶 출력 형식</SectionTitle>
-                                    <GreenBox>
-                    <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-6">
-                      {(data as CodeChallengeDetail).outputSpec}
-                    </pre>
-                                    </GreenBox>
-                                </div>
-                            </div>
-
-                            {/* 예제 */}
-                            <div className="mb-6">
-                                <div className="mb-3 flex items-center gap-2">
-                                    <span className="text-[15px] font-bold">✅ 예제 입력 / 출력</span>
-                                    <StatusBadge label="정답 예시" />
-                                </div>
-
-                                <div className="grid gap-6 md:grid-cols-2">
-                                    {(data as CodeChallengeDetail).examples.map((ex, idx) => (
-                                        <div key={idx} className="rounded-2xl border border-emerald-200/70 bg-emerald-50/30 p-4">
-                                            <div className="mb-3 flex items-center gap-2">
-                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                                <span className="text-[14px] font-semibold">{ex.title}</span>
-                                            </div>
-                                            <Copyable title={ex.title} value={ex.input} />
-                                            <div className="mt-4">
-                                                <Copyable title={ex.outputTitle} value={ex.output} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
 
                             <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards} />
