@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.auth.service;
 
+import com.sandwich.SandWich.auth.audit.SecurityAuditService;
 import com.sandwich.SandWich.auth.device.DeviceTrustService;
 import com.sandwich.SandWich.auth.dto.LoginRequest;
 import com.sandwich.SandWich.auth.dto.MfaRequiredResponse;
@@ -22,6 +23,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class AuthService {
     private final OtpService otpService;
     private final LoginOtpMailService loginOtpMailService;
     private final MfaProperties mfaProperties;
+    private final SecurityAuditService audit;
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
@@ -97,9 +100,18 @@ public class AuthService {
     }
 
     public Object login(LoginRequest req, HttpServletRequest httpReq, HttpServletResponse httpRes) {
-        // 1) 존재 여부
+
+        // 0) 존재 여부
         User user = userRepository.findByEmail(req.getEmail())
                 .orElseThrow(UserNotFoundException::new);
+
+        // 1) 인터랙티브 로그인 가드
+        if (user.getUserType() != com.sandwich.SandWich.user.domain.UserType.HUMAN
+                || !user.isInteractiveLoginEnabled()) {
+            log.warn("[LOGIN][BLOCK] interactive login disabled. email={}, userType={}, interactive={}",
+                    user.getEmail(), user.getUserType(), user.isInteractiveLoginEnabled());
+            throw new AccessDeniedException("이 계정은 대화형 로그인이 비활성화되었습니다.");
+        }
 
         // 2) provider 체크 (소셜 가입자는 로컬 로그인 불가)
         if (user.getProvider() != null && !"local".equalsIgnoreCase(user.getProvider())) {
@@ -158,6 +170,9 @@ public class AuthService {
         // 코드 발급 + 메일 전송
         String code = otpService.issueCode(pendingId);
         loginOtpMailService.sendLoginOtp(user.getEmail(), code);
+
+        audit.record("OTP_ISSUE", user.getId(), user.getEmail(), pendingId,
+                "issued=true", httpReq);
 
         return new MfaRequiredResponse("MFA_REQUIRED", pendingId, ctx.getMaskedEmail());
     }
