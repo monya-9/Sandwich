@@ -5,6 +5,7 @@ import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
@@ -96,4 +97,48 @@ public class DeviceTrustService {
         if (realIp != null && !realIp.isBlank()) return realIp.trim();
         return req.getRemoteAddr();
     }
+
+    // === revoke 단건 ===
+    @Transactional
+    public void revokeById(Long userId, Long deviceRowId) {
+        var dev = repo.findByIdAndUserId(deviceRowId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("DEVICE_NOT_FOUND"));
+        if (dev.getRevokedAt() == null) dev.setRevokedAt(OffsetDateTime.now());
+        repo.save(dev);
+    }
+
+    // === revoke 전체 ===
+    @Transactional
+    public int revokeAll(Long userId) {
+        return repo.revokeAllActiveByUserId(userId, OffsetDateTime.now());
+    }
+
+    // === 쿠키 기반(현재 브라우저) ===
+    @Transactional
+    public void revokeByCookies(HttpServletRequest req, Long userId) {
+        String tdid = readCookie(req, "tdid");
+        if (tdid == null) throw new IllegalArgumentException("COOKIE_NOT_FOUND");
+        var dev = repo.findByDeviceIdAndRevokedAtIsNull(tdid)
+                .orElseThrow(() -> new IllegalArgumentException("DEVICE_NOT_FOUND"));
+        if (!dev.getUserId().equals(userId)) throw new SecurityException("FORBIDDEN");
+        dev.setRevokedAt(OffsetDateTime.now());
+        repo.save(dev);
+    }
+
+    // === 쿠키 제거 유틸 ===
+    public void clearTrustCookies(HttpServletResponse res) {
+        killCookie(res, "tdid");
+        killCookie(res, "tdt");
+    }
+
+    private void killCookie(HttpServletResponse res, String name) {
+        Cookie c = new Cookie(name, "");
+        c.setPath("/");
+        c.setMaxAge(0);
+        c.setHttpOnly(true);
+        c.setSecure(true);
+        c.setAttribute("SameSite", "Lax");
+        res.addCookie(c);
+    }
+
 }
