@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { CTAButton, ChallengePageHeader } from "../../components/challenge/common";
+import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
 import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchPortfolioSubmissions, type SubmissionResponse } from "../../api/submissionApi";
@@ -116,12 +117,10 @@ export default function PortfolioVotePage() {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-16">
-                            <div className="text-gray-500 text-lg mb-4">아직 제출된 프로젝트가 없습니다.</div>
-                            <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
-                                첫 번째 프로젝트 제출하기
-                            </CTAButton>
-                        </div>
+                        <EmptySubmissionState 
+                            type="PORTFOLIO" 
+                            onSubmit={() => nav(`/challenge/portfolio/${id}/submit`)} 
+                        />
                     )}
                 </>
             )}

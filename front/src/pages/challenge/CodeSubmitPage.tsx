@@ -8,15 +8,16 @@ import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import { ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { addCodeSubmission } from "../../data/Challenge/submissionsDummy";
+import { createChallengeSubmission } from "../../api/submissionApi";
 import Toast from "../../components/common/Toast";
-import { useUserInfo } from "../../hooks/useUserInfo";
+// import { useUserInfo } from "../../hooks/useUserInfo"; // 백엔드에서 자동으로 사용자 정보 처리
 
 type CodeSubmitPayload = {
     title: string;
     repoUrl: string;
     language: string;
     entrypoint: string;
+    commitSha?: string; // 커밋 SHA 추가
     note?: string;
 };
 
@@ -44,7 +45,7 @@ export default function CodeSubmitPage() {
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
-    const userInfo = useUserInfo();
+    // const userInfo = useUserInfo(); // 백엔드에서 자동으로 사용자 정보 처리
 
     useEffect(() => {
         if (!isLoggedIn) setLoginOpen(true);
@@ -73,6 +74,7 @@ export default function CodeSubmitPage() {
         repoUrl: "",
         language: (data.submitExample?.language as any) || "node",
         entrypoint: data.submitExample?.entrypoint || "npm start",
+        commitSha: "",
         note: "",
     });
     const [submitting, setSubmitting] = useState(false);
@@ -87,25 +89,65 @@ export default function CodeSubmitPage() {
 
     const canSubmit = !!form.title.trim();
 
+    // GitHub API에서 최신 커밋 SHA 가져오기
+    const fetchLatestCommitSha = async (repoUrl: string): Promise<string> => {
+        try {
+            // GitHub URL에서 owner/repo 추출
+            const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+            if (!match) return "a1b2c3d"; // 기본값
+            
+            const [, owner, repo] = match;
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`;
+            
+            const response = await fetch(apiUrl);
+            if (!response.ok) return "a1b2c3d"; // 기본값
+            
+            const commits = await response.json();
+            if (commits.length > 0 && commits[0].sha) {
+                return commits[0].sha.substring(0, 7); // 7자리로 자르기
+            }
+        } catch (error) {
+            console.warn('GitHub API 호출 실패:', error);
+        }
+        return "a1b2c3d"; // 기본값
+    };
+
     const handleSubmit = async () => {
         if (!canSubmit || submitting) return;
         setSubmitting(true);
         try {
-            addCodeSubmission(id, {
+            // GitHub에서 최신 커밋 SHA 가져오기
+            const commitSha = await fetchLatestCommitSha(form.repoUrl || "");
+            
+            const submissionData: any = {
                 title: form.title.trim(),
-                desc:
-                    form.note?.trim() ||
-                    `repo: ${form.repoUrl || "-"} / ${form.language} ${form.entrypoint}`,
-                snippet: undefined,
-                authorInitial: userInfo.authorInitial,
-                authorName: userInfo.authorName,
-                authorRole: userInfo.authorRole,
-            });
+                desc: form.note?.trim() || `repo: ${form.repoUrl || "-"} / ${form.language} ${form.entrypoint}`,
+                repoUrl: form.repoUrl || "",
+                participationType: "SOLO" as const,
+                // 코드 챌린지 필수 필드
+                code: {
+                    language: form.language || "node",
+                    entrypoint: (form.entrypoint || "npm_start")
+                        .replace(/\s+/g, "_") // 공백을 언더스코어로 변경
+                        .replace(/[^a-zA-Z0-9_\-.]/g, "_") // 특수문자를 언더스코어로 변경
+                        .replace(/_+/g, "_") // 연속된 언더스코어를 하나로
+                        .replace(/^_|_$/g, ""), // 앞뒤 언더스코어 제거
+                    commitSha: commitSha // GitHub API에서 가져온 실제 커밋 SHA
+                }
+            };
+            
+            await createChallengeSubmission(id, submissionData);
             setSuccessToast({
                 visible: true,
                 message: "제출이 접수되었습니다."
             });
             nav(`/challenge/code/${id}/submissions`, { replace: true });
+        } catch (error) {
+            console.error('제출 실패:', error);
+            setSuccessToast({
+                visible: true,
+                message: "제출 중 오류가 발생했습니다. 다시 시도해주세요."
+            });
         } finally {
             setSubmitting(false);
         }

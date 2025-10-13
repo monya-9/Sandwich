@@ -164,9 +164,9 @@ export default function ChallengeDetailPage() {
     const params = useParams();
     const id = Number(params.id || 1);
     
-    // 기본 더미 데이터로 초기화
-    const [data, setData] = useState<AnyChallengeDetail>(() => getChallengeDetail(id));
-    const [loading, setLoading] = useState(false);
+    // AI 데이터만 표시하도록 null로 초기화
+    const [data, setData] = useState<AnyChallengeDetail | null>(null);
+    const [loading, setLoading] = useState(true); // 초기에는 로딩 상태
     const [error, setError] = useState<string | null>(null);
     const [mustHave, setMustHave] = useState<string[]>([]);
 
@@ -193,10 +193,14 @@ export default function ChallengeDetailPage() {
                         getDynamicChallengeDetail(id)
                             .then((dynamicData) => {
                                 setData(dynamicData);
+                                setError(null); // 성공 시 에러 초기화
+                                setLoading(false); // 성공 시 로딩 완료
                             })
                             .catch((err) => {
                                 console.error('월간 챌린지 데이터 로딩 실패:', err);
                                 setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                                setData(null);
+                                setLoading(false); // 실패 시에도 로딩 완료
                             });
                         
                         // must_have 데이터 별도로 가져오기
@@ -228,10 +232,14 @@ export default function ChallengeDetailPage() {
                                         };
                                         setData(updatedData);
                                         setMustHave(weeklyData.must || []);
+                                        setError(null); // 성공 시 에러 초기화
+                                        setLoading(false); // 성공 시 로딩 완료
                                     })
                                     .catch((err) => {
                                         console.error('주간 챌린지 데이터 로딩 실패:', err);
                                         setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                                        setData(null);
+                                        setLoading(false); // 실패 시에도 로딩 완료
                                     });
                             });
                         } else {
@@ -248,10 +256,14 @@ export default function ChallengeDetailPage() {
                                         };
                                         setData(updatedData);
                                         setMustHave(weeklyData.must || []);
+                                        setError(null); // 성공 시 에러 초기화
+                                        setLoading(false); // 성공 시 로딩 완료
                                     })
                                     .catch((err) => {
                                         console.error('주간 챌린지 데이터 로딩 실패:', err);
                                         setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                                        setData(null);
+                                        setLoading(false); // 실패 시에도 로딩 완료
                                     });
                             });
                         }
@@ -260,19 +272,20 @@ export default function ChallengeDetailPage() {
                 .catch((err) => {
                     console.error('백엔드 챌린지 상세 로딩 실패:', err);
                     setError('챌린지 정보를 불러오는 중 오류가 발생했습니다.');
-                })
-                .finally(() => {
-                    setLoading(false);
+                    setData(null);
+                    setLoading(false); // 백엔드 API 실패 시에도 로딩 완료
                 });
         });
     }, [id]); // data 의존성 제거로 무한 루프 방지
 
     const goPrimary = () => {
+        if (!data) return;
         const href = primaryHref(data.type, id);
         if (!isLoggedIn) return setLoginModalOpen(true);
         navigate(href);
     };
     const goSecondary = () => {
+        if (!data) return;
         const href = secondaryHref(data.type, id);
         const needsLogin = data.type === "PORTFOLIO";
         if (needsLogin && !isLoggedIn) return setLoginModalOpen(true);
@@ -298,7 +311,7 @@ export default function ChallengeDetailPage() {
                         <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
                     </div>
                 </div>
-            ) : (
+            ) : data ? (
                 <>
                     {/* 에러 상태 */}
                     {error && (
@@ -455,6 +468,17 @@ export default function ChallengeDetailPage() {
                         </div>
                     </div>
                 </>
+            ) : (
+                /* 데이터가 없을 때 */
+                <div className="flex items-center justify-center py-16">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                            <AlertCircle className="h-6 w-6 text-red-500" />
+                            <span className="text-lg font-medium">챌린지 정보를 불러올 수 없습니다</span>
+                        </div>
+                        <p className="text-sm text-neutral-500">잠시 후 다시 시도해주세요</p>
+                    </div>
+                </div>
             )}
         </div>
     );

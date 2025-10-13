@@ -7,6 +7,7 @@ import { getCodeSubmissions, toggleLikeCode } from "../../data/Challenge/submiss
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { useLikeToggle } from "../../hooks/useLikeToggle";
 import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
+import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
 
 export default function CodeSubmissionListPage() {
     const { id: idStr } = useParams();
@@ -53,17 +54,24 @@ export default function CodeSubmissionListPage() {
                 }
             />
 
-            <div className="grid gap-5 md:grid-cols-3">
-                {cards.map((c) => (
-                    <SubmissionCard
-                        key={c.id}
-                        submission={c}
-                        onLike={toggleLike}
-                        href={`/challenge/code/${id}/submissions/${c.id}`}
-                        actionText="전체보기"
-                    />
-                ))}
-            </div>
+            {cards.length > 0 ? (
+                <div className="grid gap-5 md:grid-cols-3">
+                    {cards.map((c) => (
+                        <SubmissionCard
+                            key={c.id}
+                            submission={c}
+                            onLike={toggleLike}
+                            href={`/challenge/code/${id}/submissions/${c.id}`}
+                            actionText="전체보기"
+                        />
+                    ))}
+                </div>
+            ) : (
+                <EmptySubmissionState 
+                    type="CODE" 
+                    onSubmit={() => nav(`/challenge/code/${id}/submit`)} 
+                />
+            )}
         </div>
     );
 }
