@@ -8,6 +8,7 @@ import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDet
 import { ChevronLeft } from "lucide-react";
 import Toast from "../../components/common/Toast";
 import { uploadImage } from "../../api/projectApi";
+import { UserApi } from "../../api/userApi";
 import { createChallengeSubmission, type SubmissionCreateRequest } from "../../api/submissionApi";
 import { fetchChallengeDetail } from "../../api/challengeApi";
 import ImageUploadSection, { processImageFile } from "../../components/ProjectMangeSample/ImageUploadSection";
@@ -151,16 +152,29 @@ export default function PortfolioSubmitPage() {
         try {
             // 3:4 비율의 직사각형 이미지 사용
             const file = new File([rect.blob], "cover.jpg", { type: "image/jpeg" });
-            const uploadResult = await uploadImage(file);
-            setForm(prev => ({ ...prev, coverUrl: uploadResult.url }));
+            const uploadedUrl = await UserApi.uploadImage(file);
+            
+            setForm(prev => ({ ...prev, coverUrl: uploadedUrl }));
             setSuccessToast({
                 visible: true,
                 message: "커버 이미지가 업로드되었습니다."
             });
-        } catch (error) {
+        } catch (error: any) {
+            
+            let errorMessage = "이미지 업로드에 실패했습니다. 다시 시도해주세요.";
+            
+            if (error?.response?.status === 500) {
+                const serverMessage = error?.response?.data?.message || "서버 오류가 발생했습니다.";
+                errorMessage = `이미지 업로드 서버 오류: ${serverMessage}`;
+            } else if (error?.response?.status === 413) {
+                errorMessage = "이미지 파일이 너무 큽니다. 더 작은 파일을 선택해주세요.";
+            } else if (error?.response?.status === 400) {
+                errorMessage = error?.response?.data?.message || "잘못된 이미지 파일입니다.";
+            }
+            
             setSuccessToast({
                 visible: true,
-                message: "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+                message: errorMessage
             });
         }
         setCropOpen(false);
@@ -205,6 +219,7 @@ export default function PortfolioSubmitPage() {
                 teamName: form.teamName?.trim(),
                 membersText: form.membersText?.trim(),
                 assets: form.images?.map(url => ({ url, mime: "image/jpeg" })) || []
+                // 포트폴리오 제출에는 code 필드 제외
             };
 
             await createChallengeSubmission(id, submissionData);
@@ -215,7 +230,6 @@ export default function PortfolioSubmitPage() {
             });
             nav(`/challenge/portfolio/${id}/vote`, { replace: true });
         } catch (error: any) {
-            console.error('제출 실패:', error);
             
             let errorMessage = "제출에 실패했습니다. 다시 시도해주세요.";
             
@@ -223,6 +237,9 @@ export default function PortfolioSubmitPage() {
                 errorMessage = "존재하지 않는 챌린지입니다. 챌린지 목록에서 확인해주세요.";
             } else if (error?.response?.status === 400) {
                 errorMessage = error?.response?.data?.message || "입력 정보를 확인해주세요.";
+            } else if (error?.response?.status === 500) {
+                const serverMessage = error?.response?.data?.message || "서버 오류가 발생했습니다.";
+                errorMessage = `서버 오류: ${serverMessage}`;
             }
             
             setSuccessToast({

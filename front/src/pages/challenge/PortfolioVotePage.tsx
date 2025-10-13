@@ -11,9 +11,9 @@ export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 2);
     
-    // 기본 더미 데이터로 초기화
-    const [detail, setDetail] = useState<PortfolioChallengeDetail>(() => getChallengeDetail(id) as PortfolioChallengeDetail);
-    const [loading, setLoading] = useState(false);
+    // 데이터 초기화 (더미 데이터 사용하지 않음)
+    const [detail, setDetail] = useState<PortfolioChallengeDetail | null>(null);
+    const [loading, setLoading] = useState(true);
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
     
@@ -26,9 +26,7 @@ export default function PortfolioVotePage() {
             try {
                 const response = await fetchPortfolioSubmissions(id, 0, 20);
                 setSubmissions(response.content);
-                console.log('제출물 데이터 로드 성공:', response.content);
             } catch (error) {
-                console.error('제출물 데이터 로드 실패:', error);
                 // 에러 시 더미 데이터 유지
             } finally {
                 setSubmissionsLoading(false);
@@ -41,16 +39,19 @@ export default function PortfolioVotePage() {
     // 백엔드에서 챌린지 타입 확인 후 포트폴리오인 경우 AI API에서 동적으로 데이터 가져오기
     useEffect(() => {
         const loadChallengeData = async () => {
+            setLoading(true);
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
                 if (backendChallenge.type === "PORTFOLIO") {
-                    setLoading(true);
                     const dynamicData = await getDynamicChallengeDetail(id, backendChallenge.type);
                     setDetail(dynamicData as PortfolioChallengeDetail);
+                } else {
+                    // 포트폴리오가 아닌 경우 기본 데이터 사용
+                    setDetail(getChallengeDetail(id) as PortfolioChallengeDetail);
                 }
             } catch (err) {
-                console.error('챌린지 데이터 로딩 실패:', err);
-                // 에러 시 기본 더미 데이터 유지
+                // 에러 시 기본 더미 데이터 사용
+                setDetail(getChallengeDetail(id) as PortfolioChallengeDetail);
             } finally {
                 setLoading(false);
             }
@@ -75,7 +76,7 @@ export default function PortfolioVotePage() {
             ) : (
                 <>
                     <ChallengePageHeader
-                        title={`샌드위치 챌린지 투표: ${detail.title.replace(/^포트폴리오 챌린지:\s*/, "")}`}
+                        title={`샌드위치 챌린지 투표: ${(detail?.title || '포트폴리오 챌린지').replace(/^포트폴리오 챌린지:\s*/, "")}`}
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         actionButton={
                             <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
