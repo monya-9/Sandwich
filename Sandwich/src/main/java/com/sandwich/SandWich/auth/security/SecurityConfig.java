@@ -72,15 +72,24 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/internal/**")  // 내부 API는 CSRF 미적용
                         .disable()
                 )
+
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers("/error", "/error/**").permitAll()
-                        // 인증/문서/OAuth 콜백 등
+                        // === Device management ===
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,  "/api/auth/devices").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE,"/api/auth/devices/*").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,  "/api/auth/devices/revoke-all").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,  "/api/auth/devices/revoke-current").authenticated()
+                        .requestMatchers("/admin/devices/**").hasRole("ADMIN")
                         // ===== 공개 라우트들 =====
                         .requestMatchers(
-                                "/api/auth/**", "/api/email/**",
+                                "/api/auth/login", "/api/auth/signup",
+                                "/api/auth/refresh", "/api/auth/otp/**",
+                                "/api/email/**",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
-                                "/swagger-ui.html", "/webjars/**", "/api/upload/image",
+                                "/swagger-ui.html", "/webjars/**",
                                 "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
                         // 하네스/정적 html 허용
