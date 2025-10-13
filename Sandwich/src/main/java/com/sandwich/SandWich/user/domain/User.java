@@ -89,6 +89,19 @@ public class User extends BaseEntity {
     @Column(name = "is_profile_set")
     private Boolean isProfileSet = false;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(name = "user_type", nullable = false)
+    private UserType userType = UserType.HUMAN;
+
+    @Builder.Default
+    @Column(name = "interactive_login_enabled", nullable = false)
+    private boolean interactiveLoginEnabled = true;
+
+    @Builder.Default
+    @Column(name = "mfa_required", nullable = false)
+    private boolean mfaRequired = false;
+
     public void setIsDeleted(boolean isDeleted) {
         this.isDeleted = isDeleted;
     }

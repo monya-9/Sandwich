@@ -23,6 +23,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -99,9 +100,18 @@ public class AuthService {
     }
 
     public Object login(LoginRequest req, HttpServletRequest httpReq, HttpServletResponse httpRes) {
-        // 1) 존재 여부
+
+        // 0) 존재 여부
         User user = userRepository.findByEmail(req.getEmail())
                 .orElseThrow(UserNotFoundException::new);
+
+        // 1) 인터랙티브 로그인 가드
+        if (user.getUserType() != com.sandwich.SandWich.user.domain.UserType.HUMAN
+                || !user.isInteractiveLoginEnabled()) {
+            log.warn("[LOGIN][BLOCK] interactive login disabled. email={}, userType={}, interactive={}",
+                    user.getEmail(), user.getUserType(), user.isInteractiveLoginEnabled());
+            throw new AccessDeniedException("이 계정은 대화형 로그인이 비활성화되었습니다.");
+        }
 
         // 2) provider 체크 (소셜 가입자는 로컬 로그인 불가)
         if (user.getProvider() != null && !"local".equalsIgnoreCase(user.getProvider())) {
