@@ -1,7 +1,7 @@
-package com.sandwich.SandWich.internal.ai;
+package com.sandwich.SandWich.internal.ai.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sandwich.SandWich.challenge.domain.Challenge;
 import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
@@ -18,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 @Service
@@ -26,24 +27,24 @@ import java.util.regex.Pattern;
 @Slf4j
 public class ChallengeBatchService {
 
-    private final RedisUtil redis;                // 멱등키용
-    private final ChallengeRepository challenges; // 업서트 타겟
-    private final ObjectMapper om = new ObjectMapper();
+    private final RedisUtil redis;
+    private final ChallengeRepository challenges;
+    private final ObjectMapper om; // 빈 주입 권장 (JavaTimeModule 포함 설정)
 
     private static final Pattern YM = Pattern.compile("^\\d{4}-\\d{2}$");
 
     @Transactional
     public void ingest(BatchReq req, String idemKey) {
-        // 1) 멱등키
+        // 멱등키
         if (idemKey != null && !idemKey.isBlank()) {
             String cacheKey = "idem:ai-batch:" + idemKey;
             if (Boolean.TRUE.equals(redis.hasKey(cacheKey))) {
                 throw new ConflictException("IDEMPOTENT_REPLAY", "이미 처리된 요청입니다.");
             }
-            redis.setDuplicateTTLKey(cacheKey, 5, java.util.concurrent.TimeUnit.MINUTES);
+            redis.setDuplicateTTLKey(cacheKey, 5, TimeUnit.MINUTES);
         }
 
-        // 2) 입력 검증
+        // 입력 검증
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new BadRequestException("EMPTY_ITEMS", "items가 비어있습니다.");
         }
@@ -51,30 +52,51 @@ public class ChallengeBatchService {
             throw new BadRequestException("BAD_YM", "month는 YYYY-MM 형식이어야 합니다.");
         }
 
-        // 3) 각 아이템 업서트
         int ok = 0;
         for (var it : req.getItems()) {
-            // parse
-            OffsetDateTime start, end;
-            try {
-                start = OffsetDateTime.parse(it.getStartAt());
-                end   = OffsetDateTime.parse(it.getEndAt());
-            } catch (DateTimeParseException e) {
-                throw new BadRequestException("BAD_DATETIME", "startAt/endAt는 ISO8601 이어야 합니다.");
-            }
-            if (!start.isBefore(end)) {
-                throw new BadRequestException("BAD_RANGE", "startAt < endAt 이어야 합니다.");
+            ChallengeType type = it.getType();
+
+            // 기간 계산
+            OffsetDateTime start;
+            OffsetDateTime end;
+            OffsetDateTime voteStart = null;
+            OffsetDateTime voteEnd   = null;
+
+            if (type == ChallengeType.PORTFOLIO) {
+                // month 기반 자동 기간 & 투표기간
+                var w = calcMonthWindow(req.getMonth());
+                start = w.start();
+                end   = w.end();
+                voteStart = w.voteStart();
+                voteEnd   = w.voteEnd();
+            } else if (type == ChallengeType.CODE) {
+                // CODE는 start/end 필수
+                if (it.getStartAt() == null || it.getEndAt() == null) {
+                    throw new BadRequestException("CODE_NEEDS_DATES", "CODE 항목은 startAt/endAt가 필요합니다.");
+                }
+                try {
+                    start = OffsetDateTime.parse(it.getStartAt());
+                    end   = OffsetDateTime.parse(it.getEndAt());
+                } catch (DateTimeParseException e) {
+                    throw new BadRequestException("BAD_DATETIME", "startAt/endAt는 ISO8601 이어야 합니다.");
+                }
+                if (!start.isBefore(end)) {
+                    throw new BadRequestException("BAD_RANGE", "startAt < endAt 이어야 합니다.");
+                }
+            } else {
+                throw new BadRequestException("BAD_TYPE", "지원하지 않는 type: " + type);
             }
 
-            // 타입 매핑
-            ChallengeType type;
-            try {
-                type = ChallengeType.valueOf(it.getType().trim().toUpperCase());
-            } catch (Exception e) {
-                throw new BadRequestException("BAD_TYPE", "지원하지 않는 type: " + it.getType());
-            }
-
-            upsertChallenge(req.getMonth(), type, it.getTitle(), it.getSummary(), it.getMust(), it.getMd(), start, end);
+            upsertChallenge(
+                    req.getMonth(),
+                    type,
+                    it.getTitle(),
+                    it.getSummary(),
+                    it.getMust(),
+                    it.getMd(),
+                    start, end,
+                    voteStart, voteEnd
+            );
             ok++;
         }
 
@@ -84,35 +106,18 @@ public class ChallengeBatchService {
     private void upsertChallenge(
             String month, ChallengeType type, String title,
             String summary, java.util.List<String> must, String md,
-            java.time.OffsetDateTime startFromReq, java.time.OffsetDateTime endFromReq
+            OffsetDateTime start, OffsetDateTime end,
+            OffsetDateTime voteStart, OffsetDateTime voteEnd
     ) {
-        // rule_json 구성
-        var rule = om.createObjectNode();
+        // rule_json (null-safe)
+        ObjectNode rule = om.createObjectNode();
         rule.put("month", month);
-        if (summary != null) rule.put("summary", summary);
-        if (md != null)      rule.put("md", md);
-        if (must != null)    rule.set("must", om.valueToTree(must));
+        if (summary != null) rule.put("summary", summary); else rule.set("summary", NullNode.getInstance());
+        if (md != null)      rule.put("md", md);           else rule.set("md",      NullNode.getInstance());
+        rule.set("must", must == null ? om.createArrayNode() : om.valueToTree(must));
 
-        java.time.OffsetDateTime start;
-        java.time.OffsetDateTime end;
-        java.time.OffsetDateTime voteStart = null;
-        java.time.OffsetDateTime voteEnd   = null;
-
-        if (type == ChallengeType.PORTFOLIO) {
-            // 포트폴리오: 항상 "해당 월 1일~말일", 투표는 "다음달 1~3일"로 강제 정규화
-            var w = calcMonthWindow(month);
-            start = w.start();
-            end   = w.end();
-            voteStart = w.voteStart();
-            voteEnd   = w.voteEnd();
-        } else {
-            // 코드: 주차 기준 등으로 start/end를 외부에서 넘겨받되, 투표는 사용하지 않으므로 null 유지
-            start = startFromReq;
-            end   = endFromReq;
-        }
-
-        // 자연키 (type, title, start_at)로 업서트
-        var existing = challenges.findByTypeAndTitleAndStartAt(type, title, start);
+        // 자연키로 업서트 (type, title, startAt)
+        Optional<Challenge> existing = challenges.findByTypeAndTitleAndStartAt(type, title, start);
 
         if (existing.isPresent()) {
             var c = existing.get();
@@ -145,16 +150,14 @@ public class ChallengeBatchService {
         challenges.save(c);
     }
 
-
     private static record MonthWindow(
-            java.time.OffsetDateTime start,
-            java.time.OffsetDateTime end,
-            java.time.OffsetDateTime voteStart,
-            java.time.OffsetDateTime voteEnd
+            OffsetDateTime start,
+            OffsetDateTime end,
+            OffsetDateTime voteStart,
+            OffsetDateTime voteEnd
     ) {}
 
     private MonthWindow calcMonthWindow(String ym) {
-        // ym: "YYYY-MM"
         var zone = java.time.ZoneId.of("Asia/Seoul");
         var parts = ym.split("-");
         int y = Integer.parseInt(parts[0]);

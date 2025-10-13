@@ -1,5 +1,6 @@
-package com.sandwich.SandWich.internal.ai;
+package com.sandwich.SandWich.internal.ai.controller;
 
+import com.sandwich.SandWich.internal.ai.service.ChallengeBatchService;
 import com.sandwich.SandWich.internal.ai.dto.BatchDtos.BatchReq;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
