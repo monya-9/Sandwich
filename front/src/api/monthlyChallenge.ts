@@ -59,7 +59,7 @@ function parseMonthlyChallenge(json: any): MonthlyChallengeData {
  * 월간 챌린지 문제 조회
  * 기본 base는 제공받은 도메인으로 설정. 필요시 override 가능.
  */
-export async function fetchMonthlyChallenge(baseUrl: string = "https://api.dnutzs.org"): Promise<MonthlyChallengeData> {
+export async function fetchMonthlyChallenge(baseUrl?: string): Promise<MonthlyChallengeData> {
   const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
 
   if (isLocalDev) {
@@ -73,8 +73,13 @@ export async function fetchMonthlyChallenge(baseUrl: string = "https://api.dnutz
     return parseMonthlyChallenge(json);
   }
 
-  // 운영/비-로컬 환경: 외부 공개 API 직접 호출
-  const directUrl = `${baseUrl}/api/reco/monthly`;
+  // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용; 기본값 없음)
+  const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
+  if (!AI_BASE) {
+    console.warn("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+    return parseMonthlyChallenge({});
+  }
+  const directUrl = `${AI_BASE}/api/reco/monthly`;
   const res = await fetch(directUrl, { credentials: "omit" });
   if (!res.ok) {
     console.warn(`월간 챌린지 조회 실패: ${res.status}, 기본값 사용`);

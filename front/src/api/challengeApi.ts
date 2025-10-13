@@ -34,6 +34,44 @@ export type ChallengeListResponse = {
   empty: boolean;
 };
 
+// ===== AI Sync Payload Types (Frontend -> Backend, exact pass-through) =====
+
+// Monthly: { ym, found, data: { title, summary, must / must_have, md? ... } }
+export type AiMonthlyData = {
+  ym: string; // YYYY-MM
+  found: boolean;
+  data: {
+    title: string;
+    summary?: string;
+    must?: string[]; // 서버에서 must_have를 must로 통합한다고 했으므로, 그대로 전달
+    must_have?: string[];
+    requirements?: string[];
+    tips?: string[];
+    md?: string;
+    [k: string]: any;
+  };
+};
+
+// Weekly: { week, found, data: { title, summary, must, md? ... } }
+export type AiWeeklyData = {
+  week: string; // YYYYWww
+  found: boolean;
+  data: {
+    title: string;
+    summary?: string;
+    must?: string[];
+    md?: string;
+    [k: string]: any;
+  };
+};
+
+export type AiSyncResponse = {
+  challengeId: number;
+  status: ChallengeStatus;
+  message?: string;
+  [k: string]: any;
+};
+
 // ===== 챌린지 API 함수들 =====
 
 /**
@@ -64,4 +102,48 @@ export async function fetchChallengeDetail(challengeId: number): Promise<any> {
     withCredentials: true,
   });
   return response.data;
+}
+
+// ===== AI Sync Endpoints (Backend) =====
+
+/**
+ * 프론트가 AI 월간 데이터를 그대로 전달하여 챌린지를 업서트
+ * POST /api/challenges/sync-ai-monthly
+ */
+export async function syncAiMonthly(payload: AiMonthlyData): Promise<AiSyncResponse> {
+  const res = await api.post('/challenges/sync-ai-monthly', payload, { withCredentials: true });
+  return res.data;
+}
+
+/**
+ * 프론트가 AI 주간 데이터를 그대로 전달하여 챌린지를 업서트
+ * POST /api/challenges/sync-ai-weekly
+ */
+export async function syncAiWeekly(payload: AiWeeklyData): Promise<AiSyncResponse> {
+  const res = await api.post('/challenges/sync-ai-weekly', payload, { withCredentials: true });
+  return res.data;
+}
+
+/**
+ * 우리 백엔드가 AI에서 월간을 끌어와 업서트 (옵션 ym)
+ * GET /api/challenges/sync-ai-monthly/fetch?ym=YYYY-MM
+ */
+export async function fetchAndSyncAiMonthly(ym?: string): Promise<AiSyncResponse> {
+  const res = await api.get('/challenges/sync-ai-monthly/fetch', {
+    params: ym ? { ym } : undefined,
+    withCredentials: true,
+  });
+  return res.data;
+}
+
+/**
+ * 우리 백엔드가 AI에서 주간을 끌어와 업서트 (옵션 week)
+ * GET /api/challenges/sync-ai-weekly/fetch?week=YYYYWww
+ */
+export async function fetchAndSyncAiWeekly(week?: string): Promise<AiSyncResponse> {
+  const res = await api.get('/challenges/sync-ai-weekly/fetch', {
+    params: week ? { week } : undefined,
+    withCredentials: true,
+  });
+  return res.data;
 }
