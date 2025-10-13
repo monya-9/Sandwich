@@ -47,6 +47,26 @@ export type SubmissionResponse = {
   rank: number;
 };
 
+// 실제 API 응답 타입 (제출물 목록용)
+export type SubmissionListItem = {
+  id: number;
+  ownerId: number;
+  title: string;
+  repoUrl: string;
+  demoUrl?: string;
+  desc: string;
+  status: string;
+  coverUrl?: string;
+  assetCount: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+  owner: SubmissionOwner;
+  language: string;
+  totalScore: number;
+};
+
 export type SubmissionDetailResponse = {
   submissionId: number;
   title: string;
@@ -74,7 +94,7 @@ export type SubmissionListResponse = {
   totalElements: number;
   totalPages: number;
   size: number;
-  content: SubmissionResponse[];
+  content: SubmissionListItem[];
   number: number;
   sort: Array<{
     direction: string;

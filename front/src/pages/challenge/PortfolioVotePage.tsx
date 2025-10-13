@@ -4,7 +4,7 @@ import { CTAButton, ChallengePageHeader } from "../../components/challenge/commo
 import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
 import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
-import { fetchPortfolioSubmissions, type SubmissionResponse } from "../../api/submissionApi";
+import { fetchPortfolioSubmissions, type SubmissionListItem } from "../../api/submissionApi";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -13,7 +13,7 @@ export default function PortfolioVotePage() {
     // 기본 더미 데이터로 초기화
     const [detail, setDetail] = useState<PortfolioChallengeDetail>(() => getChallengeDetail(id) as PortfolioChallengeDetail);
     const [loading, setLoading] = useState(false);
-    const [submissions, setSubmissions] = useState<SubmissionResponse[]>([]);
+    const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
     
     const nav = useNavigate();
@@ -92,23 +92,27 @@ export default function PortfolioVotePage() {
                     ) : submissions.length > 0 ? (
                         <div className="grid gap-5 md:grid-cols-3">
                             {submissions.map((submission) => (
-                                <div key={submission.submissionId} className="bg-white rounded-lg shadow-md p-6">
+                                <div key={submission.id} className="bg-white rounded-lg shadow-md p-6">
                                     <div className="mb-4">
                                         <h3 className="text-lg font-semibold text-gray-900">
-                                            제출물 #{submission.submissionId}
+                                            {submission.title || `제출물 #${submission.id}`}
                                         </h3>
                                         <div className="mt-2 text-sm text-gray-600">
-                                            <div>투표 수: {submission.voteCount}</div>
-                                            <div>UI/UX 평균: {submission.uiUxAvg}</div>
-                                            <div>창의성 평균: {submission.creativityAvg}</div>
-                                            <div>코드 품질 평균: {submission.codeQualityAvg}</div>
-                                            <div>난이도 평균: {submission.difficultyAvg}</div>
+                                            <div>제출자: {submission.owner?.username || '익명'}</div>
+                                            <div>좋아요: {submission.likeCount}</div>
+                                            <div>조회수: {submission.viewCount}</div>
+                                            <div>댓글: {submission.commentCount}</div>
                                             <div>총점: {submission.totalScore}</div>
-                                            <div>순위: {submission.rank}</div>
+                                            <div>언어: {submission.language}</div>
                                         </div>
+                                        {submission.desc && (
+                                            <p className="mt-2 text-sm text-gray-700 line-clamp-2">
+                                                {submission.desc}
+                                            </p>
+                                        )}
                                     </div>
                                     <Link 
-                                        to={`/challenge/portfolio/${id}/vote/${submission.submissionId}`}
+                                        to={`/challenge/portfolio/${id}/vote/${submission.id}`}
                                         className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                         평가하러 가기 →
