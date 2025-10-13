@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
+import com.sandwich.SandWich.challenge.domain.ChallengeType;
+import java.time.OffsetDateTime;
 
 public interface ChallengeRepository extends JpaRepository<Challenge, Long>,JpaSpecificationExecutor<Challenge> {
 
@@ -53,4 +56,8 @@ public interface ChallengeRepository extends JpaRepository<Challenge, Long>,JpaS
     int advanceStatus(@Param("id") Long id,
                       @Param("curr") ChallengeStatus current,
                       @Param("next") ChallengeStatus next);
+
+    Optional<Challenge> findByTypeAndTitleAndStartAt(
+            ChallengeType type, String title, OffsetDateTime startAt
+    );
 }

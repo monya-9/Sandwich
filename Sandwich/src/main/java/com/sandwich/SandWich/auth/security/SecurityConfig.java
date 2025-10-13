@@ -34,6 +34,7 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final DeviceTrustService deviceTrustService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final ServiceTokenFilter serviceTokenFilter;
 
     // OAuth2 (구글/깃허브) 연동
     private final ObjectProvider<ClientRegistrationRepository> repoProvider;
@@ -67,7 +68,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ObjectProvider<ClientRegistrationRepository> repoProvider) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/internal/**")  // 내부 API는 CSRF 미적용
+                        .disable()
+                )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error", "/error/**").permitAll()
@@ -113,7 +117,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()  // 상세(/{id}) 및 확장 대비
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/votes/summary").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/leaderboard").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/internal/ai/**").permitAll()
+                        // .requestMatchers(HttpMethod.POST, "/internal/ai/**").permitAll()
+                        .requestMatchers("/internal/**").hasAuthority("SCOPE_CHALLENGE_BATCH_WRITE")
                         // ===== 사용자 공개 정보 =====
                         .requestMatchers("/api/users/*/following").permitAll()
                         .requestMatchers("/api/users/*/followers").permitAll()
@@ -144,6 +149,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,  "/api/challenges/*/votes/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/challenges/*/votes").authenticated()
                         .requestMatchers(HttpMethod.PUT,  "/api/challenges/*/votes/me").authenticated()
+                        .requestMatchers("/internal/**").authenticated()
 
                         // 최근 검색어(로그인 전용)
                         .requestMatchers(HttpMethod.GET,    "/api/search/recent").authenticated()
@@ -161,9 +167,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // TrustedDeviceFilter를 jwtFilter보다 먼저
+                .addFilterBefore(serviceTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new TrustedDeviceFilter(deviceTrustService), UsernamePasswordAuthenticationFilter.class)
-                // JWT 필터 연결
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // 예외 처리: 401 / 403
