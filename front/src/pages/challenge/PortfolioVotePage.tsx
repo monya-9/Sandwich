@@ -5,6 +5,7 @@ import EmptySubmissionState from "../../components/challenge/EmptySubmissionStat
 import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchPortfolioSubmissions, type SubmissionListItem } from "../../api/submissionApi";
+import { fetchChallengeDetail } from "../../api/challengeApi";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -37,22 +38,25 @@ export default function PortfolioVotePage() {
         fetchSubmissions();
     }, [id]);
 
-    // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
+    // 백엔드에서 챌린지 타입 확인 후 포트폴리오인 경우 AI API에서 동적으로 데이터 가져오기
     useEffect(() => {
-        if (id === 2) {
-            setLoading(true);
-            getDynamicChallengeDetail(id)
-                .then((dynamicData) => {
+        const loadChallengeData = async () => {
+            try {
+                const backendChallenge = await fetchChallengeDetail(id);
+                if (backendChallenge.type === "PORTFOLIO") {
+                    setLoading(true);
+                    const dynamicData = await getDynamicChallengeDetail(id, backendChallenge.type);
                     setDetail(dynamicData as PortfolioChallengeDetail);
-                })
-                .catch((err) => {
-                    console.error('월간 챌린지 데이터 로딩 실패:', err);
-                    // 에러 시 기본 더미 데이터 유지
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
-        }
+                }
+            } catch (err) {
+                console.error('챌린지 데이터 로딩 실패:', err);
+                // 에러 시 기본 더미 데이터 유지
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadChallengeData();
     }, [id]);
 
     return (

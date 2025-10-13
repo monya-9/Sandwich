@@ -57,10 +57,11 @@ export default function PortfolioSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 2);
     
-    // 기본 더미 데이터로 초기화
-    const [data, setData] = useState<PortfolioChallengeDetail>(() => getChallengeDetail(id) as PortfolioChallengeDetail);
-    const [loading, setLoading] = useState(false);
+    // 데이터 초기화 (더미 데이터 사용하지 않음)
+    const [data, setData] = useState<PortfolioChallengeDetail | null>(null);
+    const [loading, setLoading] = useState(true);
     const [challengeExists, setChallengeExists] = useState<boolean | null>(null);
+    const [mustHave, setMustHave] = useState<string[]>([]);
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
@@ -87,22 +88,36 @@ export default function PortfolioSubmitPage() {
         checkChallengeExists();
     }, [id]);
 
-    // 포트폴리오 챌린지(id: 2)인 경우 AI API에서 동적으로 데이터 가져오기
+    // 백엔드에서 챌린지 타입 확인 후 포트폴리오인 경우 AI API에서 동적으로 데이터 가져오기
     useEffect(() => {
-        if (id === 2) {
+        const loadChallengeData = async () => {
             setLoading(true);
-            getDynamicChallengeDetail(id)
-                .then((dynamicData) => {
+            try {
+                const backendChallenge = await fetchChallengeDetail(id);
+                if (backendChallenge.type === "PORTFOLIO") {
+                    // 포트폴리오 챌린지 데이터와 mustHave 데이터 동시에 가져오기
+                    const [dynamicData, monthlyData] = await Promise.all([
+                        getDynamicChallengeDetail(id, backendChallenge.type),
+                        import('../../api/monthlyChallenge').then(m => m.fetchMonthlyChallenge())
+                    ]);
                     setData(dynamicData as PortfolioChallengeDetail);
-                })
-                .catch((err) => {
-                    console.error('월간 챌린지 데이터 로딩 실패:', err);
-                    // 에러 시 기본 더미 데이터 유지
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
-        }
+                    setMustHave(monthlyData.mustHave || []);
+                } else {
+                    // 포트폴리오가 아닌 경우 기본 데이터 사용
+                    setData(getChallengeDetail(id) as PortfolioChallengeDetail);
+                    setMustHave([]);
+                }
+            } catch (err) {
+                console.error('챌린지 데이터 로딩 실패:', err);
+                // 에러 시 기본 더미 데이터 사용
+                setData(getChallengeDetail(id) as PortfolioChallengeDetail);
+                setMustHave([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadChallengeData();
     }, [id]);
 
     const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -113,10 +128,10 @@ export default function PortfolioSubmitPage() {
     const [cropOpen, setCropOpen] = useState(false);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [form, setForm] = useState<PortfolioSubmitPayload>({
-        title: data.title.replace(/^포트폴리오 챌린지:\s*/, ""),
-        repoUrl: data.submitExample?.repoUrl || "",
-        demoUrl: data.submitExample?.demoUrl || "",
-        desc: data.submitExample?.desc || "",
+        title: "",
+        repoUrl: "",
+        demoUrl: "",
+        desc: "",
         teamType: "SOLO",
         teamName: "",
         membersText: "",
@@ -268,18 +283,34 @@ export default function PortfolioSubmitPage() {
                                 <ChevronLeft className="h-5 w-5" />
                             </button>
                             <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">
-                                {data.title} — 프로젝트 제출
+                                {data?.title || '포트폴리오 챌린지'} — 프로젝트 제출
                             </h1>
                         </div>
 
             <SectionCard className="!px-5 !py-5 mb-4">
-                <div className="text-[13.5px] leading-7 text-neutral-800 whitespace-pre-line">{data.description}</div>
-                <ul className="mt-3 list-disc pl-5 text-[13.5px] leading-7 text-neutral-800">
-                    <li>이 챌린지는 <b>사용자 투표 100%</b>로 순위가 결정돼요.</li>
-                    <li>GitHub 리포는 public 권장(또는 제출 후 접근 권한 안내).</li>
-                    <li>이미지/영상은 S3 Presigned 업로드 후 <code className="font-mono">s3Key</code>만 전달 권장.</li>
-                    <li>데모 URL이 없어도 설명만 제출해도 됩니다.</li>
-                </ul>
+                <div className="text-[13.5px] leading-7 text-neutral-800 whitespace-pre-line">{data?.description || '포트폴리오 챌린지에 참여해보세요.'}</div>
+                
+                {/* 필수 조건 섹션 - AI API의 mustHave 데이터 사용 */}
+                {mustHave.length > 0 && (
+                    <div className="mt-4">
+                        <h3 className="text-[14px] font-semibold text-neutral-900 mb-2">📋 필수 조건</h3>
+                        <ul className="list-disc pl-5 text-[13.5px] leading-7 text-neutral-800 space-y-1">
+                            {mustHave.map((requirement, index) => (
+                                <li key={index}>{requirement}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                
+                {/* 기본 안내사항 */}
+                <div className="mt-4">
+                    <h3 className="text-[14px] font-semibold text-neutral-900 mb-2">ℹ️ 제출 안내</h3>
+                    <ul className="list-disc pl-5 text-[13.5px] leading-7 text-neutral-800 space-y-1">
+                        <li>이 챌린지는 <b>사용자 투표 100%</b>로 순위가 결정돼요.</li>
+                        <li>GitHub 레포는 public 권장(또는 제출 후 접근 권한 안내).</li>
+                        <li>데모 URL이 없어도 설명만 제출해도 됩니다.</li>
+                    </ul>
+                </div>
             </SectionCard>
 
             <div className="mb-3 flex gap-2">
@@ -515,13 +546,13 @@ export default function PortfolioSubmitPage() {
                             </Row>
 
                             <Row>
-                                <Label>프로젝트 설명</Label>
+                                <Label>포트폴리오 설명</Label>
                                 <textarea
                                     rows={6}
                                     className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
                                     value={form.desc}
                                     onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))}
-                                    placeholder="기술 스택, 구현 포인트, 스크린샷/영상 링크 등을 적어주세요."
+                                    placeholder="포트폴리오에 대해서 간략하게 설명해주세요."
                                 />
                             </Row>
 

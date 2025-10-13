@@ -190,7 +190,7 @@ export default function ChallengeDetailPage() {
                     // 2. 챌린지 타입에 따라 AI 데이터 가져오기
                     if (backendChallenge.type === "PORTFOLIO") {
                         // 포트폴리오 챌린지 - 월간 AI 데이터
-                        getDynamicChallengeDetail(id)
+                        getDynamicChallengeDetail(id, backendChallenge.type)
                             .then((dynamicData) => {
                                 setData(dynamicData);
                                 setError(null); // 성공 시 에러 초기화

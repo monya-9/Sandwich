@@ -167,8 +167,8 @@ export function getChallengeDetail(id: number): AnyChallengeDetail {
 /* ====================================================
  * API 연동을 위한 동적 데이터 생성 함수
  * ==================================================== */
-export async function getDynamicChallengeDetail(id: number): Promise<AnyChallengeDetail> {
-    if (id === 2) {
+export async function getDynamicChallengeDetail(id: number, challengeType?: string): Promise<AnyChallengeDetail> {
+    if (challengeType === "PORTFOLIO") {
         // 포트폴리오 챌린지는 AI API에서 동적으로 가져옴
         const { fetchMonthlyChallenge } = await import('../../api/monthlyChallenge');
         const monthlyData = await fetchMonthlyChallenge();
