@@ -12,7 +12,7 @@ type MainProjectGridProps = {
 const MainProjectGrid: React.FC<MainProjectGridProps> = ({ title, projects }) => {
   return (
     <section className="px-6 py-6">
-      <h2 className="text-2xl font-bold mb-4">{title}</h2>
+      <h2 className="text-2xl font-bold mb-4 text-black dark:text-gray-100">{title}</h2>
 
       {/* 반응형 grid: 최소 2개부터 최대 5개까지 자동 조절, 간격은 적당히 압축 */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-5">

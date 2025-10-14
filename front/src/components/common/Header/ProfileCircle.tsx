@@ -12,7 +12,7 @@ const ProfileCircle = ({ email, name, size = 40 }: Props) => {
 
     return (
         <div
-            className="rounded-full bg-gray-200 text-gray-700 font-semibold flex items-center justify-center"
+            className="rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white font-semibold flex items-center justify-center"
             style={{ width: size, height: size, fontSize: size / 2 }}
         >
             {initial}

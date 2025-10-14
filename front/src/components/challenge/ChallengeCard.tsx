@@ -22,21 +22,21 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
     return (
         <section className="mb-8">
             {/* 제목은 카드 밖 */}
-            <h3 className="text-2xl font-extrabold mb-4 text-left ml-[15px]">
+            <h3 className="text-2xl font-extrabold mb-4 text-left ml-[15px] text-black dark:text-white">
                 {item.title}
             </h3>
 
             {/* 카드 본문 */}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5 md:p-7">
-                <p className="text-[15px] font-semibold mb-1">{item.subtitle}</p>
-                <div className="text-[13.5px] leading-6 text-neutral-800">
+            <div className="rounded-2xl border border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] p-5 md:p-7">
+                <p className="text-[15px] font-semibold mb-1 text-black dark:text-white">{item.subtitle}</p>
+                <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-[var(--text-secondary)]">
                     {item.description}
                 </div>
 
                 <div className="mt-3 flex justify-end">
                     <Link
                         to={href}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-white/10"
                     >
                         {item.ctaLabel} →
                     </Link>
