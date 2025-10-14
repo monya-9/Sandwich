@@ -15,9 +15,9 @@ export interface CoverCropperProps {
 }
 
 const SQUARE_OUT = 1520; // 760의 2배
-const RECT_OUT_W = 2360; // 1180의 2배
-const RECT_OUT_H = 1520; // 760의 2배 (3:2)
-const RECT_RATIO = RECT_OUT_H / RECT_OUT_W; // h / w
+const RECT_OUT_W = 2026; // 1013의 2배 (4:3 비율)
+const RECT_OUT_H = 1520; // 760의 2배
+const RECT_RATIO = RECT_OUT_H / RECT_OUT_W; // h / w = 3/4
 
 const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropped }) => {
   const [stage, setStage] = useState({ w: 360, h: 240 });
@@ -32,9 +32,9 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
   const [boxSq, setBoxSq] = useState({ x: 0, y: 0, w: 80, h: 80 });
   const [dragSq, setDragSq] = useState<{ type: HandleType | null; sx: number; sy: number; start: { x: number; y: number; w: number; h: number } } | null>(null);
 
-  const [boxRect, setBoxRect] = useState({ x: 0, y: 0, w: 120, h: 60 });
+  const [boxRect, setBoxRect] = useState({ x: 0, y: 0, w: 120, h: 90 }); // 4:3 비율로 초기화
   const [dragRect, setDragRect] = useState<{ type: HandleType | null; sx: number; sy: number; start: { x: number; y: number; w: number; h: number } } | null>(null);
-  const [activeCrop, setActiveCrop] = useState<'square' | 'rect'>('square');
+  const [activeCrop, setActiveCrop] = useState<'square' | 'rect'>('rect'); // 기본을 직사각형으로 변경
   const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
     message: ''
@@ -96,9 +96,13 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
       setOffset({ x: 0, y: 0 });
       const sqSize = Math.min(w, h) * 0.6;
       setBoxSq({ x: (w - sqSize) / 2, y: (h - sqSize) / 2, w: sqSize, h: sqSize });
-      let initW = Math.min(w * 0.9, w);
-      let initH = initW * rectRatioRef.current;
-      if (initH > h) { initH = h * 0.9; initW = initH / rectRatioRef.current; }
+      // 4:3 비율로 직사각형 크롭 박스 초기화
+      let initW = Math.min(w * 0.8, w);
+      let initH = initW * rectRatioRef.current; // 3/4 비율
+      if (initH > h * 0.8) { 
+        initH = h * 0.8; 
+        initW = initH / rectRatioRef.current; 
+      }
       setBoxRect({ x: (w - initW) / 2, y: (h - initH) / 2, w: initW, h: initH });
     };
     window.addEventListener('resize', onResize);
@@ -425,13 +429,13 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
         </div>
         <div className="p-5 space-y-6">
           <div>
-            <div className="text-sm mb-2">정사각형 커버를 지정해주세요.</div>
+            <div className="text-sm mb-2">4:3 비율의 커버를 지정해주세요.</div>
             <div className="relative bg-white rounded-none border border-[#E5E7EB] overflow-hidden" style={{ width: stage.w, height: stage.h }}>
               {img && (
                 <img src={img.src} alt="source1" draggable={false} className="select-none" style={{ position:'absolute', left: offset.x, top: offset.y, width: imgW, height: imgH }} />
               )}
-              <div className={`absolute border-2 ${activeCrop==='square' ? 'border-[#00C2A8]' : 'border-white'} shadow-[0_0_0_20000px_rgba(0,0,0,0.35)] box-border`} style={{ left: boxSq.x, top: boxSq.y, width: boxSq.w, height: boxSq.h, cursor:'move' }} onMouseDown={handleDownSq}>
-                {renderHandles(onDownSq)}
+              <div className="absolute border-2 border-[#00C2A8] shadow-[0_0_0_20000px_rgba(0,0,0,0.35)] box-border" style={{ left: boxRect.x, top: boxRect.y, width: boxRect.w, height: boxRect.h, cursor:'move' }} onMouseDown={handleDownRect}>
+                {renderHandles(onDownRect)}
               </div>
             </div>
           </div>

@@ -2,16 +2,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../components/challenge/common";
-import { ChevronLeft, Heart, Eye, MessageSquare } from "lucide-react";
+import { ChevronLeft, Eye, MessageSquare, Heart } from "lucide-react";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
-import {
-    getCodeSubmissions,
-    getCodeComments,
-    addCodeComment,
-    incViewCode,
-    toggleLikeCode,
-} from "../../data/Challenge/submissionsDummy";
+import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import api from "../../api/axiosInstance";
+
+// 댓글 타입 정의
+type CommentResponse = {
+    id: number;
+    comment: string;
+    username: string;
+    profileImageUrl?: string;
+    createdAt: string;
+    subComments: CommentResponse[];
+};
 
 export default function CodeSubmissionDetailPage() {
     const { id: idStr, submissionId: sidStr } = useParams();
@@ -20,38 +25,141 @@ export default function CodeSubmissionDetailPage() {
     const nav = useNavigate();
 
     const detail = useMemo(() => getChallengeDetail(id) as CodeChallengeDetail, [id]);
-    const [item, setItem] = useState(() => getCodeSubmissions(id).find((x) => x.id === sid));
-    const [comments, setComments] = useState(() => getCodeComments(sid));
-    const [text, setText] = useState("");
+    const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [comments, setComments] = useState<CommentResponse[]>([]);
+    const [commentText, setCommentText] = useState("");
+    const [commentLoading, setCommentLoading] = useState(false);
     const [liked, setLiked] = useState(false);
-    const [likes, setLikes] = useState(item?.likes ?? 0);
+    const [likeCount, setLikeCount] = useState(0);
 
     useEffect(() => {
-        incViewCode(id, sid);
-        const next = getCodeSubmissions(id).find((x) => x.id === sid);
-        setItem(next);
-        setLikes(next?.likes ?? 0);
+        const fetchSubmissionDetail = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const submissionDetail = await fetchChallengeSubmissionDetail(id, sid);
+                setItem(submissionDetail);
+            } catch (err) {
+                console.error('제출물 상세 로드 실패:', err);
+                setError('제출물을 찾을 수 없습니다.');
+                setItem(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSubmissionDetail();
     }, [id, sid]);
 
-    if (!item) return <div className="p-6 text-[13.5px]">제출물을 찾을 수 없습니다.</div>;
+    // 댓글 로드
+    useEffect(() => {
+        const fetchComments = async () => {
+            try {
+                const response = await api.get('/api/comments', {
+                    params: {
+                        type: 'CODE_SUBMISSION',
+                        id: sid
+                    }
+                });
+                setComments(response.data || []);
+            } catch (error) {
+                console.error('댓글 로드 실패:', error);
+                setComments([]);
+            }
+        };
+
+        if (sid) {
+            fetchComments();
+        }
+    }, [sid]);
+
+    // 좋아요 상태 로드
+    useEffect(() => {
+        const fetchLikeStatus = async () => {
+            try {
+                const response = await api.get('/api/likes', {
+                    params: {
+                        targetType: 'CODE_SUBMISSION',
+                        targetId: sid
+                    }
+                });
+                setLiked(response.data.likedByMe || false);
+                setLikeCount(response.data.likeCount || 0);
+            } catch (error) {
+                console.error('좋아요 상태 로드 실패:', error);
+                setLiked(false);
+                setLikeCount(0);
+            }
+        };
+
+        if (sid) {
+            fetchLikeStatus();
+        }
+    }, [sid]);
+
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+                <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                    <span className="text-lg font-medium">제출물을 불러오는 중...</span>
+                </div>
+            </div>
+        </div>
+    );
+    if (error || !item) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center text-neutral-600">
+                <span className="text-lg">{error || '제출물을 찾을 수 없습니다.'}</span>
+            </div>
+        </div>
+    );
 
     const headerText = `샌드위치 코드 챌린지: 🧮 ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
 
-    const onToggleLike = () => {
-        setLiked((v) => !v);
-        setLikes((n) => (liked ? n - 1 : n + 1));
-        toggleLikeCode(id, sid, !liked);
+    // 좋아요 토글
+    const toggleLike = async () => {
+        try {
+            const response = await api.post('/api/likes', {
+                targetType: 'CODE_SUBMISSION',
+                targetId: sid
+            });
+            setLiked(response.data.likedByMe);
+            setLikeCount(response.data.likeCount);
+        } catch (error) {
+            console.error('좋아요 처리 실패:', error);
+        }
     };
 
-    const submitComment = () => {
-        const v = text.trim();
-        if (!v) return;
-        addCodeComment(sid, v);
-        setComments(getCodeComments(sid));
-        // 댓글 수 갱신 포함
-        const next = getCodeSubmissions(id).find((x) => x.id === sid);
-        setItem(next);
-        setText("");
+    // 댓글 작성
+    const submitComment = async () => {
+        const text = commentText.trim();
+        if (!text) return;
+        
+        setCommentLoading(true);
+        try {
+            await api.post('/api/comments', {
+                commentableType: 'CODE_SUBMISSION',
+                commentableId: sid,
+                comment: text
+            });
+            
+            // 댓글 목록 새로고침
+            const response = await api.get('/api/comments', {
+                params: {
+                    type: 'CODE_SUBMISSION',
+                    id: sid
+                }
+            });
+            setComments(response.data || []);
+            setCommentText("");
+        } catch (error) {
+            console.error('댓글 작성 실패:', error);
+        } finally {
+            setCommentLoading(false);
+        }
     };
 
     return (
@@ -73,11 +181,11 @@ export default function CodeSubmissionDetailPage() {
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                        {item.authorInitial}
+                        {item.owner?.username?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <div className="leading-tight">
-                        <div className="text-[13px] font-semibold text-neutral-900">{item.authorName}</div>
-                        <div className="text-[12.5px] text-neutral-600">{item.authorRole}</div>
+                        <div className="text-[13px] font-semibold text-neutral-900">{item.owner?.username || '익명'}</div>
+                        <div className="text-[12.5px] text-neutral-600">{item.owner?.position || '개발자'}</div>
                     </div>
                 </div>
 
@@ -87,20 +195,47 @@ export default function CodeSubmissionDetailPage() {
                 {/* 본문 */}
                 <p className="whitespace-pre-wrap rounded-xl border border-neutral-200 bg-neutral-50/60 p-5 text-[13.5px] leading-7">
                     {item.desc}
-                    {item.snippet ? `\n\n--- 코드 참고 ---\n${item.snippet}` : ""}
                 </p>
+                
+                {/* 리포지토리 링크 */}
+                {item.repoUrl && (
+                    <div className="mt-3">
+                        <a 
+                            href={item.repoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-[13px] text-blue-600 hover:text-blue-800"
+                        >
+                            🔗 GitHub 리포지토리 보기
+                        </a>
+                    </div>
+                )}
+                
+                {/* 데모 링크 */}
+                {item.demoUrl && (
+                    <div className="mt-2">
+                        <a 
+                            href={item.demoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-[13px] text-green-600 hover:text-green-800"
+                        >
+                            🚀 데모 보기
+                        </a>
+                    </div>
+                )}
 
                 {/* 메트릭 */}
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
                     <button
-                        onClick={onToggleLike}
+                        onClick={toggleLike}
                         className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
                     >
                         <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
-                        {likes}
+                        {likeCount}
                     </button>
-                    <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> {item.views}</span>
-                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {item.comments}</span>
+                    <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> {item.viewCount}</span>
+                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {comments.length}</span>
                 </div>
             </SectionCard>
 
@@ -108,38 +243,85 @@ export default function CodeSubmissionDetailPage() {
             <SectionCard className="!px-5 !py-5 mt-6">
                 <h2 className="mb-3 text-[15px] font-bold">댓글 {comments.length}</h2>
 
-                <div className="space-y-4">
-                    {comments.map((c) => (
-                        <div key={c.id} className="rounded-2xl border p-4">
-                            <div className="mb-1 flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[12.5px] font-bold">
-                                    {c.authorInitial}
+                {/* 댓글 목록 */}
+                <div className="space-y-4 mb-6">
+                    {comments.length > 0 ? (
+                        comments.map((comment) => (
+                            <div key={comment.id} className="rounded-2xl border p-4">
+                                <div className="mb-1 flex items-center gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[12.5px] font-bold">
+                                        {comment.username?.charAt(0).toUpperCase() || 'U'}
+                                    </div>
+                                    <div className="leading-tight">
+                                        <div className="text-[13px] font-semibold text-neutral-900">{comment.username}</div>
+                                        <div className="text-[12px] text-neutral-500">
+                                            {new Date(comment.createdAt).toLocaleDateString('ko-KR', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="leading-tight">
-                                    <div className="text-[13px] font-semibold text-neutral-900">{c.authorName}</div>
-                                    {c.authorRole && <div className="text-[12px] text-neutral-500">{c.authorRole}</div>}
+                                <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">
+                                    {comment.comment}
                                 </div>
+                                
+                                {/* 대댓글 */}
+                                {comment.subComments && comment.subComments.length > 0 && (
+                                    <div className="mt-3 ml-6 space-y-3">
+                                        {comment.subComments.map((subComment) => (
+                                            <div key={subComment.id} className="rounded-xl border border-neutral-100 bg-neutral-50 p-3">
+                                                <div className="mb-1 flex items-center gap-2">
+                                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-bold">
+                                                        {subComment.username?.charAt(0).toUpperCase() || 'U'}
+                                                    </div>
+                                                    <div className="leading-tight">
+                                                        <div className="text-[12px] font-semibold text-neutral-900">{subComment.username}</div>
+                                                        <div className="text-[11px] text-neutral-500">
+                                                            {new Date(subComment.createdAt).toLocaleDateString('ko-KR', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="whitespace-pre-wrap text-[12.5px] leading-6 text-neutral-800">
+                                                    {subComment.comment}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">{c.content}</div>
-                            <div className="mt-1 text-xs text-neutral-500">{c.createdAt}</div>
+                        ))
+                    ) : (
+                        <div className="text-center py-8 text-neutral-500 text-[13px]">
+                            아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
                         </div>
-                    ))}
+                    )}
                 </div>
 
-                {/* 입력 */}
-                <div className="mt-5 rounded-2xl border p-4">
-          <textarea
-              className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
-              placeholder="댓글을 작성해보세요."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-          />
+                {/* 댓글 입력 */}
+                <div className="rounded-2xl border p-4">
+                    <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="댓글을 입력하세요..."
+                        className="w-full resize-none rounded-lg border-0 bg-transparent p-0 text-[13.5px] leading-6 placeholder-neutral-500 focus:ring-0"
+                        rows={3}
+                    />
                     <div className="mt-2 flex justify-end">
                         <button
                             onClick={submitComment}
-                            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
+                            disabled={!commentText.trim() || commentLoading}
+                            className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:bg-neutral-300"
                         >
-                            등록하기
+                            {commentLoading ? '작성 중...' : '댓글 작성'}
                         </button>
                     </div>
                 </div>

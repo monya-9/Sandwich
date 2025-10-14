@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { challengeApi } from "../../api/challengeApi";
+import { fetchChallengeSubmissionDetail, updateChallengeSubmission } from "../../api/submissionApi";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
 import Toast from "../../components/common/Toast";
 
@@ -29,7 +29,7 @@ export default function CodeEditPage() {
     useEffect(() => {
         (async () => {
             try {
-                const detail = await challengeApi.getSubmission(submissionId);
+                const detail = await fetchChallengeSubmissionDetail(challengeId, submissionId);
                 setForm({
                     title: detail.title ?? "",
                     repoUrl: detail.repoUrl ?? "",
@@ -49,13 +49,15 @@ export default function CodeEditPage() {
         if (!canSave || saving) return;
         setSaving(true);
         try {
-            await challengeApi.updateSubmission(submissionId, {
-                type: "CODE",
+            await updateChallengeSubmission(challengeId, submissionId, {
                 title: form.title.trim(),
                 repoUrl: form.repoUrl.trim(),
-                language: form.language,
-                entrypoint: form.entrypoint.trim(),
-                note: form.note?.trim() || undefined,
+                desc: form.note?.trim() || "",
+                code: {
+                    language: form.language,
+                    entrypoint: form.entrypoint.trim(),
+                    commitSha: "a1b2c3d4e5f6" // 임시 hex 값
+                }
             });
             setSuccessToast({
                 visible: true,

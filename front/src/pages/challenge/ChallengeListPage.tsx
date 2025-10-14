@@ -1,14 +1,33 @@
 // src/pages/challenge/ChallengeListPage.tsx
-import React from "react";
-import { dummyChallenges } from "../../data/Challenge/dummyChallenges";
+import React, { useState, useEffect } from "react";
+import { dummyChallenges, getDynamicChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
-
+import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ChallengeListPage() {
+    const [challenges, setChallenges] = useState<ChallengeCardData[]>(dummyChallenges);
+    const [loading, setLoading] = useState(false);
+
+    // AI API에서 동적으로 챌린지 데이터 가져오기
+    useEffect(() => {
+        setLoading(true);
+        getDynamicChallenges()
+            .then((dynamicChallenges) => {
+                setChallenges(dynamicChallenges);
+            })
+            .catch((error) => {
+                console.error('챌린지 데이터 로딩 실패:', error);
+                // 에러 시 기본 더미 데이터 유지
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, []);
+
     return (
         <div className="w-full bg-white">
             {/* 오렌지 공지 배너 */}
@@ -30,9 +49,23 @@ export default function ChallengeListPage() {
             <WinnersSection />
 
             <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-                {dummyChallenges.map((item) => (
-                    <ChallengeCard key={item.id} item={item} />
-                ))}
+                {loading ? (
+                    /* 로딩 상태 - 전체 화면 */
+                    <div className="flex items-center justify-center py-16">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                                <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
+                            </div>
+                            <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
+                        </div>
+                    </div>
+                ) : (
+                    /* 로딩 완료 - 챌린지 목록 표시 */
+                    challenges.map((item) => (
+                        <ChallengeCard key={item.id} item={item} />
+                    ))
+                )}
 
                 {/* 지난 대결 보기 - 제목만 */}
                 <h2 className="text-2xl font-bold mb-4 text-left ml-[15px]">지난 대결 보기</h2>
