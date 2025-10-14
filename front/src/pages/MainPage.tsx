@@ -32,7 +32,7 @@ const MainPage = () => {
   const userId = useMemo(() => {
     const idStr = (typeof window !== 'undefined') && (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     return idStr ? Number(idStr) : undefined;
-  }, []);
+  }, [isLoggedIn]);
 
   const cacheKey = useMemo(() => (isLoggedIn && userId ? `reco:projects:${userId}` : null), [isLoggedIn, userId]);
 

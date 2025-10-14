@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useContext, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { HiOutlineArrowUpTray } from "react-icons/hi2";
 import Sidebar from "./Sidebar";
@@ -32,6 +33,7 @@ const sortRepFirst = <T extends { isRepresentative?: boolean; id?: number }>(arr
 };
 
 const CareerSettingPage: React.FC = () => {
+    const navigate = useNavigate();
 	const [showCareerForm, setShowCareerForm] = useState(false);
 	const [showEducationForm, setShowEducationForm] = useState(false);
 	const [showProjectForm, setShowProjectForm] = useState(false);
@@ -109,12 +111,19 @@ const CareerSettingPage: React.FC = () => {
 	return (
 		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				<div className="flex gap-6">
+				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					{/* 좌측 사이드바 */}
-					<aside className="w-[320px] shrink-0">
+					<aside className="hidden lg:block w-full lg:w-[320px] shrink-0">
 						<Sidebar />
 					</aside>
-					<main className="flex-1 space-y-6">
+					<main className="flex-1 space-y-0">
+						{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
+						<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
+							<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+							<div className="justify-self-center text-[16px] font-medium text-center">커리어 설정</div>
+							<span />
+						</div>
+						<div className="space-y-6">
 						{/* 경력 */}
 						<section className={`bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showCareerForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
@@ -218,6 +227,7 @@ const CareerSettingPage: React.FC = () => {
 								)
 							)}
 						</section>
+						</div>
 					</main>
 				</div>
 			</div>

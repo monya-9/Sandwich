@@ -4,11 +4,14 @@ import com.sandwich.SandWich.common.exception.exceptiontype.EmailVerificationExp
 import com.sandwich.SandWich.common.exception.exceptiontype.InvalidVerificationCodeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
+
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.List;
@@ -20,30 +23,33 @@ import java.util.Random;
 public class EmailVerificationService {
 
     private final JavaMailSender mailSender;
-    private final RedisTemplate<String, String> redisTemplate;
+
+    // 어떤 빈을 쓸지 명시 (redisTemplate vs stringRedisTemplate 충돌 방지)
+    private final @Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate;
+
     private final Random random = new SecureRandom();
     private final Environment environment;
+
+    @Value("${spring.mail.username}")
+    private String mailFrom;
+
     public void sendVerificationCode(String email) {
         try {
-            String code;
-            // 테스트 환경일 경우 고정 코드 사용
-            if (isTestProfile()) {
-                code = "123456";
-            } else {
-                code = String.format("%06d", random.nextInt(1000000));
-            }
+            String code = isTestProfile()
+                    ? "123456"
+                    : String.format("%06d", random.nextInt(1_000_000));
 
             log.info("[이메일 인증] 생성된 코드: {}", code);
 
             String key = "email:verify:" + email;
-            redisTemplate.opsForValue().set("email:verify:" + email, code, Duration.ofMinutes(5));
+            redisTemplate.opsForValue().set(key, code, Duration.ofMinutes(5));
             log.info("[이메일 인증] Redis에 저장 완료: {} -> {}", key, code);
 
             SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(mailFrom);
             message.setTo(email);
             message.setSubject("[SandWich] 이메일 인증 코드");
             message.setText("인증번호: " + code + "\n5분 안에 입력해주세요.");
-            message.setFrom("happyhongsi03@naver.com");
 
             log.info("[이메일 인증] 메일 전송 시작 → 대상: {}", email);
             mailSender.send(message);
@@ -52,7 +58,8 @@ public class EmailVerificationService {
             log.error("[이메일 인증] 메일 전송 실패: {}", e.getMessage(), e);
             throw new RuntimeException("메일 전송 중 오류가 발생했습니다.");
         }
-}
+    }
+
     public void verifyCode(String email, String inputCode) {
         String key = "email:verify:" + email;
         String savedCode = redisTemplate.opsForValue().get(key);
@@ -62,7 +69,6 @@ public class EmailVerificationService {
         if (savedCode == null) {
             throw new EmailVerificationExpiredException(); // Redis TTL 만료
         }
-
         if (!inputCode.equals(savedCode)) {
             throw new InvalidVerificationCodeException(); // 잘못된 코드 입력
         }

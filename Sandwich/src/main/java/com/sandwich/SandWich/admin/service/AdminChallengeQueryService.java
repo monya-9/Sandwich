@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.PageImpl;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -95,7 +95,7 @@ public class AdminChallengeQueryService {
                         .title(s.getTitle())
                         .repoUrl(s.getRepoUrl())
                         .demoUrl(s.getDemoUrl())
-                        .descr(s.getDescr())
+                        .desc(s.getDesc())
                         .status(s.getStatus().name())
                         .assetCount(assetCount.getOrDefault(s.getId(), 0))
                         .totalScore(scoreMap.get(s.getId()))
@@ -104,7 +104,7 @@ public class AdminChallengeQueryService {
                 .toList();
 
 
-        return new PageImpl<>(content, pageable, page.getTotalElements());
+        return new PageImpl<AdminChallengeDtos.SubmissionItem>(content, pageable, page.getTotalElements());
     }
 
     /* ===== helpers ===== */

@@ -163,9 +163,9 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
         }}
       >
         <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-          <FaCommentDots className="w-6 h-6" />
+          <FaCommentDots className="w-7 h-7" />
         </div>
-        <span className="text-xs text-white font-semibold text-center">제안하기</span>
+        <span className="text-sm text-white font-semibold text-center" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>제안하기</span>
       </button>
 
       {/* 툴팁 */}
@@ -235,13 +235,13 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
       )}
 
       {/* 제어형 Proposal 모달 */}
-      <ProposalAction open={proposalOpen} onClose={() => { setProposalOpen(false); setIsModalOpen(false); }} onBackToMenu={() => { setProposalOpen(false); setIsModalOpen(true); }} targetUserId={targetUserId} />
+      <ProposalAction open={proposalOpen} onClose={() => { setProposalOpen(false); setIsModalOpen(false); }} onBackToMenu={() => { setProposalOpen(false); setIsModalOpen(true); }} targetUserId={targetUserId} initialProfile={profile as any} />
 
       {/* 제어형 JobOffer 모달 */}
-      <JobOfferAction open={jobOfferOpen} onClose={() => { setJobOfferOpen(false); setIsModalOpen(false); }} onBackToMenu={() => { setJobOfferOpen(false); setIsModalOpen(true); }} targetUserId={targetUserId} />
+      <JobOfferAction open={jobOfferOpen} onClose={() => { setJobOfferOpen(false); setIsModalOpen(false); }} onBackToMenu={() => { setJobOfferOpen(false); setIsModalOpen(true); }} targetUserId={targetUserId} initialProfile={profile as any} />
 
       {/* 제어형 GeneralMessage 모달 */}
-      <GeneralMessageAction open={generalOpen} onClose={() => { setGeneralOpen(false); setIsModalOpen(false); }} onBackToMenu={() => { setGeneralOpen(false); setIsModalOpen(true); }} targetUserId={targetUserId} />
+      <GeneralMessageAction open={generalOpen} onClose={() => { setGeneralOpen(false); setIsModalOpen(false); }} onBackToMenu={() => { setGeneralOpen(false); setIsModalOpen(true); }} targetUserId={targetUserId} initialProfile={profile as any} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
+import { useNavigate } from "react-router-dom";
 import { NotificationPrefsApi } from "../../api/notificationPrefsApi";
 
 // 공통 토글 색상 (청록)
@@ -83,6 +84,7 @@ const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
 );
 
 const NotificationSettingPage: React.FC = () => {
+    const navigate = useNavigate();
 	const [prefs, setPrefs] = useState<NotificationPrefs>(defaultPrefs);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [saving, setSaving] = useState<boolean>(false);
@@ -132,14 +134,21 @@ const NotificationSettingPage: React.FC = () => {
 	return (
 		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				<div className="flex gap-6">
+				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					{/* 좌측 사이드바 */}
-					<aside className="w-[320px] shrink-0">
+					<aside className="hidden lg:block w-full lg:w-[320px] shrink-0">
 						<Sidebar />
 					</aside>
 
 					{/* 우측 콘텐츠 */}
-					<main className="flex-1 space-y-6">
+					<main className="flex-1 space-y-0">
+						{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
+						<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
+							<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+							<div className="justify-self-center text-[16px] font-medium text-center">이메일/SMS 알림</div>
+							<span />
+						</div>
+						<div className="space-y-6">
 						<Card title="계정 활동 알림">
 							<Row
 								title="커뮤니티 댓글 멘션"
@@ -189,6 +198,7 @@ const NotificationSettingPage: React.FC = () => {
 								onChange={setField("eventNewsletter")}
 							/>
 						</Card>
+						</div>
 					</main>
 				</div>
 			</div>

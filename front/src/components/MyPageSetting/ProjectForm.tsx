@@ -129,31 +129,44 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 				</div>
 			</div>
 
-			{/* 참여 기간 */}
-			<div>
-				<label className="block text-[13px] text-[#6B7280] mb-2">참여 기간 <span className="text-green-500">*</span></label>
-				<div className="flex items-start gap-6 flex-wrap md:flex-nowrap">
-					<div className="flex items-start gap-4">
-						<div className="relative">
-							<input type="text" maxLength={4} value={startYear} onChange={(e)=>setStartYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-[180px] min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${startYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="시작년도" aria-invalid={!!startYearError} />
-							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{startYear.length}/4</span>
-							{startYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{startYearError}</p>}
+				{/* 참여 기간 */}
+				<div>
+					<label className="block text-[13px] text-[#6B7280] mb-2">참여 기간 <span className="text-green-500">*</span></label>
+					{/* 모바일은 세로, md 이상은 그리드로 좌/좌월/하이픈/우/우월/체크박스 */}
+					<div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_1fr_auto_1fr_1fr_auto] md:items-start md:gap-x-3 md:gap-y-0">
+						{/* 왼쪽(시작) */}
+						<div className="flex items-start gap-2 flex-1 min-w-0 md:contents">
+							<div className="relative basis-1/2 md:basis-auto min-w-0">
+								<input type="text" maxLength={4} value={startYear} onChange={(e)=>setStartYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${startYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="시작년도" aria-invalid={!!startYearError} />
+								<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{startYear.length}/4</span>
+								{startYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{startYearError}</p>}
+							</div>
+							<MonthSelect value={startMonth} onChange={setStartMonth} className="basis-1/2 md:basis-auto min-w-0" />
 						</div>
-						<MonthSelect value={startMonth} onChange={setStartMonth} className="w-[180px]" />
-					</div>
-					<span className="text-[#6B7280] text-[14px] mx-2 self-center">-</span>
-					<div className="flex items-start gap-4">
-						<div className="relative">
-							<input type="text" maxLength={4} value={endYear} onChange={(e)=>setEndYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-[180px] min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${endYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}` + disabledInputCls} placeholder="종료년도" disabled={isOngoing} aria-invalid={!!endYearError} />
-							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{endYear.length}/4</span>
-							{endYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{endYearError}</p>}
+						{/* 구분자: md 이상에서만 표시 (가운데 정렬) */}
+						<span className="hidden md:flex items-center justify-center self-center text-[#6B7280] text-[14px] px-1">-</span>
+						{/* 오른쪽(종료) */}
+						<div className="flex items-start gap-2 flex-1 min-w-0 md:contents">
+							<div className="flex flex-1 min-w-0 gap-2 md:contents md:pr-0">
+								<div className="relative basis-1/2 md:basis-auto min-w-0">
+									<input type="text" maxLength={4} value={endYear} onChange={(e)=>setEndYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${endYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}` + disabledInputCls} placeholder="종료년도" disabled={isOngoing} aria-invalid={!!endYearError} />
+									<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{endYear.length}/4</span>
+									{endYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{endYearError}</p>}
+								</div>
+								<MonthSelect value={endMonth} onChange={setEndMonth} className="basis-1/2 md:basis-auto min-w-0" disabled={isOngoing} />
+							</div>
+							<label className="hidden md:inline-flex items-center gap-2 text-[14px] text-[#111827] ml-0 whitespace-nowrap shrink-0 h-[55px]">
+								<input type="checkbox" className="accent-[#068334]" checked={isOngoing} onChange={(e)=>setIsOngoing(e.target.checked)} />
+								진행중
+							</label>
 						</div>
-						<MonthSelect value={endMonth} onChange={setEndMonth} className="w-[180px]" disabled={isOngoing} />
-						<label className="inline-flex items-center gap-2 text-[14px] text-[#111827] ml-4 whitespace-nowrap shrink-0 h-[55px]">
-							<input type="checkbox" className="accent-[#068334]" checked={isOngoing} onChange={(e)=>setIsOngoing(e.target.checked)} />
-							진행중
-						</label>
 					</div>
+				{/* 진행중 체크박스: md 미만에서는 아래 행으로 분리 */}
+				<div className="mt-3 md:hidden">
+					<label className="inline-flex items-center gap-2 text-[14px] text-[#111827] h-[55px]">
+						<input type="checkbox" className="accent-[#068334]" checked={isOngoing} onChange={(e)=>setIsOngoing(e.target.checked)} />
+						진행중
+					</label>
 				</div>
 			</div>
 

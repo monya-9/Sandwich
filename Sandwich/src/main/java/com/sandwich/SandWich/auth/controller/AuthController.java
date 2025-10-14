@@ -11,6 +11,8 @@ import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.ProfileRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import com.sandwich.SandWich.auth.security.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -41,9 +43,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest req) {
-        TokenResponse tokenResponse = authService.login(req);
-        return ResponseEntity.ok(tokenResponse);
+    public ResponseEntity<?> login(@RequestBody LoginRequest req,
+                                   HttpServletRequest request,
+                                   HttpServletResponse response) {
+        Object result = authService.login(req, request, response);
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/refresh")
