@@ -1,11 +1,12 @@
 // src/pages/challenge/CodeSubmissionListPage.tsx
-import React, { useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { SectionCard, CTAButton } from "../../components/challenge/common";
-import { Heart, Eye, MessageSquare, ChevronLeft } from "lucide-react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { CTAButton, ChallengePageHeader, SubmissionCard } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
-import { getCodeSubmissions, toggleLikeCode } from "../../data/Challenge/submissionsDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { fetchChallengeSubmissions, type SubmissionListItem } from "../../api/submissionApi";
+import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
+import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
 
 export default function CodeSubmissionListPage() {
     const { id: idStr } = useParams();
@@ -13,93 +14,113 @@ export default function CodeSubmissionListPage() {
     const detail = useMemo(() => getChallengeDetail(id) as CodeChallengeDetail, [id]);
     const nav = useNavigate();
 
-    const [cards, setCards] = useState(() =>
-        getCodeSubmissions(id).map((c) => ({ ...c, liked: false }))
-    );
+    // AI 주간 챌린지 데이터 상태
+    const [weeklyData, setWeeklyData] = useState<any>(null);
+    const [loadingWeekly, setLoadingWeekly] = useState(false);
+    const [weeklyError, setWeeklyError] = useState<string | null>(null);
 
-    const toggleLike = (e: React.MouseEvent, sid: number) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setCards((arr) =>
-            arr.map((c) =>
-                c.id === sid ? { ...c, liked: !c.liked, likes: c.liked ? c.likes - 1 : c.likes + 1 } : c
-            )
-        );
-        const target = cards.find((c) => c.id === sid);
-        if (target) toggleLikeCode(id, sid, !target.liked);
-    };
+    // 제출물 데이터 상태
+    const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
+    const [submissionsLoading, setSubmissionsLoading] = useState(false);
 
-    const headerText = `샌드위치 코드 챌린지 투표: ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
+    // AI 주간 챌린지 데이터 로드
+    useEffect(() => {
+        setLoadingWeekly(true);
+        setWeeklyError(null);
+        fetchWeeklyLatest()
+            .then((weekly) => {
+                setWeeklyData(weekly);
+            })
+            .catch((err) => {
+                console.error('주간 챌린지 데이터 로딩 실패:', err);
+                setWeeklyError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                setLoadingWeekly(false);
+            });
+    }, []);
+
+    // 실제 제출물 데이터 로드
+    useEffect(() => {
+        const fetchSubmissions = async () => {
+            setSubmissionsLoading(true);
+            try {
+                const response = await fetchChallengeSubmissions(id, 0, 20);
+                setSubmissions(response.content || []);
+            } catch (error) {
+                console.error('제출물 데이터 로드 실패:', error);
+                setSubmissions([]);
+            } finally {
+                setSubmissionsLoading(false);
+            }
+        };
+
+        fetchSubmissions();
+    }, [id]);
+
+    const headerText = `샌드위치 코드 챌린지 투표: ${(weeklyData?.title || detail.title).replace(/^코드 챌린지:\s*/, "")}`;
 
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-            <div className="mb-4 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => nav(`/challenge/code/${id}`)}
-                        className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
-                        aria-label="뒤로가기"
-                    >
-                        <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">
-                        {headerText}
-                    </h1>
+            <ChallengePageHeader
+                title={loadingWeekly ? "AI 챌린지 정보를 불러오는 중..." : weeklyError ? weeklyError : headerText}
+                onBack={() => nav(`/challenge/code/${id}`)}
+                actionButton={
+                    <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>
+                        코드 제출하기
+                    </CTAButton>
+                }
+            />
+
+            {submissionsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                    <div className="text-center">
+                        <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                            <span className="text-lg font-medium">제출물을 불러오는 중...</span>
+                        </div>
+                    </div>
                 </div>
-
-                {/* Link 대신 onClick navigate로 확실하게 이동 */}
-                <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>
-                    코드 제출하기
-                </CTAButton>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-3">
-                {cards.map((c) => (
-                    <Link key={c.id} to={`/challenge/code/${id}/submissions/${c.id}`} className="block">
-                        <SectionCard bordered className="!p-0 transition-shadow hover:shadow-md">
-                            <div className="p-5">
-                                {/* 헤더 */}
-                                <div className="mb-2 flex items-center gap-2">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                                        {c.authorInitial}
-                                    </div>
-                                    <div className="leading-tight">
-                                        <div className="text-[12.5px] font-semibold text-neutral-900">{c.authorName}</div>
-                                        <div className="text-[12.5px] text-neutral-600">{c.authorRole}</div>
-                                    </div>
-                                </div>
-
-                                <div className="mb-1 text-[14px] font-semibold">{c.title}</div>
-                                <p className="min-h-[72px] text-[13px] leading-6 text-neutral-800">{c.desc}</p>
-
-                                {/* 푸터 */}
-                                <div className="mt-2 flex items-center justify-between text-[12.5px] text-neutral-700">
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={(e) => toggleLike(e, c.id)}
-                                            className={`inline-flex items-center gap-1 ${
-                                                c.liked ? "text-rose-600" : "hover:text-neutral-900"
-                                            }`}
-                                        >
-                                            <Heart className="h-4 w-4" fill={c.liked ? "currentColor" : "none"} />
-                                            {c.likes}
-                                        </button>
-                                        <span className="inline-flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                                            {c.views}
-                    </span>
-                                        <span className="inline-flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                                            {c.comments}
-                    </span>
-                                    </div>
-                                    <span className="text-[12.5px] font-semibold">전체보기</span>
-                                </div>
-                            </div>
-                        </SectionCard>
-                    </Link>
-                ))}
-            </div>
+            ) : submissions.length > 0 ? (
+                <div className="grid gap-5 md:grid-cols-3">
+                    {submissions.filter(submission => submission != null).map((submission, index) => {
+                        // 안전한 ID 추출 (실제 API는 id 필드 사용)
+                        const submissionId = submission?.id || (index + 1);
+                        const safeId = String(submissionId);
+                        
+                        // null/undefined 체크
+                        if (!submission) {
+                            return null;
+                        }
+                        
+                        return (
+                            <SubmissionCard
+                                key={safeId}
+                                submission={{
+                                    id: submissionId,
+                                    authorInitial: (submission.owner?.username || `U${submissionId}`).charAt(0).toUpperCase(),
+                                    authorName: submission.owner?.username || `제출자 ${submissionId}`,
+                                    authorRole: submission.owner?.position || "개발자",
+                                    title: submission.title || `제출물 #${submissionId}`,
+                                    desc: submission.desc || `언어: ${submission.language || 'Unknown'} | 총점: ${submission.totalScore || 0}`,
+                                    likes: submission.likeCount || 0,
+                                    views: submission.viewCount || 0,
+                                    comments: submission.commentCount || 0,
+                                    liked: false
+                                }}
+                                onLike={() => {}}
+                                href={`/challenge/code/${id}/submissions/${submissionId}`}
+                                actionText="전체보기"
+                            />
+                        );
+                    })}
+                </div>
+            ) : (
+                <EmptySubmissionState 
+                    type="CODE" 
+                    onSubmit={() => nav(`/challenge/code/${id}/submit`)} 
+                />
+            )}
         </div>
     );
 }

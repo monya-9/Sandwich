@@ -6,6 +6,16 @@ import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
 import CoverCropper from "./CoverCropper";
 import Toast from "../common/Toast";
+import CustomDropdown from "../common/CustomDropdown";
+
+// 년도 옵션 생성 (최신 년도부터 20년 전까지)
+const getYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  return Array.from({ length: 21 }, (_, i) => (currentYear - i).toString());
+};
+
+// 월 옵션 생성 (01-12)
+const monthOptions = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
 
 interface Props {
   open: boolean;
@@ -116,6 +126,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   const [coverUrl, setCoverUrl] = useState<string>(logoPng);
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null); // 업로드 실패 시 지연 업로드용
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [startYear, setStartYear] = useState<number | "">("");
@@ -199,9 +210,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     [title, startYear, endYear, coverIsUploaded, pendingCoverFile]
   );
 
-  const months: string[] = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
-  const currentYear = new Date().getFullYear();
-  const years: number[] = Array.from({ length: 51 }, (_, i) => currentYear - i);
   // 추가: 기술 스택 옵션 및 토글 헬퍼
   const toolOptions: string[] = [
     "JavaScript","Python","Java","C / C ++","C#","Android","iOS","Docker",
@@ -259,28 +267,30 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   const onCropDone = async (
     square: { blob: Blob; url: string },
-    _rect: { blob: Blob; url: string }
+    rect: { blob: Blob; url: string }
   ) => {
-    // 1) 미리보기 먼저 표시
-    let previewUrl = square.url;
+    setIsImageLoading(true);
+    setCropOpen(false);
+
+    // 1) 미리보기 먼저 표시 (4:3 비율 직사각형 이미지 사용)
+    let previewUrl = rect.url;
     try {
       const dataUrl = await new Promise<string>((resolve) => {
         try {
           const fr = new FileReader();
-          fr.onload = () => resolve(String(fr.result || square.url));
-          fr.onerror = () => resolve(square.url);
-          fr.readAsDataURL(square.blob);
+          fr.onload = () => resolve(String(fr.result || rect.url));
+          fr.onerror = () => resolve(rect.url);
+          fr.readAsDataURL(rect.blob);
         } catch {
-          resolve(square.url);
+          resolve(rect.url);
         }
       });
       previewUrl = dataUrl;
     } catch {}
     setCoverUrl(previewUrl);
-    setCropOpen(false);
 
     // 2) 업로드 파일 준비 + 우선 pendingCoverFile 세팅(버튼 활성화 보장)
-    const file = new File([square.blob], "cover.jpg", { type: "image/jpeg" });
+    const file = new File([rect.blob], "cover.jpg", { type: "image/jpeg" });
     setPendingCoverFile(file);
 
     try {
@@ -302,6 +312,8 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     } catch (err) {
       // 업로드 실패 or 접근 실패 → 미리보기 유지 + 재시도 위해 pending 유지
       console.warn("커버 업로드/검증 실패, 재시도 필요:", (err as any)?.message);
+    } finally {
+      setIsImageLoading(false);
     }
   };
 
@@ -432,9 +444,19 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           {/* Left column */}
           <div className="p-8 flex flex-col self-start bg-white h-fit border-r border-[#E5E7EB]">
             <div className="text-[16px] font-semibold text-gray-900 mb-3">커버 이미지 <span className="text-blue-500">(필수)</span></div>
-            <div className="w-[360px] aspect-square bg-[#EEF3F3] rounded-[10px] flex items-center justify-center overflow-hidden">
-              {coverUrl ? (
-                <img src={coverUrl} alt="cover" className="w-full h-full object-contain select-none" draggable={false} />
+            <div className="w-[360px] aspect-[4/3] bg-[#EEF3F3] rounded-[10px] flex items-center justify-center overflow-hidden relative">
+              {isImageLoading ? (
+                <div className="flex flex-col items-center justify-center text-neutral-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-2"></div>
+                  <span className="text-sm">이미지 불러오는 중...</span>
+                </div>
+              ) : coverUrl ? (
+                <img 
+                  src={coverUrl} 
+                  alt="cover" 
+                  className={`w-full h-full select-none ${coverUrl === logoPng ? 'object-contain' : 'object-cover object-top'}`} 
+                  draggable={false} 
+                />
               ) : (
                 <div className="w-8 h-8 rounded bg-white/60" />
               )}
@@ -451,7 +473,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               </button>
             </div>
             <div className="w-[360px] mt-2 font-gmarket text-black text-[15px]">
-              커버 이미지 권장 사이즈는 760x760이며, 5MB 이상 파일이나 GIF 파일은 업로드하실 수 없습니다.
+              커버 이미지 권장 사이즈는 4:3 비율이며, 5MB 이상 파일이나 GIF 파일은 업로드하실 수 없습니다.
             </div>
 
           </div>
@@ -471,21 +493,35 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 mb-3">프로젝트 진행 기간</div>
                 <div className="flex items-center gap-3 flex-wrap">
-                                     <select className="border border-[#ADADAD] rounded h-12 px-3 w-40 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={startYear === '' ? '' : Number(startYear)} onChange={e=>setStartYear(e.target.value === '' ? '' : Number(e.target.value))}>
-                     <option value="">년도</option>
-                     {years.map(y => <option key={y} value={y}>{y}</option>)}
-                   </select>
-                  <select className="border border-[#ADADAD] rounded h-12 px-3 w-20 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={startMonth} onChange={e=>setStartMonth(e.target.value)}>
-                    {months.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={startYear === '' ? '' : startYear.toString()}
+                    onChange={(value) => setStartYear(value === '' ? '' : Number(value))}
+                    options={getYearOptions()}
+                    placeholder="년도"
+                    className="w-40"
+                  />
+                  <CustomDropdown
+                    value={startMonth}
+                    onChange={(value) => setStartMonth(value)}
+                    options={monthOptions}
+                    placeholder="월"
+                    className="w-20"
+                  />
                   <span className="text-gray-400">-</span>
-                  <select className="border border-[#ADADAD] rounded h-12 px-3 w-40 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={endYear === '' ? '' : Number(endYear)} onChange={e=>setEndYear(e.target.value === '' ? '' : Number(e.target.value))}>
-                    <option value="">년도</option>
-                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <select className="border border-[#ADADAD] rounded h-12 px-3 w-20 text-[16px] focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" value={endMonth} onChange={e=>setEndMonth(e.target.value)}>
-                    {months.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={endYear === '' ? '' : endYear.toString()}
+                    onChange={(value) => setEndYear(value === '' ? '' : Number(value))}
+                    options={getYearOptions()}
+                    placeholder="년도"
+                    className="w-40"
+                  />
+                  <CustomDropdown
+                    value={endMonth}
+                    onChange={(value) => setEndMonth(value)}
+                    options={monthOptions}
+                    placeholder="월"
+                    className="w-20"
+                  />
                 </div>
               </div>
               <div>

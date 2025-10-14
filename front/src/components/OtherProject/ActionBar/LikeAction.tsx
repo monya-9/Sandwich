@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import Toast from "../../common/Toast";
 
 interface LikeActionProps {
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
+  targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
   targetId: number;
 }
 
