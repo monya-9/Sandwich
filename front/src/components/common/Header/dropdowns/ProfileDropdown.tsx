@@ -54,7 +54,7 @@ const ProfileDropdown = ({ email, username, onLogout }: Props) => {
 
             {/* 테마: 마이페이지 바로 아래 (선 위) */}
             <div className="flex items-center justify-between mb-4 -mx-2">
-                <span className="text-sm text-gray-700 dark:text-gray-300">테마</span>
+                <span className="text-sm text-gray-900 dark:text-white">테마</span>
                 <div className="flex items-center gap-1 rounded-full border border-gray-300 dark:border-white/20 p-1">
                     {/* 시스템 (기본 색상은 라이트와 동일) */}
                     <button

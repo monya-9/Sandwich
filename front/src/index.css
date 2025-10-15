@@ -53,7 +53,7 @@ body {
 /* keep white text as white in dark mode */
 .dark .text-white { color: #ffffff !important; }
 /* ensure strongest titles remain bright */
-.dark .text-gray-900, .dark .text-neutral-900 { color: var(--text-primary) !important; }
+.dark .text-gray-800, .dark .text-neutral-800, .dark .text-gray-900, .dark .text-neutral-900 { color: var(--text-primary) !important; }
 
 /* Background mapping */
 .dark .bg-white { background-color: var(--surface) !important; }
@@ -75,9 +75,7 @@ body {
 /* Gray text → Vercel-like secondary tone */
 .dark .text-gray-500,
 .dark .text-gray-600,
-.dark .text-gray-700,
-.dark .text-gray-800,
-.dark .text-gray-900 { color: var(--text-secondary) !important; }
+.dark .text-gray-700 { color: var(--text-secondary) !important; }
 
 /* Hover helpers (escape Tailwind classes) */
 .dark .hover\:bg-gray-50:hover, .dark .hover\:bg-neutral-50:hover { background-color: #1a1a1a !important; }
@@ -88,7 +86,8 @@ body {
 .dark hr { border-color: var(--border-color); }
 
 /* Common avatar-style circles (rounded + gray bg) unify to header tone */
-.dark .rounded-full.bg-gray-200 { background-color: var(--avatar-bg) !important; color: var(--text-primary) !important; }
+.dark .rounded-full.bg-gray-200, .dark .rounded-full.bg-gray-300, .dark .rounded-full.bg-neutral-200 { background-color: var(--avatar-bg) !important; color: var(--text-primary) !important; }
+.dark .rounded-full.bg-gray-200 *, .dark .rounded-full.bg-gray-300 *, .dark .rounded-full.bg-neutral-200 * { color: var(--text-primary) !important; }
 /* 스크롤은 가능, 바는 숨김 */
 .no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } /* IE/Firefox */

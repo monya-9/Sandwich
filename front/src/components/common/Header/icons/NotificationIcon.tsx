@@ -32,7 +32,7 @@ const NotificationIcon = <E extends As = "span">({
 
     return (
         <Comp className={["relative group", className].filter(Boolean).join(" ")} {...commonProps} {...rest}>
-            <MdNotifications className="w-6 h-6 text-[#232323] dark:text-gray-200 group-hover:text-[#3B3B3B] dark:group-hover:text-white" />
+            <MdNotifications className="w-6 h-6 text-black dark:text-white group-hover:text-gray-700 dark:group-hover:text-white" />
             {hasNew && (
                 <span className="absolute -top-0 -right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
             )}
