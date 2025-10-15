@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
 
 
 @Service
@@ -14,7 +15,21 @@ public class DeployWorkflowService {
         this.workflowFileService = workflowFileService;
     }
 
-    public void commitDeployWorkflow(String token, String owner, String repo, String newBranchName, Long user_id, Long project_id) throws Exception {
+    public void commitDeployWorkflow(String token, String owner, String repo, String newBranchName,
+                                     Map<String, String> sandwichEnv) throws Exception {
+
+        // 1. env 섹션 생성 (Secrets에서 가져오기만 하면 됨)
+        StringBuilder envSection = new StringBuilder("env:\n");
+        if (sandwichEnv != null) {
+            sandwichEnv.keySet().forEach(key -> {
+                envSection.append("  ")
+                        .append(key)
+                        .append(": ${{ secrets.")
+                        .append(key)
+                        .append(" }}\n");
+            });
+        }
+
         String workflowYaml = """
             name: Deploy Project
             
@@ -102,8 +117,6 @@ public class DeployWorkflowService {
                       aws cloudfront create-invalidation \
                       --distribution-id ${{ secrets.SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID }} \
                       --paths "/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/*"
-
-
             """;
 
         String base64 = Base64.getEncoder().encodeToString(workflowYaml.getBytes(StandardCharsets.UTF_8));

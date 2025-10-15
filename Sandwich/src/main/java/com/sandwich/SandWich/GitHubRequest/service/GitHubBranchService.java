@@ -1,8 +1,16 @@
 package com.sandwich.SandWich.GitHubRequest.service;
 
 
+import com.sandwich.SandWich.env.domain.ProjectEnv;
+import com.sandwich.SandWich.env.service.EnvService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.couchbase.CouchbaseProperties;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -12,8 +20,20 @@ public class GitHubBranchService {
     private final GitHubSecretsService gitHubSecretsService;
     private final DeployWorkflowService deployWorkflowService;
     private final EcrCdWorkflowService awsOidcWorkflowService;
+    private final EnvService envService;
 
-    public void createBranchWithFileAndPR(Long userId, Long projectId, String owner, String repo, String baseBranch, String newBranchName, String gitHubToken) throws Exception {
+    public void createBranchWithFileAndPR(
+            Long userId,
+            Long projectId,
+            String owner,
+            String repo,
+            String baseBranch,
+            String newBranchName,
+            String gitHubToken,
+            String frontendBuildCommand,
+            String backendBuildCommand,
+            Map<String, String> sandwichEnv
+    ) throws Exception {
         if (gitHubToken == null || gitHubToken.isEmpty()) {
             throw new IllegalArgumentException("GitHub 토큰이 전달되지 않았습니다.");
         }
@@ -26,11 +46,12 @@ public class GitHubBranchService {
         gitHubApiService.createBranch(gitHubToken, owner, repo, newBranchName, baseSha);
 
         // 3. workflows 커밋 / .sandwich.json 생성 및 커밋
-        workflowFileService.commitSandwichJson(gitHubToken, owner, repo, newBranchName);
+        workflowFileService.commitSandwichJson(gitHubToken, owner, repo, newBranchName,
+                frontendBuildCommand, backendBuildCommand);
         workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
 
         // 4. 배포 워크플로우 커밋
-        deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, userId, projectId);
+        deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, sandwichEnv);
 
         // 5. GitHub Secrets 자동 등록
         String awsRoleArn = System.getenv("AWS_ROLE_ARN");
