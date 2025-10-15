@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
 
 @Service
@@ -14,7 +16,37 @@ public class DeployWorkflowService {
         this.workflowFileService = workflowFileService;
     }
 
-    public void commitDeployWorkflow(String token, String owner, String repo, String newBranchName, Long user_id, Long project_id) throws Exception {
+    public void commitDeployWorkflow(String token, String owner, String repo, String newBranchName,
+                                     Map<String, String> sandwichEnv, List<String> additionalFiles) throws Exception {
+
+        // 1. env 섹션 생성 (Secrets에서 가져오기만 하면 됨)
+        StringBuilder envSection = new StringBuilder("env:\n");
+        if (sandwichEnv != null) {
+            sandwichEnv.keySet().forEach(key -> {
+                envSection.append("  ")
+                        .append(key)
+                        .append(": ${{ secrets.")
+                        .append(key)
+                        .append(" }}\n");
+            });
+        }
+
+        // 2. 추가 파일 다운로드 Step 생성
+        StringBuilder additionalFilesStep = new StringBuilder();
+        if (additionalFiles != null && !additionalFiles.isEmpty()) {
+            additionalFilesStep.append("      - name: Download additional files\n")
+                    .append("        run: |\n")
+                    .append("          mkdir -p additional\n");
+            for (String file : additionalFiles) {
+                additionalFilesStep.append("          aws s3 cp s3://${{ env.S3_BUCKET }}/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/")
+                        .append(file)
+                        .append(" additional/")
+                        .append(file)
+                        .append("\n");
+            }
+        }
+
+        // 3. workflow YAML 생성
         String workflowYaml = """
             name: Deploy Project
             
@@ -57,6 +89,17 @@ public class DeployWorkflowService {
                       aws-access-key-id: ${{ secrets.SANDWICH_USER_AWS_ACCESS_KEY_ID }}
                       aws-secret-access-key: ${{ secrets.SANDWICH_USER_AWS_SECRET_ACCESS_KEY }}
                       aws-region: ${{ env.AWS_REGION }}
+
+                  - name: Download additional files from S3
+                    run: |
+                      ADDITIONAL_FILES=(
+                        $(aws s3 ls s3://sandwich-user-projects/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/deploy/ --recursive | awk '{print $4}')
+                      )
+                      mkdir -p additional
+                      for file in "${ADDITIONAL_FILES[@]}"; do
+                        echo "Downloading $file..."
+                        aws s3 cp s3://sandwich-user-projects/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/deploy/$file additional/$file
+                      done
 
                   - name: Create ECS Cluster
                     run: |
@@ -102,10 +145,9 @@ public class DeployWorkflowService {
                       aws cloudfront create-invalidation \
                       --distribution-id ${{ secrets.SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID }} \
                       --paths "/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/*"
-
-
             """;
 
+        // 4. Base64 인코딩 후 커밋
         String base64 = Base64.getEncoder().encodeToString(workflowYaml.getBytes(StandardCharsets.UTF_8));
         String sha = workflowFileService.getFileSha(token, owner, repo, newBranchName, ".github/workflows/deploy.yml");
         workflowFileService.commitFile(token, owner, repo, newBranchName,
