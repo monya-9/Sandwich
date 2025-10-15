@@ -20,7 +20,7 @@ public class GitHubBranchService {
     private final GitHubSecretsService gitHubSecretsService;
     private final DeployWorkflowService deployWorkflowService;
     private final EcrCdWorkflowService awsOidcWorkflowService;
-    private final EnvService envService;
+    private final AdditionalFileService additionalFileService;
 
     public void createBranchWithFileAndPR(
             Long userId,
@@ -51,7 +51,8 @@ public class GitHubBranchService {
         workflowFileService.createFolderIfNotExists(gitHubToken, owner, repo, newBranchName);
 
         // 4. 배포 워크플로우 커밋
-        deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, sandwichEnv);
+        List<String> additionalFiles = additionalFileService.getS3KeysByUserAndProject(userId, projectId);
+        deployWorkflowService.commitDeployWorkflow(gitHubToken, owner, repo, newBranchName, sandwichEnv, additionalFiles);
 
         // 5. GitHub Secrets 자동 등록
         String awsRoleArn = System.getenv("AWS_ROLE_ARN");
