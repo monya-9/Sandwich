@@ -29,7 +29,7 @@ const SortModal: React.FC<Props> = ({
   const commonButtonStyle = 'px-5 py-2 text-sm rounded-[20px] border transition drop-shadow-md';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 dark:bg-white/10">
       <div className="bg-white rounded-[20px] w-[360px] max-w-full p-4">
 
         {/* 상단 타이틀 + 닫기 버튼 */}

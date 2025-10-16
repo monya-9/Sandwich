@@ -14,11 +14,11 @@ const MAX20 = 20;
 const MAX_FILE_MB = 10;
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-	<div className="text-[14px] text-[#6B7280] mb-2 tracking-[0.01em] leading-[1.7]">{children}</div>
+    <div className="text-[14px] text-[#6B7280] dark:text-white/70 mb-2 tracking-[0.01em] leading-[1.7]">{children}</div>
 );
 
 const Counter: React.FC<{ value: number; max?: number }> = ({ value, max = MAX20 }) => (
-	<span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9CA3AF]">{value}/{max}</span>
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9CA3AF] dark:text-white/40">{value}/{max}</span>
 );
 
 const MyPageSettingPage: React.FC = () => {
@@ -529,7 +529,7 @@ const MyPageSettingPage: React.FC = () => {
 				closable={true}
 				onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
 			/>
-			<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
+            <div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] dark:bg-[var(--bg)] text-black dark:text-white">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
 				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					{/* 좌측 사이드 카드 */}
@@ -546,14 +546,14 @@ const MyPageSettingPage: React.FC = () => {
 								<span />
 							</div>
 						{/* 기본 정보 카드 */}
-						<section className="bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto">
-							<div className="text-[16px] font-medium text-[#111827] mb-6">기본 정보</div>
+                        <section className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto">
+                            <div className="text-[16px] font-medium text-[#111827] dark:text-white mb-6">기본 정보</div>
 
 							{/* 프로필 + 업로드 */}
 							<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-6">
 								<div className="w-[120px] flex flex-col items-center">
 									<div className="relative w-[100px] h-[100px] group">
-										<div className="w-full h-full rounded-full bg-[#F3F4F6] text-black flex items-center justify-center text-[28px] overflow-hidden">
+                                        <div className="w-full h-full rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[28px] overflow-hidden">
 											{avatarUrl ? (
 												<img src={avatarUrl} alt="프로필 이미지" loading="lazy" decoding="async" className="w-full h-full object-cover" />
 											) : (
@@ -590,7 +590,7 @@ const MyPageSettingPage: React.FC = () => {
 										닉네임 <span className="text-green-500">*</span>
 									</span>
 								</FieldLabel>
-								<div className="relative">
+                                <div className="relative">
 												<input
 							type="text"
 							value={userName}
@@ -600,7 +600,7 @@ const MyPageSettingPage: React.FC = () => {
 							maxLength={MAX20}
 							aria-invalid={userInitialized && (!!userNameError || isUserNameEmpty)}
 							aria-describedby={(userInitialized && (!!userNameError || isUserNameEmpty)) ? 'nickname-error' : undefined}
-							className={`w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${(userInitialized && isUserNameEmpty) ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
+                            className={`w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white ${(userInitialized && isUserNameEmpty) ? "border-[#DB2E2E]" : "border-[#E5E7EB] dark:border-[var(--border-color)]"}`}
 						/>
 									<Counter value={userName.length} />
 								</div>
@@ -616,13 +616,13 @@ const MyPageSettingPage: React.FC = () => {
 							<div className="mb-7">
 								<FieldLabel>사용자 이름</FieldLabel>
 								<div className="relative">
-									<input
+                                    <input
 										type="text"
 										value={usernameDisplay}
 										readOnly
 										disabled
 											aria-label="사용자 이름"
-											className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] text-[#6B7280]"
+                                            className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60"
 									/>
 								</div>
 							</div>
@@ -630,8 +630,8 @@ const MyPageSettingPage: React.FC = () => {
 							{/* 샌드위치 URL (뒷부분 슬러그 편집) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-									<div className={`flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border min-w-0 ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}>
-										<div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] bg-[#F3F4F6] border-r border-[#E5E7EB] whitespace-nowrap">sandwich.com/</div>
+                                    <div className={`flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border min-w-0 ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB] dark:border-[var(--border-color)]"}`}>
+                                        <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
 									<input
 										type="text"
 										value={urlSlug}
@@ -649,7 +649,7 @@ const MyPageSettingPage: React.FC = () => {
 											maxLength={20}
 											aria-invalid={!!(slugInitialized && slugError)}
 											aria-describedby={(slugInitialized && slugError) ? 'slug-error' : undefined}
-											className={`flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white min-w-0`}
+                                            className={`flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white dark:bg-[var(--surface)] dark:text-white min-w-0`}
 									/>
 								</div>
 									{slugInitialized && slugError && (
@@ -668,7 +668,7 @@ const MyPageSettingPage: React.FC = () => {
 										placeholder="띄어쓰기 포함 20자 이내로 입력해주세요."
 											aria-label="한 줄 프로필"
 											maxLength={MAX20}
-											className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+                                        className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 									/>
 									<Counter value={oneLineProfile.length} />
 								</div>
@@ -679,7 +679,7 @@ const MyPageSettingPage: React.FC = () => {
 								<FieldLabel>작업 분야</FieldLabel>
 								<button onClick={onOpenWorkModal} aria-label="작업 분야 설정" className="text-[13px] text-[#068334] hover:underline">작업 분야 설정</button>
 							</div>
-							<div className={`text-[13px] mb-7 ${workFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
+                            <div className={`text-[13px] mb-7 ${workFields.length === 0 ? "text-[#ADADAD]" : "text-black dark:text-white"}`}>
 								{workFields.length === 0 ? "선택된 작업 분야가 없습니다." : workFields.join(", ")}
 							</div>
 
@@ -688,19 +688,19 @@ const MyPageSettingPage: React.FC = () => {
 								<FieldLabel>관심 분야</FieldLabel>
 								<button onClick={onOpenInterestModal} aria-label="관심 분야 설정" className="text-[13px] text-[#068334] hover:underline">관심 분야 설정</button>
 							</div>
-							<div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
+                            <div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black dark:text-white"}`}>
 								{interestFields.length === 0 ? "선택된 관심 분야가 없습니다." : interestFields.join(", ")}
 														</div>
 
 
 							<div className="mt-8 mb-3"><FieldLabel>소개</FieldLabel></div>
-							<textarea
+                            <textarea
 								value={bio}
 								onChange={onBioChange}
 								rows={5}
 								placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
 								aria-label="소개"
-								className="w-full rounded-[10px] border border-[#E5E7EB] p-3 outline-none text-[14px] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+                                className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 							/>
 						</section>
 

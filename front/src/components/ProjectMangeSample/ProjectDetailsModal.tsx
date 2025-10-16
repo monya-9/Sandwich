@@ -40,7 +40,7 @@ const Backdrop: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 
 const ModalFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-    <div className="relative bg-white w-[1500px] max-w-[95%] rounded-xl shadow-xl h-[720px] flex flex-col overflow-hidden font-gmarket text-[#232323] leading-[1.55] text-[16px]">
+    <div className="relative bg-white dark:bg-[var(--surface)] w-[1500px] max-w-[95%] rounded-xl shadow-xl h-[720px] flex flex-col overflow-hidden font-gmarket text-[#232323] dark:text-white leading-[1.55] text-[16px] border border-black/10 dark:border-[var(--border-color)]">
       {children}
     </div>
   </div>
@@ -80,10 +80,10 @@ const MediaPicker: React.FC<{
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-[760px] max-w-[95%] rounded-xl shadow-xl max-h-[85vh] overflow-hidden">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
-          <div className="text-[18px] font-semibold">콘텐츠에서 선택하기</div>
-          <button type="button" className="w-10 h-10 text-[28px] leading-none" onClick={onClose}>×</button>
+      <div className="relative bg-white dark:bg-[var(--surface)] w-[760px] max-w-[95%] rounded-xl shadow-xl max-h-[85vh] overflow-hidden border border-black/10 dark:border-[var(--border-color)]">
+        <div className="px-6 py-4 border-b border-black/10 dark:border-[var(--border-color)] flex items-center justify-between">
+          <div className="text-[18px] font-semibold text-black dark:text-white">콘텐츠에서 선택하기</div>
+          <button type="button" className="w-10 h-10 text-[28px] leading-none text-black dark:text-white" onClick={onClose}>×</button>
         </div>
         <div className="p-6 overflow-auto" style={{maxHeight: '65vh'}}>
           {images.length ? (
@@ -95,7 +95,7 @@ const MediaPicker: React.FC<{
                     key={idx}
                     type="button"
                     onClick={()=> setSelected(src)}
-                    className={`relative border rounded overflow-hidden aspect-[4/3] bg-[#F3F4F6] ${isSelected ? 'ring-2 ring-teal-500' : 'hover:ring-2 hover:ring-black/20'}`}
+                    className={`relative border rounded overflow-hidden aspect-[4/3] bg-[#F3F4F6] dark:bg-white/5 border-black/10 dark:border-[var(--border-color)] ${isSelected ? 'ring-2 ring-teal-500' : 'hover:ring-2 hover:ring-black/20 dark:hover:ring-white/10'}`}
                   >
                     <img src={src} alt="library-item" className="w-full h-full object-cover" />
                     {isSelected && (
@@ -106,12 +106,12 @@ const MediaPicker: React.FC<{
               })}
             </div>
           ) : (
-            <div className="text-gray-500">텍스트 에디터에서 사용한 이미지가 없습니다.</div>
+            <div className="text-gray-500 dark:text-white/70">텍스트 에디터에서 사용한 이미지가 없습니다.</div>
           )}
         </div>
-        <div className="px-6 py-3 border-t flex justify-end gap-2">
-          <button type="button" className="h-9 px-4 border rounded" onClick={onClose}>취소</button>
-          <button type="button" className="h-9 px-4 rounded text-white disabled:opacity-40" style={{background:'#111'}} disabled={!selected} onClick={()=> selected && onConfirm(selected)}>완료</button>
+        <div className="px-6 py-3 border-t border-black/10 dark:border-[var(--border-color)] flex justify-end gap-2">
+          <button type="button" className="h-9 px-4 border border-[#E5E7EB] dark:border-[var(--border-color)] rounded bg-white dark:bg-[var(--surface)] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5" onClick={onClose}>취소</button>
+          <button type="button" className="h-9 px-4 rounded text-white ring-1 ring-black/10 dark:ring-white/15 border border-black/20 dark:border-white/10 disabled:opacity-40" style={{background:'#111'}} disabled={!selected} onClick={()=> selected && onConfirm(selected)}>완료</button>
         </div>
       </div>
     </div>
@@ -435,16 +435,16 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <div className="text-[22px] font-semibold">세부 정보 설정</div>
-          <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center text-[40px] leading-none">×</button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-[var(--border-color)]">
+          <div className="text-[22px] font-semibold text-black dark:text-white">세부 정보 설정</div>
+          <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center text-[40px] leading-none text-black dark:text-white">×</button>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden">
           <div className="grid items-start h-full pt-0 gap-x-20" style={{ gridTemplateColumns: '420px 1fr', gridAutoRows: 'auto' }}>
           {/* Left column */}
-          <div className="p-8 flex flex-col self-start bg-white h-fit border-r border-[#E5E7EB]">
-            <div className="text-[16px] font-semibold text-gray-900 mb-3">커버 이미지 <span className="text-blue-500">(필수)</span></div>
-            <div className="w-[360px] aspect-[4/3] bg-[#EEF3F3] rounded-[10px] flex items-center justify-center overflow-hidden relative">
+          <div className="p-8 flex flex-col self-start bg-white dark:bg-[var(--surface)] h-fit border-r border-[#E5E7EB] dark:border-[var(--border-color)]">
+            <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">커버 이미지 <span className="text-blue-500">(필수)</span></div>
+            <div className="w-[360px] aspect-[4/3] bg-[#EEF3F3] dark:bg-white/5 rounded-[10px] flex items-center justify-center overflow-hidden relative">
               {isImageLoading ? (
                 <div className="flex flex-col items-center justify-center text-neutral-500">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-2"></div>
@@ -461,18 +461,18 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <div className="w-8 h-8 rounded bg-white/60" />
               )}
             </div>
-            <div className="w-[360px] mt-6 border border-[#ADADAD] rounded-[8px] overflow-hidden grid grid-cols-2 relative">
-              <div className="absolute top-px bottom-px left-1/2 w-px bg-[#ADADAD]" />
-              <button type="button" className="h-[64px] bg-white flex flex-col items-center justify-center gap-1" onClick={openPicker}>
-                <FiImage className="text-[#232323]" />
-                <span className="font-gmarket text-black">콘텐츠에서 선택</span>
+            <div className="w-[360px] mt-6 border border-[#ADADAD] dark:border-[var(--border-color)] rounded-[8px] overflow-hidden grid grid-cols-2 relative">
+              <div className="absolute top-px bottom-px left-1/2 w-px bg-[#ADADAD] dark:bg-[var(--border-color)]" />
+              <button type="button" className="h-[64px] bg-white dark:bg-[var(--surface)] flex flex-col items-center justify-center gap-1" onClick={openPicker}>
+                <FiImage className="text-[#232323] dark:text-white" />
+                <span className="font-gmarket text-black dark:text-white">콘텐츠에서 선택</span>
               </button>
-              <button type="button" className="h-[64px] bg-white flex flex-col items-center justify-center gap-1" onClick={handleLocalUpload}>
-                <HiOutlineUpload className="text-[#232323]" />
-                <span className="font-gmarket text-black">직접 업로드</span>
+              <button type="button" className="h-[64px] bg-white dark:bg-[var(--surface)] flex flex-col items-center justify-center gap-1" onClick={handleLocalUpload}>
+                <HiOutlineUpload className="text-[#232323] dark:text-white" />
+                <span className="font-gmarket text-black dark:text-white">직접 업로드</span>
               </button>
             </div>
-            <div className="w-[360px] mt-2 font-gmarket text-black text-[15px]">
+            <div className="w-[360px] mt-2 font-gmarket text-black dark:text-white/70 text-[15px]">
               커버 이미지 권장 사이즈는 4:3 비율이며, 5MB 이상 파일이나 GIF 파일은 업로드하실 수 없습니다.
             </div>
 
@@ -483,15 +483,15 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             <div className="flex-1 space-y-6">
               {/* 섹션 1: 기본 정보 */}
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">제목 <span className="text-blue-500">(필수)</span></div>
-                <input className="border border-[#ADADAD] rounded px-5 h-14 w-full text-[17px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="제목을 입력하세요." value={title} onChange={e=>setTitle(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">제목 <span className="text-blue-500">(필수)</span></div>
+                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-14 w-full text-[17px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="제목을 입력하세요." value={title} onChange={e=>setTitle(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">한 줄 소개</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-14 w-full text-[17px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="프로젝트에 대해 간단하게 설명해주세요" value={summary} onChange={e=>setSummary(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">한 줄 소개</div>
+                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-14 w-full text-[17px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="프로젝트에 대해 간단하게 설명해주세요" value={summary} onChange={e=>setSummary(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">프로젝트 진행 기간</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프로젝트 진행 기간</div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <CustomDropdown
                     value={startYear === '' ? '' : startYear.toString()}
@@ -507,7 +507,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                     placeholder="월"
                     className="w-20"
                   />
-                  <span className="text-gray-400">-</span>
+                  <span className="text-gray-400 dark:text-white/60">-</span>
                   <CustomDropdown
                     value={endYear === '' ? '' : endYear.toString()}
                     onChange={(value) => setEndYear(value === '' ? '' : Number(value))}
@@ -525,18 +525,18 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 </div>
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">프로젝트 여부</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프로젝트 여부</div>
                 <div className="flex flex-col gap-3 text-[16px]">
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" className="scale-110 accent-black" checked={!isTeam} onChange={(e)=>setIsTeam(!e.target.checked)} /> 개인 프로젝트
+                    <input type="checkbox" className="scale-110 accent-black" checked={!isTeam} onChange={(e)=>setIsTeam(!e.target.checked)} /> <span className="text-black dark:text-white">개인 프로젝트</span>
                   </label>
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" className="scale-110 accent-black" checked={isTeam} onChange={(e)=>setIsTeam(e.target.checked)} /> 팀 프로젝트
+                    <input type="checkbox" className="scale-110 accent-black" checked={isTeam} onChange={(e)=>setIsTeam(e.target.checked)} /> <span className="text-black dark:text-white">팀 프로젝트</span>
                   </label>
                   <div className="flex items-center gap-3">
-                    <span className={isTeam ? "text-gray-900" : "text-gray-400"}>팀원 구성원 수</span>
+                    <span className={isTeam ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-white/50"}>팀원 구성원 수</span>
                     <select
-                      className={`border border-[#ADADAD] rounded h-12 px-3 w-24 text-[16px] focus:outline-none ${isTeam ? 'focus:ring-2 focus:ring-black/15 focus:border-black bg-white' : 'bg-[#F3F4F6] text-gray-400 cursor-not-allowed opacity-70'}`}
+                      className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded h-12 px-3 w-24 text-[16px] focus:outline-none ${isTeam ? 'focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white' : 'bg-[#F3F4F6] dark:bg-white/5 text-gray-400 dark:text-white/40 cursor-not-allowed opacity-70'}`}
                       value={teamSize === '' ? '01' : String(teamSize).padStart(2,'0')}
                       onChange={e=>setTeamSize(Number(e.target.value))}
                       disabled={!isTeam}
@@ -551,21 +551,21 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
               {/* 섹션 2: 저장소/빌드/포트 */}
               <div className="pt-4">
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">깃 이름</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="owner (깃 사용자/조직)" value={ghOwner} onChange={e=>setGhOwner(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">깃 이름</div>
+                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="owner (깃 사용자/조직)" value={ghOwner} onChange={e=>setGhOwner(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">깃 레포명</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="repo (레포 이름)" value={ghRepo} onChange={e=>setGhRepo(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">깃 레포명</div>
+                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="repo (레포 이름)" value={ghRepo} onChange={e=>setGhRepo(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">레포 메인 브랜치명</div>
-                <input className="border border-[#ADADAD] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="baseBranch (기본 main)" value={ghBase} onChange={e=>setGhBase(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">레포 메인 브랜치명</div>
+                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="baseBranch (기본 main)" value={ghBase} onChange={e=>setGhBase(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">깃 토큰</div>
-                <input type="password" className="border border-[#ADADAD] rounded px-4 h-12 w-full text-[16px] bg-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
-                <div className="text-[12px] text-gray-500 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">깃 토큰</div>
+                <input type="password" className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 h-12 w-full text-[16px] bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
+                <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
               </div>
               {ghResult && (
                 <div className="text-sm mt-2 text-gray-600">{ghResult}</div>
@@ -573,26 +573,26 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
               {/* 섹션 3: 카테고리 및 상세 설명 */}
               <div className="pt-4">
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">카테고리</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">카테고리</div>
                 <div className="flex flex-wrap gap-x-6 gap-y-3">
                   {toolOptions.map(opt => (
-                    <label key={opt} className="flex items-center gap-2 text-[15px]">
+                    <label key={opt} className="flex items-center gap-2 text-[15px] text-black dark:text-white">
                       <input type="checkbox" className="scale-110 accent-black" checked={tools.includes(opt)} onChange={()=>toggleTool(opt)} /> {opt}
                     </label>
                   ))}
                 </div>
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">프로젝트 상세 설명</div>
-                <textarea className="border border-[#ADADAD] rounded p-4 w-full min-h-[180px] text-[15px] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white" placeholder="프로젝트 소개, 주요 기능, 구현 내용 등 상세 설명을 입력해주세요" value={detailDescription} onChange={e=>setDetailDescription(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프로젝트 상세 설명</div>
+                <textarea className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded p-4 w-full min-h-[180px] text-[15px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="프로젝트 소개, 주요 기능, 구현 내용 등 상세 설명을 입력해주세요" value={detailDescription} onChange={e=>setDetailDescription(e.target.value)} />
               </div>
 
               {/* 섹션 4: QR만 유지 */}
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 mb-3">QR 코드 자동 생성 여부 (기본 자동 생성)</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">QR 코드 자동 생성 여부 (기본 자동 생성)</div>
                 <div className="flex items-center gap-8">
-                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="accent-black" checked={qrCodeEnabled} onChange={()=>setQrCodeEnabled(true)} /> 생성</label>
-                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="accent-black" checked={!qrCodeEnabled} onChange={()=>setQrCodeEnabled(false)} /> 생성 안 함</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="accent-black" checked={qrCodeEnabled} onChange={()=>setQrCodeEnabled(true)} /> <span className="text-black dark:text-white">생성</span></label>
+                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="accent-black" checked={!qrCodeEnabled} onChange={()=>setQrCodeEnabled(false)} /> <span className="text-black dark:text-white">생성 안 함</span></label>
                 </div>
               </div>
             </div>
@@ -600,9 +600,16 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           <div className="px-6 pb-10" />
           </div>
         </div>
-        <div className="px-6 py-4 border-t flex justify-end gap-2">
-          <button className="h-10 px-4 border rounded" onClick={onClose} type="button">닫기</button>
-          <button className="h-10 px-5 bg-black text-white rounded disabled:opacity-50" disabled={!isStep1Valid || submitting} onClick={onSubmit} type="button">업로드</button>
+        <div className="px-6 py-4 border-t border-black/10 dark:border-[var(--border-color)] flex justify-end gap-2">
+          <button className="h-10 px-4 border border-[#ADADAD] dark:border-[var(--border-color)] rounded bg-white dark:bg-[var(--surface)] text-black dark:text-white" onClick={onClose} type="button">닫기</button>
+          <button
+            className="h-10 px-5 rounded text-white bg-[#16A34A] hover:bg-[#12863D] shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-colors disabled:bg-[#F3F4F6] dark:disabled:bg-white/10 disabled:text-[#6B7280] dark:disabled:text-white/40 disabled:border disabled:border-[#E5E7EB] dark:disabled:border-[var(--border-color)] disabled:ring-0 disabled:shadow-none"
+            disabled={!isStep1Valid || submitting}
+            onClick={onSubmit}
+            type="button"
+          >
+            업로드
+          </button>
         </div>
         {pickerOpen && (
           <MediaPicker open={pickerOpen} images={libraryImages || []} onClose={()=>setPickerOpen(false)} onConfirm={(src)=>{

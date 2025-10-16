@@ -412,7 +412,7 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
       <div className="fixed inset-0 z-[999999] flex items-center justify-center isolate" role="dialog" aria-modal="true">
       <div className="absolute inset-0 z-0 bg-black/60" />
       <div
-        className="relative z-10 bg-white w-[800px] max-w-[90%] rounded-xl shadow-2xl ring-1 ring-black/5 p-0 opacity-100"
+        className="relative z-10 bg-white dark:bg-[var(--surface)] w-[800px] max-w-[90%] rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 p-0 opacity-100 border border-black/10 dark:border-[var(--border-color)]"
         style={{
           filter: 'none',
           WebkitFilter: 'none',
@@ -423,26 +423,26 @@ const CoverCropper: React.FC<CoverCropperProps> = ({ open, src, onClose, onCropp
           isolation: 'isolate'
         }}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <div className="text-[18px] font-semibold">커버 자르기</div>
-          <button type="button" className="w-10 h-10 text-[28px] leading-none" onClick={onClose}>×</button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 dark:border-[var(--border-color)]">
+          <div className="text-[18px] font-semibold text-black dark:text-white">커버 자르기</div>
+          <button type="button" className="w-10 h-10 text-[28px] leading-none text-black dark:text-white" onClick={onClose}>×</button>
         </div>
         <div className="p-5 space-y-6">
           <div>
-            <div className="text-sm mb-2">4:3 비율의 커버를 지정해주세요.</div>
-            <div className="relative bg-white rounded-none border border-[#E5E7EB] overflow-hidden" style={{ width: stage.w, height: stage.h }}>
+            <div className="text-sm mb-2 text-black dark:text-white/70">4:3 비율의 커버를 지정해주세요.</div>
+            <div className="relative bg-white dark:bg-[var(--surface)] rounded-none border border-[#E5E7EB] dark:border-[var(--border-color)] overflow-hidden" style={{ width: stage.w, height: stage.h }}>
               {img && (
                 <img src={img.src} alt="source1" draggable={false} className="select-none" style={{ position:'absolute', left: offset.x, top: offset.y, width: imgW, height: imgH }} />
               )}
-              <div className="absolute border-2 border-[#00C2A8] shadow-[0_0_0_20000px_rgba(0,0,0,0.35)] box-border" style={{ left: boxRect.x, top: boxRect.y, width: boxRect.w, height: boxRect.h, cursor:'move' }} onMouseDown={handleDownRect}>
+              <div className="absolute border-2 border-[#00C2A8] shadow-[0_0_0_20000px_rgba(0,0,0,0.45)] box-border" style={{ left: boxRect.x, top: boxRect.y, width: boxRect.w, height: boxRect.h, cursor:'move' }} onMouseDown={handleDownRect}>
                 {renderHandles(onDownRect)}
               </div>
             </div>
           </div>
         </div>
-        <div className="px-5 py-3 border-t flex justify-end gap-2">
-          <button type="button" className="h-10 px-4 border rounded" onClick={onClose}>취소</button>
-          <button type="button" className="h-10 px-5 bg-black text-white rounded" onClick={doCrop}>완료</button>
+        <div className="px-5 py-3 border-t border-black/10 dark:border-[var(--border-color)] flex justify-end gap-2">
+          <button type="button" className="h-10 px-4 border border-[#E5E7EB] dark:border-[var(--border-color)] rounded bg-white dark:bg-[var(--surface)] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5" onClick={onClose}>취소</button>
+          <button type="button" className="h-10 px-5 bg-black text-white rounded ring-1 ring-black/10 dark:ring-white/15 border border-black/20 dark:border-white/10" onClick={doCrop}>완료</button>
         </div>
       </div>
     </div>

@@ -145,7 +145,7 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
           disabled={loading}
         >
           <div
-            className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 transition-all duration-150
+            className={`w-14 h-14 rounded-full shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1 transition-all duration-150
               ${liked ? "bg-[#FF6688]" : "bg-white"}`}
             style={{ position: "relative" }}
           >

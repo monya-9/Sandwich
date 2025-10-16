@@ -144,11 +144,11 @@ export default function ProfileAction({
   );
 
   const avatar = profileImageUrl ? (
-    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full overflow-hidden ring-1 ring-gray-300 focus:outline-none" aria-label="프로필로 이동">
+    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-[var(--border-color)] focus:outline-none" aria-label="프로필로 이동">
       <img src={profileImageUrl} alt="avatar" className="w-full h-full object-cover" />
     </button>
   ) : (
-    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center text-2xl ring-1 ring-gray-300 focus:outline-none" aria-label="프로필로 이동">
+    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-gray-700 dark:text-white font-bold flex items-center justify-center text-2xl ring-1 ring-gray-300 dark:ring-[var(--border-color)] focus:outline-none" aria-label="프로필로 이동">
       {(email?.[0] || userName?.[0] || "?").toUpperCase()}
     </button>
   );
@@ -184,7 +184,7 @@ export default function ProfileAction({
         {showLoginPrompt && (<LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />)}
 
         <button ref={btnRef} className="flex flex-col items-center gap-1 group" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={goProfile}>
-          <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
+          <div className="w-14 h-14 rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1">
             <FaUser className="w-7 h-7" />
           </div>
           <span className="text-sm text-white font-semibold text-center" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>프로필</span>

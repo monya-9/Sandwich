@@ -70,7 +70,7 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 	const requiredFilled = name.trim().length > 0 && org.trim().length > 0;
 	const yearValid = !!year && !yearError && year.length === 4;
 	const isValid = requiredFilled && yearValid;
-	const completeBtnCls = `px-4 h-[36px] rounded-[10px] text-[14px] ${isValid && !saving ? "bg-[#21B284] text-white" : "bg-[#E5E7EB] text-[#111827]"}`;
+    const completeBtnCls = `px-4 h-[36px] rounded-[10px] text-[14px] ${isValid && !saving ? "bg-[#21B284] text-white" : "bg-[#E5E7EB] text-[#111827]"}`;
 
 	const buildTitle = () => {
 		const n = name.trim();
@@ -119,28 +119,28 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 			/>
 			<div className="space-y-5">
 			{/* 수상 부문 / 이름 */}
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
-					<label className="block text-[13px] text-[#6B7280] mb-2">수상 부문</label>
-					<input type="text" value={category} onChange={(e)=>setCategory(e.target.value)} className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10" placeholder="예) 학술대회" />
+                    <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">수상 부문</label>
+                    <input type="text" value={category} onChange={(e)=>setCategory(e.target.value)} className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="예) 학술대회" />
 				</div>
 				<div>
-					<label className="block text-[13px] text-[#6B7280] mb-2">이름 <span className="text-green-500">*</span></label>
-					<input type="text" value={name} onChange={(e)=>setName(e.target.value)} className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10" placeholder="예) 최우수상" />
+                    <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">이름 <span className="text-green-500">*</span></label>
+                    <input type="text" value={name} onChange={(e)=>setName(e.target.value)} className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="예) 최우수상" />
 				</div>
 			</div>
 
 			{/* 수상 기관 / 수상일 */}
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
-					<label className="block text-[13px] text-[#6B7280] mb-2">수상 기관 <span className="text-green-500">*</span></label>
-					<input type="text" value={org} onChange={(e)=>setOrg(e.target.value)} className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10" placeholder="예) 한국정보과학회" />
+                    <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">수상 기관 <span className="text-green-500">*</span></label>
+                    <input type="text" value={org} onChange={(e)=>setOrg(e.target.value)} className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="예) 한국정보과학회" />
 				</div>
 				<div>
-					<label className="block text-[13px] text-[#6B7280] mb-2">수상일 <span className="text-green-500">*</span></label>
+                    <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">수상일 <span className="text-green-500">*</span></label>
 						<div className="flex items-start gap-2 flex-nowrap">
 						<div className="relative flex-1 min-w-[120px]">
-							<input type="text" maxLength={4} value={year} onChange={(e)=>setYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${yearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"}`} placeholder="수상년도" aria-invalid={!!yearError} />
+                            <input type="text" maxLength={4} value={year} onChange={(e)=>setYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${yearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}`} placeholder="수상년도" aria-invalid={!!yearError} />
 							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{year.length}/4</span>
 							{yearError && <p className="mt-1 text-[12px] text-[#EF4444]">{yearError}</p>}
 						</div>
@@ -150,18 +150,18 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 			</div>
 
 			{/* 설명 */}
-			<div>
-				<label className="block text-[13px] text-[#6B7280] mb-2">설명</label>
-				<textarea value={desc} onChange={(e)=>setDesc(e.target.value)} rows={6} className="w-full rounded-[10px] border border-[#E5E7EB] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10" placeholder="예) 맞춤형 대외활동 플랫폼 서비스를 개발하여 론칭하였습니다." />
+            <div>
+                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명</label>
+                <textarea value={desc} onChange={(e)=>setDesc(e.target.value)} rows={6} className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="예) 맞춤형 대외활동 플랫폼 서비스를 개발하여 론칭하였습니다." />
 			</div>
 
-			<div className="flex items-center justify-between pt-1">
-				<label className="inline-flex items-center gap-2 text-[14px] text-[#111827]">
-					<input type="checkbox" checked={isMain} onChange={(e)=>setIsMain(e.target.checked)} />
+            <div className="flex items-center justify-between pt-1">
+                <label className="inline-flex items-center gap-2 text-[14px] text-[#111827] dark:text-white">
+                    <input type="checkbox" className="accent-[#068334]" checked={isMain} onChange={(e)=>setIsMain(e.target.checked)} />
 					대표 커리어 설정
 				</label>
 				<div className="inline-flex items-center gap-3">
-					<button onClick={onCancel} className="px-4 h-[36px] rounded-[10px] border border-[#E5E7EB] bg-white text-[14px]">취소</button>
+                    <button onClick={onCancel} className="px-4 h-[36px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-[14px] dark:text-white">취소</button>
 					<button onClick={handleSave} disabled={!isValid || saving} className={completeBtnCls}>완료</button>
 				</div>
 			</div>
