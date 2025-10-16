@@ -170,7 +170,7 @@ public class ChallengeSyncService {
         d.setTitle(r.data().title());
         d.setSummary(r.data().summary());
         d.setDescription(null);
-        d.setMustHave(r.data().must());     // 필드명이 must → mustHave로 매핑
+        d.setMustHave(r.data().must_have());
         d.setRequirements(null);
         d.setTips(null);
         req.setData(d);
