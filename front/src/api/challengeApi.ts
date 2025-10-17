@@ -175,3 +175,119 @@ export async function fetchAndSyncAiWeekly(week?: string): Promise<AiSyncRespons
   });
   return res.data;
 }
+
+export type ChallengeRuleJson = {
+  ym?: string;       // YYYY-MM for portfolio
+  week?: string;     // YYYYWww for code
+  must?: string[];   // requirements list (can be empty)
+  md?: string;       // markdown body (0+)
+  [k: string]: any;
+};
+
+export type ChallengeUpsertRequest = {
+  type: ChallengeType;
+  title: string;
+  summary?: string;
+  status?: ChallengeStatus; // optional – server may default
+  startAt: string;     // ISO8601
+  endAt: string;       // ISO8601
+  voteStartAt?: string; // ISO8601
+  voteEndAt?: string;   // ISO8601
+  ruleJson?: ChallengeRuleJson; // type-specific keys (ym/week) and content (must/md)
+};
+
+export async function createChallenge(payload: ChallengeUpsertRequest): Promise<{ id: number }> {
+  const toServerBody = (p: ChallengeUpsertRequest): any => ({
+    ...p,
+    // 서버 DTO는 ruleJson을 문자열(String)로 기대함 → 객체를 JSON 문자열로 변환
+    ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
+  });
+
+  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body), { withCredentials: true })).data;
+  try {
+    return await post('/admin/challenges', payload);
+  } catch (e: any) {
+    const status = e?.response?.status;
+    // 날짜 포맷 문제 가능성: 'T' → ' ' 로 한번 더 시도
+    if (status >= 400) {
+      const p2: ChallengeUpsertRequest = {
+        ...payload,
+        startAt: (payload.startAt || '').replace('T', ' '),
+        endAt: (payload.endAt || '').replace('T', ' '),
+        voteStartAt: payload.voteStartAt ? payload.voteStartAt.replace('T', ' ') : undefined,
+        voteEndAt: payload.voteEndAt ? payload.voteEndAt.replace('T', ' ') : undefined,
+      };
+      try {
+        return await post('/admin/challenges', p2);
+      } catch {}
+    }
+    // 폴백은 권한/라우팅 불일치일 때만 수행, 서버 5xx면 재시도하지 않음
+    if (status === 404 || status === 405 || status === 403) {
+      try {
+        return await post('/challenges', payload);
+      } catch (e2: any) {
+        // 마지막으로 날짜 포맷 변경하여 시도
+        const p2: ChallengeUpsertRequest = {
+          ...payload,
+          startAt: (payload.startAt || '').replace('T', ' '),
+          endAt: (payload.endAt || '').replace('T', ' '),
+          voteStartAt: payload.voteStartAt ? payload.voteStartAt.replace('T', ' ') : undefined,
+          voteEndAt: payload.voteEndAt ? payload.voteEndAt.replace('T', ' ') : undefined,
+        };
+        return await post('/challenges', p2);
+      }
+    }
+    throw e;
+  }
+}
+
+export async function updateChallenge(challengeId: number, payload: ChallengeUpsertRequest): Promise<void> {
+  const toServerBody = (p: ChallengeUpsertRequest): any => ({
+    ...p,
+    ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
+  });
+
+  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body), { withCredentials: true });
+  try {
+    await patch(`/admin/challenges/${challengeId}`, payload);
+  } catch (e: any) {
+    const status = e?.response?.status;
+    if (status >= 400) {
+      const p2: ChallengeUpsertRequest = {
+        ...payload,
+        startAt: (payload.startAt || '').replace('T', ' '),
+        endAt: (payload.endAt || '').replace('T', ' '),
+        voteStartAt: payload.voteStartAt ? payload.voteStartAt.replace('T', ' ') : undefined,
+        voteEndAt: payload.voteEndAt ? payload.voteEndAt.replace('T', ' ') : undefined,
+      };
+      try { await patch(`/admin/challenges/${challengeId}`, p2); return; } catch {}
+    }
+    if (status === 404 || status === 405 || status === 403) {
+      try { await patch(`/challenges/${challengeId}`, payload); return; } catch {}
+      const p2: ChallengeUpsertRequest = {
+        ...payload,
+        startAt: (payload.startAt || '').replace('T', ' '),
+        endAt: (payload.endAt || '').replace('T', ' '),
+        voteStartAt: payload.voteStartAt ? payload.voteStartAt.replace('T', ' ') : undefined,
+        voteEndAt: payload.voteEndAt ? payload.voteEndAt.replace('T', ' ') : undefined,
+      };
+      await patch(`/challenges/${challengeId}`, p2); return;
+    }
+    throw e;
+  }
+}
+
+// 상태 전환 API (관리자)
+export async function changeChallengeStatus(
+  challengeId: number,
+  status: ChallengeStatus
+): Promise<void> {
+  await api.patch(`/admin/challenges/${challengeId}`, { status }, { withCredentials: true });
+}
+
+// 관리자: 챌린지 삭제
+export async function deleteChallenge(challengeId: number, opts?: { force?: boolean }): Promise<void> {
+  const params: any = {};
+  if (opts?.force) params.force = true;
+  await api.delete(`/admin/challenges/${challengeId}`, { params, withCredentials: true });
+}

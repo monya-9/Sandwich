@@ -50,6 +50,8 @@ import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
 import PublicCollectionDetailPage from "./pages/PublicCollectionDetailPage";
+import RequireAdmin from "./components/Auth/RequireAdmin";
+import ChallengeFormPage from "./pages/admin/ChallengeFormPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -141,6 +143,16 @@ function App() {
 
                                 {/* 공개 사용자 프로필 */}
                                 <Route path="/users/:id" element={<UserPublicProfilePage />} />
+
+                                {/* ✅ 어드민 보호 라우트: ROLE_ADMIN 아닐 시 전체 차단 및 리다이렉트 */}
+                                <Route path="/admin/*" element={<RequireAdmin />}> 
+                                    <Route path="challenges/new" element={<ChallengeFormPage />} />
+                                    {/* 단일 수정 라우트: /admin/challenges/:id */}
+                                    <Route path="challenges/:id" element={<ChallengeFormPage />} />
+                                    {/* 유형별 수정 경로: /admin/challenge/(code|portfolio)/:id/edit */}
+                                    <Route path="challenge/code/:id/edit" element={<ChallengeFormPage />} />
+                                    <Route path="challenge/portfolio/:id/edit" element={<ChallengeFormPage />} />
+                                </Route>
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />

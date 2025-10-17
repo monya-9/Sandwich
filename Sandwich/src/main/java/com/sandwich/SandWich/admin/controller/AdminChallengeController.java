@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/admin/challenges")
+@RequestMapping({"/admin/challenges", "/api/admin/challenges"})
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminChallengeController {
@@ -52,6 +52,15 @@ public class AdminChallengeController {
     @PatchMapping("/{id}")
     public Map<String,Object> patch(@PathVariable Long id, @RequestBody @Valid PatchReq req) {
         service.patch(id, req);
+        return Map.of("ok", true);
+    }
+
+    @DeleteMapping("/{id}")
+    public Map<String,Object> delete(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "false") boolean force
+    ) {
+        service.delete(id, force);
         return Map.of("ok", true);
     }
 
