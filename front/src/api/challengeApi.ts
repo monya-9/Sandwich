@@ -7,7 +7,7 @@ import api from './axiosInstance';
 
 export type ChallengeType = "CODE" | "PORTFOLIO";
 
-export type ChallengeStatus = "DRAFT" | "OPEN" | "VOTING" | "ENDED";
+export type ChallengeStatus = "DRAFT" | "OPEN" | "CLOSED" | "VOTING" | "ENDED";
 
 export type ChallengeListItem = {
   id: number;
@@ -290,4 +290,22 @@ export async function deleteChallenge(challengeId: number, opts?: { force?: bool
   const params: any = {};
   if (opts?.force) params.force = true;
   await api.delete(`/admin/challenges/${challengeId}`, { params, withCredentials: true });
+}
+
+// 관리자: 챌린지 목록 조회 (admin 전용)
+export async function adminFetchChallenges(params?: {
+  page?: number;
+  size?: number;
+  type?: ChallengeType;
+  status?: ChallengeStatus;
+  source?: string;
+  ym?: string;   // YYYY-MM -> 서버 aiMonth로 매핑할 수도 있음
+  week?: string; // YYYYWww -> 서버 aiWeek로 매핑
+  sort?: string; // e.g. -startAt
+}): Promise<ChallengeListResponse> {
+  const p: any = { page: 0, size: 20, sort: '-startAt', ...(params || {}) };
+  if (params?.ym) p.aiMonth = params.ym;
+  if (params?.week) p.aiWeek = params.week;
+  const res = await api.get('/admin/challenges', { params: p, withCredentials: true });
+  return res.data as ChallengeListResponse;
 }

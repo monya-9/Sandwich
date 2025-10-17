@@ -1,6 +1,6 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { createChallenge, updateChallenge, type ChallengeUpsertRequest, fetchChallengeDetail, changeChallengeStatus, type ChallengeStatus, deleteChallenge } from "../../api/challengeApi";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { createChallenge, updateChallenge, type ChallengeUpsertRequest, fetchChallengeDetail, changeChallengeStatus, type ChallengeStatus, deleteChallenge, adminFetchChallenges } from "../../api/challengeApi";
 import { fetchMonthlyByYm, fetchMonthlyChallenge } from "../../api/monthlyChallenge";
 import { fetchWeeklyByKey, fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import SectionCard from "../../components/challenge/common/SectionCard";
@@ -28,7 +28,7 @@ function toLocalIsoNoZ(local: string): string | null {
     const m = local.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/);
     const src = m ? `${m[1]}T${m[2]}:00` : local;
     const d = new Date(src);
-    if (isNaN(d.getTime())) return null;
+        if (isNaN(d.getTime())) return null;
     return d.toISOString(); // 예: 2025-10-17T12:34:00.000Z
 }
 
@@ -45,8 +45,13 @@ function validateDates(params: { start?: string; end?: string; voteStart?: strin
 
 export default function ChallengeFormPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams<{ id?: string }>();
-    const mode: Mode = id ? "edit" : "create";
+    const urlEditMode: Mode = id ? "edit" : "create";
+    const isTypeEditRoute = React.useMemo(() => {
+        const p = location?.pathname || "";
+        return /\/admin\/challenge\/(code|portfolio)\/.+\/edit$/.test(p);
+    }, [location?.pathname]);
 
     const [type, setType] = React.useState<"CODE" | "PORTFOLIO">("CODE");
     const [title, setTitle] = React.useState("");
@@ -64,19 +69,49 @@ export default function ChallengeFormPage() {
     const [statusConfirm, setStatusConfirm] = React.useState<{ open: boolean; next?: ChallengeStatus }>(() => ({ open: false }));
     const [currentStatus, setCurrentStatus] = React.useState<ChallengeStatus>("DRAFT");
     const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+    const [listDeleteConfirm, setListDeleteConfirm] = React.useState<{ open: boolean; id?: number; title?: string }>({ open: false });
+    const [saveConfirm, setSaveConfirm] = React.useState<{ open: boolean; payload?: ChallengeUpsertRequest }>({ open: false });
     const aiOverlayTriedRef = React.useRef(false);
+    // 관리 드롭다운: CREATE | MANAGE (수정/삭제)
+    const [viewMode, setViewMode] = React.useState<"CREATE" | "MANAGE">(urlEditMode === "edit" ? "MANAGE" : "CREATE");
+    // 선택된 편집 대상(없으면 생성)
+    const [editingId, setEditingId] = React.useState<number | null>(id ? Number(id) : null);
+    // 목록 패널 상태
+    const [list, setList] = React.useState<Array<{ id:number; title:string; type?: string; status?: string }>>([]);
+    const [listLoading, setListLoading] = React.useState(false);
+    const [showFullList, setShowFullList] = React.useState<boolean>(true);
+    const [selectedTitle, setSelectedTitle] = React.useState<string>("");
+    const manageInitRef = React.useRef<boolean>(false);
+
+    const clearForm = React.useCallback(() => {
+        setEditingId(null);
+        setType("CODE");
+        setTitle("");
+        setSummary("");
+        setYm("");
+        setWeek("");
+        setMust("");
+        setMd("");
+        setStartAt("");
+        setEndAt("");
+        setVoteStartAt("");
+        setVoteEndAt("");
+        setCurrentStatus("DRAFT");
+    }, []);
 
     React.useEffect(() => {
-        if (mode === "edit" && id) {
+        if (urlEditMode === "edit" && id) {
             (async () => {
                 try {
+                    setEditingId(Number(id));
                     const data = await fetchChallengeDetail(Number(id));
                     // 타입 변형 대응
                     const tRaw = (data?.type || data?.challengeType || data?.kind || "CODE") as string;
                     const t = String(tRaw).toUpperCase();
                     setType(t.includes("PORT") ? "PORTFOLIO" : "CODE");
 
-                    setTitle(data?.title || data?.name || "");
+                    const loadedTitle = data?.title || data?.name || "";
+                    setTitle(loadedTitle);
                     setSummary(data?.summary || data?.desc || data?.description || "");
                     if (data?.status) setCurrentStatus(data.status as ChallengeStatus);
 
@@ -108,7 +143,7 @@ export default function ChallengeFormPage() {
                         ? rj.must_have
                         : [];
                     let mdText = rj.md || rj.markdown || "";
-                    const summaryText = rj.summary || "";
+                    const summaryText = (rj.summary || data?.summary || "");
 
                     try {
                         if (t.includes("PORT")) {
@@ -138,15 +173,58 @@ export default function ChallengeFormPage() {
                         // AI 호출 실패 시 무시하고 백엔드 데이터만 사용
                     }
 
-                    if (summaryText) setSummary(summaryText);
+                    if (typeof summaryText === 'string') setSummary(summaryText);
+                    else if (data?.summary) setSummary(data.summary);
                     if (mustArr.length > 0) setMust(mustArr.join("\n"));
                     setMd(mdText);
+                    if (isTypeEditRoute) {
+                        setSelectedTitle(loadedTitle);
+                        setShowFullList(false);
+                    }
                 } catch (e) {
                     console.error("Failed to load challenge", e);
                 }
             })();
         }
-    }, [mode, id]);
+    }, [urlEditMode, id, isTypeEditRoute]);
+
+    // 드롭다운 전환 시 동작
+    React.useEffect(() => {
+        // 단일 수정 경로에서는 뷰모드 전환에 의해 값이 초기화되면 안 된다
+        if (urlEditMode === "edit" && !isTypeEditRoute) {
+            return;
+        }
+        if (viewMode === "CREATE") {
+            // 값 초기화 (완전 초기 상태)
+            setEditingId(null);
+            setTitle(""); setSummary(""); setYm(""); setWeek(""); setMust(""); setMd(""); setStartAt(""); setEndAt(""); setVoteStartAt(""); setVoteEndAt("");
+            setCurrentStatus("DRAFT");
+            setSelectedTitle("");
+            setShowFullList(true);
+        } else {
+            // MANAGE 모드: 목록 로드
+            (async () => {
+                setListLoading(true);
+                try {
+                    const resp = await adminFetchChallenges({ page:0, size:50, sort:'-id' });
+                    setList(resp.content.map(c => ({ id:c.id, title:c.title, type: ((c as any).type || (c as any).challengeType), status: (c as any).status })));
+                } finally { setListLoading(false); }
+                if (isTypeEditRoute && !manageInitRef.current) {
+                    // 유형별 수정 경로에서 관리 모드로 들어온 첫 렌더: 목록은 접고 현재 로드된 값 유지(편집 상태 유지)
+                    setShowFullList(false);
+                    manageInitRef.current = true;
+                } else {
+                    setShowFullList(true);
+                    setSelectedTitle("");
+                    // 편집 경로에서는 폼 값을 유지해야 함
+                    if (urlEditMode !== "edit") {
+                        clearForm();
+                    }
+                }
+            })();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewMode, isTypeEditRoute, urlEditMode]);
 
     const onSubmit: React.FormEventHandler = async (e) => {
         e.preventDefault();
@@ -176,11 +254,10 @@ export default function ChallengeFormPage() {
         if (type === "PORTFOLIO" && ym && !/^\d{4}-\d{2}$/.test(ym)) { setError("YM 형식은 YYYY-MM 이어야 합니다."); return; }
         if (type === "CODE" && week && !/^\d{4}W\d{2}$/.test(week)) { setError("Week 형식은 YYYYWww 이어야 합니다."); return; }
 
-        const payload: ChallengeUpsertRequest = {
+        const payloadBase: ChallengeUpsertRequest = {
             type,
             title: titleTrim,
             summary: summaryKeep,
-            status: (mode === "edit" ? currentStatus : "DRAFT"),
             startAt: isoStart!,
             endAt: isoEnd!,
             voteStartAt: isoVoteStart || undefined,
@@ -193,29 +270,17 @@ export default function ChallengeFormPage() {
                 summary: summaryKeep,
             }
         };
+        const payload: ChallengeUpsertRequest = (editingId !== null)
+            ? payloadBase // 편집에서는 status를 보내지 않음(서버 상태 유지)
+            : { ...payloadBase, status: "DRAFT" };
         if (!payload.title || !payload.startAt || !payload.endAt) {
             setError("제목, 시작일, 마감일은 필수입니다.");
             return;
         }
 
-        try {
-            setSaving(true);
-            if (mode === "edit" && id) {
-                // 수정은 단일 엔티티만 반영
-                await updateChallenge(Number(id), payload);
-                navigate(-1);
-                return;
-            }
-            const { id: newId } = await createChallenge(payload);
-            navigate(`/challenge/${type.toLowerCase()}/${newId}`);
-            return;
-        } catch (ex: any) {
-            const msg = ex?.response?.data?.message || ex?.message || "서버 오류가 발생했습니다.";
-            console.error("[CHALLENGE UPSERT] failed:", ex);
-            setError(msg);
-        } finally {
-            setSaving(false);
-        }
+        // 저장 전 모달 열기
+        (window as any).scrollTo?.(0,0);
+        setSaveConfirm({ open: true, payload });
     };
 
     // 생성 화면은 기본값이 비어 있어야 하므로 AI 오버레이를 수행하지 않습니다.
@@ -228,16 +293,123 @@ export default function ChallengeFormPage() {
 
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-            <SectionCard title={mode === "edit" ? "챌린지 수정" : "챌린지 생성"} className="!px-5 !py-5">
+            <SectionCard title={viewMode === "MANAGE" ? "챌린지 수정/삭제" : "챌린지 생성"} className="!px-5 !py-5">
             {error && (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-[13.5px]" role="alert">{error}</div>
             )}
-            {/* 상태 전환 버튼 (수정 모드에서만 표시) */}
-            {mode === "edit" && (
+            {/* 드롭다운: 생성 / 수정·삭제 (생성 페이지에서만 노출) */}
+            {(urlEditMode !== "edit" || isTypeEditRoute) && (
+                <div className="mb-3">
+                    <label className="mr-2 text-[13px] text-neutral-700">작업</label>
+                    <select value={viewMode} onChange={(e)=> {
+                        const nm = e.target.value as "CREATE" | "MANAGE";
+                        // 먼저 폼을 깨끗이 초기화하여 전환 중 기존 값이 잠깐 보이지 않도록 함
+                        clearForm();
+                        if (nm === "MANAGE") {
+                            // 관리 모드 시작 시 선택 타이틀 유지 여부는 경로에 따라 달라짐 (아래 useEffect에서 처리)
+                            setViewMode("MANAGE");
+                        } else {
+                            setSelectedTitle("");
+                            setShowFullList(true);
+                            setViewMode("CREATE");
+                        }
+                    }} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-[12.5px]">
+                        <option value="CREATE">챌린지 생성</option>
+                        <option value="MANAGE">챌린지 수정/삭제</option>
+                    </select>
+                </div>
+            )}
+            {/* 상태 전환 버튼 (편집 대상 선택 시 표시) – 목록 패널 아래로 이동 */}
+            {/* 저장 확인 모달 */}
+            {saveConfirm.open && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
+                    <div className="w-full max-w-sm rounded-lg bg-white p-5">
+                        <div className="mb-3 text-[15px] font-bold">저장 확인</div>
+                        <div className="mb-4 text-[13.5px]">현재 입력하신 내용으로 {editingId !== null || urlEditMode === 'edit' ? '수정' : '생성'}을 진행할까요?</div>
+                        <div className="flex justify-end gap-2">
+                            <button className="rounded-md border px-3 py-1.5 text-[13px]" onClick={()=> setSaveConfirm({ open:false })}>취소</button>
+                            <button className="rounded-md bg-emerald-600 px-3 py-1.5 text-[13px] font-semibold text-white" onClick={async()=>{
+                                const payload = saveConfirm.payload!;
+                                try {
+                                    setSaving(true);
+                                    const effectiveEditId = editingId !== null ? editingId : (urlEditMode === 'edit' && id ? Number(id) : null);
+                                    if (effectiveEditId !== null) {
+                                        await updateChallenge(effectiveEditId, payload);
+                                        setSaveConfirm({ open:false });
+                                        navigate(-1);
+                                        return;
+                                    }
+                                    const { id: newId } = await createChallenge(payload);
+                                    setSaveConfirm({ open:false });
+                                    navigate(`/challenge/${type.toLowerCase()}/${newId}`);
+                                } catch (ex:any) {
+                                    const msg = ex?.response?.data?.message || ex?.message || '서버 오류가 발생했습니다.';
+                                    console.error('[CHALLENGE UPSERT] failed:', ex);
+                                    setError(msg);
+                                    setSaveConfirm({ open:false });
+                                } finally { setSaving(false); }
+                            }}>확인</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* 관리 목록 (생성 페이지의 수정/삭제 모드에서만 표시) */}
+            {(urlEditMode !== "edit" || isTypeEditRoute) && viewMode === "MANAGE" && (
+                <div className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                    {showFullList ? (
+                        <>
+                            <div className="mb-2 flex items-center justify-between">
+                                <div className="text-[14px] font-semibold">챌린지 전체 목록 보기</div>
+                                <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={()=> setShowFullList(false)}>접기</button>
+                            </div>
+                            {listLoading ? (
+                                <div className="text-[13px] text-neutral-600">불러오는 중...</div>
+                            ) : (
+                                <ul className="max-h-56 overflow-auto divide-y">
+                            {list.map(it => (
+                                <li key={it.id} className="flex items-center justify-between py-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-[13px]">#{it.id} {it.title}</div>
+                                                {it.type && (
+                                                    <span className="rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[11px] text-neutral-700">{String(it.type).toUpperCase().includes('PORT') ? 'PORTFOLIO' : 'CODE'}</span>
+                                                )}
+                                                {it.status && (
+                                                    <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">{it.status}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={() => {
+                                                    const kind = String(it.type || 'CODE').toUpperCase().includes('PORT') ? 'portfolio' : 'code';
+                                                    navigate(`/admin/challenge/${kind}/${it.id}/edit`);
+                                                }}>선택</button>
+                                                <button className="rounded-full border border-red-300 bg-white px-3 py-1 text-[12px] text-red-600 hover:bg-red-50" onClick={()=> setListDeleteConfirm({ open: true, id: it.id, title: it.title })}>삭제</button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                    {list.length===0 && <li className="py-3 text-[13px] text-neutral-500">데이터가 없습니다.</li>}
+                                </ul>
+                            )}
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[13px]">
+                                <span className="font-semibold">선택한 챌린지</span>:
+                                <span>{selectedTitle}</span>
+                            </div>
+                            <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={()=> setShowFullList(true)}>목록 펼치기</button>
+                        </div>
+                    )}
+                </div>
+            )}
+            {editingId !== null && (
                 <div className="mb-3 flex flex-wrap gap-2 items-center">
                     {(() => {
-                        const options: ChallengeStatus[] =
-                            type === "CODE" ? ["DRAFT", "OPEN", "ENDED"] : ["DRAFT", "OPEN", "ENDED", "VOTING"];
+                        // 상태 목록: CODE = DRAFT/OPEN/CLOSED, PORTFOLIO = DRAFT/OPEN/CLOSED/VOTING/ENDED
+                        const options: ChallengeStatus[] = (
+                            type === "CODE"
+                                ? ["DRAFT", "OPEN", "CLOSED"]
+                                : ["DRAFT", "OPEN", "CLOSED", "VOTING", "ENDED"]
+                        );
                         return options.map((opt) => {
                             const active = currentStatus === opt;
                             const cls = active
@@ -263,7 +435,7 @@ export default function ChallengeFormPage() {
             <form onSubmit={onSubmit} className="space-y-6 text-[13.5px]">
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">타입</label>
-                    <select value={type} onChange={(e) => setType(e.target.value as any)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500">
+                    <select value={type} onChange={(e) => setType(e.target.value as any)} disabled={urlEditMode === "edit" || editingId !== null} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500 disabled:bg-neutral-100 disabled:text-neutral-500">
                         <option value="CODE">코드</option>
                         <option value="PORTFOLIO">포트폴리오</option>
                     </select>
@@ -362,11 +534,16 @@ export default function ChallengeFormPage() {
                         <div className="flex justify-end gap-2">
                             <button className="rounded-md border px-3 py-1.5 text-[13px]" onClick={() => setStatusConfirm({ open: false })}>취소</button>
                             <button className="rounded-md bg-emerald-600 px-3 py-1.5 text-[13px] font-semibold text-white" onClick={async () => {
-                                if (!id || !statusConfirm.next) { setStatusConfirm({ open: false }); return; }
+                                const effectiveId = (editingId !== null) ? editingId : (id ? Number(id) : null);
+                                if (!effectiveId || !statusConfirm.next) { setStatusConfirm({ open: false }); return; }
                                 try {
-                                    await changeChallengeStatus(Number(id), statusConfirm.next);
+                                    await changeChallengeStatus(effectiveId, statusConfirm.next);
                                     setStatusConfirm({ open: false });
-                                    setCurrentStatus(statusConfirm.next);
+                                    // 서버 최종값으로 재동기화 (특히 DRAFT 전환 확인)
+                                    try {
+                                        const fresh = await fetchChallengeDetail(effectiveId);
+                                        if (fresh?.status) setCurrentStatus(fresh.status as ChallengeStatus);
+                                    } catch {}
                                 } catch (e) {
                                     console.error("status change failed", e);
                                     setStatusConfirm({ open: false });
@@ -399,6 +576,30 @@ export default function ChallengeFormPage() {
                                 } catch (e) {
                                     console.error('delete failed', e);
                                     setError('삭제 중 오류가 발생했습니다.');
+                                }
+                            }}>삭제</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* 목록 삭제 확인 모달 */}
+            {listDeleteConfirm.open && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
+                    <div className="w-full max-w-sm rounded-lg bg-white p-5">
+                        <div className="mb-3 text-[15px] font-bold text-red-600">챌린지 삭제</div>
+                        <div className="mb-4 text-[13.5px]">#{listDeleteConfirm.id} {listDeleteConfirm.title} 항목을 삭제하시겠습니까?</div>
+                        <div className="flex justify-end gap-2">
+                            <button className="rounded-md border px-3 py-1.5 text-[13px]" onClick={()=> setListDeleteConfirm({ open:false })}>취소</button>
+                            <button className="rounded-md bg-red-600 px-3 py-1.5 text-[13px] font-semibold text-white" onClick={async()=>{
+                                if (!listDeleteConfirm.id) { setListDeleteConfirm({ open:false }); return; }
+                                try {
+                                    await deleteChallenge(listDeleteConfirm.id, { force: true });
+                                    setList(list.filter(x=>x.id !== listDeleteConfirm.id));
+                                    setListDeleteConfirm({ open:false });
+                                } catch (e) {
+                                    console.error('delete list item failed', e);
+                                    setError('삭제 중 오류가 발생했습니다.');
+                                    setListDeleteConfirm({ open:false });
                                 }
                             }}>삭제</button>
                         </div>

@@ -42,9 +42,10 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
         const challenges = backendChallenges.content || [] as any[];
+        const ALLOWED = new Set(['OPEN', 'ENDED', 'VOTING']);
         const byLatestRegistered = (type: "CODE" | "PORTFOLIO") =>
             [...challenges]
-                .filter(c => c.type === type)
+                .filter(c => c.type === type && ALLOWED.has(String(c.status || '').toUpperCase()))
                 // 등록 최신 우선: id 내림차순, 보조로 시작일(desc)
                 .sort((a, b) => {
                     const idDiff = (Number(b.id) || 0) - (Number(a.id) || 0);
@@ -73,18 +74,20 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             }
         };
 
-        const codeRule = parseRule(codeDetail?.ruleJson);
-        const portfolioRule = parseRule(portfolioDetail?.ruleJson);
+        const codeUse = (codeDetail && ALLOWED.has(String(codeDetail.status || '').toUpperCase())) ? codeDetail : null;
+        const portfolioUse = (portfolioDetail && ALLOWED.has(String(portfolioDetail.status || '').toUpperCase())) ? portfolioDetail : null;
+        const codeRule = parseRule(codeUse?.ruleJson);
+        const portfolioRule = parseRule(portfolioUse?.ruleJson);
 
         return [
             {
                 id: codeChallenge?.id || 1, // 백엔드 ID 사용, 없으면 기본값
                 type: "CODE",
                 title: "이번 주 코드 챌린지",
-                subtitle: (codeDetail?.title || weeklyData.title) as string,
+                subtitle: (codeUse?.title || weeklyData.title) as string,
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
-                        <p>📣 {(codeRule.md || codeDetail?.summary || weeklyData.summary || 'AI가 생성한 주간 코드 챌린지입니다.') as string}</p>
+                        <p>📣 {(codeRule.md || codeUse?.summary || weeklyData.summary || 'AI가 생성한 주간 코드 챌린지입니다.') as string}</p>
                         <p className="text-[13px]">조건: 자동 채점 지원 · 중복 제출 가능</p>
                         {(Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData.must) && (Array.isArray(codeRule.must) ? codeRule.must.length : (weeklyData.must?.length || 0)) > 0 && (
                             <div className="py-1">
@@ -111,10 +114,10 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 id: portfolioChallenge?.id || 2, // 백엔드 ID 사용, 없으면 기본값
                 type: "PORTFOLIO",
                 title: "이번 달 포트폴리오 챌린지",
-                subtitle: `${monthlyData.emoji} ${portfolioDetail?.title || monthlyData.title}`,
+                subtitle: `${monthlyData.emoji} ${portfolioUse?.title || monthlyData.title}`,
                 description: (
                     <div className="space-y-3 text-[13.5px] leading-6 text-neutral-800">
-                        <p>✨ {(portfolioRule.md || portfolioDetail?.summary || monthlyData.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.') as string}</p>
+                        <p>✨ {(portfolioRule.md || portfolioUse?.summary || monthlyData.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.') as string}</p>
                         <p className="text-[13px] py-1">👥 팀/개인 모두 가능 · 결과는 <b>커뮤니티 투표 100%</b></p>
                         {(Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0 ? portfolioRule.must : monthlyData.mustHave) && (Array.isArray(portfolioRule.must) ? portfolioRule.must.length : (monthlyData.mustHave?.length || 0)) > 0 && (
                             <div className="py-1">
