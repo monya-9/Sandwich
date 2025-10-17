@@ -36,22 +36,52 @@ export default function PortfolioVotePage() {
         fetchSubmissions();
     }, [id]);
 
-    // 백엔드에서 챌린지 타입 확인 후 포트폴리오인 경우 AI API에서 동적으로 데이터 가져오기
+    // 백엔드 챌린지 데이터 우선 사용
     useEffect(() => {
         const loadChallengeData = async () => {
             setLoading(true);
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
+                console.log('포트폴리오 투표 - 백엔드 데이터:', backendChallenge);
+                
                 if (backendChallenge.type === "PORTFOLIO") {
-                    const dynamicData = await getDynamicChallengeDetail(id, backendChallenge.type);
-                    setDetail(dynamicData as PortfolioChallengeDetail);
+                    // 백엔드 데이터 우선 사용
+                    let ruleData: any = null;
+                    let backendDescription: string | null = null;
+                    
+                    if (backendChallenge.ruleJson) {
+                        try {
+                            ruleData = typeof backendChallenge.ruleJson === 'string' 
+                                ? JSON.parse(backendChallenge.ruleJson) 
+                                : backendChallenge.ruleJson;
+                            backendDescription = ruleData.summary || ruleData.md;
+                        } catch (e) {
+                            console.error('포트폴리오 투표 - ruleJson 파싱 실패:', e);
+                        }
+                    }
+                    
+                    // 더미 데이터 기반으로 백엔드 데이터 적용
+                    const baseData = getChallengeDetail(id) as PortfolioChallengeDetail;
+                    const backendBasedData = {
+                        ...baseData,
+                        id: backendChallenge.id,
+                        title: `포트폴리오 챌린지: ${backendChallenge.title}`,
+                        subtitle: backendChallenge.title,
+                        description: backendDescription || baseData.description,
+                        startAt: backendChallenge.startAt,
+                        endAt: backendChallenge.endAt,
+                        status: backendChallenge.status,
+                    };
+                    
+                    console.log('포트폴리오 투표 - 최종 데이터:', backendBasedData);
+                    setDetail(backendBasedData);
                 } else {
-                    // 포트폴리오가 아닌 경우 기본 데이터 사용
-                    setDetail(getChallengeDetail(id) as PortfolioChallengeDetail);
+                    console.error('이 챌린지는 포트폴리오 챌린지가 아닙니다.');
+                    setDetail(null);
                 }
             } catch (err) {
-                // 에러 시 기본 더미 데이터 사용
-                setDetail(getChallengeDetail(id) as PortfolioChallengeDetail);
+                console.error('포트폴리오 투표 - 챌린지 데이터 로딩 실패:', err);
+                setDetail(null);
             } finally {
                 setLoading(false);
             }

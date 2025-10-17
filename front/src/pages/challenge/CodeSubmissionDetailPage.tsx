@@ -1,11 +1,10 @@
 // src/pages/challenge/CodeSubmissionDetailPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { SectionCard } from "../../components/challenge/common";
 import { ChevronLeft, Eye, MessageSquare, Heart } from "lucide-react";
-import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
-import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { fetchChallengeDetail } from "../../api/challengeApi";
 import api from "../../api/axiosInstance";
 
 // 댓글 타입 정의
@@ -24,7 +23,10 @@ export default function CodeSubmissionDetailPage() {
     const sid = Number(sidStr);
     const nav = useNavigate();
 
-    const detail = useMemo(() => getChallengeDetail(id) as CodeChallengeDetail, [id]);
+    // 백엔드 챌린지 데이터 상태
+    const [challengeData, setChallengeData] = useState<any>(null);
+    const [challengeLoading, setChallengeLoading] = useState(true);
+    
     const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,24 @@ export default function CodeSubmissionDetailPage() {
     const [commentLoading, setCommentLoading] = useState(false);
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+
+    // 백엔드 챌린지 데이터 로드
+    useEffect(() => {
+        const loadChallengeData = async () => {
+            setChallengeLoading(true);
+            try {
+                const backendChallenge = await fetchChallengeDetail(id);
+                setChallengeData(backendChallenge);
+            } catch (error) {
+                console.error('백엔드 챌린지 데이터 로딩 실패:', error);
+                setChallengeData(null);
+            } finally {
+                setChallengeLoading(false);
+            }
+        };
+
+        loadChallengeData();
+    }, [id]);
 
     useEffect(() => {
         const fetchSubmissionDetail = async () => {
@@ -117,7 +137,20 @@ export default function CodeSubmissionDetailPage() {
         </div>
     );
 
-    const headerText = `샌드위치 코드 챌린지: 🧮 ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
+    // 챌린지 제목 결정
+    const getChallengeTitle = () => {
+        if (challengeLoading) {
+            return "챌린지 정보 로딩 중...";
+        }
+        
+        if (challengeData?.title) {
+            return challengeData.title.replace(/^코드 챌린지:\s*/, "");
+        }
+        
+        return `챌린지 #${id}`;
+    };
+    
+    const headerText = `샌드위치 코드 챌린지: 🧮 ${getChallengeTitle()}`;
 
     // 좋아요 토글
     const toggleLike = async () => {

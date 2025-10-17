@@ -1,7 +1,7 @@
 // src/pages/challenge/ChallengeListPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { dummyChallenges, getDynamicChallenges } from "../../data/Challenge/dummyChallenges";
+import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
@@ -13,10 +13,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 export default function ChallengeListPage() {
     const navigate = useNavigate();
     const [challenges, setChallenges] = useState<ChallengeCardData[]>(dummyChallenges);
+    const [pastChallenges, setPastChallenges] = useState<ChallengeCardData[]>([]);
     const [loading, setLoading] = useState(false);
+    const [pastLoading, setPastLoading] = useState(false);
     const admin = isAdmin();
 
-    // AI API에서 동적으로 챌린지 데이터 가져오기
+    // 현재 챌린지 데이터 가져오기
     useEffect(() => {
         setLoading(true);
         getDynamicChallenges()
@@ -29,6 +31,21 @@ export default function ChallengeListPage() {
             })
             .finally(() => {
                 setLoading(false);
+            });
+    }, []);
+
+    // 지난 챌린지 데이터 가져오기
+    useEffect(() => {
+        setPastLoading(true);
+        getPastChallenges()
+            .then((pastData) => {
+                setPastChallenges(pastData);
+            })
+            .catch((error) => {
+                console.error('지난 챌린지 데이터 로딩 실패:', error);
+            })
+            .finally(() => {
+                setPastLoading(false);
             });
     }, []);
 
@@ -109,12 +126,52 @@ export default function ChallengeListPage() {
 
                         {/* 캐러셀 그리드: 타이틀 라인과 정렬(ml[15px] ↔ pl[15px]) / 4열 */}
                         <div className="grid grid-cols-1 gap-4 pl-[15px] pr-[15px] sm:grid-cols-2 lg:grid-cols-4">
-                            {[0, 1, 2, 3].map((i) => (
-                                <div
-                                    key={i}
-                                    className="h-[160px] rounded-2xl border border-neutral-200 bg-neutral-50/60 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)]"
-                                />
-                            ))}
+                            {pastLoading ? (
+                                // 로딩 중일 때 스켈레톤
+                                [0, 1, 2, 3].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="h-[160px] rounded-2xl border border-neutral-200 bg-neutral-50/60 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
+                                    />
+                                ))
+                            ) : pastChallenges.length > 0 ? (
+                                // 실제 지난 챌린지 데이터
+                                pastChallenges.slice(0, 4).map((challenge) => (
+                                    <div
+                                        key={challenge.id}
+                                        className="group h-[160px] rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                        onClick={() => window.location.href = `/challenge/${challenge.type.toLowerCase()}/${challenge.id}`}
+                                    >
+                                        <div className="flex flex-col justify-between h-full">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                        challenge.type === 'CODE' 
+                                                            ? 'bg-blue-100 text-blue-700' 
+                                                            : 'bg-purple-100 text-purple-700'
+                                                    }`}>
+                                                        {challenge.type === 'CODE' ? '코드' : '포트폴리오'}
+                                                    </span>
+                                                </div>
+                                                <h4 className="font-semibold text-sm text-neutral-800 mb-1 line-clamp-2">
+                                                    {challenge.subtitle}
+                                                </h4>
+                                                <div className="text-xs text-neutral-600">
+                                                    {challenge.description}
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-neutral-500 text-right">
+                                                {challenge.ctaLabel}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                // 데이터가 없을 때
+                                <div className="col-span-full flex items-center justify-center py-8 text-neutral-500">
+                                    <p className="text-sm">아직 지난 챌린지가 없습니다.</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* ➡️ 오른쪽 버튼: 카드 밖으로 살짝 */}

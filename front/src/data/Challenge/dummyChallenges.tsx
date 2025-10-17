@@ -30,14 +30,41 @@ export const dummyChallenges: ChallengeCardData[] = [
     },
 ];
 
-// AI API에서 동적으로 가져오는 챌린지 데이터
+// 날짜 기준 헬퍼 함수들
+const isCurrentWeek = (dateStr: string): boolean => {
+    const challengeDate = new Date(dateStr);
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay()); // 이번 주 시작 (일요일)
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // 이번 주 끝 (토요일)
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return challengeDate >= weekStart && challengeDate <= weekEnd;
+};
+
+const isCurrentMonth = (dateStr: string): boolean => {
+    const challengeDate = new Date(dateStr);
+    const now = new Date();
+    return challengeDate.getFullYear() === now.getFullYear() && 
+           challengeDate.getMonth() === now.getMonth();
+};
+
+const isCurrentOrFuture = (dateStr: string): boolean => {
+    const challengeDate = new Date(dateStr);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // 오늘 00시 기준
+    return challengeDate >= now;
+};
+
+// 백엔드 데이터 기반으로 현재 챌린지 가져오기
 export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
     try {
-        const [monthlyData, weeklyData, backendChallenges] = await Promise.all([
-            import('../../api/monthlyChallenge').then(m => m.fetchMonthlyChallenge()),
-            import('../../api/weeklyChallenge').then(w => w.fetchWeeklyLatest()),
-            import('../../api/challengeApi').then(c => c.fetchChallenges(0, 10)) // 최신 10개 챌린지 가져오기
-        ]);
+        // 1. 백엔드 챌린지 데이터 가져오기 (우선순위)
+        const { fetchChallenges } = await import('../../api/challengeApi');
+        const backendChallenges = await fetchChallenges(0, 20); // 더 많이 가져와서 필터링
         
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
@@ -79,21 +106,34 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
         const codeRule = parseRule(codeUse?.ruleJson);
         const portfolioRule = parseRule(portfolioUse?.ruleJson);
 
+        // AI API는 백엔드 데이터가 부족할 때만 보조적으로 사용
+        let weeklyData = null;
+        let monthlyData = null;
+        
+        if (!codeChallenge || !portfolioChallenge) {
+            const [monthlyAI, weeklyAI] = await Promise.all([
+                import('../../api/monthlyChallenge').then(m => m.fetchMonthlyChallenge()).catch(() => null),
+                import('../../api/weeklyChallenge').then(w => w.fetchWeeklyLatest()).catch(() => null),
+            ]);
+            weeklyData = weeklyAI;
+            monthlyData = monthlyAI;
+        }
+
         return [
             {
                 id: codeChallenge?.id || 1, // 백엔드 ID 사용, 없으면 기본값
                 type: "CODE",
                 title: "이번 주 코드 챌린지",
-                subtitle: (codeUse?.title || weeklyData.title) as string,
+                subtitle: (codeUse?.title || weeklyData?.title) as string,
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
-                        <p>📣 {(codeRule.md || codeUse?.summary || weeklyData.summary || 'AI가 생성한 주간 코드 챌린지입니다.') as string}</p>
+                        <p>📣 {(codeRule.md || codeUse?.summary || weeklyData?.summary || 'AI가 생성한 주간 코드 챌린지입니다.') as string}</p>
                         <p className="text-[13px]">조건: 자동 채점 지원 · 중복 제출 가능</p>
-                        {(Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData.must) && (Array.isArray(codeRule.must) ? codeRule.must.length : (weeklyData.must?.length || 0)) > 0 && (
+                        {(Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData?.must) && (Array.isArray(codeRule.must) ? codeRule.must.length : (weeklyData?.must?.length || 0)) > 0 && (
                             <div className="py-1">
                                 <p className="text-[12px] text-neutral-600">
                                     {(() => {
-                                        const arr = (Array.isArray(codeRule.must) && codeRule.must.length > 0) ? codeRule.must : (weeklyData.must || []);
+                                        const arr = (Array.isArray(codeRule.must) && codeRule.must.length > 0) ? codeRule.must : (weeklyData?.must || []);
                                         return (
                                             <>
                                                 📋 <b>필수 요구사항:</b> {arr.slice(0, 3).join(', ')}
@@ -112,18 +152,18 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             },
             {
                 id: portfolioChallenge?.id || 2, // 백엔드 ID 사용, 없으면 기본값
-                type: "PORTFOLIO",
+                type: "PORTFOLIO", 
                 title: "이번 달 포트폴리오 챌린지",
-                subtitle: `${monthlyData.emoji} ${portfolioUse?.title || monthlyData.title}`,
+                subtitle: `${monthlyData?.emoji} ${portfolioUse?.title || monthlyData?.title}`,
                 description: (
                     <div className="space-y-3 text-[13.5px] leading-6 text-neutral-800">
-                        <p>✨ {(portfolioRule.md || portfolioUse?.summary || monthlyData.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.') as string}</p>
+                        <p>✨ {(portfolioRule.md || portfolioUse?.summary || monthlyData?.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.') as string}</p>
                         <p className="text-[13px] py-1">👥 팀/개인 모두 가능 · 결과는 <b>커뮤니티 투표 100%</b></p>
-                        {(Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0 ? portfolioRule.must : monthlyData.mustHave) && (Array.isArray(portfolioRule.must) ? portfolioRule.must.length : (monthlyData.mustHave?.length || 0)) > 0 && (
+                        {(Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0 ? portfolioRule.must : monthlyData?.mustHave) && (Array.isArray(portfolioRule.must) ? portfolioRule.must.length : (monthlyData?.mustHave?.length || 0)) > 0 && (
                             <div className="py-1">
                                 <p className="text-[12px] text-neutral-600">
                                     {(() => {
-                                        const arr = (Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0) ? portfolioRule.must : (monthlyData.mustHave || []);
+                                        const arr = (Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0) ? portfolioRule.must : (monthlyData?.mustHave || []);
                                         return (
                                             <>
                                                 📋 <b>필수 요구사항:</b> {arr.slice(0, 3).join(', ')}
@@ -144,5 +184,45 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
     } catch (error) {
         console.error('챌린지 데이터 로딩 실패:', error);
         return dummyChallenges; // 에러 시 기본 더미 데이터 반환
+    }
+}
+
+// 🆕 지난 챌린지 데이터 가져오기 (지난 대결 보기용)
+export async function getPastChallenges(): Promise<ChallengeCardData[]> {
+    try {
+        const { fetchChallenges } = await import('../../api/challengeApi');
+        const backendChallenges = await fetchChallenges(0, 50); // 많이 가져와서 과거 챌린지 찾기
+        
+        if (!backendChallenges.content || backendChallenges.content.length === 0) {
+            return [];
+        }
+
+        // 과거 챌린지만 필터링 (오늘 이전에 시작된 것들)
+        const pastChallenges = backendChallenges.content
+            .filter(c => !isCurrentOrFuture(c.startAt))
+            .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()) // 최신순
+            .slice(0, 8); // 최대 8개만
+
+        return pastChallenges.map(challenge => {
+            const challengeDate = new Date(challenge.startAt);
+            const isCode = challenge.type === "CODE";
+            
+            return {
+                id: challenge.id,
+                type: challenge.type,
+                title: `${isCode ? '코드' : '포트폴리오'} 챌린지`,
+                subtitle: challenge.title || (isCode ? '코딩 챌린지' : '포트폴리오 챌린지'),
+                description: (
+                    <div className="space-y-2 text-[13.5px] leading-6 text-neutral-600">
+                        <p>📅 {challengeDate.toLocaleDateString('ko-KR')} 진행</p>
+                        <p className="text-[12px] text-gray-500">✅ 종료된 챌린지</p>
+                    </div>
+                ),
+                ctaLabel: "결과 보기",
+            };
+        });
+    } catch (error) {
+        console.error('지난 챌린지 데이터 로딩 실패:', error);
+        return [];
     }
 }

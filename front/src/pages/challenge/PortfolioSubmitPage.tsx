@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
-import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
 import Toast from "../../components/common/Toast";
@@ -104,14 +104,15 @@ export default function PortfolioSubmitPage() {
                     setData(dynamicData as PortfolioChallengeDetail);
                     setMustHave(monthlyData.mustHave || []);
                 } else {
-                    // 포트폴리오가 아닌 경우 기본 데이터 사용
-                    setData(getChallengeDetail(id) as PortfolioChallengeDetail);
+                    // 포트폴리오가 아닌 경우 에러 처리
+                    console.error('이 챌린지는 포트폴리오 챌린지가 아닙니다.');
+                    setData(null);
                     setMustHave([]);
                 }
             } catch (err) {
                 console.error('챌린지 데이터 로딩 실패:', err);
-                // 에러 시 기본 더미 데이터 사용
-                setData(getChallengeDetail(id) as PortfolioChallengeDetail);
+                // 에러 시 null로 설정하여 에러 상태 표시
+                setData(null);
                 setMustHave([]);
             } finally {
                 setLoading(false);

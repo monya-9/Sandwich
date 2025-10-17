@@ -194,79 +194,112 @@ export default function ChallengeDetailPage() {
                     } catch {}
 
                     if (backendChallenge.type === "PORTFOLIO") {
-                        // 베이스(월간 AI 템플릿) + 백엔드 덮어쓰기
-                        try {
-                            const base = await getDynamicChallengeDetail(id, backendChallenge.type);
-
-                            const fmtDate = (s?: string) => {
-                                if (!s) return "";
-                                const d = new Date(s);
-                                return `${d.getMonth() + 1}월 ${d.getDate()}일`;
-                            };
-                            const schedule: { label: string; date: string }[] = [];
-                            if (backendChallenge.startAt) schedule.push({ label: '챌린지 시작', date: fmtDate(backendChallenge.startAt) });
-                            if (backendChallenge.endAt) schedule.push({ label: '프로젝트 제출 마감', date: fmtDate(backendChallenge.endAt) });
-                            if (backendChallenge.voteStartAt && backendChallenge.voteEndAt) {
-                                schedule.push({ label: '투표 기간', date: `${fmtDate(backendChallenge.voteStartAt)} ~ ${fmtDate(backendChallenge.voteEndAt)}` });
+                        // 포트폴리오 챌린지 - 백엔드 데이터 우선 사용
+                        console.log('백엔드 포트폴리오 챌린지 데이터:', backendChallenge);
+                        
+                        // ruleJson 파싱 먼저 수행
+                        let ruleData: any = null;
+                        let backendDescription: string | null = null;
+                        
+                        if (backendChallenge.ruleJson) {
+                            try {
+                                ruleData = typeof backendChallenge.ruleJson === 'string' 
+                                    ? JSON.parse(backendChallenge.ruleJson) 
+                                    : backendChallenge.ruleJson;
+                                
+                                // 백엔드 설명 우선순위: summary > md > null
+                                backendDescription = ruleData.summary || ruleData.md;
+                                console.log('포트폴리오 파싱된 ruleJson:', ruleData);
+                                console.log('포트폴리오 백엔드 설명:', backendDescription);
+                                
+                                setMustHave(ruleData.must || ruleData.mustHave || []);
+                            } catch (e) {
+                                console.error('포트폴리오 ruleJson 파싱 실패:', e);
+                                setMustHave([]);
                             }
-                            // 월간 AI에서 이모지/타이틀 가져와 제목 구성
-                            const { fetchMonthlyChallenge } = await import('../../api/monthlyChallenge');
-                            const monthly = await fetchMonthlyChallenge();
-                            const emoji = monthly?.emoji || '';
-                            const rawTitle = (backendChallenge.title || monthly?.title || (base as PortfolioChallengeDetail).title || '').toString();
-                            const stripped = rawTitle.replace(/^포트폴리오\s*챌린지:\s*/i, '').trim();
-                            const finalTitle = `포트폴리오 챌린지: ${emoji ? emoji + ' ' : ''}${stripped}`;
-
-                        const updated: PortfolioChallengeDetail = {
-                                ...(base as PortfolioChallengeDetail),
-                                title: finalTitle,
-                            description: (rule.md || rule.summary || backendChallenge.summary || base.description) as string,
-                                schedule: schedule.length > 0 ? schedule : (base as PortfolioChallengeDetail).schedule,
-                            };
-                            setData(updated);
-
-                            if (Array.isArray(rule.must) && rule.must.length > 0) setMustHave(rule.must);
-                            else setMustHave(monthly?.mustHave || []);
-                            setError(null);
-                            setLoading(false);
-                        } catch (err) {
-                                console.error('월간 챌린지 데이터 로딩 실패:', err);
-                                setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
-                                setData(null);
-                            setLoading(false);
                         }
-                        return;
-                    }
-
-                    // CODE: 베이스(주간 AI 템플릿) + 백엔드 덮어쓰기
-                    try {
-                        const week = rule.week as string | undefined;
-                        let weeklyData: any | null = null;
-                        if (week) {
-                            const { fetchWeeklyByKey } = await import('../../api/weeklyChallenge');
-                            weeklyData = await fetchWeeklyByKey(week);
-                        } else {
-                            const { fetchWeeklyLatest } = await import('../../api/weeklyChallenge');
-                            weeklyData = await fetchWeeklyLatest();
+                        
+                        // 더미 데이터를 기반으로 하되 백엔드 데이터로 업데이트
+                        const baseData = getChallengeDetail(id) as PortfolioChallengeDetail;
+                        const backendBasedData = {
+                            ...baseData,
+                            id: backendChallenge.id,
+                            title: `포트폴리오 챌린지: ${backendChallenge.title}`, // 백엔드 제목 사용
+                            subtitle: backendChallenge.title, // 원본 제목 
+                            description: backendDescription || baseData.description, // 파싱된 백엔드 설명 사용
+                            startAt: backendChallenge.startAt,
+                            endAt: backendChallenge.endAt,
+                            status: backendChallenge.status,
+                        };
+                        
+                        console.log('최종 포트폴리오 챌린지 데이터:', backendBasedData);
+                        setData(backendBasedData);
+                        
+                        // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
+                        if (!backendDescription) {
+                            import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
+                                fetchMonthlyChallenge()
+                                    .then((monthlyData) => {
+                                        console.log('보조 월간 AI 데이터:', monthlyData);
+                                        setData(prev => prev ? {
+                                            ...prev,
+                                            description: monthlyData.description || prev.description,
+                                        } : prev);
+                                        if (!ruleData?.must && !ruleData?.mustHave) {
+                                            setMustHave(monthlyData.mustHave || []);
+                                        }
+                                    })
+                                    .catch((err) => {
+                                        console.error('월간 AI 데이터 로딩 실패:', err);
+                                    });
+                            });
                         }
-                        const base = getChallengeDetail(id);
-                        const rawTitle = (backendChallenge.title || weeklyData?.title || base.title || '').toString();
-                        const stripped = rawTitle.replace(/^코드\s*챌린지:\s*/i, '').trim();
-                        const finalTitle = `코드 챌린지: ${stripped}`;
-                                        const updatedData = {
-                            ...base,
-                            title: finalTitle,
-                            description: (rule.md || rule.summary || backendChallenge.summary || weeklyData?.summary || base.description) as string,
-                        } as CodeChallengeDetail;
-                                        setData(updatedData);
-                        const must = Array.isArray(rule.must) && rule.must.length > 0 ? rule.must : (weeklyData?.must || []);
-                        setMustHave(must);
+                        
                         setError(null);
                         setLoading(false);
-                    } catch (err) {
-                                        console.error('주간 챌린지 데이터 로딩 실패:', err);
-                                        setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
-                                        setData(null);
+                    } else if (backendChallenge.type === "CODE") {
+                        // 코드 챌린지 - 백엔드 데이터 우선 사용
+                        console.log('백엔드 코드 챌린지 데이터:', backendChallenge);
+                        
+                        // ruleJson 파싱 먼저 수행
+                        let ruleData: any = null;
+                        let backendDescription: string | null = null;
+                        
+                        if (backendChallenge.ruleJson) {
+                            try {
+                                ruleData = typeof backendChallenge.ruleJson === 'string' 
+                                    ? JSON.parse(backendChallenge.ruleJson) 
+                                    : backendChallenge.ruleJson;
+                                
+                                // 백엔드 설명 우선순위: summary > md > null
+                                backendDescription = ruleData.summary || ruleData.md;
+                                console.log('파싱된 ruleJson:', ruleData);
+                                console.log('백엔드 설명:', backendDescription);
+                                
+                                setMustHave(ruleData.must || []);
+                            } catch (e) {
+                                console.error('ruleJson 파싱 실패:', e);
+                                setMustHave([]);
+                            }
+                        }
+                        
+                        // 더미 데이터를 기반으로 하되 백엔드 데이터로 업데이트
+                        const baseData = getChallengeDetail(id) as CodeChallengeDetail;
+                        const backendBasedData = {
+                            ...baseData,
+                            id: backendChallenge.id,
+                            title: `코드 챌린지: ${backendChallenge.title}`, // 백엔드 제목 사용
+                            subtitle: backendChallenge.title, // 원본 제목 
+                            description: backendDescription || baseData.description, // 파싱된 백엔드 설명 사용
+                            startAt: backendChallenge.startAt,
+                            endAt: backendChallenge.endAt,
+                            status: backendChallenge.status,
+                        };
+                        
+                        console.log('최종 챌린지 데이터:', backendBasedData);
+                        setData(backendBasedData);
+                        
+                        setError(null);
                         setLoading(false);
                     }
                 })
@@ -391,10 +424,36 @@ export default function ChallengeDetailPage() {
                     {/* 유형별 */}
                     {data.type === "CODE" ? (
                         <>
-
                             <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards} />
-                            <SubmitExampleBox {...((data as CodeChallengeDetail).submitExample || {})} />
+                            
+                            {/* 코드 챌린지 제출 예시 */}
+                            <div className="mb-6">
+                                <SectionTitle>📦 제출 예시</SectionTitle>
+                                <GreenBox>
+                                    <div className="space-y-1 text-[13.5px] leading-7">
+                                        <div>
+                                            <span className="font-semibold">GitHub: </span>
+                                            https://github.com/hong-dev/max-room-number
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold">데모 URL: </span>
+                                            https://max-room-number.example.com
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold">언어: </span>
+                                            node
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold">엔트리포인트: </span>
+                                            npm start
+                                        </div>
+                                        <div className="whitespace-pre-line">Node.js로 풀이 제출. 그리디로 자릿수 최대 확보 후 자리별 대체 로직 적용.
+유닛테스트 케이스 20개 포함, 엣지(예산=1, N=1) 처리.</div>
+                                    </div>
+                                </GreenBox>
+                            </div>
+                            
                             <AIScoringList items={(data as CodeChallengeDetail).aiScoring} />
                         </>
                     ) : (
@@ -409,7 +468,25 @@ export default function ChallengeDetailPage() {
                                 </ul>
                             </div>
                             <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards} />
-                            <SubmitExampleBox {...((data as PortfolioChallengeDetail).submitExample || {})} />
+                            
+                            {/* 포트폴리오 챌린지 제출 예시 */}
+                            <div className="mb-6">
+                                <SectionTitle>📦 제출 예시</SectionTitle>
+                                <GreenBox>
+                                    <div className="space-y-1 text-[13.5px] leading-7">
+                                        <div>
+                                            <span className="font-semibold">GitHub: </span>
+                                            https://github.com/retro-blog-team
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold">데모 URL: </span>
+                                            https://retroblog.dev
+                                        </div>
+                                        <div className="whitespace-pre-line">Next.js + Tailwind 기반 레트로 테마 블로그. VHS 스타일 애니메이션/CRT 느낌 UI 반영.</div>
+                                    </div>
+                                </GreenBox>
+                            </div>
+                            
                             {(data as PortfolioChallengeDetail).teamExample && (
                                 <div className="mb-6">
                                     <SectionTitle>👥 팀 정보 예시</SectionTitle>
@@ -436,24 +513,53 @@ export default function ChallengeDetailPage() {
                         </>
                     )}
 
-                    {/* 공통 */}
-                    <div className="mb-6">
-                        <SectionTitle>{data.type === "CODE" ? "💡 심사 기준" : "🛡 운영/공정성"}</SectionTitle>
-                        <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                            {data.judgeNotes.map((t, i) => (
-                                <li key={i}>{t}</li>
-                            ))}
-                        </ul>
-                    </div>
+                    {/* 공통 - 하드코딩된 안내문구 */}
+                    {data.type === "CODE" ? (
+                        <>
+                            {/* 코드 챌린지 - 심사 기준 */}
+                            <div className="mb-6">
+                                <SectionTitle>💡 심사 기준</SectionTitle>
+                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                                    <li>자리 수를 먼저 최대화한 뒤 각 자리에서 가능한 가장 큰 수를 고르는 전략(그리디+보정) 제시</li>
+                                    <li>선행 0 금지(한 자리 예외) 등 엣지케이스 처리</li>
+                                    <li>복잡도/가독성/테스트 통과율(성능) 가산점</li>
+                                    <li>창의적인 접근(DP/증명/튜닝) 환영</li>
+                                </ul>
+                            </div>
 
-                    <div>
-                        <SectionTitle>📣 안내</SectionTitle>
-                        <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                            {data.submitGuide.map((t, i) => (
-                                <li key={i}>{t}</li>
-                            ))}
-                        </ul>
-                    </div>
+                            {/* 코드 챌린지 - 안내 */}
+                            <div>
+                                <SectionTitle>📣 안내</SectionTitle>
+                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                                    <li>챌린지 시작: 월요일 00:00 (KST) ~ 문제 제출 마감: 일요일 23:59</li>
+                                    <li>AI 자동 채점 → 점수/코멘트 반영(수 분 소요)</li>
+                                    <li>커뮤니티 투표 점수와 합산되어 최종 순위 결정, 보상은 크레딧으로 자동 지급</li>
+                                </ul>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* 포트폴리오 챌린지 - 운영/공정성 */}
+                            <div className="mb-6">
+                                <SectionTitle>🛡 운영/공정성</SectionTitle>
+                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                                    <li>운영 정책/공정성: 챌린지당 1표, 본인 작품 투표 불가, 투표 기간 내에만 가능</li>
+                                    <li>UI/UX, 기술력, 창의성, 기획력의 종합 점수(별점 합산)로 순위 산정</li>
+                                    <li>제출물은 표절/저작권을 침해하지 않도록 주의(참고 출처 표기 권장)</li>
+                                </ul>
+                            </div>
+
+                            {/* 포트폴리오 챌린지 - 안내 */}
+                            <div>
+                                <SectionTitle>📣 안내</SectionTitle>
+                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                                    <li>챌린지 기간: 매월 1일 ~ 말일</li>
+                                    <li>투표 기간: 다음달 1일 ~ 3일</li>
+                                    <li>결과 발표: 다음달 4일, 보상은 크레딧으로 자동 지급</li>
+                                </ul>
+                            </div>
+                        </>
+                    )}
                 </SectionCard>
             )}
 
