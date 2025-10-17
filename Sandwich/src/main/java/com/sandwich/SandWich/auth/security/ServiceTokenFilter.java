@@ -29,7 +29,7 @@ public class ServiceTokenFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest req) {
         String p = req.getRequestURI();
-        return !(p.startsWith("/internal/"));
+        return !p.startsWith("/internal/ai/");
     }
 
     @Override
