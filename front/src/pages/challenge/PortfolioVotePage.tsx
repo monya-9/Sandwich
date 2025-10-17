@@ -16,6 +16,7 @@ export default function PortfolioVotePage() {
     const [loading, setLoading] = useState(true);
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
     
     const nav = useNavigate();
 
@@ -73,8 +74,10 @@ export default function PortfolioVotePage() {
                     };
                     
                     setDetail(backendBasedData);
+                    setChallengeStatus(backendChallenge.status);
                 } else {
                     setDetail(null);
+                    setChallengeStatus(null);
                 }
             } catch (err) {
                 setDetail(null);
@@ -105,9 +108,11 @@ export default function PortfolioVotePage() {
                         title={`샌드위치 챌린지 투표: ${(detail?.title || '포트폴리오 챌린지').replace(/^포트폴리오 챌린지:\s*/, "")}`}
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         actionButton={
-                            <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
-                                프로젝트 제출하기
-                            </CTAButton>
+                            challengeStatus === "ENDED" ? undefined : (
+                                <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
+                                    프로젝트 제출하기
+                                </CTAButton>
+                            )
                         }
                     />
 
@@ -155,6 +160,7 @@ export default function PortfolioVotePage() {
                         <EmptySubmissionState 
                             type="PORTFOLIO" 
                             onSubmit={() => nav(`/challenge/portfolio/${id}/submit`)} 
+                            challengeStatus={challengeStatus}
                         />
                     )}
                 </>

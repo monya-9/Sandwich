@@ -15,6 +15,7 @@ export default function CodeSubmissionListPage() {
     // 백엔드 챌린지 데이터 상태
     const [challengeData, setChallengeData] = useState<any>(null);
     const [loadingChallenge, setLoadingChallenge] = useState(false);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
     
     // AI 주간 챌린지 데이터 상태 (백업용)
     const [weeklyData, setWeeklyData] = useState<any>(null);
@@ -32,6 +33,7 @@ export default function CodeSubmissionListPage() {
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
                 setChallengeData(backendChallenge);
+                setChallengeStatus(backendChallenge.status);
             } catch (error) {
                 console.error('백엔드 챌린지 데이터 로딩 실패:', error);
                 // 백엔드 실패 시 AI 데이터 로드
@@ -106,9 +108,11 @@ export default function CodeSubmissionListPage() {
                 title={getHeaderTitle()}
                 onBack={() => nav(`/challenge/code/${id}`)}
                 actionButton={
-                    <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>
-                        코드 제출하기
-                    </CTAButton>
+                    challengeStatus === "ENDED" ? undefined : (
+                        <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>
+                            코드 제출하기
+                        </CTAButton>
+                    )
                 }
             />
 
@@ -159,6 +163,7 @@ export default function CodeSubmissionListPage() {
                 <EmptySubmissionState 
                     type="CODE" 
                     onSubmit={() => nav(`/challenge/code/${id}/submit`)} 
+                    challengeStatus={challengeStatus}
                 />
             )}
         </div>

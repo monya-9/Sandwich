@@ -115,11 +115,16 @@ export default function ChallengeListPage() {
                     <div className="relative">
                         {/* ⬅️ 왼쪽 버튼: 카드 밖으로 살짝 */}
                         <button
-                            className="
-        absolute left-[-10px] md:left-[-14px] top-1/2 -translate-y-1/2
-        rounded-full border border-neutral-300 bg-white p-2 shadow-sm hover:bg-neutral-50
-      "
+                            className={`
+                                absolute left-[-10px] md:left-[-14px] top-1/2 -translate-y-1/2
+                                rounded-full border p-2 shadow-sm transition-colors
+                                ${pastChallenges.length <= 4 
+                                    ? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed' 
+                                    : 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
+                                }
+                            `}
                             aria-label="이전"
+                            disabled={pastChallenges.length <= 4}
                         >
                             <ChevronLeft className="h-5 w-5" />
                         </button>
@@ -176,11 +181,16 @@ export default function ChallengeListPage() {
 
                         {/* ➡️ 오른쪽 버튼: 카드 밖으로 살짝 */}
                         <button
-                            className="
-        absolute right-[-10px] md:right-[-14px] top-1/2 -translate-y-1/2
-        rounded-full border border-neutral-300 bg-white p-2 shadow-sm hover:bg-neutral-50
-      "
+                            className={`
+                                absolute right-[-10px] md:right-[-14px] top-1/2 -translate-y-1/2
+                                rounded-full border p-2 shadow-sm transition-colors
+                                ${pastChallenges.length <= 4 
+                                    ? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed' 
+                                    : 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
+                                }
+                            `}
                             aria-label="다음"
+                            disabled={pastChallenges.length <= 4}
                         >
                             <ChevronRight className="h-5 w-5" />
                         </button>
