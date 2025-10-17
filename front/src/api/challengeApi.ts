@@ -309,3 +309,69 @@ export async function adminFetchChallenges(params?: {
   const res = await api.get('/admin/challenges', { params: p, withCredentials: true });
   return res.data as ChallengeListResponse;
 }
+
+// ===== 리더보드/우승자 관련 =====
+
+export type LeaderboardEntry = {
+  rank: number;
+  userId: number;
+  userName: string;
+  userInitial: string;
+  totalScore?: number;
+  voteCount?: number;
+  credits?: number;
+};
+
+export type LeaderboardResponse = {
+  challengeId: number;
+  entries: LeaderboardEntry[];
+  total: number;
+};
+
+/**
+ * 포트폴리오 챌린지 리더보드 조회
+ */
+export async function fetchPortfolioLeaderboard(
+  challengeId: number, 
+  limit: number = 10
+): Promise<LeaderboardResponse> {
+  const response = await api.get(`/challenges/${challengeId}/leaderboard`, {
+    params: { limit },
+    withCredentials: true,
+  });
+  return response.data;
+}
+
+/**
+ * 코드 챌린지 상위 제출자 조회 (제출물 API 활용)
+ */
+export async function fetchCodeTopSubmitters(
+  challengeId: number,
+  limit: number = 10
+): Promise<LeaderboardResponse> {
+  const response = await api.get(`/challenges/${challengeId}/submissions`, {
+    params: { 
+      page: 0, 
+      size: limit,
+      sort: "likeCount,desc" // 좋아요 순으로 정렬
+    },
+    withCredentials: true,
+  });
+  
+  // 제출물 응답을 리더보드 형식으로 변환
+  const submissions = response.data.content || [];
+  const entries: LeaderboardEntry[] = submissions.map((sub: any, index: number) => ({
+    rank: index + 1,
+    userId: sub.authorId || sub.userId,
+    userName: sub.authorName || sub.userName || 'Unknown',
+    userInitial: (sub.authorName || sub.userName || 'U')[0].toUpperCase(),
+    totalScore: sub.likeCount || 0,
+    voteCount: sub.likeCount || 0,
+  }));
+
+  return {
+    challengeId,
+    entries,
+    total: response.data.totalElements || entries.length,
+  };
+}

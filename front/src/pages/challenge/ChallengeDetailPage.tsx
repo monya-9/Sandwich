@@ -11,6 +11,12 @@ import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { ChevronDown, ChevronLeft, AlertCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
+import { 
+    fetchChallengeDetail, 
+    fetchPortfolioLeaderboard, 
+    fetchCodeTopSubmitters,
+    type LeaderboardEntry 
+} from "../../api/challengeApi";
 
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
@@ -146,13 +152,34 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
 }
 
 /* ---------- TOP Winners Component ---------- */
-function TopWinners({ type }: { type: "CODE" | "PORTFOLIO" }) {
-    // 더미 데이터 (추후 API에서 가져올 수 있음)
-    const winners = [
-        { rank: 2, name: "홍시엽", initial: "H", credit: "5,000 크레딧" },
-        { rank: 1, name: "조미연", initial: "J", credit: "10,000 크레딧" }, 
-        { rank: 3, name: "이주홍", initial: "L", credit: "1,000 크레딧" }
-    ];
+function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challengeId: number }) {
+    const [winners, setWinners] = useState<LeaderboardEntry[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchWinners = async () => {
+            try {
+                setLoading(true);
+                let leaderboardData;
+                
+                if (type === "PORTFOLIO") {
+                    leaderboardData = await fetchPortfolioLeaderboard(challengeId, 3);
+                } else {
+                    leaderboardData = await fetchCodeTopSubmitters(challengeId, 3);
+                }
+                
+                setWinners(leaderboardData.entries.slice(0, 3)); // 상위 3명만
+                setError(null);
+            } catch (err) {
+                setError("우승자 정보를 불러올 수 없습니다.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchWinners();
+    }, [type, challengeId]);
 
     const getMedalIcon = (rank: number) => {
         switch(rank) {
@@ -163,6 +190,38 @@ function TopWinners({ type }: { type: "CODE" | "PORTFOLIO" }) {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="mb-6">
+                <h2 className="text-xl font-bold mb-4 text-center">
+                    지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
+                </h2>
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                    <div className="flex justify-center items-center py-8">
+                        <div className="text-gray-500">우승자 정보를 불러오는 중...</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || winners.length === 0) {
+        return (
+            <div className="mb-6">
+                <h2 className="text-xl font-bold mb-4 text-center">
+                    지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
+                </h2>
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                    <div className="flex justify-center items-center py-8">
+                        <div className="text-gray-500">
+                            {error || "아직 우승자 정보가 없습니다."}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="mb-6">
             <h2 className="text-xl font-bold mb-4 text-center">
@@ -171,7 +230,7 @@ function TopWinners({ type }: { type: "CODE" | "PORTFOLIO" }) {
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="flex justify-center items-end gap-8">
                     {winners.map((winner, index) => (
-                        <div key={index} className="text-center">
+                        <div key={winner.userId} className="text-center">
                             {/* 메달 아이콘 */}
                             <div className="mb-2 text-4xl">
                                 {getMedalIcon(winner.rank)}
@@ -179,15 +238,17 @@ function TopWinners({ type }: { type: "CODE" | "PORTFOLIO" }) {
                             
                             {/* 이니셜 */}
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                <span className="font-bold text-lg text-gray-700">{winner.initial}</span>
+                                <span className="font-bold text-lg text-gray-700">{winner.userInitial}</span>
                             </div>
                             
                             {/* 이름 */}
-                            <div className="font-semibold text-gray-800 mb-1">{winner.name}</div>
+                            <div className="font-semibold text-gray-800 mb-1">{winner.userName}</div>
                             
-                            {/* 크레딧 */}
+                            {/* 크레딧 또는 점수 */}
                             <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
-                                {winner.credit}
+                                {winner.credits ? `${winner.credits.toLocaleString()} 크레딧` : 
+                                 winner.totalScore ? `${winner.totalScore}점` : 
+                                 `${winner.voteCount || 0}표`}
                             </div>
                         </div>
                     ))}
@@ -452,8 +513,8 @@ export default function ChallengeDetailPage() {
                 </button>
             </div>
 
-            {/* TOP Winners - 종료된 챌린지만 */}
-            {challengeStatus === "ENDED" && <TopWinners type={type} />}
+            {/* TOP Winners - 종료된 포트폴리오 챌린지만 */}
+            {challengeStatus === "ENDED" && type === "PORTFOLIO" && data?.id && <TopWinners type={type} challengeId={data.id} />}
 
             {/* 본문 */}
             {open && (
