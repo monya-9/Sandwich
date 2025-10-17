@@ -44,7 +44,6 @@ export default function CodeSubmissionDetailPage() {
                 const backendChallenge = await fetchChallengeDetail(id);
                 setChallengeData(backendChallenge);
             } catch (error) {
-                console.error('백엔드 챌린지 데이터 로딩 실패:', error);
                 setChallengeData(null);
             } finally {
                 setChallengeLoading(false);

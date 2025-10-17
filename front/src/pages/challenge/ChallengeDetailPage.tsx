@@ -183,8 +183,7 @@ export default function ChallengeDetailPage() {
         // 1. 백엔드에서 챌린지 상세 정보 가져오기
         import('../../api/challengeApi').then(({ fetchChallengeDetail }) => {
             fetchChallengeDetail(id)
-                .then(async (backendChallenge) => {
-                    console.log('백엔드 챌린지 데이터:', backendChallenge);
+                .then((backendChallenge) => {
                     
                     // ruleJson 파싱: 문자열일 수 있음
                     let rule: any = {};
@@ -195,7 +194,6 @@ export default function ChallengeDetailPage() {
 
                     if (backendChallenge.type === "PORTFOLIO") {
                         // 포트폴리오 챌린지 - 백엔드 데이터 우선 사용
-                        console.log('백엔드 포트폴리오 챌린지 데이터:', backendChallenge);
                         
                         // ruleJson 파싱 먼저 수행
                         let ruleData: any = null;
@@ -209,12 +207,9 @@ export default function ChallengeDetailPage() {
                                 
                                 // 백엔드 설명 우선순위: summary > md > null
                                 backendDescription = ruleData.summary || ruleData.md;
-                                console.log('포트폴리오 파싱된 ruleJson:', ruleData);
-                                console.log('포트폴리오 백엔드 설명:', backendDescription);
                                 
                                 setMustHave(ruleData.must || ruleData.mustHave || []);
                             } catch (e) {
-                                console.error('포트폴리오 ruleJson 파싱 실패:', e);
                                 setMustHave([]);
                             }
                         }
@@ -232,7 +227,6 @@ export default function ChallengeDetailPage() {
                             status: backendChallenge.status,
                         };
                         
-                        console.log('최종 포트폴리오 챌린지 데이터:', backendBasedData);
                         setData(backendBasedData);
                         
                         // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
@@ -240,7 +234,6 @@ export default function ChallengeDetailPage() {
                             import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
                                 fetchMonthlyChallenge()
                                     .then((monthlyData) => {
-                                        console.log('보조 월간 AI 데이터:', monthlyData);
                                         setData(prev => prev ? {
                                             ...prev,
                                             description: monthlyData.description || prev.description,
@@ -250,7 +243,7 @@ export default function ChallengeDetailPage() {
                                         }
                                     })
                                     .catch((err) => {
-                                        console.error('월간 AI 데이터 로딩 실패:', err);
+                                        // AI 데이터 로딩 실패는 무시
                                     });
                             });
                         }
@@ -259,7 +252,6 @@ export default function ChallengeDetailPage() {
                         setLoading(false);
                     } else if (backendChallenge.type === "CODE") {
                         // 코드 챌린지 - 백엔드 데이터 우선 사용
-                        console.log('백엔드 코드 챌린지 데이터:', backendChallenge);
                         
                         // ruleJson 파싱 먼저 수행
                         let ruleData: any = null;
@@ -273,12 +265,9 @@ export default function ChallengeDetailPage() {
                                 
                                 // 백엔드 설명 우선순위: summary > md > null
                                 backendDescription = ruleData.summary || ruleData.md;
-                                console.log('파싱된 ruleJson:', ruleData);
-                                console.log('백엔드 설명:', backendDescription);
                                 
                                 setMustHave(ruleData.must || []);
                             } catch (e) {
-                                console.error('ruleJson 파싱 실패:', e);
                                 setMustHave([]);
                             }
                         }
@@ -296,7 +285,6 @@ export default function ChallengeDetailPage() {
                             status: backendChallenge.status,
                         };
                         
-                        console.log('최종 챌린지 데이터:', backendBasedData);
                         setData(backendBasedData);
                         
                         setError(null);
@@ -304,7 +292,6 @@ export default function ChallengeDetailPage() {
                     }
                 })
                 .catch((err) => {
-                    console.error('백엔드 챌린지 상세 로딩 실패:', err);
                     setError('챌린지 정보를 불러오는 중 오류가 발생했습니다.');
                     setData(null);
                     setLoading(false); // 실패 시에도 로딩 완료

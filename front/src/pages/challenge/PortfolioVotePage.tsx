@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { CTAButton, ChallengePageHeader } from "../../components/challenge/common";
 import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
-import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchPortfolioSubmissions, type SubmissionListItem } from "../../api/submissionApi";
 import { fetchChallengeDetail } from "../../api/challengeApi";
@@ -42,7 +42,6 @@ export default function PortfolioVotePage() {
             setLoading(true);
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
-                console.log('포트폴리오 투표 - 백엔드 데이터:', backendChallenge);
                 
                 if (backendChallenge.type === "PORTFOLIO") {
                     // 백엔드 데이터 우선 사용
@@ -56,7 +55,7 @@ export default function PortfolioVotePage() {
                                 : backendChallenge.ruleJson;
                             backendDescription = ruleData.summary || ruleData.md;
                         } catch (e) {
-                            console.error('포트폴리오 투표 - ruleJson 파싱 실패:', e);
+                            // ruleJson 파싱 실패는 무시
                         }
                     }
                     
@@ -73,14 +72,11 @@ export default function PortfolioVotePage() {
                         status: backendChallenge.status,
                     };
                     
-                    console.log('포트폴리오 투표 - 최종 데이터:', backendBasedData);
                     setDetail(backendBasedData);
                 } else {
-                    console.error('이 챌린지는 포트폴리오 챌린지가 아닙니다.');
                     setDetail(null);
                 }
             } catch (err) {
-                console.error('포트폴리오 투표 - 챌린지 데이터 로딩 실패:', err);
                 setDetail(null);
             } finally {
                 setLoading(false);

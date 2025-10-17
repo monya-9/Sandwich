@@ -59,7 +59,6 @@ export default function CodeSubmitPage() {
             try {
                 const { fetchChallengeDetail } = await import('../../api/challengeApi');
                 const backendChallenge = await fetchChallengeDetail(id);
-                console.log('코드 제출 - 백엔드 데이터:', backendChallenge);
                 
                 if (backendChallenge.type === "CODE") {
                     // 백엔드 데이터 우선 사용
@@ -73,7 +72,7 @@ export default function CodeSubmitPage() {
                                 : backendChallenge.ruleJson;
                             backendDescription = ruleData.summary || ruleData.md;
                         } catch (e) {
-                            console.error('코드 제출 - ruleJson 파싱 실패:', e);
+                            // ruleJson 파싱 실패는 무시
                         }
                     }
                     
@@ -90,14 +89,11 @@ export default function CodeSubmitPage() {
                         status: backendChallenge.status,
                     };
                     
-                    console.log('코드 제출 - 최종 데이터:', backendBasedData);
                     setData(backendBasedData);
                 } else {
-                    console.error('이 챌린지는 코드 챌린지가 아닙니다.');
                     setData(null);
                 }
             } catch (err) {
-                console.error('코드 제출 - 챌린지 데이터 로딩 실패:', err);
                 // 에러 시 더미 데이터 사용
                 const fallbackData = getChallengeDetail(id) as CodeChallengeDetail;
                 setData(fallbackData);

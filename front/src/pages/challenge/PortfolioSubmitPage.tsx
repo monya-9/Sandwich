@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
-import { getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
 import Toast from "../../components/common/Toast";
@@ -89,28 +89,71 @@ export default function PortfolioSubmitPage() {
         checkChallengeExists();
     }, [id]);
 
-    // 백엔드에서 챌린지 타입 확인 후 포트폴리오인 경우 AI API에서 동적으로 데이터 가져오기
+    // 백엔드 챌린지 데이터 우선 사용
     useEffect(() => {
         const loadChallengeData = async () => {
             setLoading(true);
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
+                
                 if (backendChallenge.type === "PORTFOLIO") {
-                    // 포트폴리오 챌린지 데이터와 mustHave 데이터 동시에 가져오기
-                    const [dynamicData, monthlyData] = await Promise.all([
-                        getDynamicChallengeDetail(id, backendChallenge.type),
-                        import('../../api/monthlyChallenge').then(m => m.fetchMonthlyChallenge())
-                    ]);
-                    setData(dynamicData as PortfolioChallengeDetail);
-                    setMustHave(monthlyData.mustHave || []);
+                    // 백엔드 데이터 우선 사용
+                    let ruleData: any = null;
+                    let backendDescription: string | null = null;
+                    
+                    if (backendChallenge.ruleJson) {
+                        try {
+                            ruleData = typeof backendChallenge.ruleJson === 'string' 
+                                ? JSON.parse(backendChallenge.ruleJson) 
+                                : backendChallenge.ruleJson;
+                            backendDescription = ruleData.summary || ruleData.md;
+                            setMustHave(ruleData.must || ruleData.mustHave || []);
+                        } catch (e) {
+                            setMustHave([]);
+                        }
+                    }
+                    
+                    // 더미 데이터 기반으로 백엔드 데이터 적용
+                    const baseData = getChallengeDetail(id) as PortfolioChallengeDetail;
+                    const backendBasedData = {
+                        ...baseData,
+                        id: backendChallenge.id,
+                        title: `포트폴리오 챌린지: ${backendChallenge.title}`,
+                        subtitle: backendChallenge.title,
+                        description: backendDescription || baseData.description,
+                        startAt: backendChallenge.startAt,
+                        endAt: backendChallenge.endAt,
+                        status: backendChallenge.status,
+                    };
+                    
+                    setData(backendBasedData);
+                    
+                    // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
+                    if (!backendDescription && !ruleData?.must && !ruleData?.mustHave) {
+                        import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
+                            fetchMonthlyChallenge()
+                                .then((monthlyData) => {
+                                    if (!backendDescription) {
+                                        setData(prev => prev ? {
+                                            ...prev,
+                                            description: monthlyData.description || prev.description,
+                                        } : prev);
+                                    }
+                                    if (!ruleData?.must && !ruleData?.mustHave) {
+                                        setMustHave(monthlyData.mustHave || []);
+                                    }
+                                })
+                                .catch((err) => {
+                                    // AI 데이터 로딩 실패는 무시
+                                });
+                        });
+                    }
                 } else {
                     // 포트폴리오가 아닌 경우 에러 처리
-                    console.error('이 챌린지는 포트폴리오 챌린지가 아닙니다.');
                     setData(null);
                     setMustHave([]);
                 }
             } catch (err) {
-                console.error('챌린지 데이터 로딩 실패:', err);
                 // 에러 시 null로 설정하여 에러 상태 표시
                 setData(null);
                 setMustHave([]);
