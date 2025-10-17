@@ -70,11 +70,9 @@ public class AdminChallengeController {
     }
 
     @DeleteMapping("/{id}")
-    public Map<String,Object> delete(@PathVariable Long id) {
-        // 하드/소프트 삭제 정책에 맞춰 교체 가능
-        service.patch(id, AdminChallengeDtos.PatchReq.builder()
-                .status(com.sandwich.SandWich.challenge.domain.ChallengeStatus.ENDED).build());
-        // 또는 repo.deleteById(id);
+    public Map<String,Object> delete(@PathVariable Long id,
+                                     @RequestParam(defaultValue = "false") boolean force) {
+        service.delete(id, force);   // ← 실제 삭제
         return Map.of("ok", true);
     }
 

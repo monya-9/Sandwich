@@ -11,8 +11,11 @@ import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
 import com.sandwich.SandWich.challenge.domain.ChallengeType;
 import com.sandwich.SandWich.challenge.repository.ChallengeRepository;
 import com.sandwich.SandWich.challenge.repository.ChallengeSpecifications;
+import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLogRepository;
 import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.reward.service.RewardPayoutService;
 import com.sandwich.SandWich.reward.service.RewardRule;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
@@ -27,7 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
+import java.util.Map;
 
 
 @Service
@@ -41,6 +44,10 @@ public class AdminChallengeService {
     private final CurrentUserProvider current;
     private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository auditRepo;
     private final ChallengeSyncLogRepository logs;
+    private final SubmissionRepository submissionRepo;
+    private final PortfolioVoteRepository voteRepo;
+    private final RedisUtil redisUtil;
+
 
     @Transactional
     public Long create(CreateReq req) {
@@ -158,6 +165,45 @@ public class AdminChallengeService {
                 .latestSync(latest.isEmpty()? null : latest.get(0))
                 .build();
     }
+
+    @Transactional
+    public void delete(Long challengeId, boolean force) {
+        Challenge c = repo.findById(challengeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+
+        if (reward.isPublished(challengeId) && !force) {
+            throw new BadRequestException("CANNOT_DELETE_PUBLISHED",
+                    "보상 지급된 챌린지는 삭제할 수 없습니다. force=true로 강제 삭제하세요.");
+        }
+
+        long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
+        long voteCount = 0L;
+        try {
+            voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
+                    .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
+        } catch (Exception ignore) {}
+
+        if (!force && (submissionCount > 0 || voteCount > 0)) {
+            throw new BadRequestException("HAS_DEPENDENCIES",
+                    "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+        }
+
+        var subIds = submissionRepo.findIdsByChallengeId(challengeId);
+        for (Long sid : subIds) {
+            redisUtil.deleteValue("viewcount:submission:" + sid);
+        }
+
+        try { voteRepo.deleteByChallengeId(challengeId); } catch (Exception ignore) {}
+
+        submissionRepo.deleteByChallengeId(challengeId);
+
+        repo.delete(c);
+
+        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of(
+                "force", force, "submissionCount", submissionCount, "voteCount", voteCount
+        ));
+    }
+
 
 
 }
