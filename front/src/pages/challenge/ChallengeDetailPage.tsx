@@ -145,6 +145,58 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
     );
 }
 
+/* ---------- TOP Winners Component ---------- */
+function TopWinners({ type }: { type: "CODE" | "PORTFOLIO" }) {
+    // 더미 데이터 (추후 API에서 가져올 수 있음)
+    const winners = [
+        { rank: 2, name: "홍시엽", initial: "H", credit: "5,000 크레딧" },
+        { rank: 1, name: "조미연", initial: "J", credit: "10,000 크레딧" }, 
+        { rank: 3, name: "이주홍", initial: "L", credit: "1,000 크레딧" }
+    ];
+
+    const getMedalIcon = (rank: number) => {
+        switch(rank) {
+            case 1: return "🥇";
+            case 2: return "🥈"; 
+            case 3: return "🥉";
+            default: return "🏅";
+        }
+    };
+
+    return (
+        <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4 text-center">
+                지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
+            </h2>
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="flex justify-center items-end gap-8">
+                    {winners.map((winner, index) => (
+                        <div key={index} className="text-center">
+                            {/* 메달 아이콘 */}
+                            <div className="mb-2 text-4xl">
+                                {getMedalIcon(winner.rank)}
+                            </div>
+                            
+                            {/* 이니셜 */}
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
+                                <span className="font-bold text-lg text-gray-700">{winner.initial}</span>
+                            </div>
+                            
+                            {/* 이름 */}
+                            <div className="font-semibold text-gray-800 mb-1">{winner.name}</div>
+                            
+                            {/* 크레딧 */}
+                            <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+                                {winner.credit}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ---------- Helpers: 라벨/경로 ---------- */
 function primaryHref(type: "CODE" | "PORTFOLIO", id: number) {
     return type === "CODE" ? `/challenge/code/${id}/submit` : `/challenge/portfolio/${id}/submit`;
@@ -179,6 +231,7 @@ export default function ChallengeDetailPage() {
     const [loading, setLoading] = useState(true); // 초기에는 로딩 상태
     const [error, setError] = useState<string | null>(null);
     const [mustHave, setMustHave] = useState<string[]>([]);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -238,6 +291,7 @@ export default function ChallengeDetailPage() {
                         };
                         
                         setData(backendBasedData);
+                        setChallengeStatus(backendChallenge.status);
                         
                         // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
                         if (!backendDescription) {
@@ -296,6 +350,7 @@ export default function ChallengeDetailPage() {
                         };
                         
                         setData(backendBasedData);
+                        setChallengeStatus(backendChallenge.status);
                         
                         setError(null);
                         setLoading(false);
@@ -379,12 +434,15 @@ export default function ChallengeDetailPage() {
 
             {/* 상단 CTA */}
             <div className="mb-4 flex flex-wrap gap-2">
-                <button
-                    onClick={goPrimary}
-                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
-                >
-                    <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
-                </button>
+                {/* 종료된 챌린지가 아닐 때만 제출하기 버튼 표시 */}
+                {challengeStatus !== "ENDED" && (
+                    <button
+                        onClick={goPrimary}
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                    >
+                        <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
+                    </button>
+                )}
 
                 <button
                     onClick={goSecondary}
@@ -393,6 +451,9 @@ export default function ChallengeDetailPage() {
                     <span>{type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(type)} →
                 </button>
             </div>
+
+            {/* TOP Winners - 종료된 챌린지만 */}
+            {challengeStatus === "ENDED" && <TopWinners type={type} />}
 
             {/* 본문 */}
             {open && (
@@ -562,9 +623,12 @@ export default function ChallengeDetailPage() {
                     {/* 하단 고정 CTA */}
                     <div className="sticky bottom-4 mt-6 flex justify-end">
                         <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
-                            <CTAButton as="button" onClick={goPrimary}>
-                                {primaryLabel(type)}
-                            </CTAButton>
+                            {/* 종료된 챌린지가 아닐 때만 제출하기 버튼 표시 */}
+                            {challengeStatus !== "ENDED" && (
+                                <CTAButton as="button" onClick={goPrimary}>
+                                    {primaryLabel(type)}
+                                </CTAButton>
+                            )}
                             <CTAButton as="button" onClick={goSecondary}>
                                 {secondaryLabel(type)}
                             </CTAButton>

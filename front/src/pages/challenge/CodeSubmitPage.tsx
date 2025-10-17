@@ -37,6 +37,7 @@ export default function CodeSubmitPage() {
     // 백엔드 챌린지 데이터 상태
     const [data, setData] = useState<CodeChallengeDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
     
     // AI 주간 챌린지 데이터 상태 (보조용)
     const [weeklyData, setWeeklyData] = useState<any>(null);
@@ -90,6 +91,7 @@ export default function CodeSubmitPage() {
                     };
                     
                     setData(backendBasedData);
+                    setChallengeStatus(backendChallenge.status);
                 } else {
                     setData(null);
                 }
@@ -135,7 +137,8 @@ export default function CodeSubmitPage() {
     const submissionId: number | null = null;
     const [aiStatus] = useState<AiStatus>({});
 
-    const canSubmit = !!form.title.trim();
+    const canSubmit = !!form.title.trim() && challengeStatus !== "ENDED";
+    const isChallengeEnded = challengeStatus === "ENDED";
 
     // GitHub API에서 최신 커밋 SHA 가져오기
     const fetchLatestCommitSha = async (repoUrl: string): Promise<string> => {
@@ -341,12 +344,31 @@ export default function CodeSubmitPage() {
                                 <Help>예: 추가 환경변수 / 빌드 스텝 / 샘플 입력 설명 등</Help>
                             </Row>
 
+                            {/* 종료된 챌린지 안내 */}
+                            {isChallengeEnded && (
+                                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div className="flex items-center gap-2 text-gray-700">
+                                        <span className="text-lg">🔒</span>
+                                        <div>
+                                            <div className="font-semibold">종료된 챌린지</div>
+                                            <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-end">
-                                <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit || submitting}>
+                                <CTAButton 
+                                    as="button" 
+                                    onClick={handleSubmit} 
+                                    disabled={!canSubmit || submitting}
+                                >
                                     {submitting ? (
                                         <>
                                             <Loader2 className="mr-1 h-4 w-4 animate-spin" /> 제출 중…
                                         </>
+                                    ) : isChallengeEnded ? (
+                                        "제출 불가"
                                     ) : (
                                         "제출하기"
                                     )}

@@ -26,6 +26,7 @@ export default function CodeSubmissionDetailPage() {
     // 백엔드 챌린지 데이터 상태
     const [challengeData, setChallengeData] = useState<any>(null);
     const [challengeLoading, setChallengeLoading] = useState(true);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
     
     const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -43,8 +44,10 @@ export default function CodeSubmissionDetailPage() {
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
                 setChallengeData(backendChallenge);
+                setChallengeStatus(backendChallenge.status);
             } catch (error) {
                 setChallengeData(null);
+                setChallengeStatus(null);
             } finally {
                 setChallengeLoading(false);
             }
@@ -153,6 +156,7 @@ export default function CodeSubmissionDetailPage() {
 
     // 좋아요 토글
     const toggleLike = async () => {
+        if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
         try {
             const response = await api.post('/api/likes', {
                 targetType: 'CODE_SUBMISSION',
@@ -168,7 +172,7 @@ export default function CodeSubmissionDetailPage() {
     // 댓글 작성
     const submitComment = async () => {
         const text = commentText.trim();
-        if (!text) return;
+        if (!text || challengeStatus === "ENDED") return; // 종료된 챌린지에서는 댓글 작성 불가
         
         setCommentLoading(true);
         try {
@@ -261,7 +265,15 @@ export default function CodeSubmissionDetailPage() {
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
                     <button
                         onClick={toggleLike}
-                        className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                        disabled={challengeStatus === "ENDED"}
+                        className={`inline-flex items-center gap-1 ${
+                            challengeStatus === "ENDED" 
+                                ? "text-gray-400 cursor-not-allowed" 
+                                : liked 
+                                ? "text-rose-600" 
+                                : "hover:text-neutral-900"
+                        }`}
+                        title={challengeStatus === "ENDED" ? "종료된 챌린지에서는 좋아요를 할 수 없습니다" : ""}
                     >
                         <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
                         {likeCount}
@@ -339,24 +351,33 @@ export default function CodeSubmissionDetailPage() {
                 </div>
 
                 {/* 댓글 입력 */}
-                <div className="rounded-2xl border p-4">
-                    <textarea
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="댓글을 입력하세요..."
-                        className="w-full resize-none rounded-lg border-0 bg-transparent p-0 text-[13.5px] leading-6 placeholder-neutral-500 focus:ring-0"
-                        rows={3}
-                    />
-                    <div className="mt-2 flex justify-end">
-                        <button
-                            onClick={submitComment}
-                            disabled={!commentText.trim() || commentLoading}
-                            className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:bg-neutral-300"
-                        >
-                            {commentLoading ? '작성 중...' : '댓글 작성'}
-                        </button>
+                {challengeStatus === "ENDED" ? (
+                    <div className="rounded-2xl border p-4 bg-gray-50">
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <span>🔒</span>
+                            <span className="text-sm">이 챌린지는 종료되어 댓글을 작성할 수 없습니다.</span>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="rounded-2xl border p-4">
+                        <textarea
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            placeholder="댓글을 입력하세요..."
+                            className="w-full resize-none rounded-lg border-0 bg-transparent p-0 text-[13.5px] leading-6 placeholder-neutral-500 focus:ring-0"
+                            rows={3}
+                        />
+                        <div className="mt-2 flex justify-end">
+                            <button
+                                onClick={submitComment}
+                                disabled={!commentText.trim() || commentLoading}
+                                className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:bg-neutral-300"
+                            >
+                                {commentLoading ? '작성 중...' : '댓글 작성'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </SectionCard>
 
             <div className="mt-6 flex justify-end">

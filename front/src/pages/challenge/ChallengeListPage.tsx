@@ -107,8 +107,8 @@ export default function ChallengeListPage() {
                     ))
                 )}
 
-                {/* 지난 대결 보기 - 제목만 */}
-                <h2 className="text-2xl font-bold mb-4 text-left ml-[15px]">지난 대결 보기</h2>
+                {/* 지난 챌린지 - 제목만 */}
+                <h2 className="text-2xl font-bold mb-4 text-left ml-[15px]">지난 챌린지</h2>
 
                 {/* 캐러셀 카드 틀만 감싸기 (타이틀 X, 보더 O) */}
                 <SectionCard bordered className="mt-2 overflow-visible">

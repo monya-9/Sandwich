@@ -63,6 +63,7 @@ export default function PortfolioSubmitPage() {
     const [loading, setLoading] = useState(true);
     const [challengeExists, setChallengeExists] = useState<boolean | null>(null);
     const [mustHave, setMustHave] = useState<string[]>([]);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
@@ -127,6 +128,7 @@ export default function PortfolioSubmitPage() {
                     };
                     
                     setData(backendBasedData);
+                    setChallengeStatus(backendChallenge.status);
                     
                     // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
                     if (!backendDescription && !ruleData?.must && !ruleData?.mustHave) {
@@ -185,8 +187,9 @@ export default function PortfolioSubmitPage() {
         images: [],
     });
 
-    // ✅ 제목 또는 설명만 있어도 제출 가능
-    const canSubmit = !!form.title.trim() || !!form.desc?.trim();
+    // ✅ 제목 또는 설명만 있어도 제출 가능 (단, 챌린지가 종료되지 않았을 때만)
+    const canSubmit = (!!form.title.trim() || !!form.desc?.trim()) && challengeStatus !== "ENDED";
+    const isChallengeEnded = challengeStatus === "ENDED";
 
     // 이미지 크롭 핸들러
     const handleCropDone = async (
@@ -617,9 +620,26 @@ export default function PortfolioSubmitPage() {
                                 />
                             </Row>
 
+                            {/* 종료된 챌린지 안내 */}
+                            {isChallengeEnded && (
+                                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div className="flex items-center gap-2 text-gray-700">
+                                        <span className="text-lg">🔒</span>
+                                        <div>
+                                            <div className="font-semibold">종료된 챌린지</div>
+                                            <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-end">
-                                <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit}>
-                                    제출하기
+                                <CTAButton 
+                                    as="button" 
+                                    onClick={handleSubmit} 
+                                    disabled={!canSubmit}
+                                >
+                                    {isChallengeEnded ? "제출 불가" : "제출하기"}
                                 </CTAButton>
                             </div>
                         </div>
@@ -698,8 +718,27 @@ export default function PortfolioSubmitPage() {
                             </div>
                         </div>
 
+                        {/* 종료된 챌린지 안내 */}
+                        {isChallengeEnded && (
+                            <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <span className="text-lg">🔒</span>
+                                    <div>
+                                        <div className="font-semibold">종료된 챌린지</div>
+                                        <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-4 flex justify-end">
-                            <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit}>제출하기</CTAButton>
+                            <CTAButton 
+                                as="button" 
+                                onClick={handleSubmit} 
+                                disabled={!canSubmit}
+                            >
+                                {isChallengeEnded ? "제출 불가" : "제출하기"}
+                            </CTAButton>
                         </div>
                     </SectionCard>
                 )}

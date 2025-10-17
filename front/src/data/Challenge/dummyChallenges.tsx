@@ -197,14 +197,19 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
             return [];
         }
 
-        // 과거 챌린지만 필터링 (오늘 이전에 시작된 것들)
+        // ENDED 상태 챌린지만 필터링
         const pastChallenges = backendChallenges.content
-            .filter(c => !isCurrentOrFuture(c.startAt))
-            .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()) // 최신순
+            .filter(c => c.status === "ENDED")
+            .sort((a, b) => {
+                // 종료일 기준으로 최신순 정렬 (endAt이 없으면 startAt 사용)
+                const aEndDate = new Date(a.endAt || a.startAt).getTime();
+                const bEndDate = new Date(b.endAt || b.startAt).getTime();
+                return bEndDate - aEndDate;
+            })
             .slice(0, 8); // 최대 8개만
 
         return pastChallenges.map(challenge => {
-            const challengeDate = new Date(challenge.startAt);
+            const endDate = new Date(challenge.endAt || challenge.startAt);
             const isCode = challenge.type === "CODE";
             
             return {
@@ -214,11 +219,11 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                 subtitle: challenge.title || (isCode ? '코딩 챌린지' : '포트폴리오 챌린지'),
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-600">
-                        <p>📅 {challengeDate.toLocaleDateString('ko-KR')} 진행</p>
+                        <p>📅 {endDate.toLocaleDateString('ko-KR')} 종료</p>
                         <p className="text-[12px] text-gray-500">✅ 종료된 챌린지</p>
                     </div>
                 ),
-                ctaLabel: "결과 보기",
+                ctaLabel: "자세히 보기",
             };
         });
     } catch (error) {

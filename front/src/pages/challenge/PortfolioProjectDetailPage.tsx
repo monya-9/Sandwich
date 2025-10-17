@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, X } from "lucide-react";
 import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
+import { fetchChallengeDetail } from "../../api/challengeApi";
 import api from "../../api/axiosInstance";
 
 function Stars({
@@ -39,12 +40,33 @@ export default function PortfolioProjectDetailPage() {
     const [cText, setCText] = useState("");
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+    
+    // 챌린지 상태 확인
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    const [challengeLoading, setChallengeLoading] = useState(true);
 
     // 별점
     const [ux, setUx] = useState(0);
     const [tech, setTech] = useState(0);
     const [cre, setCre] = useState(0);
     const [plan, setPlan] = useState(0);
+
+    // 챌린지 상태 로드
+    useEffect(() => {
+        const loadChallengeData = async () => {
+            setChallengeLoading(true);
+            try {
+                const backendChallenge = await fetchChallengeDetail(id);
+                setChallengeStatus(backendChallenge.status);
+            } catch (error) {
+                setChallengeStatus(null);
+            } finally {
+                setChallengeLoading(false);
+            }
+        };
+
+        loadChallengeData();
+    }, [id]);
 
     // 제출물 상세 데이터 로드
     useEffect(() => {
@@ -134,10 +156,15 @@ export default function PortfolioProjectDetailPage() {
         </div>
     );
 
-    // ✅ 중복 제한 제거: 별점 모두 채웠는지만 체크
-    const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0;
+    // ✅ 중복 제한 제거: 별점 모두 채웠는지만 체크 + 챌린지 종료 체크
+    const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0 && challengeStatus !== "ENDED";
+    const isChallengeEnded = challengeStatus === "ENDED";
 
     const handleVote = () => {
+        if (isChallengeEnded) {
+            setToast("종료된 챌린지에는 투표할 수 없습니다.");
+            return;
+        }
         if (!canVote) {
             setToast("모든 항목에 별점을 주세요.");
             return;
@@ -150,7 +177,7 @@ export default function PortfolioProjectDetailPage() {
 
     const submitComment = async () => {
         const v = cText.trim();
-        if (!v) return;
+        if (!v || challengeStatus === "ENDED") return; // 종료된 챌린지에서는 댓글 작성 불가
         
         try {
             await api.post('/api/comments', {
@@ -176,6 +203,7 @@ export default function PortfolioProjectDetailPage() {
     };
 
     const toggleLike = async () => {
+        if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
         try {
             const response = await api.post('/api/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
@@ -287,7 +315,14 @@ export default function PortfolioProjectDetailPage() {
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
                     <button
                         onClick={toggleLike}
-                        className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                        disabled={challengeStatus === "ENDED"}
+                        className={`inline-flex items-center gap-1 ${
+                            challengeStatus === "ENDED" 
+                                ? "text-gray-400 cursor-not-allowed" 
+                                : liked 
+                                ? "text-rose-600" 
+                                : "hover:text-neutral-900"
+                        }`}
                     >
                         <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
                         {likeCount}
@@ -301,19 +336,31 @@ export default function PortfolioProjectDetailPage() {
                 </div>
 
                 {/* 투표 */}
-                <div className="mt-6 space-y-2">
-                    <Stars label="UI/UX" value={ux} onChange={setUx} />
-                    <Stars label="기술력" value={tech} onChange={setTech} />
-                    <Stars label="창의성" value={cre} onChange={setCre} />
-                    <Stars label="기획력" value={plan} onChange={setPlan} />
-                    <div className="text-[12px] text-neutral-500">
-                        ※ 데모용으로 중복 투표 제한을 적용하지 않았습니다. (실서비스는 서버에서 검증)
+                {isChallengeEnded ? (
+                    <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-gray-700">
+                            <span className="text-lg">🔒</span>
+                            <div>
+                                <div className="font-semibold">종료된 챌린지</div>
+                                <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 투표할 수 없습니다.</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="mt-6 space-y-2">
+                        <Stars label="UI/UX" value={ux} onChange={setUx} />
+                        <Stars label="기술력" value={tech} onChange={setTech} />
+                        <Stars label="창의성" value={cre} onChange={setCre} />
+                        <Stars label="기획력" value={plan} onChange={setPlan} />
+                        <div className="text-[12px] text-neutral-500">
+                            ※ 데모용으로 중복 투표 제한을 적용하지 않았습니다. (실서비스는 서버에서 검증)
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-4 flex justify-end">
                     <CTAButton as="button" onClick={handleVote} disabled={!canVote}>
-                        투표 제출
+                        {isChallengeEnded ? "투표 불가" : "투표 제출"}
                     </CTAButton>
                 </div>
             </SectionCard>
@@ -347,22 +394,33 @@ export default function PortfolioProjectDetailPage() {
                     ))}
                 </div>
 
-                <div className="mt-5 rounded-2xl border p-4">
-          <textarea
-              className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
-              placeholder="댓글을 작성해보세요."
-              value={cText}
-              onChange={(e) => setCText(e.target.value)}
-          />
-                    <div className="mt-2 flex justify-end">
-                        <button
-                            onClick={submitComment}
-                            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
-                        >
-                            등록하기
-                        </button>
+                {/* 댓글 입력 */}
+                {isChallengeEnded ? (
+                    <div className="mt-5 rounded-2xl border p-4 bg-gray-50">
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <span>🔒</span>
+                            <span className="text-sm">이 챌린지는 종료되어 댓글을 작성할 수 없습니다.</span>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="mt-5 rounded-2xl border p-4">
+                        <textarea
+                            className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
+                            placeholder="댓글을 작성해보세요."
+                            value={cText}
+                            onChange={(e) => setCText(e.target.value)}
+                        />
+                        <div className="mt-2 flex justify-end">
+                            <button
+                                onClick={submitComment}
+                                disabled={!cText.trim()}
+                                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:bg-gray-300"
+                            >
+                                등록하기
+                            </button>
+                        </div>
+                    </div>
+                )}
             </SectionCard>
         </div>
     );
