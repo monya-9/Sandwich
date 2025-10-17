@@ -1,8 +1,10 @@
 package com.sandwich.SandWich.admin.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.sandwich.SandWich.challenge.domain.Challenge;
 import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
 import com.sandwich.SandWich.challenge.domain.ChallengeType;
+import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLog;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -39,19 +41,19 @@ public class AdminChallengeDtos {
 
     public record PublishReq(List<Long> top, Long participant) {}
 
-    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
-    public static class ListItem {
-        private Long id;
-        private ChallengeType type;
-        private String title;
-        private ChallengeStatus status;
-        private OffsetDateTime startAt;
-        private OffsetDateTime endAt;
-        private OffsetDateTime voteStartAt;
-        private OffsetDateTime voteEndAt;
-        private long submissionCount;
-        private long voteCount;
-    }
+//    @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
+//    public static class ListItem {
+//        private Long id;
+//        private ChallengeType type;
+//        private String title;
+//        private ChallengeStatus status;
+//        private OffsetDateTime startAt;
+//        private OffsetDateTime endAt;
+//        private OffsetDateTime voteStartAt;
+//        private OffsetDateTime voteEndAt;
+//        private long submissionCount;
+//        private long voteCount;
+//    }
 
 
     @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
@@ -94,5 +96,30 @@ public class AdminChallengeDtos {
         private double codeQualityAvg;
         private double difficultyAvg;
         private double totalScore;
+    }
+
+    @Getter @Setter @Builder
+    public static class ListItem {
+        Long id; ChallengeType type; String title;
+        OffsetDateTime startAt, endAt, voteStartAt, voteEndAt;
+        ChallengeStatus status;
+        String source, aiMonth, aiWeek, idempotencyKey;
+        long submissionCount;
+        long voteCount;
+        public static ListItem from(Challenge c) {
+            return ListItem.builder()
+                    .id(c.getId()).type(c.getType()).title(c.getTitle())
+                    .startAt(c.getStartAt()).endAt(c.getEndAt())
+                    .voteStartAt(c.getVoteStartAt()).voteEndAt(c.getVoteEndAt())
+                    .status(c.getStatus())
+                    .source(c.getSource()).aiMonth(c.getAiMonth()).aiWeek(c.getAiWeek())
+                    .idempotencyKey(c.getIdempotencyKey())
+                    .build();
+        }
+    }
+    @Getter @Setter @Builder
+    public static class Detail {
+        ListItem challenge;
+        ChallengeSyncLog latestSync; // 요약 표시용
     }
 }

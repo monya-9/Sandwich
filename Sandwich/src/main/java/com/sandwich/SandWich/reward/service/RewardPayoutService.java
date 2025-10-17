@@ -18,6 +18,15 @@ public class RewardPayoutService {
     private final JdbcTemplate jdbc;
     private final RewardProperties props;
 
+    @Transactional(readOnly = true)
+    public boolean isPublished(long challengeId) {
+        Integer cnt = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM reward_payout WHERE challenge_id = ?",
+                Integer.class, challengeId
+        );
+        return cnt != null && cnt > 0;
+    }
+
     @Transactional
     public int publishPortfolioResults(long challengeId, RewardRule rule) {
         // 투표 종료 검증: challenge.vote_end_at 기준 (필드명이 다르면 맞춰서 수정)
