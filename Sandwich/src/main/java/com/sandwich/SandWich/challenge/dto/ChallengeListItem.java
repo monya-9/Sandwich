@@ -10,6 +10,7 @@ public class ChallengeListItem {
     private Long id;
     private ChallengeType type;
     private String title;
+    private String ruleJson;
     private OffsetDateTime startAt;
     private OffsetDateTime endAt;
     private OffsetDateTime voteStartAt;
@@ -21,6 +22,7 @@ public class ChallengeListItem {
                 .id(c.getId())
                 .type(c.getType())
                 .title(c.getTitle())
+                .ruleJson(c.getRuleJson() == null ? "{}" : c.getRuleJson().toString())
                 .startAt(c.getStartAt())
                 .endAt(c.getEndAt())
                 .voteStartAt(c.getVoteStartAt())

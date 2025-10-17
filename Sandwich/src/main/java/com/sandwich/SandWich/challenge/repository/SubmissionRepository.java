@@ -6,6 +6,7 @@ import com.sandwich.SandWich.challenge.domain.Submission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -21,4 +22,11 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     countByChallengeIds(@Param("ids") List<Long> ids);
 
     long countByChallenge_Id(Long challengeId);
+
+    @Modifying
+    @Query("DELETE FROM Submission s WHERE s.challenge.id = :challengeId")
+    void deleteByChallengeId(@Param("challengeId") Long challengeId);
+
+    @Query("SELECT s.id FROM Submission s WHERE s.challenge.id = :challengeId")
+    java.util.List<Long> findIdsByChallengeId(@Param("challengeId") Long challengeId);
 }
