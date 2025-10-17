@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
     getChallengeDetail,
     getDynamicChallengeDetail,
@@ -36,7 +36,7 @@ function ScheduleList({ items }: { items: { label: string; date: string }[] }) {
             <SectionTitle>📅 진행 일정</SectionTitle>
             <GreenBox>
                 <ul className="space-y-1">
-                    {items.map((s, i) => (
+                    {items?.map((s, i) => (
                         <li key={i} className="flex items-center justify-between">
                             <span className="font-medium">{s.label}</span>
                             <span className="text-neutral-700">{s.date}</span>
@@ -65,7 +65,7 @@ function RewardsTable({
                     <div className="font-semibold">크레딧</div>
                     <div className="font-semibold">환산</div>
                     <div className="font-semibold">의미</div>
-                    {rewards.map((r, i) => (
+                    {rewards?.map((r, i) => (
                         <React.Fragment key={i}>
                             <div>{r.rank}</div>
                             <div>{r.credit}</div>
@@ -135,7 +135,7 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
         <div className="mb-6">
             <SectionTitle>🤖 AI 자동 채점 기준</SectionTitle>
             <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                {items.map((i, idx) => (
+                {items?.map((i, idx) => (
                     <li key={idx}>
                         {i.label}: <span className="font-medium">{i.weight}점</span>
                     </li>
@@ -153,16 +153,26 @@ function secondaryHref(type: "CODE" | "PORTFOLIO", id: number) {
     return type === "CODE" ? `/challenge/code/${id}/submissions` : `/challenge/portfolio/${id}/vote`;
 }
 function primaryLabel(type: "CODE" | "PORTFOLIO") {
-    return type === "CODE" ? "코드 제출하기" : "프로젝트 제출하기";
+    return type === "CODE" ? "코드 제출하기" : "포트폴리오 제출하기";
 }
 function secondaryLabel(type: "CODE" | "PORTFOLIO") {
-    return type === "CODE" ? "제출물 보기" : "작품 투표하러 가기";
+    return type === "CODE" ? "제출물 보기" : "투표하러 가기";
 }
 
 /* ---------- Page ---------- */
 export default function ChallengeDetailPage() {
     const params = useParams();
+    const location = useLocation();
     const id = Number(params.id || 1);
+    
+    // URL에서 타입 추출: /challenge/code/:id 또는 /challenge/portfolio/:id
+    const getTypeFromPath = (pathname: string): "CODE" | "PORTFOLIO" => {
+        if (pathname.includes('/challenge/portfolio/')) return "PORTFOLIO";
+        if (pathname.includes('/challenge/code/')) return "CODE";
+        return "CODE"; // 기본값
+    };
+    
+    const type = getTypeFromPath(location.pathname);
     
     // AI 데이터만 표시하도록 null로 초기화
     const [data, setData] = useState<AnyChallengeDetail | null>(null);
@@ -301,14 +311,14 @@ export default function ChallengeDetailPage() {
 
     const goPrimary = () => {
         if (!data) return;
-        const href = primaryHref(data.type, id);
+        const href = primaryHref(type, id);
         if (!isLoggedIn) return setLoginModalOpen(true);
         navigate(href);
     };
     const goSecondary = () => {
         if (!data) return;
-        const href = secondaryHref(data.type, id);
-        const needsLogin = data.type === "PORTFOLIO";
+        const href = secondaryHref(type, id);
+        const needsLogin = type === "PORTFOLIO";
         if (needsLogin && !isLoggedIn) return setLoginModalOpen(true);
         navigate(href);
     };
@@ -373,14 +383,14 @@ export default function ChallengeDetailPage() {
                     onClick={goPrimary}
                     className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
                 >
-                    <span>{data.type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(data.type)} →
+                    <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
                 </button>
 
                 <button
                     onClick={goSecondary}
                     className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
                 >
-                    <span>{data.type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(data.type)} →
+                    <span>{type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(type)} →
                 </button>
             </div>
 
@@ -389,7 +399,7 @@ export default function ChallengeDetailPage() {
                 <SectionCard className="!px-6 !py-5 md:!px-8 md:!py-6" outerClassName="mt-2">
                     {/* 설명 */}
                     <div className="mb-6">
-                        <SectionTitle>{data.type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
+                        <SectionTitle>{type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
                         <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
                     </div>
 
@@ -398,21 +408,21 @@ export default function ChallengeDetailPage() {
                         <div className="mb-6">
                             <SectionTitle>📋 필수 조건</SectionTitle>
                             <div className="space-y-2">
-                                {mustHave.map((requirement, index) => (
-                                    <div key={index} className="flex items-start gap-2">
-                                        <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
-                                        <span className="text-[13.5px] leading-6 text-neutral-800">{requirement}</span>
-                                    </div>
-                                ))}
+                    {mustHave?.map((requirement, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                            <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
+                            <span className="text-[13.5px] leading-6 text-neutral-800">{requirement}</span>
+                        </div>
+                    ))}
                             </div>
                         </div>
                     )}
 
                     {/* 유형별 */}
-                    {data.type === "CODE" ? (
+                    {type === "CODE" ? (
                         <>
                             <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
-                            <RewardsTable rewards={(data as CodeChallengeDetail).rewards} />
+                            <RewardsTable rewards={(data as CodeChallengeDetail).rewards || []} />
                             
                             {/* 코드 챌린지 제출 예시 */}
                             <div className="mb-6">
@@ -441,20 +451,20 @@ export default function ChallengeDetailPage() {
                                 </GreenBox>
                             </div>
                             
-                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring} />
+                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                         </>
                     ) : (
                         <>
-                            <ScheduleList items={(data as PortfolioChallengeDetail).schedule} />
+                            <ScheduleList items={(data as PortfolioChallengeDetail).schedule || []} />
                             <div className="mb-6">
                                 <SectionTitle>🗳️ 투표 기준</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    {(data as PortfolioChallengeDetail).votingCriteria.map((t, i) => (
+                                    {(data as PortfolioChallengeDetail).votingCriteria?.map((t, i) => (
                                         <li key={i}>{t} (1~5점)</li>
                                     ))}
                                 </ul>
                             </div>
-                            <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards} />
+                            <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards || []} />
                             
                             {/* 포트폴리오 챌린지 제출 예시 */}
                             <div className="mb-6">
@@ -473,7 +483,6 @@ export default function ChallengeDetailPage() {
                                     </div>
                                 </GreenBox>
                             </div>
-                            
                             {(data as PortfolioChallengeDetail).teamExample && (
                                 <div className="mb-6">
                                     <SectionTitle>👥 팀 정보 예시</SectionTitle>
@@ -501,7 +510,7 @@ export default function ChallengeDetailPage() {
                     )}
 
                     {/* 공통 - 하드코딩된 안내문구 */}
-                    {data.type === "CODE" ? (
+                    {type === "CODE" ? (
                         <>
                             {/* 코드 챌린지 - 심사 기준 */}
                             <div className="mb-6">
@@ -554,10 +563,10 @@ export default function ChallengeDetailPage() {
                     <div className="sticky bottom-4 mt-6 flex justify-end">
                         <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
                             <CTAButton as="button" onClick={goPrimary}>
-                                {primaryLabel(data.type)}
+                                {primaryLabel(type)}
                             </CTAButton>
                             <CTAButton as="button" onClick={goSecondary}>
-                                {secondaryLabel(data.type)}
+                                {secondaryLabel(type)}
                             </CTAButton>
                         </div>
                     </div>
