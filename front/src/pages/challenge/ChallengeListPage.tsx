@@ -67,7 +67,7 @@ export default function ChallengeListPage() {
             </div>
 
             {/* WinnersSection + Admin Actions */}
-            <div className="mx-auto max-w-screen-xl px-4 md:px-6">
+            <div className="mx-auto max-w-7xl px-4 md:px-6">
                 <div className="flex items-center justify-between mt-6">
                     <h2 className="sr-only">Winners</h2>
                 </div>
@@ -75,7 +75,7 @@ export default function ChallengeListPage() {
             <div className="relative">
                 <WinnersSection />
                 {admin && (
-                    <div className="mx-auto max-w-screen-xl px-4 md:px-6">
+                    <div className="mx-auto max-w-7xl px-4 md:px-6">
                         <div className="mt-2 flex justify-end">
                             <button
                                 className="rounded-md bg-black text-white px-3 py-2 text-sm"

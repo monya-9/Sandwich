@@ -30,7 +30,7 @@ function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
     return (
         <div className="text-center">
             {/* 메달 아이콘 */}
-            <div className="mb-2 text-4xl">
+            <div className="mb-2 text-3xl">
                 {getMedalIcon(rank)}
             </div>
             
@@ -40,7 +40,7 @@ function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
             </div>
             
             {/* 이름과 팀 이름 */}
-            <div className="font-semibold text-gray-800 mb-1 break-words">
+            <div className="font-semibold text-gray-800 mb-1 break-words text-sm">
                 {displayName}
             </div>
             
@@ -62,7 +62,7 @@ function WinnersBox({ items, loading, error }: {
 }) {
     if (loading) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8">
                 <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 mx-auto mb-2"></div>
@@ -73,13 +73,60 @@ function WinnersBox({ items, loading, error }: {
         );
     }
 
-    if (error || items.length === 0) {
+    if (error) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8">
                 <div className="flex items-center justify-center h-full">
                     <div className="text-sm text-neutral-500 text-center">
-                        {error || "아직 우승자 정보가 없습니다."}
+                        {error}
                     </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 데이터가 없을 때 더미 우승자 카드 표시
+    if (items.length === 0) {
+        const dummyWinners = [
+            { rank: 2, name: "2등", teamName: "팀", credits: 5000 },
+            { rank: 1, name: "1등", teamName: "팀", credits: 10000 },
+            { rank: 3, name: "3등", teamName: "팀", credits: 3000 }
+        ];
+
+        return (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8">
+                <div className="flex justify-between items-start w-full">
+                    {dummyWinners.map((winner, index) => (
+                        <div key={winner.rank} className="flex-1 flex justify-center">
+                            <div className="text-center">
+                                {/* 메달 아이콘 */}
+                                <div className="mb-2">
+                                    {winner.rank === 1 ? (
+                                        <div className="text-3xl">🥇</div>
+                                    ) : winner.rank === 2 ? (
+                                        <div className="text-3xl">🥈</div>
+                                    ) : (
+                                        <div className="text-3xl">🥉</div>
+                                    )}
+                                </div>
+                                
+                                {/* 이니셜 원 */}
+                                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    <span className="text-lg font-semibold text-gray-500">?</span>
+                                </div>
+                                
+                                {/* 이름 */}
+                                <div className="text-sm font-medium text-gray-500 mb-1">
+                                    {winner.name} • {winner.teamName}
+                                </div>
+                                
+                                {/* 점수 배지 */}
+                                <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-sm font-medium">
+                                    {winner.credits.toLocaleString()}C
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
@@ -93,7 +140,7 @@ function WinnersBox({ items, loading, error }: {
     ].filter(Boolean) as (WinnerEntry | LeaderboardEntry)[];
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-8">
             <div className="flex justify-between items-start w-full">
                 {byOrder.map((w) => (
                     <div key={w.rank} className="flex-1 flex justify-center">
@@ -151,8 +198,8 @@ export default function WinnersSection() {
     return (
         <div className="mx-auto mt-5 max-w-screen-xl px-4 md:px-6">
             <div className="flex justify-center">
-                {/* 포트폴리오만 - 중앙 정렬 */}
-                <div className="flex flex-col max-w-md w-full">
+                {/* 포트폴리오만 - 더 넓게 표시 */}
+                <div className="flex flex-col w-full max-w-4xl">
                     <h3 className="mb-3 text-[16px] font-extrabold tracking-[-0.01em] text-center">
                         지난 포트폴리오 챌린지 TOP Winners
                     </h3>

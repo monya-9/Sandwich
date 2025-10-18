@@ -205,7 +205,7 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
         );
     }
 
-    if (error || winners.length === 0) {
+    if (error) {
         return (
             <div className="mb-6">
                 <h2 className="text-xl font-bold mb-4 text-center">
@@ -213,9 +213,53 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
                 </h2>
                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                     <div className="flex justify-center items-center py-8">
-                        <div className="text-gray-500">
-                            {error || "아직 우승자 정보가 없습니다."}
-                        </div>
+                        <div className="text-gray-500">{error}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 데이터가 없을 때 더미 우승자 카드 표시
+    if (winners.length === 0) {
+        const dummyWinners = [
+            { rank: 2, userName: "2등", teamName: "팀", userInitial: "2", credits: 5000 },
+            { rank: 1, userName: "1등", teamName: "팀", userInitial: "1", credits: 10000 },
+            { rank: 3, userName: "3등", teamName: "팀", userInitial: "3", credits: 3000 }
+        ];
+
+        return (
+            <div className="mb-6">
+                <h2 className="text-xl font-bold mb-4 text-center">
+                    지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
+                </h2>
+                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                    <div className="flex justify-between items-start w-full">
+                        {dummyWinners.map((winner) => (
+                            <div key={winner.rank} className="flex-1 flex justify-center">
+                                <div className="text-center">
+                                    {/* 메달 아이콘 */}
+                                    <div className="mb-2 text-3xl">
+                                        {getMedalIcon(winner.rank)}
+                                    </div>
+                                    
+                                    {/* 이니셜 */}
+                                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-2 mx-auto">
+                                        <span className="font-bold text-lg text-gray-500">{winner.userInitial}</span>
+                                    </div>
+                                    
+                                    {/* 이름과 팀 이름 */}
+                                    <div className="font-semibold text-gray-500 mb-1 break-words text-sm">
+                                        {winner.userName} • {winner.teamName}
+                                    </div>
+                                    
+                                    {/* 점수 */}
+                                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-sm font-medium">
+                                        {winner.credits.toLocaleString()}C
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -240,7 +284,7 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
                         <div key={winner.userId} className="flex-1 flex justify-center">
                             <div className="text-center">
                                 {/* 메달 아이콘 */}
-                                <div className="mb-2 text-4xl">
+                                <div className="mb-2 text-3xl">
                                     {getMedalIcon(winner.rank)}
                                 </div>
                                 
@@ -250,7 +294,7 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
                                 </div>
                                 
                                 {/* 이름과 팀 이름 */}
-                                <div className="font-semibold text-gray-800 mb-1 break-words">
+                                <div className="font-semibold text-gray-800 mb-1 break-words text-sm">
                                     {winner.teamName ? `${winner.userName} • ${winner.teamName}` : winner.userName}
                                 </div>
                                 
