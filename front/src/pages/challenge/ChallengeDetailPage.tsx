@@ -268,8 +268,12 @@ function secondaryHref(type: "CODE" | "PORTFOLIO", id: number) {
 function primaryLabel(type: "CODE" | "PORTFOLIO") {
     return type === "CODE" ? "코드 제출하기" : "포트폴리오 제출하기";
 }
-function secondaryLabel(type: "CODE" | "PORTFOLIO") {
-    return type === "CODE" ? "제출물 보기" : "투표하러 가기";
+function secondaryLabel(type: "CODE" | "PORTFOLIO", challengeStatus?: string | null) {
+    if (type === "CODE") return "제출물 보기";
+    if (type === "PORTFOLIO") {
+        return challengeStatus === "ENDED" ? "제출물 확인하러 가기" : "투표하러 가기";
+    }
+    return "투표하러 가기";
 }
 
 /* ---------- Page ---------- */
@@ -520,7 +524,7 @@ export default function ChallengeDetailPage() {
                     onClick={goSecondary}
                     className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
                 >
-                    <span>{type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(type)} →
+                    <span>{type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(type, challengeStatus)} →
                 </button>
             </div>
 
@@ -702,7 +706,7 @@ export default function ChallengeDetailPage() {
                                 </CTAButton>
                             )}
                             <CTAButton as="button" onClick={goSecondary}>
-                                {secondaryLabel(type)}
+                                {secondaryLabel(type, challengeStatus)}
                             </CTAButton>
                         </div>
                     </div>
