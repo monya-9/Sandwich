@@ -13,6 +13,7 @@ export type ChallengeListItem = {
   id: number;
   type: ChallengeType;
   title: string;
+  ruleJson: string;  // 🔥 백엔드에서 추가된 필드
   status: ChallengeStatus;
   startAt: string;
   endAt: string;

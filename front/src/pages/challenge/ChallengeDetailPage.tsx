@@ -316,6 +316,17 @@ export default function ChallengeDetailPage() {
                         rule = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
                     } catch {}
 
+                    // 🚨 타입 불일치 체크 및 리디렉션
+                    if (backendChallenge.type !== type) {
+                        const correctPath = backendChallenge.type === "CODE" 
+                            ? `/challenge/code/${id}` 
+                            : `/challenge/portfolio/${id}`;
+                        console.warn(`타입 불일치 감지: URL=${type}, 백엔드=${backendChallenge.type}. ${correctPath}로 리디렉션합니다.`);
+                        navigate(correctPath, { replace: true });
+                        return;
+                    }
+                    
+                    // 2. 챌린지 타입에 따라 AI 데이터 가져오기
                     if (backendChallenge.type === "PORTFOLIO") {
                         // 포트폴리오 챌린지 - 백엔드 데이터 우선 사용
                         

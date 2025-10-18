@@ -199,7 +199,18 @@ export default function PortfolioSubmitPage() {
         try {
             // 3:4 비율의 직사각형 이미지 사용
             const file = new File([rect.blob], "cover.jpg", { type: "image/jpeg" });
+            
+            console.log("🖼️ 커버 이미지 업로드 시도:", {
+                fileName: file.name,
+                fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                fileType: file.type,
+                blobSize: rect.blob.size,
+                timestamp: new Date().toISOString()
+            });
+            
             const uploadedUrl = await UserApi.uploadImage(file);
+            
+            console.log("✅ 커버 이미지 업로드 성공:", uploadedUrl);
             
             setForm(prev => ({ ...prev, coverUrl: uploadedUrl }));
             setSuccessToast({
@@ -207,16 +218,33 @@ export default function PortfolioSubmitPage() {
                 message: "커버 이미지가 업로드되었습니다."
             });
         } catch (error: any) {
+            console.error("❌ 커버 이미지 업로드 실패:", {
+                error,
+                status: error?.response?.status,
+                statusText: error?.response?.statusText,
+                data: error?.response?.data,
+                message: error?.message,
+                config: error?.config ? {
+                    url: error.config.url,
+                    method: error.config.method,
+                    headers: error.config.headers
+                } : null
+            });
             
             let errorMessage = "이미지 업로드에 실패했습니다. 다시 시도해주세요.";
             
             if (error?.response?.status === 500) {
                 const serverMessage = error?.response?.data?.message || "서버 오류가 발생했습니다.";
-                errorMessage = `이미지 업로드 서버 오류: ${serverMessage}`;
+                errorMessage = `서버 오류: ${serverMessage}`;
+                console.error("🔥 서버 500 오류 상세:", error?.response?.data);
             } else if (error?.response?.status === 413) {
                 errorMessage = "이미지 파일이 너무 큽니다. 더 작은 파일을 선택해주세요.";
             } else if (error?.response?.status === 400) {
                 errorMessage = error?.response?.data?.message || "잘못된 이미지 파일입니다.";
+            } else if (error?.response?.status === 415) {
+                errorMessage = "지원하지 않는 파일 형식입니다.";
+            } else if (!error?.response) {
+                errorMessage = "네트워크 오류가 발생했습니다.";
             }
             
             setSuccessToast({
@@ -586,7 +614,16 @@ export default function PortfolioSubmitPage() {
                                                     return;
                                                 }
                                                 
+                                                console.log("📸 추가 이미지 업로드 시도:", {
+                                                    fileName: file.name,
+                                                    fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                                                    fileType: file.type
+                                                });
+                                                
                                                 const uploadResult = await uploadImage(file);
+                                                
+                                                console.log("✅ 추가 이미지 업로드 성공:", uploadResult.url);
+                                                
                                                 setForm(prev => ({
                                                     ...prev,
                                                     images: [...(prev.images || []), uploadResult.url]
@@ -595,10 +632,24 @@ export default function PortfolioSubmitPage() {
                                                     visible: true,
                                                     message: "이미지가 추가되었습니다."
                                                 });
-                                            } catch (error) {
+                                            } catch (error: any) {
+                                                console.error("❌ 추가 이미지 업로드 실패:", {
+                                                    error,
+                                                    status: error?.response?.status,
+                                                    data: error?.response?.data
+                                                });
+                                                
+                                                let errorMessage = "이미지 업로드에 실패했습니다. 다시 시도해주세요.";
+                                                
+                                                if (error?.response?.status === 500) {
+                                                    errorMessage = `서버 오류: ${error?.response?.data?.message || "서버 오류가 발생했습니다."}`;
+                                                } else if (error?.response?.status === 413) {
+                                                    errorMessage = "이미지 파일이 너무 큽니다.";
+                                                }
+                                                
                                                 setSuccessToast({
                                                     visible: true,
-                                                    message: "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+                                                    message: errorMessage
                                                 });
                                             }
                                         }}

@@ -17,6 +17,10 @@ export type ChallengeCardData = {
     adminEditHref?: string;
     /** 선택: 챌린지 목록으로 이동 */
     listHref?: string;
+    // 🔥 새로 추가
+    summary?: string;       // ruleJson에서 파싱한 요약
+    must?: string[];        // ruleJson에서 파싱한 필수 조건들
+    startDate?: string;     // 시작일 정보
 };
 
 const detailHref = (type: "CODE" | "PORTFOLIO", id: number) =>
@@ -59,6 +63,46 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                 <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-[var(--text-secondary)]">
                     {item.description}
                 </div>
+
+                {/* Summary 표시 */}
+                {item.summary && (
+                    <div className="mt-4 p-3 bg-neutral-50 rounded-lg">
+                        <div className="font-medium text-neutral-700 mb-2 text-sm">📋 문제 설명</div>
+                        <div className="text-xs leading-relaxed text-neutral-600">
+                            {item.summary.length > 200 
+                                ? `${item.summary.substring(0, 200)}...`
+                                : item.summary
+                            }
+                        </div>
+                    </div>
+                )}
+
+                {/* 시작일 정보 - 문제 설명 박스 아래 */}
+                {item.startDate && (
+                    <div className="mt-3 text-xs text-neutral-500">
+                        📅 시작일: {item.startDate}
+                    </div>
+                )}
+
+                {/* Must 조건들 표시 */}
+                {item.must && item.must.length > 0 && (
+                    <div className="mt-3">
+                        <div className="text-xs font-medium text-neutral-600 mb-2">📋 필수 조건</div>
+                        <div className="space-y-1">
+                            {item.must.slice(0, 3).map((req, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs text-neutral-600">
+                                    <div className="w-1 h-1 bg-neutral-400 rounded-full"></div>
+                                    <span>{req}</span>
+                                </div>
+                            ))}
+                            {item.must.length > 3 && (
+                                <div className="text-xs text-neutral-500 ml-3">
+                                    외 {item.must.length - 3}개 조건
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-3 flex justify-end gap-2">
                     <Link
