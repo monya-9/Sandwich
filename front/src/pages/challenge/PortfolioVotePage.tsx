@@ -126,10 +126,53 @@ export default function PortfolioVotePage() {
                             </div>
                         </div>
                     ) : submissions.length > 0 ? (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                             {submissions.map((submission) => (
-                                <div key={submission.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200">
-                                    {/* 썸네일 이미지 */}
+                                <Link 
+                                    key={submission.id} 
+                                    to={`/challenge/portfolio/${id}/vote/${submission.id}`}
+                                    className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200 block cursor-pointer"
+                                >
+                                    {/* 1. 프로필 정보 */}
+                                    <div className="p-4 pb-3">
+                                        <div className="flex items-center gap-3">
+                                            {/* 프로필 이미지 */}
+                                            <div className="flex-shrink-0">
+                                                {submission.owner?.profileImageUrl ? (
+                                                    <img 
+                                                        src={submission.owner.profileImageUrl} 
+                                                        alt={submission.owner.username}
+                                                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(submission.owner?.username || 'U')}&background=e5e7eb&color=1f2937&size=40`;
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <span className="text-gray-800 font-semibold text-sm">
+                                                            {(() => {
+                                                                const username = submission.owner?.username || 'user@example.com';
+                                                                // username이 이메일 형식인지 확인하고 @ 앞부분 사용, 아니면 username 첫 글자 사용
+                                                                const emailPart = username.includes('@') ? username.split('@')[0] : username;
+                                                                return emailPart.charAt(0).toUpperCase() || 'U';
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* 사용자명 & 직책 */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-semibold text-gray-900 truncate">
+                                                    {submission.owner?.username || '익명'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">개발자</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* 2. 썸네일 이미지 */}
                                     {submission.coverUrl && (
                                         <div className="relative h-48 bg-gray-100">
                                             <img 
@@ -144,83 +187,53 @@ export default function PortfolioVotePage() {
                                         </div>
                                     )}
                                     
-                                    <div className="p-5">
-                                        {/* 상단: 프로필 정보 & 제목 */}
-                                        <div className="flex items-start gap-3 mb-3">
-                                            {/* 프로필 이미지 */}
-                                            <div className="flex-shrink-0">
-                                                {submission.owner?.profileImageUrl ? (
-                                                    <img 
-                                                        src={submission.owner.profileImageUrl} 
-                                                        alt={submission.owner.username}
-                                                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
-                                                        onError={(e) => {
-                                                            const target = e.target as HTMLImageElement;
-                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(submission.owner?.username || 'U')}&background=e5e7eb&color=6b7280&size=40`;
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                                                        {submission.owner?.username?.charAt(0).toUpperCase() || 'U'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                            <div className="flex-1 min-w-0">
-                                                {/* 사용자명 & 팀명 */}
-                                                <div className="flex items-center gap-1 text-sm font-medium text-gray-900 mb-1">
-                                                    <span className="truncate">
-                                                        {submission.owner?.username || '익명'}
-                                                    </span>
-                                                    {/* 팀 정보 - 현재 API에 없으므로 임시로 더미 데이터 */}
-                                                    {submission.id % 3 === 0 && (
-                                                        <>
-                                                            <span className="text-gray-400">·</span>
-                                                            <span className="text-gray-600 truncate">샌드위치팀</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                
-                                                {/* 제목 */}
-                                                <h3 className="text-base font-semibold text-gray-900 line-clamp-1 mb-1">
-                                                    {submission.title || `제출물 #${submission.id}`}
-                                                </h3>
-                                            </div>
-                                        </div>
+                                    <div className="p-4">
+                                        {/* 3. 제목 */}
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                            {submission.title || `제출물 #${submission.id}`}
+                                        </h3>
                                         
-                                        {/* 설명 */}
+                                        {/* 4. 소개/설명 */}
                                         {submission.desc && (
-                                            <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+                                            <p className="text-sm text-gray-600 mb-4 line-clamp-3">
                                                 {submission.desc}
                                             </p>
                                         )}
                                         
-                                        {/* 하단: 통계 & 버튼 */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                                        {/* 5. 하단: 좋아요, 조회수, 댓글, 전체보기 */}
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                {/* 좋아요 */}
                                                 <div className="flex items-center gap-1">
-                                                    <span>♡</span>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                    </svg>
                                                     <span>{submission.likeCount}</span>
                                                 </div>
+                                                {/* 조회수 */}
                                                 <div className="flex items-center gap-1">
-                                                    <span>👁</span>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
                                                     <span>{submission.viewCount}</span>
                                                 </div>
+                                                {/* 댓글 */}
                                                 <div className="flex items-center gap-1">
-                                                    <span>💬</span>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                    </svg>
                                                     <span>{submission.commentCount}</span>
                                                 </div>
                                             </div>
                                             
-                                            <Link 
-                                                to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
-                                            >
+                                            {/* 전체보기 버튼 */}
+                                            <div className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors">
                                                 전체보기
-                                            </Link>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     ) : (
