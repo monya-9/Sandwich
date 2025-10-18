@@ -16,6 +16,7 @@ import {
     type VoteSummaryResponse
 } from "../../api/challengeApi";
 import Toast from "../../components/common/Toast";
+import api from "../../api/axiosInstance";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -27,6 +28,7 @@ export default function PortfolioVotePage() {
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    const [submissionLikes, setSubmissionLikes] = useState<Record<number, { liked: boolean; count: number }>>({});
     
     // 투표 관련 상태
     const [myVote, setMyVote] = useState<MyVoteResponse | null>(null);
@@ -49,6 +51,38 @@ export default function PortfolioVotePage() {
             try {
                 const response = await fetchPortfolioSubmissions(id, 0, 20);
                 setSubmissions(response.content);
+                
+                // 각 제출물의 좋아요 상태 가져오기
+                const likesPromises = response.content.map(async (submission) => {
+                    try {
+                        const likeResponse = await api.get('/likes', {
+                            params: {
+                                targetType: 'PORTFOLIO_SUBMISSION',
+                                targetId: submission.id
+                            }
+                        });
+                        return {
+                            id: submission.id,
+                            liked: likeResponse.data.likedByMe || false,
+                            count: likeResponse.data.likeCount || 0
+                        };
+                    } catch (error) {
+                        console.error(`제출물 ${submission.id} 좋아요 상태 조회 실패:`, error);
+                        return {
+                            id: submission.id,
+                            liked: false,
+                            count: submission.likeCount || 0
+                        };
+                    }
+                });
+                
+                const likesResults = await Promise.all(likesPromises);
+                const likesMap = likesResults.reduce((acc, result) => {
+                    acc[result.id] = { liked: result.liked, count: result.count };
+                    return acc;
+                }, {} as Record<number, { liked: boolean; count: number }>);
+                
+                setSubmissionLikes(likesMap);
             } catch (error) {
                 // 에러 시 더미 데이터 유지
             } finally {
@@ -58,6 +92,30 @@ export default function PortfolioVotePage() {
 
         fetchSubmissions();
     }, [id]);
+
+    // 좋아요 토글 함수
+    const handleLike = async (e: React.MouseEvent, submissionId: number) => {
+        e.preventDefault(); // Link 클릭 방지
+        e.stopPropagation();
+        
+        try {
+            const response = await api.post('/likes', {
+                targetType: 'PORTFOLIO_SUBMISSION',
+                targetId: submissionId
+            });
+            
+            // 좋아요 상태 업데이트
+            setSubmissionLikes(prev => ({
+                ...prev,
+                [submissionId]: {
+                    liked: response.data.likedByMe,
+                    count: response.data.likeCount
+                }
+            }));
+        } catch (error) {
+            console.error('좋아요 처리 실패:', error);
+        }
+    };
 
     // 백엔드 챌린지 데이터 우선 사용
     useEffect(() => {
@@ -277,12 +335,11 @@ export default function PortfolioVotePage() {
                             )}
 
                             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                            {submissions.map((submission) => (
-                                <Link 
-                                    key={submission.id} 
-                                    to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                    className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200 block cursor-pointer"
-                                >
+                            {submissions.map((submission) => {
+                                const likeInfo = submissionLikes[submission.id] || { liked: false, count: submission.likeCount || 0 };
+                                
+                                return (
+                                <div key={submission.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200">
                                     {/* 1. 프로필 정보 */}
                                     <div className="p-4 pb-3">
                                         <div className="flex items-center gap-3">
@@ -354,12 +411,15 @@ export default function PortfolioVotePage() {
                                         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                                             <div className="flex items-center gap-4 text-sm text-gray-500">
                                                 {/* 좋아요 */}
-                                                <div className="flex items-center gap-1">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <button 
+                                                    onClick={(e) => handleLike(e, submission.id)}
+                                                    className={`flex items-center gap-1 hover:text-gray-700 transition-colors ${likeInfo.liked ? 'text-red-500' : ''}`}
+                                                >
+                                                    <svg className="w-4 h-4" fill={likeInfo.liked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                                     </svg>
-                                                    <span>{submission.likeCount}</span>
-                                                </div>
+                                                    <span>{likeInfo.count}</span>
+                                                </button>
                                                 {/* 조회수 */}
                                                 <div className="flex items-center gap-1">
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,13 +438,17 @@ export default function PortfolioVotePage() {
                                             </div>
                                             
                                             {/* 전체보기 버튼 */}
-                                            <div className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors">
+                                            <Link 
+                                                to={`/challenge/portfolio/${id}/vote/${submission.id}`}
+                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
+                                            >
                                                 전체보기
-                                            </div>
+                                            </Link>
                                         </div>
                                     </div>
-                                    </Link>
-                            ))}
+                                </div>
+                                );
+                            })}
                             </div>
                         </>
                     ) : (

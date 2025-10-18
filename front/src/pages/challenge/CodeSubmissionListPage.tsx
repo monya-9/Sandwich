@@ -6,6 +6,7 @@ import { fetchChallengeSubmissions, type SubmissionListItem } from "../../api/su
 import { fetchChallengeDetail } from "../../api/challengeApi";
 import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
+import api from "../../api/axiosInstance";
 
 export default function CodeSubmissionListPage() {
     const { id: idStr } = useParams();
@@ -25,6 +26,7 @@ export default function CodeSubmissionListPage() {
     // 제출물 데이터 상태
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
+    const [submissionLikes, setSubmissionLikes] = useState<Record<number, { liked: boolean; count: number }>>({});
 
     // 백엔드 챌린지 데이터 로드 (우선순위)
     useEffect(() => {
@@ -65,6 +67,38 @@ export default function CodeSubmissionListPage() {
             try {
                 const response = await fetchChallengeSubmissions(id, 0, 20);
                 setSubmissions(response.content || []);
+                
+                // 각 제출물의 좋아요 상태 가져오기
+                const likesPromises = (response.content || []).map(async (submission) => {
+                    try {
+                        const likeResponse = await api.get('/likes', {
+                            params: {
+                                targetType: 'CODE_SUBMISSION',
+                                targetId: submission.id
+                            }
+                        });
+                        return {
+                            id: submission.id,
+                            liked: likeResponse.data.likedByMe || false,
+                            count: likeResponse.data.likeCount || 0
+                        };
+                    } catch (error) {
+                        console.error(`제출물 ${submission.id} 좋아요 상태 조회 실패:`, error);
+                        return {
+                            id: submission.id,
+                            liked: false,
+                            count: submission.likeCount || 0
+                        };
+                    }
+                });
+                
+                const likesResults = await Promise.all(likesPromises);
+                const likesMap = likesResults.reduce((acc, result) => {
+                    acc[result.id] = { liked: result.liked, count: result.count };
+                    return acc;
+                }, {} as Record<number, { liked: boolean; count: number }>);
+                
+                setSubmissionLikes(likesMap);
             } catch (error) {
                 console.error('제출물 데이터 로드 실패:', error);
                 setSubmissions([]);
@@ -75,6 +109,30 @@ export default function CodeSubmissionListPage() {
 
         fetchSubmissions();
     }, [id]);
+
+    // 좋아요 토글 함수
+    const handleLike = async (e: React.MouseEvent, submissionId: number) => {
+        e.preventDefault(); // Link 클릭 방지
+        e.stopPropagation();
+        
+        try {
+            const response = await api.post('/likes', {
+                targetType: 'CODE_SUBMISSION',
+                targetId: submissionId
+            });
+            
+            // 좋아요 상태 업데이트
+            setSubmissionLikes(prev => ({
+                ...prev,
+                [submissionId]: {
+                    liked: response.data.likedByMe,
+                    count: response.data.likeCount
+                }
+            }));
+        } catch (error) {
+            console.error('좋아요 처리 실패:', error);
+        }
+    };
 
     // 제목 결정 로직 (백엔드 우선, 없으면 AI 데이터, 마지막 기본값)
     const getHeaderTitle = () => {
@@ -137,6 +195,8 @@ export default function CodeSubmissionListPage() {
                             return null;
                         }
                         
+                        const likeInfo = submissionLikes[submissionId] || { liked: false, count: submission.likeCount || 0 };
+                        
                         return (
                             <SubmissionCard
                                 key={safeId}
@@ -147,12 +207,12 @@ export default function CodeSubmissionListPage() {
                                     authorRole: submission.owner?.position || "개발자",
                                     title: submission.title || `제출물 #${submissionId}`,
                                     desc: submission.desc || `언어: ${submission.language || 'Unknown'} | 총점: ${submission.totalScore || 0}`,
-                                    likes: submission.likeCount || 0,
+                                    likes: likeInfo.count,
                                     views: submission.viewCount || 0,
                                     comments: submission.commentCount || 0,
-                                    liked: false
+                                    liked: likeInfo.liked
                                 }}
-                                onLike={() => {}}
+                                onLike={handleLike}
                                 href={`/challenge/code/${id}/submissions/${submissionId}`}
                                 actionText="전체보기"
                             />
