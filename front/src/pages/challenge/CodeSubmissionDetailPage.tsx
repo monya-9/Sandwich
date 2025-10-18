@@ -1,21 +1,11 @@
 // src/pages/challenge/CodeSubmissionDetailPage.tsx
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { SectionCard } from "../../components/challenge/common";
+import { SectionCard, ChallengeCommentSection, CommentResponse } from "../../components/challenge/common";
 import { ChevronLeft, Eye, MessageSquare, Heart } from "lucide-react";
 import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
 import { fetchChallengeDetail } from "../../api/challengeApi";
 import api from "../../api/axiosInstance";
-
-// 댓글 타입 정의
-type CommentResponse = {
-    id: number;
-    comment: string;
-    username: string;
-    profileImageUrl?: string;
-    createdAt: string;
-    subComments: CommentResponse[];
-};
 
 export default function CodeSubmissionDetailPage() {
     const { id: idStr, submissionId: sidStr } = useParams();
@@ -32,8 +22,6 @@ export default function CodeSubmissionDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [comments, setComments] = useState<CommentResponse[]>([]);
-    const [commentText, setCommentText] = useState("");
-    const [commentLoading, setCommentLoading] = useState(false);
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
 
@@ -79,7 +67,7 @@ export default function CodeSubmissionDetailPage() {
     useEffect(() => {
         const fetchComments = async () => {
             try {
-                const response = await api.get('/api/comments', {
+                const response = await api.get('/comments', {
                     params: {
                         type: 'CODE_SUBMISSION',
                         id: sid
@@ -101,7 +89,7 @@ export default function CodeSubmissionDetailPage() {
     useEffect(() => {
         const fetchLikeStatus = async () => {
             try {
-                const response = await api.get('/api/likes', {
+                const response = await api.get('/likes', {
                     params: {
                         targetType: 'CODE_SUBMISSION',
                         targetId: sid
@@ -158,7 +146,7 @@ export default function CodeSubmissionDetailPage() {
     const toggleLike = async () => {
         if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
         try {
-            const response = await api.post('/api/likes', {
+            const response = await api.post('/likes', {
                 targetType: 'CODE_SUBMISSION',
                 targetId: sid
             });
@@ -169,34 +157,6 @@ export default function CodeSubmissionDetailPage() {
         }
     };
 
-    // 댓글 작성
-    const submitComment = async () => {
-        const text = commentText.trim();
-        if (!text || challengeStatus === "ENDED") return; // 종료된 챌린지에서는 댓글 작성 불가
-        
-        setCommentLoading(true);
-        try {
-            await api.post('/api/comments', {
-                commentableType: 'CODE_SUBMISSION',
-                commentableId: sid,
-                comment: text
-            });
-            
-            // 댓글 목록 새로고침
-            const response = await api.get('/api/comments', {
-                params: {
-                    type: 'CODE_SUBMISSION',
-                    id: sid
-                }
-            });
-            setComments(response.data || []);
-            setCommentText("");
-        } catch (error) {
-            console.error('댓글 작성 실패:', error);
-        } finally {
-            setCommentLoading(false);
-        }
-    };
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
@@ -284,101 +244,13 @@ export default function CodeSubmissionDetailPage() {
             </SectionCard>
 
             {/* 댓글 */}
-            <SectionCard className="!px-5 !py-5 mt-6">
-                <h2 className="mb-3 text-[15px] font-bold">댓글 {comments.length}</h2>
-
-                {/* 댓글 목록 */}
-                <div className="space-y-4 mb-6">
-                    {comments.length > 0 ? (
-                        comments.map((comment) => (
-                            <div key={comment.id} className="rounded-2xl border p-4">
-                                <div className="mb-1 flex items-center gap-2">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[12.5px] font-bold">
-                                        {comment.username?.charAt(0).toUpperCase() || 'U'}
-                                    </div>
-                                    <div className="leading-tight">
-                                        <div className="text-[13px] font-semibold text-neutral-900">{comment.username}</div>
-                                        <div className="text-[12px] text-neutral-500">
-                                            {new Date(comment.createdAt).toLocaleDateString('ko-KR', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">
-                                    {comment.comment}
-                                </div>
-                                
-                                {/* 대댓글 */}
-                                {comment.subComments && comment.subComments.length > 0 && (
-                                    <div className="mt-3 ml-6 space-y-3">
-                                        {comment.subComments.map((subComment) => (
-                                            <div key={subComment.id} className="rounded-xl border border-neutral-100 bg-neutral-50 p-3">
-                                                <div className="mb-1 flex items-center gap-2">
-                                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-bold">
-                                                        {subComment.username?.charAt(0).toUpperCase() || 'U'}
-                                                    </div>
-                                                    <div className="leading-tight">
-                                                        <div className="text-[12px] font-semibold text-neutral-900">{subComment.username}</div>
-                                                        <div className="text-[11px] text-neutral-500">
-                                                            {new Date(subComment.createdAt).toLocaleDateString('ko-KR', {
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="whitespace-pre-wrap text-[12.5px] leading-6 text-neutral-800">
-                                                    {subComment.comment}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-8 text-neutral-500 text-[13px]">
-                            아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
-                        </div>
-                    )}
-                </div>
-
-                {/* 댓글 입력 */}
-                {challengeStatus === "ENDED" ? (
-                    <div className="rounded-2xl border p-4 bg-gray-50">
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <span>🔒</span>
-                            <span className="text-sm">이 챌린지는 종료되어 댓글을 작성할 수 없습니다.</span>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="rounded-2xl border p-4">
-                        <textarea
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="댓글을 입력하세요..."
-                            className="w-full resize-none rounded-lg border-0 bg-transparent p-0 text-[13.5px] leading-6 placeholder-neutral-500 focus:ring-0"
-                            rows={3}
-                        />
-                        <div className="mt-2 flex justify-end">
-                            <button
-                                onClick={submitComment}
-                                disabled={!commentText.trim() || commentLoading}
-                                className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:bg-neutral-300"
-                            >
-                                {commentLoading ? '작성 중...' : '댓글 작성'}
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </SectionCard>
+            <ChallengeCommentSection
+                commentableType="CODE_SUBMISSION"
+                commentableId={sid}
+                challengeStatus={challengeStatus}
+                comments={comments}
+                onCommentsChange={setComments}
+            />
 
             <div className="mt-6 flex justify-end">
                 <Link to={`/challenge/code/${id}/submissions`} className="text-[13px] font-semibold underline">

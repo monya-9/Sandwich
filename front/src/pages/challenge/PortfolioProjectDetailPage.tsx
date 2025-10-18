@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { SectionCard, CTAButton } from "../../components/challenge/common";
+import { SectionCard, CTAButton, ChallengeCommentSection, CommentResponse } from "../../components/challenge/common";
 import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare } from "lucide-react";
 import Toast from "../../components/common/Toast";
 import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
@@ -52,8 +52,7 @@ export default function PortfolioProjectDetailPage() {
     const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [comments, setComments] = useState<any[]>([]);
-    const [cText, setCText] = useState("");
+    const [comments, setComments] = useState<CommentResponse[]>([]);
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     
@@ -121,7 +120,7 @@ export default function PortfolioProjectDetailPage() {
     useEffect(() => {
         const fetchComments = async () => {
             try {
-                const response = await api.get('/api/comments', {
+                const response = await api.get('/comments', {
                     params: {
                         type: 'PORTFOLIO_SUBMISSION',
                         id: pid
@@ -143,7 +142,7 @@ export default function PortfolioProjectDetailPage() {
     useEffect(() => {
         const fetchLikeStatus = async () => {
             try {
-                const response = await api.get('/api/likes', {
+                const response = await api.get('/likes', {
                     params: {
                         targetType: 'PORTFOLIO_SUBMISSION',
                         targetId: pid
@@ -167,37 +166,22 @@ export default function PortfolioProjectDetailPage() {
     useEffect(() => {
         const loadVoteData = async () => {
             try {
-                console.log('🔍 투표 데이터 로드 시작:', { challengeId: id, itemId: item?.id });
-                const myVoteData = await getMyVote(id);
-                console.log('📊 투표 데이터 로드 결과:', myVoteData);
+            const myVoteData = await getMyVote(id);
                 setMyVote(myVoteData);
                 
                 // 기존 투표가 있고, 현재 제출물에 대한 투표인 경우에만 별점 초기화
                 if (myVoteData && myVoteData.submissionId === item?.id) {
-                    console.log('⭐ 현재 제출물에 대한 투표 발견 - 별점 초기화:', {
-                        submissionId: myVoteData.submissionId,
-                        currentItemId: item?.id,
-                        uiUx: myVoteData.uiUx,
-                        codeQuality: myVoteData.codeQuality,
-                        creativity: myVoteData.creativity,
-                        difficulty: myVoteData.difficulty
-                    });
                     setUx(myVoteData.uiUx);
                     setTech(myVoteData.codeQuality);
                     setCre(myVoteData.creativity);
                     setPlan(myVoteData.difficulty);
                 } else if (myVoteData) {
-                    console.log('⚠️ 다른 제출물에 대한 투표 - 별점 초기화하지 않음:', {
-                        votedSubmissionId: myVoteData.submissionId,
-                        currentItemId: item?.id
-                    });
                     // 다른 제출물에 투표한 경우 별점을 0으로 초기화
                     setUx(0);
                     setTech(0);
                     setCre(0);
                     setPlan(0);
                 } else {
-                    console.log('📝 투표 이력 없음 - 별점 초기화');
                     setUx(0);
                     setTech(0);
                     setCre(0);
@@ -220,24 +204,17 @@ export default function PortfolioProjectDetailPage() {
         const checkVoteStatus = async () => {
             if (item && (challengeStatus === "OPEN" || challengeStatus === "VOTING")) {
                 try {
-                    console.log('🔄 페이지 로드 시 투표 상태 재확인');
                     const myVoteData = await getMyVote(id);
                     if (myVoteData && !myVote) {
-                        console.log('✅ 기존 투표 발견:', {
-                            submissionId: myVoteData.submissionId,
-                            currentItemId: item?.id
-                        });
                         setMyVote(myVoteData);
                         
                         // 현재 제출물에 대한 투표인 경우에만 별점 표시
                         if (myVoteData.submissionId === item?.id) {
-                            console.log('⭐ 현재 제출물에 대한 투표 - 별점 표시');
                             setUx(myVoteData.uiUx);
                             setTech(myVoteData.codeQuality);
                             setCre(myVoteData.creativity);
                             setPlan(myVoteData.difficulty);
                         } else {
-                            console.log('⚠️ 다른 제출물에 대한 투표 - 별점 초기화');
                             setUx(0);
                             setTech(0);
                             setCre(0);
@@ -435,45 +412,11 @@ export default function PortfolioProjectDetailPage() {
 
     // handleVote 함수는 위에서 이미 정의됨 (API 연결 버전)
 
-    const submitComment = async () => {
-        const v = cText.trim();
-        if (!v || challengeStatus === "ENDED") return; // 종료된 챌린지에서는 댓글 작성 불가
-        
-        try {
-            await api.post('/api/comments', {
-                commentableType: 'PORTFOLIO_SUBMISSION',
-                commentableId: pid,
-                comment: v
-            });
-            
-            // 댓글 목록 새로고침
-            const response = await api.get('/api/comments', {
-                params: {
-                    type: 'PORTFOLIO_SUBMISSION',
-                    id: pid
-                }
-            });
-            setComments(response.data || []);
-            setCText("");
-            setToast({
-                visible: true,
-                message: "댓글이 등록됐어요.",
-                type: 'success'
-            });
-        } catch (error) {
-            console.error('댓글 작성 실패:', error);
-            setToast({
-                visible: true,
-                message: "댓글 등록에 실패했습니다.",
-                type: 'error'
-            });
-        }
-    };
 
     const toggleLike = async () => {
         if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
         try {
-            const response = await api.post('/api/likes', {
+            const response = await api.post('/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
                 targetId: pid
             });
@@ -681,7 +624,7 @@ export default function PortfolioProjectDetailPage() {
                                 onChange={setPlan} 
                                 disabled={false}
                             />
-                        </div>
+                </div>
                     )
                 )}
 
@@ -708,70 +651,21 @@ export default function PortfolioProjectDetailPage() {
                             // 아직 투표하지 않은 경우
                             <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
                                 {voteLoading ? "투표 중..." : "투표 제출"}
-                            </CTAButton>
+                    </CTAButton>
                         ) : null}
                         {/* 다른 제출물에 투표한 경우는 버튼 없음 */}
-                    </div>
+                </div>
                 )}
             </SectionCard>
 
             {/* 댓글 */}
-            <SectionCard className="!px-5 !py-5 mt-6">
-                <h2 className="mb-3 text-[15px] font-bold">댓글 {comments.length}</h2>
-
-                <div className="space-y-4">
-                    {comments.map((c) => (
-                        <div key={c.id} className="rounded-2xl border p-4">
-                            <div className="mb-1 flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[12.5px] font-bold">
-                                    {c.username?.charAt(0).toUpperCase() || 'U'}
-                                </div>
-                                <div className="leading-tight">
-                                    <div className="text-[13px] font-semibold text-neutral-900">{c.username}</div>
-                                    <div className="text-[12px] text-neutral-500">
-                                        {new Date(c.createdAt).toLocaleDateString('ko-KR', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">{c.comment}</div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* 댓글 입력 */}
-                {isChallengeEnded ? (
-                    <div className="mt-5 rounded-2xl border p-4 bg-gray-50">
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <span>🔒</span>
-                            <span className="text-sm">이 챌린지는 종료되어 댓글을 작성할 수 없습니다.</span>
-                        </div>
-                    </div>
-                ) : (
-                <div className="mt-5 rounded-2xl border p-4">
-          <textarea
-              className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
-              placeholder="댓글을 작성해보세요."
-              value={cText}
-              onChange={(e) => setCText(e.target.value)}
-          />
-                    <div className="mt-2 flex justify-end">
-                        <button
-                            onClick={submitComment}
-                                disabled={!cText.trim()}
-                                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:bg-gray-300"
-                        >
-                            등록하기
-                        </button>
-                    </div>
-                </div>
-                )}
-            </SectionCard>
+            <ChallengeCommentSection
+                commentableType="PORTFOLIO_SUBMISSION"
+                commentableId={pid}
+                challengeStatus={challengeStatus}
+                comments={comments}
+                onCommentsChange={setComments}
+            />
         </div>
     );
 }
