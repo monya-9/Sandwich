@@ -13,6 +13,7 @@ export type ChallengeListItem = {
   id: number;
   type: ChallengeType;
   title: string;
+  ruleJson: string;  // 🔥 백엔드에서 추가된 필드
   status: ChallengeStatus;
   startAt: string;
   endAt: string;
@@ -308,4 +309,186 @@ export async function adminFetchChallenges(params?: {
   if (params?.week) p.aiWeek = params.week;
   const res = await api.get('/admin/challenges', { params: p, withCredentials: true });
   return res.data as ChallengeListResponse;
+}
+
+// ===== 리더보드/우승자 관련 =====
+
+export type LeaderboardEntry = {
+  rank: number;
+  submissionId?: number;
+  userId: number;
+  userName: string;
+  userInitial: string;
+  teamName?: string;
+  totalScore?: number;
+  voteCount?: number;
+  credits?: number;
+  uiUxAvg?: number;
+  creativityAvg?: number;
+  codeQualityAvg?: number;
+  difficultyAvg?: number;
+};
+
+export type LeaderboardResponse = {
+  challengeId: number;
+  entries: LeaderboardEntry[];
+  total: number;
+};
+
+/**
+ * 포트폴리오 챌린지 리더보드 조회
+ */
+export async function fetchPortfolioLeaderboard(
+  challengeId: number, 
+  limit: number = 10
+): Promise<LeaderboardResponse> {
+  const response = await api.get(`/challenges/${challengeId}/leaderboard`, {
+    params: { limit },
+    withCredentials: true,
+  });
+  
+  // API 응답이 { items: [...] } 형태인 경우 { entries: [...] } 형태로 변환
+  const data = response.data;
+  if (data.items && !data.entries) {
+    return {
+      challengeId: challengeId,
+      entries: data.items.map((item: any, index: number) => ({
+        rank: index + 1, // 순서대로 1, 2, 3 설정
+        submissionId: item.submissionId,
+        userId: item.owner?.userId || 0,
+        userName: item.owner?.username || 'Unknown',
+        userInitial: item.owner?.username ? item.owner.username.charAt(0) : 'U',
+        teamName: item.teamName || '',
+        totalScore: item.totalScore || 0,
+        voteCount: item.voteCount || 0,
+        credits: item.credits || 0,
+        uiUxAvg: item.uiUxAvg,
+        creativityAvg: item.creativityAvg,
+        codeQualityAvg: item.codeQualityAvg,
+        difficultyAvg: item.difficultyAvg,
+      })),
+      total: data.items.length,
+    };
+  }
+  
+  return data;
+}
+
+/**
+ * 코드 챌린지 상위 제출자 조회 (제출물 API 활용)
+ */
+export async function fetchCodeTopSubmitters(
+  challengeId: number,
+  limit: number = 10
+): Promise<LeaderboardResponse> {
+  const response = await api.get(`/challenges/${challengeId}/submissions`, {
+    params: { 
+      page: 0, 
+      size: limit,
+      sort: "likeCount,desc" // 좋아요 순으로 정렬
+    },
+    withCredentials: true,
+  });
+  
+  // 제출물 응답을 리더보드 형식으로 변환
+  const submissions = response.data.content || [];
+  const entries: LeaderboardEntry[] = submissions.map((sub: any, index: number) => ({
+    rank: index + 1,
+    userId: sub.authorId || sub.userId,
+    userName: sub.authorName || sub.userName || 'Unknown',
+    userInitial: (sub.authorName || sub.userName || 'U')[0].toUpperCase(),
+    totalScore: sub.likeCount || 0,
+    voteCount: sub.likeCount || 0,
+  }));
+
+  return {
+    challengeId,
+    entries,
+    total: response.data.totalElements || entries.length,
+  };
+}
+
+// ===== 포트폴리오 투표 관련 타입 및 API =====
+
+export type VoteRequest = {
+  submissionId: number;
+  uiUx: number;
+  creativity: number;
+  codeQuality: number;
+  difficulty: number;
+};
+
+export type VoteResponse = {
+  id: number;
+};
+
+export type MyVoteResponse = {
+  submissionId: number;
+  uiUx: number;
+  creativity: number;
+  codeQuality: number;
+  difficulty: number;
+};
+
+export type VoteSummaryResponse = {
+  submissionId: number;
+  voteCount: number;
+  uiUxAvg: number;
+  creativityAvg: number;
+  codeQualityAvg: number;
+  difficultyAvg: number;
+  totalScore: number;
+}[];
+
+/**
+ * 포트폴리오 챌린지 투표 생성
+ */
+export async function createVote(
+  challengeId: number,
+  voteData: VoteRequest
+): Promise<VoteResponse> {
+  const response = await api.post(`/challenges/${challengeId}/votes`, voteData, {
+    withCredentials: true,
+  });
+  return response.data;
+}
+
+/**
+ * 내 투표 수정
+ */
+export async function updateMyVote(
+  challengeId: number,
+  voteData: VoteRequest
+): Promise<VoteResponse> {
+  const response = await api.put(`/challenges/${challengeId}/votes/me`, voteData, {
+    withCredentials: true,
+  });
+  return response.data;
+}
+
+/**
+ * 내 투표 조회
+ */
+export async function getMyVote(challengeId: number): Promise<MyVoteResponse | null> {
+  try {
+    const response = await api.get(`/challenges/${challengeId}/votes/me`, {
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return null; // 투표하지 않은 경우
+    }
+    throw error;
+  }
+}
+
+/**
+ * 투표 요약 조회 (공개)
+ */
+export async function getVoteSummary(challengeId: number): Promise<VoteSummaryResponse> {
+  const response = await api.get(`/challenges/${challengeId}/votes/summary`, {
+    withCredentials: true,
+  });
+  return response.data;
 }

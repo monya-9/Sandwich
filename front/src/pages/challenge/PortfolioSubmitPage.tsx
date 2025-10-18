@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
-import { getChallengeDetail, getDynamicChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
 import Toast from "../../components/common/Toast";
@@ -63,6 +63,7 @@ export default function PortfolioSubmitPage() {
     const [loading, setLoading] = useState(true);
     const [challengeExists, setChallengeExists] = useState<boolean | null>(null);
     const [mustHave, setMustHave] = useState<string[]>([]);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
@@ -89,29 +90,74 @@ export default function PortfolioSubmitPage() {
         checkChallengeExists();
     }, [id]);
 
-    // 백엔드에서 챌린지 타입 확인 후 포트폴리오인 경우 AI API에서 동적으로 데이터 가져오기
+    // 백엔드 챌린지 데이터 우선 사용
     useEffect(() => {
         const loadChallengeData = async () => {
             setLoading(true);
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
+                
                 if (backendChallenge.type === "PORTFOLIO") {
-                    // 포트폴리오 챌린지 데이터와 mustHave 데이터 동시에 가져오기
-                    const [dynamicData, monthlyData] = await Promise.all([
-                        getDynamicChallengeDetail(id, backendChallenge.type),
-                        import('../../api/monthlyChallenge').then(m => m.fetchMonthlyChallenge())
-                    ]);
-                    setData(dynamicData as PortfolioChallengeDetail);
-                    setMustHave(monthlyData.mustHave || []);
+                    // 백엔드 데이터 우선 사용
+                    let ruleData: any = null;
+                    let backendDescription: string | null = null;
+                    
+                    if (backendChallenge.ruleJson) {
+                        try {
+                            ruleData = typeof backendChallenge.ruleJson === 'string' 
+                                ? JSON.parse(backendChallenge.ruleJson) 
+                                : backendChallenge.ruleJson;
+                            backendDescription = ruleData.summary || ruleData.md;
+                            setMustHave(ruleData.must || ruleData.mustHave || []);
+                        } catch (e) {
+                            setMustHave([]);
+                        }
+                    }
+                    
+                    // 더미 데이터 기반으로 백엔드 데이터 적용
+                    const baseData = getChallengeDetail(id) as PortfolioChallengeDetail;
+                    const backendBasedData = {
+                        ...baseData,
+                        id: backendChallenge.id,
+                        title: `포트폴리오 챌린지: ${backendChallenge.title}`,
+                        subtitle: backendChallenge.title,
+                        description: backendDescription || baseData.description,
+                        startAt: backendChallenge.startAt,
+                        endAt: backendChallenge.endAt,
+                        status: backendChallenge.status,
+                    };
+                    
+                    setData(backendBasedData);
+                    setChallengeStatus(backendChallenge.status);
+                    
+                    // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
+                    if (!backendDescription && !ruleData?.must && !ruleData?.mustHave) {
+                        import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
+                            fetchMonthlyChallenge()
+                                .then((monthlyData) => {
+                                    if (!backendDescription) {
+                                        setData(prev => prev ? {
+                                            ...prev,
+                                            description: monthlyData.description || prev.description,
+                                        } : prev);
+                                    }
+                                    if (!ruleData?.must && !ruleData?.mustHave) {
+                                        setMustHave(monthlyData.mustHave || []);
+                                    }
+                                })
+                                .catch((err) => {
+                                    // AI 데이터 로딩 실패는 무시
+                                });
+                        });
+                    }
                 } else {
-                    // 포트폴리오가 아닌 경우 기본 데이터 사용
-                    setData(getChallengeDetail(id) as PortfolioChallengeDetail);
+                    // 포트폴리오가 아닌 경우 에러 처리
+                    setData(null);
                     setMustHave([]);
                 }
             } catch (err) {
-                console.error('챌린지 데이터 로딩 실패:', err);
-                // 에러 시 기본 더미 데이터 사용
-                setData(getChallengeDetail(id) as PortfolioChallengeDetail);
+                // 에러 시 null로 설정하여 에러 상태 표시
+                setData(null);
                 setMustHave([]);
             } finally {
                 setLoading(false);
@@ -141,8 +187,9 @@ export default function PortfolioSubmitPage() {
         images: [],
     });
 
-    // ✅ 제목 또는 설명만 있어도 제출 가능
-    const canSubmit = !!form.title.trim() || !!form.desc?.trim();
+    // ✅ 제목 또는 설명만 있어도 제출 가능 (단, 챌린지가 종료되지 않았을 때만)
+    const canSubmit = (!!form.title.trim() || !!form.desc?.trim()) && challengeStatus !== "ENDED";
+    const isChallengeEnded = challengeStatus === "ENDED";
 
     // 이미지 크롭 핸들러
     const handleCropDone = async (
@@ -152,7 +199,18 @@ export default function PortfolioSubmitPage() {
         try {
             // 3:4 비율의 직사각형 이미지 사용
             const file = new File([rect.blob], "cover.jpg", { type: "image/jpeg" });
+            
+            console.log("🖼️ 커버 이미지 업로드 시도:", {
+                fileName: file.name,
+                fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                fileType: file.type,
+                blobSize: rect.blob.size,
+                timestamp: new Date().toISOString()
+            });
+            
             const uploadedUrl = await UserApi.uploadImage(file);
+            
+            console.log("✅ 커버 이미지 업로드 성공:", uploadedUrl);
             
             setForm(prev => ({ ...prev, coverUrl: uploadedUrl }));
             setSuccessToast({
@@ -160,16 +218,33 @@ export default function PortfolioSubmitPage() {
                 message: "커버 이미지가 업로드되었습니다."
             });
         } catch (error: any) {
+            console.error("❌ 커버 이미지 업로드 실패:", {
+                error,
+                status: error?.response?.status,
+                statusText: error?.response?.statusText,
+                data: error?.response?.data,
+                message: error?.message,
+                config: error?.config ? {
+                    url: error.config.url,
+                    method: error.config.method,
+                    headers: error.config.headers
+                } : null
+            });
             
             let errorMessage = "이미지 업로드에 실패했습니다. 다시 시도해주세요.";
             
             if (error?.response?.status === 500) {
                 const serverMessage = error?.response?.data?.message || "서버 오류가 발생했습니다.";
-                errorMessage = `이미지 업로드 서버 오류: ${serverMessage}`;
+                errorMessage = `서버 오류: ${serverMessage}`;
+                console.error("🔥 서버 500 오류 상세:", error?.response?.data);
             } else if (error?.response?.status === 413) {
                 errorMessage = "이미지 파일이 너무 큽니다. 더 작은 파일을 선택해주세요.";
             } else if (error?.response?.status === 400) {
                 errorMessage = error?.response?.data?.message || "잘못된 이미지 파일입니다.";
+            } else if (error?.response?.status === 415) {
+                errorMessage = "지원하지 않는 파일 형식입니다.";
+            } else if (!error?.response) {
+                errorMessage = "네트워크 오류가 발생했습니다.";
             }
             
             setSuccessToast({
@@ -539,7 +614,16 @@ export default function PortfolioSubmitPage() {
                                                     return;
                                                 }
                                                 
+                                                console.log("📸 추가 이미지 업로드 시도:", {
+                                                    fileName: file.name,
+                                                    fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                                                    fileType: file.type
+                                                });
+                                                
                                                 const uploadResult = await uploadImage(file);
+                                                
+                                                console.log("✅ 추가 이미지 업로드 성공:", uploadResult.url);
+                                                
                                                 setForm(prev => ({
                                                     ...prev,
                                                     images: [...(prev.images || []), uploadResult.url]
@@ -548,10 +632,24 @@ export default function PortfolioSubmitPage() {
                                                     visible: true,
                                                     message: "이미지가 추가되었습니다."
                                                 });
-                                            } catch (error) {
+                                            } catch (error: any) {
+                                                console.error("❌ 추가 이미지 업로드 실패:", {
+                                                    error,
+                                                    status: error?.response?.status,
+                                                    data: error?.response?.data
+                                                });
+                                                
+                                                let errorMessage = "이미지 업로드에 실패했습니다. 다시 시도해주세요.";
+                                                
+                                                if (error?.response?.status === 500) {
+                                                    errorMessage = `서버 오류: ${error?.response?.data?.message || "서버 오류가 발생했습니다."}`;
+                                                } else if (error?.response?.status === 413) {
+                                                    errorMessage = "이미지 파일이 너무 큽니다.";
+                                                }
+                                                
                                                 setSuccessToast({
                                                     visible: true,
-                                                    message: "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+                                                    message: errorMessage
                                                 });
                                             }
                                         }}
@@ -573,9 +671,26 @@ export default function PortfolioSubmitPage() {
                                 />
                             </Row>
 
+                            {/* 종료된 챌린지 안내 */}
+                            {isChallengeEnded && (
+                                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div className="flex items-center gap-2 text-gray-700">
+                                        <span className="text-lg">🔒</span>
+                                        <div>
+                                            <div className="font-semibold">종료된 챌린지</div>
+                                            <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-end">
-                                <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit}>
-                                    제출하기
+                                <CTAButton 
+                                    as="button" 
+                                    onClick={handleSubmit} 
+                                    disabled={!canSubmit}
+                                >
+                                    {isChallengeEnded ? "제출 불가" : "제출하기"}
                                 </CTAButton>
                             </div>
                         </div>
@@ -654,8 +769,27 @@ export default function PortfolioSubmitPage() {
                             </div>
                         </div>
 
+                        {/* 종료된 챌린지 안내 */}
+                        {isChallengeEnded && (
+                            <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <span className="text-lg">🔒</span>
+                                    <div>
+                                        <div className="font-semibold">종료된 챌린지</div>
+                                        <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-4 flex justify-end">
-                            <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit}>제출하기</CTAButton>
+                            <CTAButton 
+                                as="button" 
+                                onClick={handleSubmit} 
+                                disabled={!canSubmit}
+                            >
+                                {isChallengeEnded ? "제출 불가" : "제출하기"}
+                            </CTAButton>
                         </div>
                     </SectionCard>
                 )}
