@@ -129,21 +129,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
                         <p>📣 {(codeRule.md || codeUse?.summary || weeklyData?.summary || 'AI가 생성한 주간 코드 챌린지입니다.') as string}</p>
                         <p className="text-[13px]">조건: 자동 채점 지원 · 중복 제출 가능</p>
-                        {(Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData?.must) && (Array.isArray(codeRule.must) ? codeRule.must.length : (weeklyData?.must?.length || 0)) > 0 && (
-                            <div className="py-1">
-                                <p className="text-[12px] text-neutral-600">
-                                    {(() => {
-                                        const arr = (Array.isArray(codeRule.must) && codeRule.must.length > 0) ? codeRule.must : (weeklyData?.must || []);
-                                        return (
-                                            <>
-                                                📋 <b>필수 요구사항:</b> {arr.slice(0, 3).join(', ')}
-                                                {arr.length > 3 && ` 외 ${arr.length - 3}개`}
-                                            </>
-                                        );
-                                    })()}
-                                </p>
-                            </div>
-                        )}
                     </div>
                 ),
                 ctaLabel: "참여하러 가기",
@@ -163,21 +148,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                     <div className="space-y-3 text-[13.5px] leading-6 text-neutral-800">
                         <p>✨ {(portfolioRule.md || portfolioUse?.summary || monthlyData?.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.') as string}</p>
                         <p className="text-[13px]">조건: 팀/개인 참여 가능 · 투표로 순위 결정</p>
-                        {(Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0 ? portfolioRule.must : monthlyData?.mustHave) && (Array.isArray(portfolioRule.must) ? portfolioRule.must.length : (monthlyData?.mustHave?.length || 0)) > 0 && (
-                            <div className="py-1">
-                                <p className="text-[12px] text-neutral-600">
-                                    {(() => {
-                                        const arr = (Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0) ? portfolioRule.must : (monthlyData?.mustHave || []);
-                                        return (
-                                            <>
-                                                📋 <b>필수 요구사항:</b> {arr.slice(0, 3).join(', ')}
-                                                {arr.length > 3 && ` 외 ${arr.length - 3}개`}
-                                            </>
-                                        );
-                                    })()}
-                                </p>
-                            </div>
-                        )}
                     </div>
                 ),
                 ctaLabel: "참여하러 가기",
