@@ -3,7 +3,7 @@
 FROM gradle:8.14.2-jdk17 AS builder
 WORKDIR /app
 COPY --chown=gradle:gradle . .
-RUN gradle clean build --no-daemon -x test
+#RUN gradle clean build --no-daemon -x test
 
 
 # 2단계: 실행 이미지 (Playwright 브라우저 포함)
