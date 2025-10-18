@@ -11,7 +11,7 @@ interface LikedUser {
 interface LikedUsersModalProps {
   isOpen: boolean;
   onClose: () => void;
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
+  targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
   targetId: number;
 }
 

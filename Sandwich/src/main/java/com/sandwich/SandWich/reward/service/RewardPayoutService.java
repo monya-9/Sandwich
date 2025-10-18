@@ -18,6 +18,15 @@ public class RewardPayoutService {
     private final JdbcTemplate jdbc;
     private final RewardProperties props;
 
+    @Transactional(readOnly = true)
+    public boolean isPublished(long challengeId) {
+        Integer cnt = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM reward_payout WHERE challenge_id = ?",
+                Integer.class, challengeId
+        );
+        return cnt != null && cnt > 0;
+    }
+
     @Transactional
     public int publishPortfolioResults(long challengeId, RewardRule rule) {
         // 투표 종료 검증: challenge.vote_end_at 기준 (필드명이 다르면 맞춰서 수정)
@@ -66,12 +75,12 @@ public class RewardPayoutService {
     }
 
     private int payoutOne(long challengeId, long userId, long amount, Integer rank) {
-        // 멱등 insert
+        // 멱등 upsert + 타임스탬프 명시
         int inserted = jdbc.update("""
-          INSERT INTO reward_payout(challenge_id, user_id, amount, rank)
-          VALUES (?, ?, ?, ?)
-          ON CONFLICT (challenge_id, user_id) DO NOTHING
-        """, ps -> {
+      INSERT INTO reward_payout (challenge_id, user_id, amount, rank, created_at, updated_at)
+      VALUES (?, ?, ?, ?, now(), now())
+      ON CONFLICT (challenge_id, user_id) DO NOTHING
+    """, ps -> {
             ps.setLong(1, challengeId);
             ps.setLong(2, userId);
             ps.setLong(3, amount);
@@ -79,22 +88,23 @@ public class RewardPayoutService {
             else ps.setInt(4, rank);
         });
 
-        // 실제로 새로 기록된 경우에만 크레딧 반영 (토글이 켜져 있을 때)
         if (inserted == 1 && props.isApplyCredits()) {
-            // 거래 기록
+            // 거래 기록: created_at / updated_at 명시
             jdbc.update("""
-              INSERT INTO credit_txn(user_id, amount, reason, ref_id)
-              VALUES (?, ?, 'REWARD', ?)
+              INSERT INTO credit_txn(user_id, amount, reason, ref_id, created_at, updated_at)
+              VALUES (?, ?, 'REWARD', ?, now(), now())
             """, userId, amount, challengeId);
 
-            // 지갑 upsert
+            // 지갑 upsert: created_at / updated_at 명시 + UPDATE 시 updated_at 갱신
             jdbc.update("""
-              INSERT INTO credit_wallet(user_id, balance)
-              VALUES (?, ?)
+              INSERT INTO credit_wallet(user_id, balance, created_at, updated_at)
+              VALUES (?, ?, now(), now())
               ON CONFLICT (user_id) DO UPDATE SET
-                balance = credit_wallet.balance + EXCLUDED.balance
+                balance    = credit_wallet.balance + EXCLUDED.balance,
+                updated_at = now()
             """, userId, amount);
         }
         return inserted;
     }
+
 }

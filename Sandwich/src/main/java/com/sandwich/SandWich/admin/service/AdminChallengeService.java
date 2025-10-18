@@ -3,22 +3,34 @@ package com.sandwich.SandWich.admin.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sandwich.SandWich.admin.dto.AdminChallengeDtos;
 import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.CreateReq;
 import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.PatchReq;
 import com.sandwich.SandWich.challenge.domain.Challenge;
 import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
+import com.sandwich.SandWich.challenge.domain.ChallengeType;
 import com.sandwich.SandWich.challenge.repository.ChallengeRepository;
+import com.sandwich.SandWich.challenge.repository.ChallengeSpecifications;
+import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
+import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLogRepository;
 import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.reward.service.RewardPayoutService;
 import com.sandwich.SandWich.reward.service.RewardRule;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
+import java.util.Map;
 
 
 @Service
@@ -28,9 +40,14 @@ public class AdminChallengeService {
     private final ObjectMapper om;
     private final ChallengeRepository repo;
     private final RewardPayoutService reward;
-    private final PortfolioLeaderboardCache leaderboard; // 네 구현 클래스
-    private final CurrentUserProvider current;           // 감사로그
+    private final PortfolioLeaderboardCache leaderboard;
+    private final CurrentUserProvider current;
     private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository auditRepo;
+    private final ChallengeSyncLogRepository logs;
+    private final SubmissionRepository submissionRepo;
+    private final PortfolioVoteRepository voteRepo;
+    private final RedisUtil redisUtil;
+
 
     @Transactional
     public Long create(CreateReq req) {
@@ -118,6 +135,75 @@ public class AdminChallengeService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_RULE_JSON");
         }
     }
+
+    public Page<AdminChallengeDtos.ListItem> list(
+            ChallengeType type, ChallengeStatus status, String source,
+            String aiMonth, String aiWeek, Pageable pageable) {
+
+        Specification<Challenge> spec = Specification
+                .where(ChallengeSpecifications.hasType(type))
+                .and(ChallengeSpecifications.hasStatus(status))
+                .and((root,q,cb) -> source==null? null : cb.equal(root.get("source"), source))
+                .and((root,q,cb) -> aiMonth==null? null : cb.equal(root.get("aiMonth"), aiMonth))
+                .and((root,q,cb) -> aiWeek==null? null : cb.equal(root.get("aiWeek"), aiWeek));
+
+        return repo.findAll(spec, pageable).map(AdminChallengeDtos.ListItem::from);
+    }
+
+    public AdminChallengeDtos.Detail get(Long id) {
+        Challenge c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // 최신 로그 1건
+        var latest = logs.findAll(
+                (root,q,cb) -> cb.or(
+                        cb.equal(root.get("aiMonth"), c.getAiMonth()),
+                        cb.equal(root.get("aiWeek"),  c.getAiWeek())
+                ),
+                PageRequest.of(0,1, Sort.by(Sort.Direction.DESC, "createdAt"))
+        ).getContent();
+        return AdminChallengeDtos.Detail.builder()
+                .challenge(AdminChallengeDtos.ListItem.from(c))
+                .latestSync(latest.isEmpty()? null : latest.get(0))
+                .build();
+    }
+
+    @Transactional
+    public void delete(Long challengeId, boolean force) {
+        Challenge c = repo.findById(challengeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+
+        if (reward.isPublished(challengeId) && !force) {
+            throw new BadRequestException("CANNOT_DELETE_PUBLISHED",
+                    "보상 지급된 챌린지는 삭제할 수 없습니다. force=true로 강제 삭제하세요.");
+        }
+
+        long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
+        long voteCount = 0L;
+        try {
+            voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
+                    .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
+        } catch (Exception ignore) {}
+
+        if (!force && (submissionCount > 0 || voteCount > 0)) {
+            throw new BadRequestException("HAS_DEPENDENCIES",
+                    "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+        }
+
+        var subIds = submissionRepo.findIdsByChallengeId(challengeId);
+        for (Long sid : subIds) {
+            redisUtil.deleteValue("viewcount:submission:" + sid);
+        }
+
+        try { voteRepo.deleteByChallengeId(challengeId); } catch (Exception ignore) {}
+
+        submissionRepo.deleteByChallengeId(challengeId);
+
+        repo.delete(c);
+
+        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of(
+                "force", force, "submissionCount", submissionCount, "voteCount", voteCount
+        ));
+    }
+
 
 
 }

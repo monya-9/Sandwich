@@ -1,4 +1,5 @@
 package com.sandwich.SandWich.admin.store;
+
 import com.sandwich.SandWich.challenge.domain.Challenge;
 import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
 import com.sandwich.SandWich.challenge.domain.ChallengeType;
@@ -9,72 +10,78 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Repository;
-
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Repository
 public class ChallengeQueryRepository {
-
 
     @PersistenceContext
     private EntityManager em;
 
-
-    public Page<Challenge> search(String q,
-                                  ChallengeType type,
-                                  ChallengeStatus status,
-                                  OffsetDateTime from,
-                                  OffsetDateTime to,
-                                  Pageable pageable) {
+    public Page<Challenge> search(
+            String q,
+            ChallengeType type,
+            ChallengeStatus status,
+            OffsetDateTime from,
+            OffsetDateTime to,
+            String source,
+            String aiMonth,
+            String aiWeek,
+            Pageable pageable
+    ) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
 
-
-// data query
+        // ===== data query =====
         CriteriaQuery<Challenge> cq = cb.createQuery(Challenge.class);
         Root<Challenge> root = cq.from(Challenge.class);
-        cq.select(root).where(predicates(cb, root, q, type, status, from, to));
+        cq.select(root).where(predicates(cb, root, q, type, status, from, to, source, aiMonth, aiWeek));
         applySort(cb, cq, root, pageable.getSort());
+
         TypedQuery<Challenge> tq = em.createQuery(cq);
         tq.setFirstResult((int) pageable.getOffset());
         tq.setMaxResults(pageable.getPageSize());
         List<Challenge> content = tq.getResultList();
 
-
-// count query
+        // ===== count query =====
         CriteriaQuery<Long> ccq = cb.createQuery(Long.class);
         Root<Challenge> croot = ccq.from(Challenge.class);
-        ccq.select(cb.count(croot)).where(predicates(cb, croot, q, type, status, from, to));
-        Long total = em.createQuery(ccq).getSingleResult();
+        ccq.select(cb.count(croot))
+                .where(predicates(cb, croot, q, type, status, from, to, source, aiMonth, aiWeek));
 
+        Long total = em.createQuery(ccq).getSingleResult();
 
         return new PageImpl<>(content, pageable, total);
     }
 
-
-    private Predicate[] predicates(CriteriaBuilder cb, Root<Challenge> root,
-                                   String q, ChallengeType type, ChallengeStatus status,
-                                   OffsetDateTime from, OffsetDateTime to) {
+    private Predicate[] predicates(
+            CriteriaBuilder cb, Root<Challenge> root,
+            String q, ChallengeType type, ChallengeStatus status,
+            OffsetDateTime from, OffsetDateTime to,
+            String source, String aiMonth, String aiWeek
+    ) {
         List<Predicate> ps = new ArrayList<>();
+
         if (q != null && !q.isBlank()) {
             String like = "%" + q.trim().toLowerCase() + "%";
             ps.add(cb.like(cb.lower(root.get("title")), like));
         }
-        if (type != null) ps.add(cb.equal(root.get("type"), type));
+        if (type != null)   ps.add(cb.equal(root.get("type"), type));
         if (status != null) ps.add(cb.equal(root.get("status"), status));
-        if (from != null) ps.add(cb.greaterThanOrEqualTo(root.get("startAt"), from));
-        if (to != null) ps.add(cb.lessThanOrEqualTo(root.get("startAt"), to));
+        if (from != null)   ps.add(cb.greaterThanOrEqualTo(root.get("startAt"), from));
+
+        if (to != null)     ps.add(cb.lessThanOrEqualTo(root.get("endAt"), to));
+
+        if (source  != null && !source.isBlank())  ps.add(cb.equal(root.get("source"),  source));
+        if (aiMonth != null && !aiMonth.isBlank()) ps.add(cb.equal(root.get("aiMonth"), aiMonth));
+        if (aiWeek  != null && !aiWeek.isBlank())  ps.add(cb.equal(root.get("aiWeek"),  aiWeek));
+
         return ps.toArray(new Predicate[0]);
     }
-
 
     private void applySort(CriteriaBuilder cb, CriteriaQuery<?> cq, Root<Challenge> root, Sort sort) {
         if (sort == null || sort.isUnsorted()) {

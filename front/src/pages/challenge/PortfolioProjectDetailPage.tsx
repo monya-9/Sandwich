@@ -1,14 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, X } from "lucide-react";
-import {
-    getPortfolioProjects,
-    getPortfolioComments,
-    addPortfolioComment,
-    incViewPortfolio,
-    toggleLikePortfolio,
-} from "../../data/Challenge/submissionsDummy";
+import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
+import api from "../../api/axiosInstance";
 
 function Stars({
                    value,
@@ -37,10 +32,13 @@ export default function PortfolioProjectDetailPage() {
     const pid = Number(pidStr);
     const nav = useNavigate();
 
-    const [item, setItem] = useState(() => getPortfolioProjects(id).find((p) => p.id === pid));
-    const [comments, setComments] = useState(() => getPortfolioComments(pid));
+    const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [comments, setComments] = useState<any[]>([]);
     const [cText, setCText] = useState("");
     const [liked, setLiked] = useState(false);
+    const [likeCount, setLikeCount] = useState(0);
 
     // 별점
     const [ux, setUx] = useState(0);
@@ -48,15 +46,93 @@ export default function PortfolioProjectDetailPage() {
     const [cre, setCre] = useState(0);
     const [plan, setPlan] = useState(0);
 
+    // 제출물 상세 데이터 로드
+    useEffect(() => {
+        const fetchSubmissionDetail = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const submissionDetail = await fetchChallengeSubmissionDetail(id, pid);
+                setItem(submissionDetail);
+                setLikeCount(submissionDetail.likeCount || 0);
+            } catch (err) {
+                console.error('포트폴리오 상세 로드 실패:', err);
+                setError('제출물을 찾을 수 없습니다.');
+                setItem(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSubmissionDetail();
+    }, [id, pid]);
+
+    // 댓글 로드 (포트폴리오 제출물용)
+    useEffect(() => {
+        const fetchComments = async () => {
+            try {
+                const response = await api.get('/api/comments', {
+                    params: {
+                        type: 'PORTFOLIO_SUBMISSION',
+                        id: pid
+                    }
+                });
+                setComments(response.data || []);
+            } catch (error) {
+                console.error('댓글 로드 실패:', error);
+                setComments([]);
+            }
+        };
+
+        if (pid) {
+            fetchComments();
+        }
+    }, [pid]);
+
+    // 좋아요 상태 로드
+    useEffect(() => {
+        const fetchLikeStatus = async () => {
+            try {
+                const response = await api.get('/api/likes', {
+                    params: {
+                        targetType: 'PORTFOLIO_SUBMISSION',
+                        targetId: pid
+                    }
+                });
+                setLiked(response.data.likedByMe || false);
+                setLikeCount(response.data.likeCount || 0);
+            } catch (error) {
+                console.error('좋아요 상태 로드 실패:', error);
+                setLiked(false);
+                setLikeCount(0);
+            }
+        };
+
+        if (pid) {
+            fetchLikeStatus();
+        }
+    }, [pid]);
+
     // 간단 토스트
     const [toast, setToast] = useState<string>("");
 
-    useEffect(() => {
-        incViewPortfolio(id, pid);
-        setItem(getPortfolioProjects(id).find((p) => p.id === pid));
-    }, [id, pid]);
-
-    if (!item) return <div className="p-6 text-[13.5px]">프로젝트를 찾을 수 없습니다.</div>;
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+                <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                    <span className="text-lg font-medium">제출물을 불러오는 중...</span>
+                </div>
+            </div>
+        </div>
+    );
+    if (error || !item) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center text-neutral-600">
+                <span className="text-lg">{error || '제출물을 찾을 수 없습니다.'}</span>
+            </div>
+        </div>
+    );
 
     // ✅ 중복 제한 제거: 별점 모두 채웠는지만 체크
     const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0;
@@ -72,23 +148,44 @@ export default function PortfolioProjectDetailPage() {
         // nav(`/challenge/portfolio/${id}/vote`, { replace: true });
     };
 
-    const submitComment = () => {
+    const submitComment = async () => {
         const v = cText.trim();
         if (!v) return;
-        addPortfolioComment(pid, v);
-        setComments(getPortfolioComments(pid));
-        setItem(getPortfolioProjects(id).find((p) => p.id === pid)); // 댓글 수 갱신
-        setCText("");
-        setToast("댓글이 등록됐어요.");
+        
+        try {
+            await api.post('/api/comments', {
+                commentableType: 'PORTFOLIO_SUBMISSION',
+                commentableId: pid,
+                comment: v
+            });
+            
+            // 댓글 목록 새로고침
+            const response = await api.get('/api/comments', {
+                params: {
+                    type: 'PORTFOLIO_SUBMISSION',
+                    id: pid
+                }
+            });
+            setComments(response.data || []);
+            setCText("");
+            setToast("댓글이 등록됐어요.");
+        } catch (error) {
+            console.error('댓글 작성 실패:', error);
+            setToast("댓글 등록에 실패했습니다.");
+        }
     };
 
-    const toggleLike = () => {
-        setLiked((cur) => {
-            toggleLikePortfolio(id, pid, !cur);
-            const updated = getPortfolioProjects(id).find((p) => p.id === pid);
-            setItem(updated);
-            return !cur;
-        });
+    const toggleLike = async () => {
+        try {
+            const response = await api.post('/api/likes', {
+                targetType: 'PORTFOLIO_SUBMISSION',
+                targetId: pid
+            });
+            setLiked(response.data.likedByMe);
+            setLikeCount(response.data.likeCount);
+        } catch (error) {
+            console.error('좋아요 처리 실패:', error);
+        }
     };
 
     return (
@@ -117,22 +214,32 @@ export default function PortfolioProjectDetailPage() {
                 <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
             </div>
 
+
             <SectionCard className="!px-5 !py-5">
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                        {item.authorInitial}
+                        {item.owner?.username?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <div className="leading-tight">
                         <div className="text-[13px] font-semibold text-neutral-900">
-                            {item.authorName}
+                            {item.owner?.username || '익명'}
                             {item.teamName ? ` · ${item.teamName}` : ""}
                         </div>
-                        <div className="text-[12.5px] text-neutral-600">{item.authorRole}</div>
+                        <div className="text-[12.5px] text-neutral-600">{item.owner?.position || '개발자'}</div>
                     </div>
                 </div>
 
-                <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{item.summary}</p>
+                {/* 기술 스택 */}
+                {item.language && (
+                    <div className="mb-3">
+                        <span className="inline-block px-3 py-1 text-[12px] bg-emerald-50 text-emerald-700 rounded-full font-medium">
+                            {item.language}
+                        </span>
+                    </div>
+                )}
+
+                <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{item.desc}</p>
 
                 <div className="mt-4 flex gap-2">
                     {item.demoUrl && (
@@ -157,6 +264,25 @@ export default function PortfolioProjectDetailPage() {
                     )}
                 </div>
 
+                {/* 추가 이미지들 */}
+                {item.assets && item.assets.length > 0 && (
+                    <div className="mt-6">
+                        <h3 className="mb-3 text-[14px] font-semibold text-neutral-900">추가 이미지</h3>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                            {item.assets.map((asset, index) => (
+                                <div key={index} className="aspect-[4/3] overflow-hidden rounded-lg">
+                                    <img 
+                                        src={asset.url} 
+                                        alt={`${item.title} 이미지 ${index + 1}`}
+                                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                                        onClick={() => window.open(asset.url, '_blank')}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* 메트릭 */}
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
                     <button
@@ -164,13 +290,13 @@ export default function PortfolioProjectDetailPage() {
                         className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
                     >
                         <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
-                        {item.likes}
+                        {likeCount}
                     </button>
                     <span className="inline-flex items-center gap-1">
-            <Eye className="h-4 w-4" /> {item.views}
+            <Eye className="h-4 w-4" /> {item.viewCount}
           </span>
                     <span className="inline-flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" /> {item.comments}
+            <MessageSquare className="h-4 w-4" /> {comments.length}
           </span>
                 </div>
 
@@ -201,15 +327,22 @@ export default function PortfolioProjectDetailPage() {
                         <div key={c.id} className="rounded-2xl border p-4">
                             <div className="mb-1 flex items-center gap-2">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[12.5px] font-bold">
-                                    {c.authorInitial}
+                                    {c.username?.charAt(0).toUpperCase() || 'U'}
                                 </div>
                                 <div className="leading-tight">
-                                    <div className="text-[13px] font-semibold text-neutral-900">{c.authorName}</div>
-                                    {c.authorRole && <div className="text-[12px] text-neutral-500">{c.authorRole}</div>}
+                                    <div className="text-[13px] font-semibold text-neutral-900">{c.username}</div>
+                                    <div className="text-[12px] text-neutral-500">
+                                        {new Date(c.createdAt).toLocaleDateString('ko-KR', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">{c.content}</div>
-                            <div className="mt-1 text-xs text-neutral-500">{c.createdAt}</div>
+                            <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">{c.comment}</div>
                         </div>
                     ))}
                 </div>

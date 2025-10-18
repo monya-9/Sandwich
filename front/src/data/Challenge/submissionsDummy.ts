@@ -33,6 +33,9 @@ export type PortfolioProjectCard = {
     summary: string;
     demoUrl?: string;
     repoUrl?: string;
+    coverUrl?: string;  // 커버 이미지
+    language?: string;  // 기술 스택/언어
+    images?: string[];  // 추가 이미지들
     likes: number;
     views: number;
     comments: number;
@@ -94,6 +97,12 @@ const portfolioProjectsByChallenge: Record<number, PortfolioProjectCard[]> = {
             summary: "VHS 그레인 + CRT 스캔라인. 도트 폰트/네온 팔레트.",
             demoUrl: "#",
             repoUrl: "#",
+            coverUrl: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400&h=300&fit=crop",
+            language: "React, TypeScript, CSS",
+            images: [
+                "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400&h=300&fit=crop",
+                "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop"
+            ],
             likes: 12,
             views: 300,
             comments: 10,
@@ -107,6 +116,11 @@ const portfolioProjectsByChallenge: Record<number, PortfolioProjectCard[]> = {
             summary: "픽셀 아이콘과 8bit 전환 애니메이션.",
             demoUrl: "#",
             repoUrl: "#",
+            coverUrl: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop",
+            language: "Vue.js, JavaScript",
+            images: [
+                "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop"
+            ],
             likes: 9,
             views: 210,
             comments: 8,
@@ -181,6 +195,9 @@ export function addPortfolioProject(
         summary?: string;
         demoUrl?: string;
         repoUrl?: string;
+        coverUrl?: string;
+        language?: string;
+        images?: string[];
         authorInitial?: UserInitial;
         authorName?: string;
         teamName?: string;
@@ -199,6 +216,9 @@ export function addPortfolioProject(
         summary: payload.summary || "등록폼에서 제출된 프로젝트입니다.",
         demoUrl: payload.demoUrl,
         repoUrl: payload.repoUrl,
+        coverUrl: payload.coverUrl,
+        language: payload.language,
+        images: payload.images || [],
         likes: 0,
         views: 0,
         comments: 0,

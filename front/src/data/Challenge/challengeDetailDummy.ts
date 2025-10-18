@@ -140,12 +140,7 @@ export const portfolioChallengeDetail: PortfolioChallengeDetail = {
         "투표 기간: 다음달 1일 ~ 3일",
         "결과 발표: 다음달 4일, 보상은 크레딧으로 자동 지급",
     ],
-    schedule: [
-        { label: "챌린지 시작", date: "10월 1일" },
-        { label: "프로젝트 제출 마감", date: "10월 31일" },
-        { label: "투표 기간", date: "11월 1일 ~ 3일" },
-        { label: "결과 발표", date: "11월 4일" },
-    ],
+    schedule: [], // 동적으로 계산됨
     votingCriteria: ["UI/UX", "기술력", "창의성", "기획력"],
     rewards: [
         { rank: "🥇 1등", credit: "10,000 크레딧", krw: "₩10,000", note: "Pro 1개월 무료" },
@@ -167,4 +162,66 @@ export const portfolioChallengeDetail: PortfolioChallengeDetail = {
 export function getChallengeDetail(id: number): AnyChallengeDetail {
     if (id === 2) return portfolioChallengeDetail;
     return challengeDetail; // default id:1
+}
+
+/* ====================================================
+ * API 연동을 위한 동적 데이터 생성 함수
+ * ==================================================== */
+export async function getDynamicChallengeDetail(id: number, challengeType?: string): Promise<AnyChallengeDetail> {
+    if (challengeType === "PORTFOLIO") {
+        // 포트폴리오 챌린지는 AI API에서 동적으로 가져옴
+        const { fetchMonthlyChallenge } = await import('../../api/monthlyChallenge');
+        const monthlyData = await fetchMonthlyChallenge();
+        
+        // ym(YYYY-MM) 기준으로 일정 계산
+        const [yearStr, monthStr] = (monthlyData.ym || '').split('-');
+        const year = Number(yearStr);
+        const month = Number(monthStr); // 1-12
+        const hasYm = !Number.isNaN(year) && !Number.isNaN(month) && month >= 1 && month <= 12;
+
+        const format = (labelDate: Date) => {
+            const m = labelDate.getMonth() + 1;
+            const d = labelDate.getDate();
+            return `${m}월 ${d}일`;
+        };
+
+        let schedule: { label: string; date: string }[] = [];
+        if (hasYm) {
+            const start = new Date(year, month - 1, 1);
+            const end = new Date(year, month, 0); // 말일
+            const voteStart = new Date(year, month - 1, 1); // 그달 1일
+            const voteEnd = new Date(year, month, 3);   // 다음달 3일
+            const announce = new Date(year, month, 4);  // 다음달 4일
+
+            schedule = [
+                { label: '챌린지 시작', date: format(start) },
+                { label: '프로젝트 제출 마감', date: format(end) },
+                { label: '투표 기간', date: `${format(voteStart)} ~ ${format(voteEnd)}` },
+                { label: '결과 발표', date: format(announce) },
+            ];
+        } else {
+            // ym이 없으면 기본값 사용
+            schedule = [
+                { label: '챌린지 시작', date: '매월 1일' },
+                { label: '프로젝트 제출 마감', date: '매월 말일' },
+                { label: '투표 기간', date: '매월 1일 ~ 다음달 3일' },
+                { label: '결과 발표', date: '다음달 4일' },
+            ];
+        }
+        
+        return {
+            ...portfolioChallengeDetail,
+            title: `포트폴리오 챌린지: ${monthlyData.emoji} ${monthlyData.title}`,
+            description: monthlyData.description,
+            schedule,
+            // AI API에서 가져온 필수 요구사항 추가
+            judgeNotes: [
+                "운영 정책/공정성: 챌린지당 1표, 본인 작품 투표 불가, 투표 기간 내에만 가능",
+                "UI/UX, 기술력, 창의성, 기획력의 종합 점수(별점 합산)로 순위 산정",
+                "제출물은 표절/저작권을 침해하지 않도록 주의(참고 출처 표기 권장)",
+                ...(monthlyData.mustHave?.length ? [`필수 요구사항: ${monthlyData.mustHave.join(', ')}`] : [])
+            ],
+        };
+    }
+    return challengeDetail; // 코드 챌린지는 기존 더미 데이터 사용
 }
