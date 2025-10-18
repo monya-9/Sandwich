@@ -18,16 +18,24 @@ function Stars({
                    value,
                    onChange,
                    label,
+                   disabled = false,
                }: {
     value: number;
     onChange: (v: number) => void;
     label: string;
+    disabled?: boolean;
 }) {
     return (
         <div className="flex items-center gap-2">
             <span className="w-16 text-[13px]">{label}</span>
             {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} onClick={() => onChange(n)} aria-label={`${label} ${n}점`}>
+                <button 
+                    key={n} 
+                    onClick={() => !disabled && onChange(n)} 
+                    aria-label={`${label} ${n}점`}
+                    disabled={disabled}
+                    className={disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}
+                >
                     <Star className={`h-5 w-5 ${n <= value ? "fill-yellow-400 stroke-yellow-400" : ""}`} />
                 </button>
             ))}
@@ -56,6 +64,7 @@ export default function PortfolioProjectDetailPage() {
     // 투표 관련 상태
     const [myVote, setMyVote] = useState<MyVoteResponse | null>(null);
     const [voteLoading, setVoteLoading] = useState(false);
+    const [isEditingVote, setIsEditingVote] = useState(false);
 
     // 별점
     const [ux, setUx] = useState(0);
@@ -187,6 +196,23 @@ export default function PortfolioProjectDetailPage() {
         }
     }, [id, challengeStatus, item]);
 
+    // 투표 수정 모드 전환
+    const startEditingVote = () => {
+        setIsEditingVote(true);
+    };
+
+    // 투표 수정 취소
+    const cancelEditingVote = () => {
+        setIsEditingVote(false);
+        // 원래 투표 상태로 복원
+        if (myVote) {
+            setUx(myVote.uiUx);
+            setTech(myVote.codeQuality);
+            setCre(myVote.creativity);
+            setPlan(myVote.difficulty);
+        }
+    };
+
     // 투표 제출 함수
     const handleVote = async () => {
         if (!item) return;
@@ -245,6 +271,9 @@ export default function PortfolioProjectDetailPage() {
                 setCre(updatedVote.creativity);
                 setPlan(updatedVote.difficulty);
             }
+            
+            // 수정 모드 종료
+            setIsEditingVote(false);
 
         } catch (error: any) {
             console.error('투표 실패:', error);
@@ -472,20 +501,57 @@ export default function PortfolioProjectDetailPage() {
                     </div>
                 ) : (
                     <div className="mt-6 space-y-2">
-                        <Stars label="UI/UX" value={ux} onChange={setUx} />
-                        <Stars label="기술력" value={tech} onChange={setTech} />
-                        <Stars label="창의성" value={cre} onChange={setCre} />
-                        <Stars label="기획력" value={plan} onChange={setPlan} />
+                        <Stars 
+                            label="UI/UX" 
+                            value={ux} 
+                            onChange={setUx} 
+                            disabled={!isEditingVote && !!myVote} 
+                        />
+                        <Stars 
+                            label="기술력" 
+                            value={tech} 
+                            onChange={setTech} 
+                            disabled={!isEditingVote && !!myVote} 
+                        />
+                        <Stars 
+                            label="창의성" 
+                            value={cre} 
+                            onChange={setCre} 
+                            disabled={!isEditingVote && !!myVote} 
+                        />
+                        <Stars 
+                            label="기획력" 
+                            value={plan} 
+                            onChange={setPlan} 
+                            disabled={!isEditingVote && !!myVote} 
+                        />
                         <div className="text-[12px] text-neutral-500">
                             ※ 데모용으로 중복 투표 제한을 적용하지 않았습니다. (실서비스는 서버에서 검증)
                         </div>
                     </div>
                 )}
 
-                <div className="mt-4 flex justify-end">
-                    <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
-                        {voteLoading ? "투표 중..." : isChallengeEnded ? "투표 불가" : myVote ? "투표 수정" : "투표 제출"}
-                    </CTAButton>
+                <div className="mt-4 flex justify-end gap-2">
+                    {myVote && !isEditingVote ? (
+                        <>
+                            <CTAButton as="button" onClick={startEditingVote} disabled={isChallengeEnded}>
+                                투표 수정
+                            </CTAButton>
+                        </>
+                    ) : isEditingVote ? (
+                        <>
+                            <CTAButton as="button" onClick={cancelEditingVote} disabled={voteLoading}>
+                                취소
+                            </CTAButton>
+                            <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
+                                {voteLoading ? "저장 중..." : "저장하기"}
+                            </CTAButton>
+                        </>
+                    ) : (
+                        <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
+                            {voteLoading ? "투표 중..." : "투표 제출"}
+                        </CTAButton>
+                    )}
                 </div>
             </SectionCard>
 
