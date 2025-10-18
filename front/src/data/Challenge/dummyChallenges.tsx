@@ -42,26 +42,31 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
         const challenges = backendChallenges.content || [] as any[];
-        const ALLOWED = new Set(['OPEN', 'VOTING']); // ENDED 제외하여 현재 활성 챌린지만 표시
+        const isAllowed = (t: "CODE" | "PORTFOLIO", status: any) => {
+            const s = String(status || '').toUpperCase();
+            return t === 'CODE' ? s === 'OPEN' : (s === 'OPEN' || s === 'VOTING');
+        };
         const byLatestRegistered = (type: "CODE" | "PORTFOLIO") =>
             [...challenges]
                 .filter(c => {
                     // 타입과 상태 체크
-                    if (c.type !== type || !ALLOWED.has(String(c.status || '').toUpperCase())) {
+                    if (c.type !== type || !isAllowed(type, c.status)) {
                         return false;
                     }
                     
-                    // 날짜 체크: 현재 날짜가 시작일과 종료일 사이에 있어야 함
+                    // 날짜 체크: 현재 날짜가 시작일과 "마감 기준" 사이에 있어야 함
                     const now = new Date();
                     const startAt = c.startAt ? new Date(c.startAt as any) : null;
-                    const endAt = c.endAt ? new Date(c.endAt as any) : null;
+                    // CODE: endAt, PORTFOLIO: voteEndAt(있으면) / 없으면 endAt
+                    const endAtRaw = type === 'PORTFOLIO' ? (c.voteEndAt || c.endAt) : c.endAt;
+                    const endAt = endAtRaw ? new Date(endAtRaw as any) : null;
                     
                     // 시작일이 있고 현재가 시작일보다 이전이면 제외
                     if (startAt && now < startAt) {
                         return false;
                     }
                     
-                    // 종료일이 있고 현재가 종료일보다 이후면 제외
+                    // 마감 기준이 있고 현재가 그 이후면 제외
                     if (endAt && now > endAt) {
                         return false;
                     }
@@ -95,8 +100,8 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             }
         };
 
-        const codeUse = (codeDetail && ALLOWED.has(String(codeDetail.status || '').toUpperCase())) ? codeDetail : null;
-        const portfolioUse = (portfolioDetail && ALLOWED.has(String(portfolioDetail.status || '').toUpperCase())) ? portfolioDetail : null;
+        const codeUse = (codeDetail && isAllowed('CODE', codeDetail.status)) ? codeDetail : null;
+        const portfolioUse = (portfolioDetail && isAllowed('PORTFOLIO', portfolioDetail.status)) ? portfolioDetail : null;
         const codeRule = parseRule(codeUse?.ruleJson);
         const portfolioRule = parseRule(portfolioUse?.ruleJson);
 
@@ -131,6 +136,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 summary: codeRule.summary || codeRule.md || codeUse?.summary || weeklyData?.summary || 'AI가 생성한 주간 코드 챌린지입니다.',
                 must: Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData?.must,
                 startDate: codeChallenge?.startAt ? new Date(codeChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
+                expireAtMs: codeChallenge?.endAt ? new Date(codeChallenge.endAt as any).getTime() : undefined,
             },
             {
                 id: portfolioChallenge?.id || 2, // 백엔드 ID 사용, 없으면 기본값
@@ -149,6 +155,10 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 summary: portfolioRule.summary || portfolioRule.md || portfolioUse?.summary || monthlyData?.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.',
                 must: Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0 ? portfolioRule.must : monthlyData?.mustHave,
                 startDate: portfolioChallenge?.startAt ? new Date(portfolioChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
+                expireAtMs: (() => {
+                    const raw = (portfolioChallenge?.voteEndAt || portfolioChallenge?.endAt) as any;
+                    return raw ? new Date(raw).getTime() : undefined;
+                })(),
             },
         ];
     } catch (error) {
@@ -168,11 +178,22 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
 
         // ENDED 상태 챌린지만 필터링
         const pastChallenges = backendChallenges.content
-            .filter(c => c.status === "ENDED")
+            .filter(c => {
+                const type = String(c.type || '').toUpperCase();
+                const now = new Date();
+                const endAtRaw = type === 'PORTFOLIO' ? (c.voteEndAt || c.endAt) : c.endAt;
+                const endAt = endAtRaw ? new Date(endAtRaw as any) : null;
+                // 상태가 ENDED이거나, 마감 기준 시간이 지났으면 지난 챌린지로 이동
+                return c.status === 'ENDED' || (endAt && now > endAt);
+            })
             .sort((a, b) => {
                 // 종료일 기준으로 최신순 정렬 (endAt이 없으면 startAt 사용)
-                const aEndDate = new Date(a.endAt || a.startAt).getTime();
-                const bEndDate = new Date(b.endAt || b.startAt).getTime();
+                const aType = String(a.type || '').toUpperCase();
+                const bType = String(b.type || '').toUpperCase();
+                const aEndKey = aType === 'PORTFOLIO' ? (a.voteEndAt || a.endAt || a.startAt) : (a.endAt || a.startAt);
+                const bEndKey = bType === 'PORTFOLIO' ? (b.voteEndAt || b.endAt || b.startAt) : (b.endAt || b.startAt);
+                const aEndDate = new Date(aEndKey).getTime();
+                const bEndDate = new Date(bEndKey).getTime();
                 return bEndDate - aEndDate;
             })
             .slice(0, 8); // 최대 8개만
