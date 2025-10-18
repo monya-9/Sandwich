@@ -172,9 +172,11 @@ export default function PortfolioProjectDetailPage() {
                 console.log('📊 투표 데이터 로드 결과:', myVoteData);
                 setMyVote(myVoteData);
                 
-                // 기존 투표가 있으면 별점 초기화
-                if (myVoteData) {
-                    console.log('⭐ 별점 초기화:', {
+                // 기존 투표가 있고, 현재 제출물에 대한 투표인 경우에만 별점 초기화
+                if (myVoteData && myVoteData.submissionId === item?.id) {
+                    console.log('⭐ 현재 제출물에 대한 투표 발견 - 별점 초기화:', {
+                        submissionId: myVoteData.submissionId,
+                        currentItemId: item?.id,
                         uiUx: myVoteData.uiUx,
                         codeQuality: myVoteData.codeQuality,
                         creativity: myVoteData.creativity,
@@ -184,6 +186,22 @@ export default function PortfolioProjectDetailPage() {
                     setTech(myVoteData.codeQuality);
                     setCre(myVoteData.creativity);
                     setPlan(myVoteData.difficulty);
+                } else if (myVoteData) {
+                    console.log('⚠️ 다른 제출물에 대한 투표 - 별점 초기화하지 않음:', {
+                        votedSubmissionId: myVoteData.submissionId,
+                        currentItemId: item?.id
+                    });
+                    // 다른 제출물에 투표한 경우 별점을 0으로 초기화
+                    setUx(0);
+                    setTech(0);
+                    setCre(0);
+                    setPlan(0);
+                } else {
+                    console.log('📝 투표 이력 없음 - 별점 초기화');
+                    setUx(0);
+                    setTech(0);
+                    setCre(0);
+                    setPlan(0);
                 }
             } catch (error) {
                 console.error('투표 데이터 로드 실패:', error);
@@ -191,10 +209,51 @@ export default function PortfolioProjectDetailPage() {
             }
         };
 
-        if (challengeStatus === "OPEN" && item) {
+        // 투표 가능한 상태이거나 이미 투표한 상태라면 투표 데이터 로드
+        if ((challengeStatus === "OPEN" || challengeStatus === "VOTING") && item) {
             loadVoteData();
         }
     }, [id, challengeStatus, item]);
+
+    // 페이지 로드 시 투표 상태 확인 (추가 보장)
+    useEffect(() => {
+        const checkVoteStatus = async () => {
+            if (item && (challengeStatus === "OPEN" || challengeStatus === "VOTING")) {
+                try {
+                    console.log('🔄 페이지 로드 시 투표 상태 재확인');
+                    const myVoteData = await getMyVote(id);
+                    if (myVoteData && !myVote) {
+                        console.log('✅ 기존 투표 발견:', {
+                            submissionId: myVoteData.submissionId,
+                            currentItemId: item?.id
+                        });
+                        setMyVote(myVoteData);
+                        
+                        // 현재 제출물에 대한 투표인 경우에만 별점 표시
+                        if (myVoteData.submissionId === item?.id) {
+                            console.log('⭐ 현재 제출물에 대한 투표 - 별점 표시');
+                            setUx(myVoteData.uiUx);
+                            setTech(myVoteData.codeQuality);
+                            setCre(myVoteData.creativity);
+                            setPlan(myVoteData.difficulty);
+                        } else {
+                            console.log('⚠️ 다른 제출물에 대한 투표 - 별점 초기화');
+                            setUx(0);
+                            setTech(0);
+                            setCre(0);
+                            setPlan(0);
+                        }
+                    }
+                } catch (error) {
+                    console.error('투표 상태 확인 실패:', error);
+                }
+            }
+        };
+
+        // 약간의 지연 후 실행 (다른 useEffect들이 완료된 후)
+        const timer = setTimeout(checkVoteStatus, 100);
+        return () => clearTimeout(timer);
+    }, [item, challengeStatus, id, myVote]);
 
     // 투표 수정 모드 전환
     const startEditingVote = () => {
@@ -258,9 +317,11 @@ export default function PortfolioProjectDetailPage() {
             console.log('🔄 투표 후 데이터 새로고침:', updatedVote);
             setMyVote(updatedVote);
             
-            // 별점 상태도 업데이트
-            if (updatedVote) {
+            // 별점 상태도 업데이트 (현재 제출물에 대한 투표인 경우에만)
+            if (updatedVote && updatedVote.submissionId === item?.id) {
                 console.log('⭐ 투표 후 별점 업데이트:', {
+                    submissionId: updatedVote.submissionId,
+                    currentItemId: item?.id,
                     uiUx: updatedVote.uiUx,
                     codeQuality: updatedVote.codeQuality,
                     creativity: updatedVote.creativity,
@@ -278,20 +339,73 @@ export default function PortfolioProjectDetailPage() {
         } catch (error: any) {
             console.error('투표 실패:', error);
             
-            let errorMessage = "투표에 실패했습니다.";
+            // 409 DUPLICATE_VOTE 에러인 경우 기존 투표 정보를 불러와서 표시
             if (error?.response?.status === 409) {
-                errorMessage = "이미 투표한 제출물입니다.";
-            } else if (error?.response?.status === 400) {
-                errorMessage = "투표 기간이 아닙니다.";
-            } else if (error?.response?.status === 403) {
-                errorMessage = "자신의 작품에는 투표할 수 없습니다.";
-            }
+                try {
+                    console.log('🔄 중복 투표 감지 - 기존 투표 정보 불러오기');
+                    const existingVote = await getMyVote(id);
+                    if (existingVote) {
+                        console.log('✅ 기존 투표 정보 발견:', {
+                            submissionId: existingVote.submissionId,
+                            currentItemId: item?.id
+                        });
+                        setMyVote(existingVote);
+                        
+                        // 현재 제출물에 대한 투표인 경우에만 별점 표시
+                        if (existingVote.submissionId === item?.id) {
+                            console.log('⭐ 현재 제출물에 대한 기존 투표 - 별점 표시');
+                            setUx(existingVote.uiUx);
+                            setTech(existingVote.codeQuality);
+                            setCre(existingVote.creativity);
+                            setPlan(existingVote.difficulty);
+                            
+                            setToast({
+                                visible: true,
+                                message: "이미 투표한 제출물입니다. 기존 투표가 표시됩니다.",
+                                type: 'info'
+                            });
+                        } else {
+                            console.log('⚠️ 다른 제출물에 대한 기존 투표 - 별점 초기화');
+                            setUx(0);
+                            setTech(0);
+                            setCre(0);
+                            setPlan(0);
+                            
+                            setToast({
+                                visible: true,
+                                message: "다른 제출물에 이미 투표했습니다.",
+                                type: 'info'
+                            });
+                        }
+                    } else {
+                        setToast({
+                            visible: true,
+                            message: "이미 투표한 제출물입니다.",
+                            type: 'error'
+                        });
+                    }
+                } catch (voteError) {
+                    console.error('기존 투표 정보 불러오기 실패:', voteError);
+                    setToast({
+                        visible: true,
+                        message: "이미 투표한 제출물입니다.",
+                        type: 'error'
+                    });
+                }
+            } else {
+                let errorMessage = "투표에 실패했습니다.";
+                if (error?.response?.status === 400) {
+                    errorMessage = "투표 기간이 아닙니다.";
+                } else if (error?.response?.status === 403) {
+                    errorMessage = "자신의 작품에는 투표할 수 없습니다.";
+                }
 
-            setToast({
-                visible: true,
-                message: errorMessage,
-                type: 'error'
-            });
+                setToast({
+                    visible: true,
+                    message: errorMessage,
+                    type: 'error'
+                });
+            }
         } finally {
             setVoteLoading(false);
         }
@@ -488,7 +602,7 @@ export default function PortfolioProjectDetailPage() {
           </span>
                 </div>
 
-                {/* 투표 */}
+                {/* 투표 섹션 */}
                 {isChallengeEnded ? (
                     <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                         <div className="flex items-center gap-2 text-gray-700">
@@ -500,59 +614,105 @@ export default function PortfolioProjectDetailPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="mt-6 space-y-2">
-                        <Stars 
-                            label="UI/UX" 
-                            value={ux} 
-                            onChange={setUx} 
-                            disabled={!isEditingVote && !!myVote} 
-                        />
-                        <Stars 
-                            label="기술력" 
-                            value={tech} 
-                            onChange={setTech} 
-                            disabled={!isEditingVote && !!myVote} 
-                        />
-                        <Stars 
-                            label="창의성" 
-                            value={cre} 
-                            onChange={setCre} 
-                            disabled={!isEditingVote && !!myVote} 
-                        />
-                        <Stars 
-                            label="기획력" 
-                            value={plan} 
-                            onChange={setPlan} 
-                            disabled={!isEditingVote && !!myVote} 
-                        />
-                        <div className="text-[12px] text-neutral-500">
-                            ※ 데모용으로 중복 투표 제한을 적용하지 않았습니다. (실서비스는 서버에서 검증)
+                    // 투표 섹션 표시 조건
+                    myVote && myVote.submissionId === item?.id ? (
+                        // 현재 제출물에 투표한 경우 - 투표한 별점 표시
+                        <div className="mt-6 space-y-2">
+                            <Stars 
+                                label="UI/UX" 
+                                value={ux} 
+                                onChange={setUx} 
+                                disabled={!isEditingVote}
+                            />
+                            <Stars 
+                                label="기술력" 
+                                value={tech} 
+                                onChange={setTech} 
+                                disabled={!isEditingVote}
+                            />
+                            <Stars 
+                                label="창의성" 
+                                value={cre} 
+                                onChange={setCre} 
+                                disabled={!isEditingVote}
+                            />
+                            <Stars 
+                                label="기획력" 
+                                value={plan} 
+                                onChange={setPlan} 
+                                disabled={!isEditingVote}
+                            />
                         </div>
-                    </div>
+                    ) : myVote && myVote.submissionId !== item?.id ? (
+                        // 다른 제출물에 투표한 경우 - 안내 메시지
+                        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-blue-700">
+                                <span className="text-lg">ℹ️</span>
+                                <div>
+                                    <div className="font-semibold">이미 다른 제출물에 투표했습니다</div>
+                                    <div className="text-sm text-blue-600">한 챌린지당 하나의 제출물에만 투표할 수 있습니다.</div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        // 아직 투표하지 않은 경우 - 투표 섹션 표시
+                        <div className="mt-6 space-y-2">
+                            <Stars 
+                                label="UI/UX" 
+                                value={ux} 
+                                onChange={setUx} 
+                                disabled={false}
+                            />
+                            <Stars 
+                                label="기술력" 
+                                value={tech} 
+                                onChange={setTech} 
+                                disabled={false}
+                            />
+                            <Stars 
+                                label="창의성" 
+                                value={cre} 
+                                onChange={setCre} 
+                                disabled={false}
+                            />
+                            <Stars 
+                                label="기획력" 
+                                value={plan} 
+                                onChange={setPlan} 
+                                disabled={false}
+                            />
+                        </div>
+                    )
                 )}
 
-                <div className="mt-4 flex justify-end gap-2">
-                    {myVote && !isEditingVote ? (
-                        <>
-                            <CTAButton as="button" onClick={startEditingVote} disabled={isChallengeEnded}>
-                                투표 수정
-                            </CTAButton>
-                        </>
-                    ) : isEditingVote ? (
-                        <>
-                            <CTAButton as="button" onClick={cancelEditingVote} disabled={voteLoading}>
-                                취소
-                            </CTAButton>
+                {/* 투표 버튼 */}
+                {!isChallengeEnded && (
+                    <div className="mt-4 flex justify-end gap-2">
+                        {myVote && myVote.submissionId === item?.id ? (
+                            // 현재 제출물에 투표한 경우
+                            !isEditingVote ? (
+                                <CTAButton as="button" onClick={startEditingVote}>
+                                    투표 수정
+                                </CTAButton>
+                            ) : (
+                                <>
+                                    <CTAButton as="button" onClick={cancelEditingVote} disabled={voteLoading}>
+                                        취소
+                                    </CTAButton>
+                                    <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
+                                        {voteLoading ? "저장 중..." : "저장하기"}
+                                    </CTAButton>
+                                </>
+                            )
+                        ) : !myVote ? (
+                            // 아직 투표하지 않은 경우
                             <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
-                                {voteLoading ? "저장 중..." : "저장하기"}
+                                {voteLoading ? "투표 중..." : "투표 제출"}
                             </CTAButton>
-                        </>
-                    ) : (
-                        <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
-                            {voteLoading ? "투표 중..." : "투표 제출"}
-                        </CTAButton>
-                    )}
-                </div>
+                        ) : null}
+                        {/* 다른 제출물에 투표한 경우는 버튼 없음 */}
+                    </div>
+                )}
             </SectionCard>
 
             {/* 댓글 */}
@@ -593,23 +753,23 @@ export default function PortfolioProjectDetailPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="mt-5 rounded-2xl border p-4">
-                        <textarea
-                            className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
-                            placeholder="댓글을 작성해보세요."
-                            value={cText}
-                            onChange={(e) => setCText(e.target.value)}
-                        />
-                        <div className="mt-2 flex justify-end">
-                            <button
-                                onClick={submitComment}
+                <div className="mt-5 rounded-2xl border p-4">
+          <textarea
+              className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
+              placeholder="댓글을 작성해보세요."
+              value={cText}
+              onChange={(e) => setCText(e.target.value)}
+          />
+                    <div className="mt-2 flex justify-end">
+                        <button
+                            onClick={submitComment}
                                 disabled={!cText.trim()}
                                 className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:bg-gray-300"
-                            >
-                                등록하기
-                            </button>
-                        </div>
+                        >
+                            등록하기
+                        </button>
                     </div>
+                </div>
                 )}
             </SectionCard>
         </div>
