@@ -76,6 +76,11 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
+                        // ==== 배포 ====
+                        // 로드밸런싱 용 HealthCheck
+                        .requestMatchers(HttpMethod.GET, "/health").permitAll()
+                        // ==== 배포 End ====
+
                         .requestMatchers("/error", "/error/**").permitAll()
                         // === Device management ===
                         .requestMatchers(org.springframework.http.HttpMethod.GET,  "/api/auth/devices").authenticated()
