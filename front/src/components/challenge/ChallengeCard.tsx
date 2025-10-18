@@ -21,6 +21,8 @@ export type ChallengeCardData = {
     summary?: string;       // ruleJson에서 파싱한 요약
     must?: string[];        // ruleJson에서 파싱한 필수 조건들
     startDate?: string;     // 시작일 정보
+    /** 마감 기준 시간(코드:endAt, 포트폴리오:voteEndAt|endAt) – 메인 자동 이동 스케줄링용 */
+    expireAtMs?: number;
 };
 
 const detailHref = (type: "CODE" | "PORTFOLIO", id: number) =>
