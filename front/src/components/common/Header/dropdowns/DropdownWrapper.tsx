@@ -74,7 +74,7 @@ const DropdownWrapper = ({
                 alignClass,
                 offsetY,
                 width,
-                "bg-white shadow-xl rounded-xl p-6 z-50 pointer-events-auto",
+                "bg-white dark:bg-black shadow-xl rounded-xl p-6 z-50 pointer-events-auto",
                 className,
             ].join(" ")}
         >

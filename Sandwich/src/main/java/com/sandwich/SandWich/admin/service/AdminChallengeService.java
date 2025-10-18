@@ -100,6 +100,20 @@ public class AdminChallengeService {
         }
     }
 
+    @Transactional
+    public void delete(Long id, boolean force) {
+        Challenge c = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+
+        // 간단 구현: force가 아니고 의존 데이터가 있으면 거부 (의존 체크는 필요 시 확장)
+        if (!force) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CANNOT_DELETE_HAS_DEPENDENCIES");
+        }
+
+        repo.deleteById(id);
+        audit("DELETE_CHALLENGE", "CHALLENGE", id, java.util.Map.of("force", force));
+    }
+
     /** DB CHECK와 동일: start<end && ((vs,ve 둘다 null) || (둘다 not null && end<=vs && vs<ve)) */
     private void validateWindow(Challenge c) {
         var start = c.getStartAt();

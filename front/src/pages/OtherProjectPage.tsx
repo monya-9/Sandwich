@@ -4,7 +4,6 @@ import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
 import ProjectThumbnail from "../components/OtherProject/ProjectThumbnail";
 import TagList from "../components/OtherProject/TagList";
 import ProjectStatsBox from "../components/OtherProject/ProjectStatsBox";
-import UserProfileBox from "../components/OtherProject/UserProfileBox";
 import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
@@ -349,9 +348,20 @@ export default function OtherProjectPage() {
                                 </div>
                                 <TagList tags={headerCategories} />
                                 <div className="mb-8">
-                                    <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} projectId={project.id} />
+                                    <ProjectStatsBox
+                                        likes={likesCount}
+                                        views={0}
+                                        comments={commentsCount}
+                                        projectName={project.name}
+                                        date={headerDate}
+                                        category={project.category}
+                                        projectId={project.id}
+                                        ownerName={project.owner}
+                                        ownerEmail={project.ownerEmail}
+                                        ownerImageUrl={project.ownerImageUrl}
+                                        ownerId={project.ownerId}
+                                    />
                                 </div>
-                                <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                             </section>
                             {!commentOpen && (
                                 <div className={`hidden lg:flex flex-col ${forcePage ? 'op-actionbar' : ''}`} style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }}>
@@ -390,10 +400,21 @@ export default function OtherProjectPage() {
                                 </div>
                             </div>
                             <TagList tags={headerCategories} />
-                            <div className="mb-8">
-                                <ProjectStatsBox likes={likesCount} views={0} comments={commentsCount} projectName={project.name} date={headerDate} category={project.category} hasCollected={false} projectId={project.id} />
+                                <div className="mb-8">
+                                <ProjectStatsBox
+                                    likes={likesCount}
+                                    views={0}
+                                    comments={commentsCount}
+                                    projectName={project.name}
+                                    date={headerDate}
+                                    category={project.category}
+                                    projectId={project.id}
+                                    ownerName={project.owner}
+                                    ownerEmail={project.ownerEmail}
+                                    ownerImageUrl={project.ownerImageUrl}
+                                    ownerId={project.ownerId}
+                                />
                             </div>
-                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                         </section>
                         {!commentOpen && (
                             <div className="hidden lg:flex flex-col" style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>

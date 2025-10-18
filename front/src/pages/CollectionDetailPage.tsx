@@ -123,19 +123,19 @@ export default function CollectionDetailPage() {
   return (
     <div className="w-full flex justify-center">
       <Toast visible={!!banner} message={banner || ""} type="success" size="medium" autoClose={2000} closable={true} onClose={() => setBanner(null)} />
-      <div className="w-full min-h-screen bg-white font-gmarket px-4 md:px-8 xl:px-14 pb-16">
+      <div className="w-full min-h-screen bg-white dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 pb-16 text-black dark:text-white">
         <div className="max-w-[1100px] mx-auto pt-20">
           {/* Header */}
           <div className="flex items-start justify-between mt-10">
             <div>
               <div className="text-[20px] font-semibold">{folder?.title || "컬렉션"}</div>
-              <div className="mt-1 text-black/60 text-[13px]">총 {projects.length}개의 작업  |  {(((folder as any)?.private) ?? ((folder as any)?.isPrivate)) ? "비공개 컬렉션" : "공개 컬렉션"}</div>
+              <div className="mt-1 text-black/60 dark:text-white/60 text-[13px]">총 {projects.length}개의 작업  |  {(((folder as any)?.private) ?? ((folder as any)?.isPrivate)) ? "비공개 컬렉션" : "공개 컬렉션"}</div>
               {folder?.description && (
-                <div className="mt-1 text-black/80 text-[14px]">{folder.description}</div>
+                <div className="mt-1 text-black/80 dark:text-white/80 text-[14px]">{folder.description}</div>
               )}
             </div>
             <div className="flex items-center gap-2 mt-6">
-              <button className="px-3 h-9 rounded-md border border-[#D1D5DB] text-black/80 hover:bg-neutral-50" onClick={openEdit}>폴더 수정하기</button>
+              <button className="px-3 h-9 rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-black/80 dark:text-white hover:bg-neutral-50 dark:hover:bg-white/5" onClick={openEdit}>폴더 수정하기</button>
               <button className="px-3 h-9 rounded-md bg-[#F6323E] text-white hover:bg-[#e42b36]" onClick={() => setConfirmOpen(true)}>폴더 삭제하기</button>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function CollectionDetailPage() {
                       <img src={p.thumbnailUrl} alt={p.title} className="absolute inset-0 w-full h-full object-cover" />
                     )}
                   </div>
-                  <div className="mt-2 px-1 text-[14px] font-medium line-clamp-1">{p.title}</div>
+                  <div className="mt-2 px-1 text-[14px] font-medium line-clamp-1 text-black dark:text-white">{p.title}</div>
                 </div>
               ))}
             </div>
@@ -167,28 +167,28 @@ export default function CollectionDetailPage() {
       {editOpen && ReactDOM.createPortal(
         <div className="fixed inset-0 z-[20050] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[rgba(0,0,0,0.55)]" onClick={() => setEditOpen(false)} />
-          <div className="relative z-[20051] w-full max-w-[500px] rounded-[12px] bg-white shadow-2xl">
-            <div className="flex items-center justify-between px-6 h-14 border-b border-black/10">
-              <div className="text-[16px] font-semibold">컬렉션 폴더 수정하기</div>
+          <div className="relative z-[20051] w-full max-w-[500px] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
+            <div className="flex items-center justify-between px-6 h-14 border-b border-black/10 dark:border-[var(--border-color)]">
+              <div className="text-[16px] font-semibold text-black dark:text-white">컬렉션 폴더 수정하기</div>
               <button aria-label="닫기" onClick={() => setEditOpen(false)} className="p-2 rounded-md hover:bg-neutral-100">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={onSubmitEdit} className="px-6 py-4 space-y-4 max-h-[70vh] min-h-[420px] overflow-y-auto">
               <div>
-                <label className="block text-[13px] text-black/70 mb-1">컬렉션 이름</label>
-                <input value={name} onChange={(e) => setName(e.target.value.slice(0,30))} placeholder="이름을 입력해주세요 (최대 30자)" className="w-full h-[44px] rounded-md border border-[#D1D5DB] px-3 text-[14px] bg-white" />
+                <label className="block text-[13px] text-black/70 dark:text-white/70 mb-1">컬렉션 이름</label>
+                <input value={name} onChange={(e) => setName(e.target.value.slice(0,30))} placeholder="이름을 입력해주세요 (최대 30자)" className="w-full h-[44px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 text-[14px] bg-white dark:bg-[var(--surface)] dark:text-white" />
               </div>
               <div>
-                <label className="block text-[13px] text-black/70 mb-1">컬렉션 소개</label>
-                <textarea value={desc} onChange={(e) => setDesc(e.target.value.slice(0,1000))} placeholder="소개를 입력해주세요. (최대 1000자)" className="w-full min-h-[120px] rounded-md border border-[#D1D5DB] px-3 py-2 text-[14px] bg-white resize-y" />
+                <label className="block text-[13px] text-black/70 dark:text-white/70 mb-1">컬렉션 소개</label>
+                <textarea value={desc} onChange={(e) => setDesc(e.target.value.slice(0,1000))} placeholder="소개를 입력해주세요. (최대 1000자)" className="w-full min-h-[120px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 py-2 text-[14px] bg-white dark:bg-[var(--surface)] dark:text-white resize-y" />
               </div>
-              <label className="inline-flex items-center gap-2 text-[13px] text-black/80">
+              <label className="inline-flex items-center gap-2 text-[13px] text-black/80 dark:text-white/80">
                 <input type="checkbox" checked={isPrivate} onChange={(e)=>setIsPrivate(e.target.checked)} />
                 <span>이 폴더를 비공개로 설정</span>
               </label>
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" className="h-10 px-4 rounded-md bg-white border border-[#D1D5DB] text-black/70 hover:bg-neutral-50" onClick={() => setEditOpen(false)}>취소</button>
+                <button type="button" className="h-10 px-4 rounded-md bg-white dark:bg-[var(--surface)] border border-[#D1D5DB] dark:border-[var(--border-color)] text-black/70 dark:text-white hover:bg-neutral-50 dark:hover:bg-white/5" onClick={() => setEditOpen(false)}>취소</button>
                 <button type="submit" className="h-10 px-5 rounded-md bg-[#068334] text-white hover:bg-[#05702C] disabled:opacity-50" disabled={!name.trim() || saving}>{saving ? "저장 중..." : "완료"}</button>
               </div>
             </form>
