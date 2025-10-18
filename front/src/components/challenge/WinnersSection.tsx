@@ -1,42 +1,54 @@
 import React, { useState, useEffect } from "react";
-import { SectionCard } from "./common";
-import { Medal } from "lucide-react";
 import { WinnerEntry } from "../../data/Challenge/winnersDummy";
 import { 
     fetchChallenges, 
     fetchPortfolioLeaderboard,
-    type ChallengeListItem,
     type LeaderboardEntry 
 } from "../../api/challengeApi";
 
-/** 메달 색상 */
-const rankColor = (rank: 1 | 2 | 3) =>
-    rank === 1 ? "text-amber-500" : rank === 2 ? "text-slate-400" : "text-orange-500";
+/** 메달 아이콘 가져오기 */
+const getMedalIcon = (rank: number) => {
+    switch(rank) {
+        case 1: return "🥇";
+        case 2: return "🥈"; 
+        case 3: return "🥉";
+        default: return "🏅";
+    }
+};
 
-/** 1·2·3등 카드(포디움 바 완전 제거) */
+/** 1·2·3등 카드(ChallengeDetailPage와 동일한 스타일) */
 function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
     // WinnerEntry와 LeaderboardEntry 모두 호환되도록 처리
     const rank = data.rank as 1 | 2 | 3;
     const userInitial = 'userInitial' in data ? data.userInitial : (data as LeaderboardEntry).userInitial;
     const name = 'name' in data ? data.name : (data as LeaderboardEntry).userName;
     const teamName = 'teamName' in data ? data.teamName : undefined;
-    const credits = 'credits' in data ? data.credits : (data as LeaderboardEntry).credits || 0;
+
+    // 이름과 팀 이름을 "제출자 이름 • 팀 이름" 형식으로 표시
+    const displayName = teamName ? `${name} • ${teamName}` : name;
 
     return (
-        <div className="flex flex-col items-center gap-2">
-            <Medal className={`h-6 w-6 ${rankColor(rank)}`} />
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                {userInitial}
+        <div className="text-center">
+            {/* 메달 아이콘 */}
+            <div className="mb-2 text-4xl">
+                {getMedalIcon(rank)}
             </div>
-
-            <div className="text-center leading-tight">
-                <div className="text-[13px] font-semibold text-neutral-900">{name}</div>
-                {teamName && <div className="text-[12px] text-neutral-500">{teamName}</div>}
+            
+            {/* 이니셜 */}
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
+                <span className="font-bold text-lg text-gray-700">{userInitial}</span>
             </div>
-
-            <div className="rounded-xl bg-neutral-900/90 px-3 py-1 text-[12px] font-semibold text-white shadow-sm">
-                {credits?.toLocaleString() || '0'} 크레딧
+            
+            {/* 이름과 팀 이름 */}
+            <div className="font-semibold text-gray-800 mb-1 break-words">
+                {displayName}
+            </div>
+            
+            {/* 크레딧 또는 점수 */}
+            <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+                {'totalScore' in data && data.totalScore ? `${data.totalScore.toFixed(2)}점` : 
+                 data.credits ? `${data.credits.toLocaleString()} 크레딧` : 
+                 'voteCount' in data ? `${data.voteCount || 0}표` : '0표'}
             </div>
         </div>
     );
@@ -50,32 +62,26 @@ function WinnersBox({ items, loading, error }: {
 }) {
     if (loading) {
         return (
-            <SectionCard
-                bordered
-                className="!px-5 !py-5 h-full min-h-[220px]"
-            >
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 mx-auto mb-2"></div>
                         <div className="text-sm text-neutral-500">우승자 정보 로딩 중...</div>
                     </div>
                 </div>
-            </SectionCard>
+            </div>
         );
     }
 
     if (error || items.length === 0) {
         return (
-            <SectionCard
-                bordered
-                className="!px-5 !py-5 h-full min-h-[220px]"
-            >
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="flex items-center justify-center h-full">
                     <div className="text-sm text-neutral-500 text-center">
                         {error || "아직 우승자 정보가 없습니다."}
                     </div>
                 </div>
-            </SectionCard>
+            </div>
         );
     }
 
@@ -87,16 +93,15 @@ function WinnersBox({ items, loading, error }: {
     ].filter(Boolean) as (WinnerEntry | LeaderboardEntry)[];
 
     return (
-        <SectionCard
-            bordered
-            className="!px-5 !py-5 h-full min-h-[220px]"
-        >
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="flex justify-between items-start w-full">
                 {byOrder.map((w) => (
-                    <WinnerCard key={w.rank} data={w} />
+                    <div key={w.rank} className="flex-1 flex justify-center">
+                        <WinnerCard data={w} />
+                    </div>
                 ))}
             </div>
-        </SectionCard>
+        </div>
     );
 }
 
@@ -126,7 +131,10 @@ export default function WinnersSection() {
                 
                 // 3. 해당 챌린지의 리더보드 가져오기
                 const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
-                setWinners(leaderboardData.entries.slice(0, 3)); // 상위 3명만
+                
+                console.log('리더보드 데이터:', leaderboardData.entries);
+                
+                setWinners(leaderboardData.entries.slice(0, 3));
                 setError(null);
                 
             } catch (err) {

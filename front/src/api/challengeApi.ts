@@ -315,12 +315,18 @@ export async function adminFetchChallenges(params?: {
 
 export type LeaderboardEntry = {
   rank: number;
+  submissionId?: number;
   userId: number;
   userName: string;
   userInitial: string;
+  teamName?: string;
   totalScore?: number;
   voteCount?: number;
   credits?: number;
+  uiUxAvg?: number;
+  creativityAvg?: number;
+  codeQualityAvg?: number;
+  difficultyAvg?: number;
 };
 
 export type LeaderboardResponse = {
@@ -340,7 +346,32 @@ export async function fetchPortfolioLeaderboard(
     params: { limit },
     withCredentials: true,
   });
-  return response.data;
+  
+  // API 응답이 { items: [...] } 형태인 경우 { entries: [...] } 형태로 변환
+  const data = response.data;
+  if (data.items && !data.entries) {
+    return {
+      challengeId: challengeId,
+      entries: data.items.map((item: any, index: number) => ({
+        rank: index + 1, // 순서대로 1, 2, 3 설정
+        submissionId: item.submissionId,
+        userId: item.owner?.userId || 0,
+        userName: item.owner?.username || 'Unknown',
+        userInitial: item.owner?.username ? item.owner.username.charAt(0) : 'U',
+        teamName: item.teamName || '',
+        totalScore: item.totalScore || 0,
+        voteCount: item.voteCount || 0,
+        credits: item.credits || 0,
+        uiUxAvg: item.uiUxAvg,
+        creativityAvg: item.creativityAvg,
+        codeQualityAvg: item.codeQualityAvg,
+        difficultyAvg: item.difficultyAvg,
+      })),
+      total: data.items.length,
+    };
+  }
+  
+  return data;
 }
 
 /**

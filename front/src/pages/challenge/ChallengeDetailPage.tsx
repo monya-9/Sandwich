@@ -222,33 +222,44 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
         );
     }
 
+    // 1등을 가운데 배치하기 위해 2-1-3 순서로 정렬
+    const orderedWinners = [
+        winners.find(w => w.rank === 2),
+        winners.find(w => w.rank === 1), 
+        winners.find(w => w.rank === 3)
+    ].filter(Boolean) as LeaderboardEntry[];
+
     return (
         <div className="mb-6">
             <h2 className="text-xl font-bold mb-4 text-center">
                 지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
             </h2>
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <div className="flex justify-center items-end gap-8">
-                    {winners.map((winner, index) => (
-                        <div key={winner.userId} className="text-center">
-                            {/* 메달 아이콘 */}
-                            <div className="mb-2 text-4xl">
-                                {getMedalIcon(winner.rank)}
-                            </div>
-                            
-                            {/* 이니셜 */}
-                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                <span className="font-bold text-lg text-gray-700">{winner.userInitial}</span>
-                            </div>
-                            
-                            {/* 이름 */}
-                            <div className="font-semibold text-gray-800 mb-1">{winner.userName}</div>
-                            
-                            {/* 크레딧 또는 점수 */}
-                            <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
-                                {winner.credits ? `${winner.credits.toLocaleString()} 크레딧` : 
-                                 winner.totalScore ? `${winner.totalScore}점` : 
-                                 `${winner.voteCount || 0}표`}
+                <div className="flex justify-between items-start w-full">
+                    {orderedWinners.map((winner) => (
+                        <div key={winner.userId} className="flex-1 flex justify-center">
+                            <div className="text-center">
+                                {/* 메달 아이콘 */}
+                                <div className="mb-2 text-4xl">
+                                    {getMedalIcon(winner.rank)}
+                                </div>
+                                
+                                {/* 이니셜 */}
+                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
+                                    <span className="font-bold text-lg text-gray-700">{winner.userInitial}</span>
+                                </div>
+                                
+                                {/* 이름과 팀 이름 */}
+                                <div className="font-semibold text-gray-800 mb-1 break-words">
+                                    {winner.teamName ? `${winner.userName} • ${winner.teamName}` : winner.userName}
+                                </div>
+                                
+                                {/* 크레딧 또는 점수 */}
+                                <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+                                    {winner.credits ? `${winner.credits.toLocaleString()} 크레딧` : 
+                                     winner.totalScore ? `${winner.totalScore.toFixed(2)}점` : 
+                                     `${winner.voteCount || 0}표`}
+                                </div>
                             </div>
                         </div>
                     ))}

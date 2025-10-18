@@ -84,48 +84,6 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                     </div>
                 )}
 
-                {/* Must 조건들 표시 - 타입별로 다르게 */}
-                {item.must && item.must.length > 0 && (
-                    <div className="mt-3">
-                        {item.type === "CODE" ? (
-                            // 코드 챌린지: 상세한 박스 스타일
-                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                                <div className="font-medium text-emerald-700 mb-2 text-sm">✅ 필수 조건</div>
-                                <ul className="space-y-1">
-                                    {item.must.slice(0, 4).map((condition, index) => (
-                                        <li key={index} className="flex items-start gap-2 text-xs text-emerald-600">
-                                            <span className="text-emerald-500 mt-0.5 text-xs">•</span>
-                                            <span className="flex-1 leading-relaxed">{condition}</span>
-                                        </li>
-                                    ))}
-                                    {item.must.length > 4 && (
-                                        <li className="text-xs text-emerald-500 font-medium">
-                                            + {item.must.length - 4}개 조건 더 보기
-                                        </li>
-                                    )}
-                                </ul>
-                            </div>
-                        ) : (
-                            // 포트폴리오 챌린지: 간단한 리스트 스타일
-                            <div>
-                                <div className="text-xs font-medium text-neutral-600 mb-2">📋 필수 조건</div>
-                                <div className="space-y-1">
-                                    {item.must.slice(0, 3).map((req, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-xs text-neutral-600">
-                                            <div className="w-1 h-1 bg-neutral-400 rounded-full"></div>
-                                            <span>{req}</span>
-                                        </div>
-                                    ))}
-                                    {item.must.length > 3 && (
-                                        <div className="text-xs text-neutral-500 ml-3">
-                                            외 {item.must.length - 3}개 조건
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
 
                 <div className="mt-3 flex justify-end gap-2">
                     <Link
