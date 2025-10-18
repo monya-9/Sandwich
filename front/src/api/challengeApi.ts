@@ -116,7 +116,7 @@ export async function fetchChallenges(
   if (status) params.status = status;
   
   const response = await api.get('/challenges', {
-    params,
+    params: { ...params, sort: 'startAt,desc' },
     withCredentials: true,
   });
   return response.data;

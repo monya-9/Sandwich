@@ -42,7 +42,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
         const challenges = backendChallenges.content || [] as any[];
-        const ALLOWED = new Set(['OPEN', 'ENDED', 'VOTING']);
+        const ALLOWED = new Set(['OPEN', 'VOTING']);
         const byLatestRegistered = (type: "CODE" | "PORTFOLIO") =>
             [...challenges]
                 .filter(c => c.type === type && ALLOWED.has(String(c.status || '').toUpperCase()))

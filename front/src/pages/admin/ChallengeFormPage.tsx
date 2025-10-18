@@ -68,6 +68,7 @@ export default function ChallengeFormPage() {
     const [saving, setSaving] = React.useState(false);
     const [statusConfirm, setStatusConfirm] = React.useState<{ open: boolean; next?: ChallengeStatus }>(() => ({ open: false }));
     const [currentStatus, setCurrentStatus] = React.useState<ChallengeStatus>("DRAFT");
+    const [detailLoaded, setDetailLoaded] = React.useState<boolean>(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
     const [listDeleteConfirm, setListDeleteConfirm] = React.useState<{ open: boolean; id?: number; title?: string }>({ open: false });
     const [saveConfirm, setSaveConfirm] = React.useState<{ open: boolean; payload?: ChallengeUpsertRequest }>({ open: false });
@@ -183,7 +184,7 @@ export default function ChallengeFormPage() {
                     }
                 } catch (e) {
                     console.error("Failed to load challenge", e);
-                }
+                } finally { setDetailLoaded(true); }
             })();
         }
     }, [urlEditMode, id, isTypeEditRoute]);
@@ -225,6 +226,19 @@ export default function ChallengeFormPage() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode, isTypeEditRoute, urlEditMode]);
+
+    async function refetchStatusUntil(idNum: number, expected: ChallengeStatus, maxTry: number = 3): Promise<ChallengeStatus | null> {
+        for (let i = 0; i < maxTry; i++) {
+            try {
+                const fresh = await fetchChallengeDetail(idNum);
+                const st = (fresh?.status || "") as ChallengeStatus;
+                if (st && st === expected) return st;
+                // 잠깐의 지연을 고려해 대기 후 재시도
+                await new Promise(res => setTimeout(res, 250));
+            } catch {}
+        }
+        return null;
+    }
 
     const onSubmit: React.FormEventHandler = async (e) => {
         e.preventDefault();
@@ -336,12 +350,21 @@ export default function ChallengeFormPage() {
                                     if (effectiveEditId !== null) {
                                         await updateChallenge(effectiveEditId, payload);
                                         setSaveConfirm({ open:false });
-                                        navigate(-1);
+                                        // 상태 초기화하여 이전 선택 항목 내용이 남지 않도록 처리
+                                        clearForm();
+                                        setSelectedTitle("");
+                                        setShowFullList(true);
+                                        // 챌린지 메인으로 이동
+                                        navigate('/challenge');
                                         return;
                                     }
                                     const { id: newId } = await createChallenge(payload);
                                     setSaveConfirm({ open:false });
-                                    navigate(`/challenge/${type.toLowerCase()}/${newId}`);
+                                    clearForm();
+                                    setSelectedTitle("");
+                                    setShowFullList(true);
+                                    // 생성 후에도 동일하게 챌린지 메인으로 이동
+                                    navigate('/challenge');
                                 } catch (ex:any) {
                                     const msg = ex?.response?.data?.message || ex?.message || '서버 오류가 발생했습니다.';
                                     console.error('[CHALLENGE UPSERT] failed:', ex);
@@ -401,13 +424,13 @@ export default function ChallengeFormPage() {
                     )}
                 </div>
             )}
-            {editingId !== null && (
+            {editingId !== null && detailLoaded && (
                 <div className="mb-3 flex flex-wrap gap-2 items-center">
                     {(() => {
                         // 상태 목록: CODE = DRAFT/OPEN/CLOSED, PORTFOLIO = DRAFT/OPEN/CLOSED/VOTING/ENDED
                         const options: ChallengeStatus[] = (
                             type === "CODE"
-                                ? ["DRAFT", "OPEN", "CLOSED"]
+                                ? ["DRAFT", "OPEN", "CLOSED", "ENDED"]
                                 : ["DRAFT", "OPEN", "CLOSED", "VOTING", "ENDED"]
                         );
                         return options.map((opt) => {
@@ -502,22 +525,26 @@ export default function ChallengeFormPage() {
                             const title = (() => {
                                 if (type === "CODE") {
                                     if (from === "DRAFT" && to === "OPEN") return "코드 챌린지 오픈";
-                                    if (from === "OPEN" && to === "ENDED") return "코드 챌린지 마감";
+                                    if (from === "OPEN" && to === "CLOSED") return "코드 챌린지 마감";
+                                    if (to === "ENDED") return "코드 챌린지 종료";
                                 } else {
                                     if (from === "DRAFT" && to === "OPEN") return "포트폴리오 챌린지 오픈";
-                                    if (from === "OPEN" && to === "ENDED") return "포트폴리오 제출 마감";
-                                    if (from === "ENDED" && to === "VOTING") return "포트폴리오 투표 시작";
+                                    if (from === "OPEN" && to === "CLOSED") return "포트폴리오 제출 마감";
+                                    if (from === "CLOSED" && to === "VOTING") return "포트폴리오 투표 시작";
+                                    if (from === "VOTING" && to === "ENDED") return "포트폴리오 투표 마감";
                                 }
                                 return "상태 전환";
                             })();
                             const points: string[] = (() => {
                                 if (type === "CODE") {
                                     if (from === "DRAFT" && to === "OPEN") return ["참여가 열립니다.", "사용자들이 코드를 제출할 수 있습니다."];
-                                    if (from === "OPEN" && to === "ENDED") return ["제출이 마감됩니다.", "결과 및 후속 조치는 별도 진행됩니다."];
+                                    if (from === "OPEN" && to === "CLOSED") return ["제출이 마감됩니다.", "결과 및 후속 조치는 별도 진행됩니다."];
+                                    if (to === "ENDED") return ["챌린지를 종료합니다.", "이후에는 상태가 최종 종료로 유지됩니다."];
                                 } else {
                                     if (from === "DRAFT" && to === "OPEN") return ["프로젝트 제출이 시작됩니다.", "제출 기간 내에만 등록 가능합니다."];
-                                    if (from === "OPEN" && to === "ENDED") return ["프로젝트 제출이 마감됩니다.", "투표 일정은 설정된 기간에 따라 진행됩니다."];
-                                    if (from === "ENDED" && to === "VOTING") return ["투표가 시작됩니다.", "설정된 투표 종료 시점까지 집계됩니다."];
+                                    if (from === "OPEN" && to === "CLOSED") return ["프로젝트 제출이 마감됩니다.", "투표 일정에 따라 다음 단계로 진행하세요."];
+                                    if (from === "CLOSED" && to === "VOTING") return ["투표가 시작됩니다.", "설정된 투표 종료 시점까지 집계됩니다."];
+                                    if (from === "VOTING" && to === "ENDED") return ["투표가 마감됩니다.", "결과 집계가 완료됩니다."];
                                 }
                                 return ["상태를 변경합니다."];
                             })();
@@ -536,14 +563,15 @@ export default function ChallengeFormPage() {
                             <button className="rounded-md bg-emerald-600 px-3 py-1.5 text-[13px] font-semibold text-white" onClick={async () => {
                                 const effectiveId = (editingId !== null) ? editingId : (id ? Number(id) : null);
                                 if (!effectiveId || !statusConfirm.next) { setStatusConfirm({ open: false }); return; }
+                                const targetStatus = statusConfirm.next;
                                 try {
-                                    await changeChallengeStatus(effectiveId, statusConfirm.next);
+                                    await changeChallengeStatus(effectiveId, targetStatus);
+                                    // UI 즉시 반영
+                                    setCurrentStatus(targetStatus);
                                     setStatusConfirm({ open: false });
-                                    // 서버 최종값으로 재동기화 (특히 DRAFT 전환 확인)
-                                    try {
-                                        const fresh = await fetchChallengeDetail(effectiveId);
-                                        if (fresh?.status) setCurrentStatus(fresh.status as ChallengeStatus);
-                                    } catch {}
+                                    // 서버 반영이 늦는 경우를 위해 짧게 재확인
+                                    const st = await refetchStatusUntil(effectiveId, targetStatus, 3);
+                                    if (st) setCurrentStatus(st);
                                 } catch (e) {
                                     console.error("status change failed", e);
                                     setStatusConfirm({ open: false });

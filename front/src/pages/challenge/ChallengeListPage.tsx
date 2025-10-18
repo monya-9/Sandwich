@@ -32,6 +32,35 @@ export default function ChallengeListPage() {
             });
     }, []);
 
+  // 자동 새로고침: 일정 주기로 최신 데이터 재요청 + 탭 포커스 시 갱신
+  useEffect(() => {
+    let disposed = false;
+
+    async function refreshOnce() {
+      try {
+        const next = await getDynamicChallenges();
+        if (!disposed) setChallenges((prev) => {
+          // 간단 비교: id/type/subtitle만 비교하여 변경 시에만 교체
+          const key = (it: any) => `${it?.id}|${it?.type}|${it?.subtitle}`;
+          const a = prev?.map(key).join(',');
+          const b = next?.map(key).join(',');
+          return a === b ? prev : next;
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const interval = window.setInterval(refreshOnce, 30000); // 30초마다 갱신
+    const onFocus = () => refreshOnce();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
     return (
         <div className="w-full bg-white">
             {/* 오렌지 공지 배너 */}
