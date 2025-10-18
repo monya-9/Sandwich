@@ -5,7 +5,17 @@ import EmptySubmissionState from "../../components/challenge/EmptySubmissionStat
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchPortfolioSubmissions, type SubmissionListItem } from "../../api/submissionApi";
-import { fetchChallengeDetail } from "../../api/challengeApi";
+import { 
+    fetchChallengeDetail, 
+    createVote, 
+    updateMyVote, 
+    getMyVote, 
+    getVoteSummary,
+    type VoteRequest,
+    type MyVoteResponse,
+    type VoteSummaryResponse
+} from "../../api/challengeApi";
+import Toast from "../../components/common/Toast";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -17,6 +27,18 @@ export default function PortfolioVotePage() {
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    
+    // 투표 관련 상태
+    const [myVote, setMyVote] = useState<MyVoteResponse | null>(null);
+    const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
+    const [voteLoading, setVoteLoading] = useState(false);
+    
+    // 토스트 상태
+    const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' }>({
+        visible: false,
+        message: '',
+        type: 'info'
+    });
     
     const nav = useNavigate();
 
@@ -89,8 +111,95 @@ export default function PortfolioVotePage() {
         loadChallengeData();
     }, [id]);
 
+    // 투표 데이터 로드
+    useEffect(() => {
+        const loadVoteData = async () => {
+            try {
+                // 내 투표 조회
+                const myVoteData = await getMyVote(id);
+                setMyVote(myVoteData);
+                
+                // 투표 요약 조회
+                const summaryData = await getVoteSummary(id);
+                setVoteSummary(summaryData);
+            } catch (error) {
+                console.error('투표 데이터 로드 실패:', error);
+            }
+        };
+
+        if (challengeStatus === "OPEN") {
+            loadVoteData();
+        }
+    }, [id, challengeStatus]);
+
+    // 투표 제출 함수
+    const handleVote = async (submissionId: number, scores: { uiUx: number; creativity: number; codeQuality: number; difficulty: number }) => {
+        setVoteLoading(true);
+        try {
+            const voteData: VoteRequest = {
+                submissionId,
+                ...scores
+            };
+
+            if (myVote) {
+                // 기존 투표 수정
+                await updateMyVote(id, voteData);
+                setToast({
+                    visible: true,
+                    message: "투표가 수정되었습니다.",
+                    type: 'success'
+                });
+            } else {
+                // 새 투표 생성
+                await createVote(id, voteData);
+                setToast({
+                    visible: true,
+                    message: "투표가 완료되었습니다.",
+                    type: 'success'
+                });
+            }
+
+            // 투표 데이터 새로고침
+            const updatedVote = await getMyVote(id);
+            setMyVote(updatedVote);
+            
+            const updatedSummary = await getVoteSummary(id);
+            setVoteSummary(updatedSummary);
+
+        } catch (error: any) {
+            console.error('투표 실패:', error);
+            
+            let errorMessage = "투표에 실패했습니다.";
+            if (error?.response?.status === 409) {
+                errorMessage = "이미 투표한 제출물입니다.";
+            } else if (error?.response?.status === 400) {
+                errorMessage = "투표 기간이 아닙니다.";
+            } else if (error?.response?.status === 403) {
+                errorMessage = "자신의 작품에는 투표할 수 없습니다.";
+            }
+
+            setToast({
+                visible: true,
+                message: errorMessage,
+                type: 'error'
+            });
+        } finally {
+            setVoteLoading(false);
+        }
+    };
+
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
+            {/* 토스트 알림 */}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
             {loading ? (
                 /* 로딩 상태 - 전체 화면 */
                 <div className="flex items-center justify-center py-16">
@@ -109,9 +218,9 @@ export default function PortfolioVotePage() {
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         actionButton={
                             challengeStatus === "ENDED" ? undefined : (
-                                <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
-                                    프로젝트 제출하기
-                                </CTAButton>
+                            <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
+                                프로젝트 제출하기
+                            </CTAButton>
                             )
                         }
                     />
@@ -126,7 +235,48 @@ export default function PortfolioVotePage() {
                             </div>
                         </div>
                     ) : submissions.length > 0 ? (
-                        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                        <>
+                            {/* 투표 요약 정보 */}
+                            {voteSummary.length > 0 && (
+                                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <h3 className="text-lg font-semibold text-blue-900 mb-3">📊 투표 현황</h3>
+                                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                                        {voteSummary.map((summary) => {
+                                            const submission = submissions.find(s => s.id === summary.submissionId);
+                                            return (
+                                                <div key={summary.submissionId} className="p-3 bg-white rounded border">
+                                                    <div className="font-medium text-sm text-gray-900 mb-1">
+                                                        {submission?.title || `제출물 #${summary.submissionId}`}
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 space-y-1">
+                                                        <div>투표 수: {summary.voteCount}표</div>
+                                                        <div>UI/UX: {summary.uiUxAvg.toFixed(1)}</div>
+                                                        <div>창의성: {summary.creativityAvg.toFixed(1)}</div>
+                                                        <div>코드 품질: {summary.codeQualityAvg.toFixed(1)}</div>
+                                                        <div>난이도: {summary.difficultyAvg.toFixed(1)}</div>
+                                                        <div className="font-semibold text-blue-600">총점: {summary.totalScore.toFixed(1)}</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 내 투표 정보 */}
+                            {myVote && (
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <h3 className="text-lg font-semibold text-green-900 mb-2">✅ 내 투표</h3>
+                                    <div className="text-sm text-green-800">
+                                        제출물 #{myVote.submissionId}에 투표하셨습니다.
+                                        <div className="mt-1 text-xs">
+                                            UI/UX: {myVote.uiUx} | 창의성: {myVote.creativity} | 코드 품질: {myVote.codeQuality} | 난이도: {myVote.difficulty}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                             {submissions.map((submission) => (
                                 <Link 
                                     key={submission.id} 
@@ -233,9 +383,10 @@ export default function PortfolioVotePage() {
                                             </div>
                                         </div>
                                     </div>
-                                </Link>
+                                    </Link>
                             ))}
-                        </div>
+                            </div>
+                        </>
                     ) : (
                         <EmptySubmissionState 
                             type="PORTFOLIO" 

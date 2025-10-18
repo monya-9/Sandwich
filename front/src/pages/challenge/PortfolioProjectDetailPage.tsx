@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard, CTAButton } from "../../components/challenge/common";
-import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, X } from "lucide-react";
+import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare } from "lucide-react";
+import Toast from "../../components/common/Toast";
 import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
-import { fetchChallengeDetail } from "../../api/challengeApi";
+import { 
+    fetchChallengeDetail, 
+    createVote, 
+    updateMyVote, 
+    getMyVote,
+    type VoteRequest,
+    type MyVoteResponse
+} from "../../api/challengeApi";
 import api from "../../api/axiosInstance";
 
 function Stars({
@@ -45,11 +53,22 @@ export default function PortfolioProjectDetailPage() {
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
     const [challengeLoading, setChallengeLoading] = useState(true);
 
+    // 투표 관련 상태
+    const [myVote, setMyVote] = useState<MyVoteResponse | null>(null);
+    const [voteLoading, setVoteLoading] = useState(false);
+
     // 별점
     const [ux, setUx] = useState(0);
     const [tech, setTech] = useState(0);
     const [cre, setCre] = useState(0);
     const [plan, setPlan] = useState(0);
+
+    // 토스트 상태
+    const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' }>({
+        visible: false,
+        message: '',
+        type: 'info'
+    });
 
     // 챌린지 상태 로드
     useEffect(() => {
@@ -135,8 +154,119 @@ export default function PortfolioProjectDetailPage() {
         }
     }, [pid]);
 
-    // 간단 토스트
-    const [toast, setToast] = useState<string>("");
+    // 투표 데이터 로드
+    useEffect(() => {
+        const loadVoteData = async () => {
+            try {
+                console.log('🔍 투표 데이터 로드 시작:', { challengeId: id, itemId: item?.id });
+                const myVoteData = await getMyVote(id);
+                console.log('📊 투표 데이터 로드 결과:', myVoteData);
+                setMyVote(myVoteData);
+                
+                // 기존 투표가 있으면 별점 초기화
+                if (myVoteData) {
+                    console.log('⭐ 별점 초기화:', {
+                        uiUx: myVoteData.uiUx,
+                        codeQuality: myVoteData.codeQuality,
+                        creativity: myVoteData.creativity,
+                        difficulty: myVoteData.difficulty
+                    });
+                    setUx(myVoteData.uiUx);
+                    setTech(myVoteData.codeQuality);
+                    setCre(myVoteData.creativity);
+                    setPlan(myVoteData.difficulty);
+                }
+            } catch (error) {
+                console.error('투표 데이터 로드 실패:', error);
+                setMyVote(null);
+            }
+        };
+
+        if (challengeStatus === "OPEN" && item) {
+            loadVoteData();
+        }
+    }, [id, challengeStatus, item]);
+
+    // 투표 제출 함수
+    const handleVote = async () => {
+        if (!item) return;
+        
+        setVoteLoading(true);
+        try {
+            const voteData: VoteRequest = {
+                submissionId: item.id, // 백엔드에서는 id 필드가 제출물 ID
+                uiUx: ux,
+                creativity: cre,
+                codeQuality: tech,
+                difficulty: plan
+            };
+
+            // 필수 필드 검증
+            if (!voteData.submissionId) {
+                throw new Error("제출물 ID가 없습니다.");
+            }
+            if (voteData.uiUx === 0 || voteData.creativity === 0 || voteData.codeQuality === 0 || voteData.difficulty === 0) {
+                throw new Error("모든 항목에 별점을 주세요.");
+            }
+
+            if (myVote) {
+                // 기존 투표 수정
+                await updateMyVote(id, voteData);
+                setToast({
+                    visible: true,
+                    message: "투표가 수정되었습니다.",
+                    type: 'success'
+                });
+            } else {
+                // 새 투표 생성
+                await createVote(id, voteData);
+                setToast({
+                    visible: true,
+                    message: "투표가 완료되었습니다.",
+                    type: 'success'
+                });
+            }
+
+            // 투표 데이터 새로고침
+            const updatedVote = await getMyVote(id);
+            console.log('🔄 투표 후 데이터 새로고침:', updatedVote);
+            setMyVote(updatedVote);
+            
+            // 별점 상태도 업데이트
+            if (updatedVote) {
+                console.log('⭐ 투표 후 별점 업데이트:', {
+                    uiUx: updatedVote.uiUx,
+                    codeQuality: updatedVote.codeQuality,
+                    creativity: updatedVote.creativity,
+                    difficulty: updatedVote.difficulty
+                });
+                setUx(updatedVote.uiUx);
+                setTech(updatedVote.codeQuality);
+                setCre(updatedVote.creativity);
+                setPlan(updatedVote.difficulty);
+            }
+
+        } catch (error: any) {
+            console.error('투표 실패:', error);
+            
+            let errorMessage = "투표에 실패했습니다.";
+            if (error?.response?.status === 409) {
+                errorMessage = "이미 투표한 제출물입니다.";
+            } else if (error?.response?.status === 400) {
+                errorMessage = "투표 기간이 아닙니다.";
+            } else if (error?.response?.status === 403) {
+                errorMessage = "자신의 작품에는 투표할 수 없습니다.";
+            }
+
+            setToast({
+                visible: true,
+                message: errorMessage,
+                type: 'error'
+            });
+        } finally {
+            setVoteLoading(false);
+        }
+    };
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -160,20 +290,7 @@ export default function PortfolioProjectDetailPage() {
     const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0 && challengeStatus !== "ENDED";
     const isChallengeEnded = challengeStatus === "ENDED";
 
-    const handleVote = () => {
-        if (isChallengeEnded) {
-            setToast("종료된 챌린지에는 투표할 수 없습니다.");
-            return;
-        }
-        if (!canVote) {
-            setToast("모든 항목에 별점을 주세요.");
-            return;
-        }
-        // 서버 연동 전이므로 단순 성공 토스트만
-        setToast(`투표 완료! (UI/UX:${ux} · 기술력:${tech} · 창의성:${cre} · 기획력:${plan})`);
-        // 필요 시 목록으로 이동하려면 아래 주석 해제
-        // nav(`/challenge/portfolio/${id}/vote`, { replace: true });
-    };
+    // handleVote 함수는 위에서 이미 정의됨 (API 연결 버전)
 
     const submitComment = async () => {
         const v = cText.trim();
@@ -195,10 +312,18 @@ export default function PortfolioProjectDetailPage() {
             });
             setComments(response.data || []);
             setCText("");
-            setToast("댓글이 등록됐어요.");
+            setToast({
+                visible: true,
+                message: "댓글이 등록됐어요.",
+                type: 'success'
+            });
         } catch (error) {
             console.error('댓글 작성 실패:', error);
-            setToast("댓글 등록에 실패했습니다.");
+            setToast({
+                visible: true,
+                message: "댓글 등록에 실패했습니다.",
+                type: 'error'
+            });
         }
     };
 
@@ -219,16 +344,15 @@ export default function PortfolioProjectDetailPage() {
     return (
         <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
             {/* 토스트 */}
-            {toast && (
-                <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-neutral-900/90 px-4 py-2 text-[12.5px] font-semibold text-white shadow-lg">
-                    <div className="flex items-center gap-3">
-                        <span>{toast}</span>
-                        <button className="opacity-80 hover:opacity-100" onClick={() => setToast("")} aria-label="닫기">
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
 
             {/* 헤더 */}
             <div className="mb-4 flex items-center gap-2">
@@ -359,8 +483,8 @@ export default function PortfolioProjectDetailPage() {
                 )}
 
                 <div className="mt-4 flex justify-end">
-                    <CTAButton as="button" onClick={handleVote} disabled={!canVote}>
-                        {isChallengeEnded ? "투표 불가" : "투표 제출"}
+                    <CTAButton as="button" onClick={handleVote} disabled={!canVote || voteLoading}>
+                        {voteLoading ? "투표 중..." : isChallengeEnded ? "투표 불가" : myVote ? "투표 수정" : "투표 제출"}
                     </CTAButton>
                 </div>
             </SectionCard>
