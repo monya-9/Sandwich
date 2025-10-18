@@ -1,16 +1,20 @@
 // src/pages/challenge/ChallengeListPage.tsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { dummyChallenges, getDynamicChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
+import { isAdmin } from "../../utils/authz";
 import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ChallengeListPage() {
+    const navigate = useNavigate();
     const [challenges, setChallenges] = useState<ChallengeCardData[]>(dummyChallenges);
     const [loading, setLoading] = useState(false);
+    const admin = isAdmin();
 
     // AI API에서 동적으로 챌린지 데이터 가져오기
     useEffect(() => {
@@ -45,8 +49,27 @@ export default function ChallengeListPage() {
                 </div>
             </div>
 
-            {/* WinnersSection */}
-            <WinnersSection />
+            {/* WinnersSection + Admin Actions */}
+            <div className="mx-auto max-w-screen-xl px-4 md:px-6">
+                <div className="flex items-center justify-between mt-6">
+                    <h2 className="sr-only">Winners</h2>
+                </div>
+            </div>
+            <div className="relative">
+                <WinnersSection />
+                {admin && (
+                    <div className="mx-auto max-w-screen-xl px-4 md:px-6">
+                        <div className="mt-2 flex justify-end">
+                            <button
+                                className="rounded-md bg-black text-white px-3 py-2 text-sm"
+                                onClick={() => navigate("/admin/challenges/new")}
+                            >
+                                챌린지 생성
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
                 {loading ? (

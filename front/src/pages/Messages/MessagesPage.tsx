@@ -159,8 +159,8 @@ const MessagesPage: React.FC = () => {
 
     return (
         <main className="mx-auto max-w-6xl px-4 mt-4">
-            <section className="bg-white rounded-lg border overflow-hidden flex h-[530px] md:h-[600px] min-h-0">
-                <div className="flex flex-col w-[320px] shrink-0 border-r">
+            <section className="bg-white dark:bg-[var(--surface)] rounded-lg border dark:border-[var(--border-color)] overflow-hidden flex h-[530px] md:h-[600px] min-h-0">
+                <div className="flex flex-col w-[320px] shrink-0 border-r dark:border-[var(--border-color)]">
                     <MessageList
                         messages={items}
                         selectedId={selectedRoomId}
@@ -171,7 +171,7 @@ const MessagesPage: React.FC = () => {
                             type="button"
                             onClick={loadMore}
                             disabled={loading}
-                            className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                            className="w-full py-2 text-sm text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white disabled:opacity-50"
                         >
                             {loading ? "불러오는 중…" : "이전 대화 더 보기"}
                         </button>

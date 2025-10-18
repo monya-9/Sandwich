@@ -176,7 +176,6 @@ export default function ChallengeDetailPage() {
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
 
-    // 백엔드 챌린지 상세 + AI API에서 동적으로 데이터 가져오기
     useEffect(() => {
         setLoading(true);
         setError(null);
@@ -184,96 +183,98 @@ export default function ChallengeDetailPage() {
         // 1. 백엔드에서 챌린지 상세 정보 가져오기
         import('../../api/challengeApi').then(({ fetchChallengeDetail }) => {
             fetchChallengeDetail(id)
-                .then((backendChallenge) => {
+                .then(async (backendChallenge) => {
                     console.log('백엔드 챌린지 데이터:', backendChallenge);
                     
-                    // 2. 챌린지 타입에 따라 AI 데이터 가져오기
+                    // ruleJson 파싱: 문자열일 수 있음
+                    let rule: any = {};
+                    try {
+                        const raw = backendChallenge?.ruleJson;
+                        rule = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+                    } catch {}
+
                     if (backendChallenge.type === "PORTFOLIO") {
-                        // 포트폴리오 챌린지 - 월간 AI 데이터
-                        getDynamicChallengeDetail(id, backendChallenge.type)
-                            .then((dynamicData) => {
-                                setData(dynamicData);
-                                setError(null); // 성공 시 에러 초기화
-                                setLoading(false); // 성공 시 로딩 완료
-                            })
-                            .catch((err) => {
+                        // 베이스(월간 AI 템플릿) + 백엔드 덮어쓰기
+                        try {
+                            const base = await getDynamicChallengeDetail(id, backendChallenge.type);
+
+                            const fmtDate = (s?: string) => {
+                                if (!s) return "";
+                                const d = new Date(s);
+                                return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+                            };
+                            const schedule: { label: string; date: string }[] = [];
+                            if (backendChallenge.startAt) schedule.push({ label: '챌린지 시작', date: fmtDate(backendChallenge.startAt) });
+                            if (backendChallenge.endAt) schedule.push({ label: '프로젝트 제출 마감', date: fmtDate(backendChallenge.endAt) });
+                            if (backendChallenge.voteStartAt && backendChallenge.voteEndAt) {
+                                schedule.push({ label: '투표 기간', date: `${fmtDate(backendChallenge.voteStartAt)} ~ ${fmtDate(backendChallenge.voteEndAt)}` });
+                            }
+                            // 월간 AI에서 이모지/타이틀 가져와 제목 구성
+                            const { fetchMonthlyChallenge } = await import('../../api/monthlyChallenge');
+                            const monthly = await fetchMonthlyChallenge();
+                            const emoji = monthly?.emoji || '';
+                            const rawTitle = (backendChallenge.title || monthly?.title || (base as PortfolioChallengeDetail).title || '').toString();
+                            const stripped = rawTitle.replace(/^포트폴리오\s*챌린지:\s*/i, '').trim();
+                            const finalTitle = `포트폴리오 챌린지: ${emoji ? emoji + ' ' : ''}${stripped}`;
+
+                        const updated: PortfolioChallengeDetail = {
+                                ...(base as PortfolioChallengeDetail),
+                                title: finalTitle,
+                            description: (rule.md || rule.summary || backendChallenge.summary || base.description) as string,
+                                schedule: schedule.length > 0 ? schedule : (base as PortfolioChallengeDetail).schedule,
+                            };
+                            setData(updated);
+
+                            if (Array.isArray(rule.must) && rule.must.length > 0) setMustHave(rule.must);
+                            else setMustHave(monthly?.mustHave || []);
+                            setError(null);
+                            setLoading(false);
+                        } catch (err) {
                                 console.error('월간 챌린지 데이터 로딩 실패:', err);
                                 setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
                                 setData(null);
-                                setLoading(false); // 실패 시에도 로딩 완료
-                            });
-                        
-                        // must_have 데이터 별도로 가져오기
-                        import('../../api/monthlyChallenge').then(({ fetchMonthlyChallenge }) => {
-                            fetchMonthlyChallenge()
-                                .then((monthlyData) => {
-                                    setMustHave(monthlyData.mustHave || []);
-                                })
-                                .catch((err) => {
-                                    console.error('필수 조건 데이터 로딩 실패:', err);
-                                });
-                        });
-                    } else if (backendChallenge.type === "CODE") {
-                        // 코드 챌린지 - 주간 AI 데이터
-                        const week = backendChallenge.ruleJson?.week; // 백엔드에서 week 필드 가져오기
-                        
-                        if (week) {
-                            // 특정 주차 데이터 가져오기
-                            import('../../api/weeklyChallenge').then(({ fetchWeeklyByKey }) => {
-                                fetchWeeklyByKey(week)
-                                    .then((weeklyData) => {
-                                        console.log('주간 AI 데이터:', weeklyData);
-                                        // 주간 데이터로 코드 챌린지 정보 업데이트 (기본 더미 데이터 기반)
-                                        const baseData = getChallengeDetail(id);
-                                        const updatedData = {
-                                            ...baseData,
-                                            title: `코드 챌린지: ${weeklyData.title}`,
-                                            description: weeklyData.summary || baseData.description,
-                                        };
-                                        setData(updatedData);
-                                        setMustHave(weeklyData.must || []);
-                                        setError(null); // 성공 시 에러 초기화
-                                        setLoading(false); // 성공 시 로딩 완료
-                                    })
-                                    .catch((err) => {
-                                        console.error('주간 챌린지 데이터 로딩 실패:', err);
-                                        setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
-                                        setData(null);
-                                        setLoading(false); // 실패 시에도 로딩 완료
-                                    });
-                            });
-                        } else {
-                            // week가 없으면 최신 주간 데이터 가져오기
-                            import('../../api/weeklyChallenge').then(({ fetchWeeklyLatest }) => {
-                                fetchWeeklyLatest()
-                                    .then((weeklyData) => {
-                                        console.log('최신 주간 AI 데이터:', weeklyData);
-                                        const baseData = getChallengeDetail(id);
-                                        const updatedData = {
-                                            ...baseData,
-                                            title: `코드 챌린지: ${weeklyData.title}`,
-                                            description: weeklyData.summary || baseData.description,
-                                        };
-                                        setData(updatedData);
-                                        setMustHave(weeklyData.must || []);
-                                        setError(null); // 성공 시 에러 초기화
-                                        setLoading(false); // 성공 시 로딩 완료
-                                    })
-                                    .catch((err) => {
-                                        console.error('주간 챌린지 데이터 로딩 실패:', err);
-                                        setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
-                                        setData(null);
-                                        setLoading(false); // 실패 시에도 로딩 완료
-                                    });
-                            });
+                            setLoading(false);
                         }
+                        return;
+                    }
+
+                    // CODE: 베이스(주간 AI 템플릿) + 백엔드 덮어쓰기
+                    try {
+                        const week = rule.week as string | undefined;
+                        let weeklyData: any | null = null;
+                        if (week) {
+                            const { fetchWeeklyByKey } = await import('../../api/weeklyChallenge');
+                            weeklyData = await fetchWeeklyByKey(week);
+                        } else {
+                            const { fetchWeeklyLatest } = await import('../../api/weeklyChallenge');
+                            weeklyData = await fetchWeeklyLatest();
+                        }
+                        const base = getChallengeDetail(id);
+                        const rawTitle = (backendChallenge.title || weeklyData?.title || base.title || '').toString();
+                        const stripped = rawTitle.replace(/^코드\s*챌린지:\s*/i, '').trim();
+                        const finalTitle = `코드 챌린지: ${stripped}`;
+                                        const updatedData = {
+                            ...base,
+                            title: finalTitle,
+                            description: (rule.md || rule.summary || backendChallenge.summary || weeklyData?.summary || base.description) as string,
+                        } as CodeChallengeDetail;
+                                        setData(updatedData);
+                        const must = Array.isArray(rule.must) && rule.must.length > 0 ? rule.must : (weeklyData?.must || []);
+                        setMustHave(must);
+                        setError(null);
+                        setLoading(false);
+                    } catch (err) {
+                                        console.error('주간 챌린지 데이터 로딩 실패:', err);
+                                        setError('AI 챌린지 정보를 불러오는 중 오류가 발생했습니다.');
+                                        setData(null);
+                        setLoading(false);
                     }
                 })
                 .catch((err) => {
                     console.error('백엔드 챌린지 상세 로딩 실패:', err);
                     setError('챌린지 정보를 불러오는 중 오류가 발생했습니다.');
                     setData(null);
-                    setLoading(false); // 백엔드 API 실패 시에도 로딩 완료
+                    setLoading(false); // 실패 시에도 로딩 완료
                 });
         });
     }, [id]); // data 의존성 제거로 무한 루프 방지

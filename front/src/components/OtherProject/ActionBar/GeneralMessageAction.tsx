@@ -2,20 +2,33 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { postMessage } from "../../../api/messages";
 import Toast from "../../common/Toast";
+import api from "../../../api/axiosInstance";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onBackToMenu?: () => void;
   targetUserId?: number;
+  initialProfile?: { id: number; nickname?: string | null; username?: string | null; email?: string | null; profileImage?: string | null } | null;
 };
 
 /** 일반 메시지: Proposal/JobOffer 스타일 공통 프레임을 사용하는 모달 */
-export default function GeneralMessageAction({ open, onClose, onBackToMenu, targetUserId }: Props) {
-  const safeGet = (k: string) => { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ""; } catch { return ""; } };
-  const storedEmail = safeGet("userEmail");
-  const displayName = (safeGet("userNickname").trim()) || (safeGet("userUsername").trim()) || "사용자";
-  const avatarInitial = ((storedEmail || displayName || "?").trim()[0] || "U").toUpperCase();
+export default function GeneralMessageAction({ open, onClose, onBackToMenu, targetUserId, initialProfile }: Props) {
+  type PublicProfile = { id: number; nickname?: string | null; username?: string | null; email?: string | null; profileImage?: string | null };
+  const [profile, setProfile] = React.useState<PublicProfile | null>(initialProfile ?? null);
+  React.useEffect(() => {
+    let alive = true;
+    if (!open || !targetUserId) { setProfile(initialProfile ?? null); return; }
+    setProfile((prev) => prev || (initialProfile ?? null));
+    (async () => {
+      try { const { data } = await api.get<PublicProfile>(`/users/${targetUserId}`); if (alive) setProfile(data); }
+      catch { if (alive) setProfile(null); }
+    })();
+    return () => { alive = false; };
+  }, [open, targetUserId, initialProfile]);
+
+  const targetInitial = ((profile?.email || profile?.nickname || profile?.username || "?") as string).trim().charAt(0).toUpperCase() || "U";
+  const targetName = (profile?.nickname || profile?.username || "사용자") as string;
 
   const [message, setMessage] = React.useState("");
   const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
@@ -119,7 +132,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={{ height: 500 }}
           >
             {/* 헤더 */}
@@ -131,9 +144,13 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
               >
                 ‹
               </button>
-              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800">
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[12px]">{avatarInitial}</div>
-                <div className="text-[14px] font-medium">{displayName}</div>
+              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[12px]">{targetInitial}</div>
+                )}
+                <div className="text-[14px] font-medium">{targetName}</div>
               </div>
               <button
                 className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
@@ -163,7 +180,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
             </div>
 
             {/* 하단 고정 버튼 바 */}
-            <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3">
+            <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
               <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 text-gray-700">취소</button>
               <button disabled={!canSubmit} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
+import { useNavigate } from "react-router-dom";
 import { NotificationPrefsApi } from "../../api/notificationPrefsApi";
 
 const ACTIVE_COLOR = "#22C55E";
@@ -46,8 +47,8 @@ const defaults: PushPrefs = {
 const Row: React.FC<{ title: string; desc?: string; value: boolean; onChange?: (v: boolean) => void; disabled?: boolean }> = ({ title, desc, value, onChange, disabled }) => (
 	<div className="flex items-start justify-between py-4">
 		<div>
-			<div className={`text-[14px] ${disabled ? "text-[#9CA3AF]" : "text-[#111827]"}`}>{title}</div>
-			{desc ? <p className={`text-[14px] mt-1 leading-relaxed ${disabled ? "text-[#9CA3AF]" : "text-[#6B7280]"}`}>{desc}</p> : null}
+            <div className={`text-[14px] ${disabled ? "text-[#9CA3AF]" : "text-[#111827] dark:text-white"}`}>{title}</div>
+            {desc ? <p className={`text-[14px] mt-1 leading-relaxed ${disabled ? "text-[#9CA3AF]" : "text-[#6B7280] dark:text-white/60"}`}>{desc}</p> : null}
 		</div>
 		<div className="ml-4 mt-1">
 			<ToggleSwitch checked={value} onChange={onChange} disabled={disabled} />
@@ -56,14 +57,15 @@ const Row: React.FC<{ title: string; desc?: string; value: boolean; onChange?: (
 );
 
 const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-	<section className="bg-white border border-[#E5E7EB] rounded-xl p-6 box-border">
-		<div className="text-[16px] font-medium text-[#111827] mb-2">{title}</div>
-		<hr className="border-[#E5E7EB] mb-2" />
+    <section className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 box-border">
+        <div className="text-[16px] font-medium text-[#111827] dark:text-white mb-2">{title}</div>
+        <hr className="border-[#E5E7EB] dark:border-[var(--border-color)] mb-2" />
 		<div>{children}</div>
 	</section>
 );
 
 const PushSettingPage: React.FC = () => {
+    const navigate = useNavigate();
 	const [prefs, setPrefs] = useState<PushPrefs>(defaults);
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -117,12 +119,19 @@ const PushSettingPage: React.FC = () => {
 
 	const setField = (k: keyof PushPrefs) => (v: boolean) => save({ [k]: v } as any);
 
-	return (
-		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
+    return (
+        <div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] dark:bg-[var(--bg)] text-black dark:text-white">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				<div className="flex gap-6">
-					<aside className="w-[320px] shrink-0"><Sidebar /></aside>
-					<main className="flex-1 space-y-6">
+				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+					<aside className="hidden lg:block w-full lg:w-[320px] shrink-0"><Sidebar /></aside>
+					<main className="flex-1 space-y-0">
+						{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
+						<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
+							<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+							<div className="justify-self-center text-[16px] font-medium text-center">푸시 알림(APP)</div>
+							<span />
+						</div>
+						<div className="space-y-6">
 						{/* 계정 활동 알림 — 좋아요/컬렉션/팔로우/작업 댓글/커뮤니티 댓글 */}
 						<Card title="계정 활동 알림">
 							<Row title="좋아요" desc="내 작업을 다른 사람이 좋아했을 때 알림을 받겠습니다." value={prefs.like} onChange={setField("like")} />
@@ -154,6 +163,7 @@ const PushSettingPage: React.FC = () => {
 						<Card title="이벤트 알림">
 							<Row title="이벤트 혜택/정보" desc="창작자와 디자이너에게 도움이 되는 다양한 소식과 혜택 정보를 받겠습니다." value={prefs.eventNewsletter} onChange={setField("eventNewsletter")} />
 						</Card>
+						</div>
 					</main>
 				</div>
 			</div>

@@ -54,24 +54,24 @@ export const Dropdown: React.FC<DropdownProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+        className="flex items-center justify-between w-full px-4 py-3 bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
       >
-        <span className="text-gray-700">{displayText}</span>
+        <span className="text-gray-700 dark:text-white">{displayText}</span>
         <ChevronDown 
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-4 h-4 text-gray-400 dark:text-white/70 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
 
       {/* 드롭다운 메뉴 */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 animate-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-black border border-gray-200 dark:border-white/20 rounded-lg shadow-lg z-50 animate-in slide-in-from-top-2 duration-200">
           {options.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => handleOptionClick(option.value)}
-              className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                option.value === value ? 'bg-green-50 text-green-700' : 'text-gray-700'
+              className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-white/10 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                option.value === value ? 'bg-green-50 dark:bg-green-600/20 text-green-700 dark:text-green-300' : 'text-gray-700 dark:text-white'
               }`}
             >
               {option.label}

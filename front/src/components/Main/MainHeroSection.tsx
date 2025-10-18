@@ -168,24 +168,24 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
     return (
         <section className="w-full relative mb-10 py-[20px]">
-            <h1 className="text-2xl font-bold mb-4 text-left ml-[15px]">이번 주 인기 프로젝트</h1>
+            <h1 className="text-2xl font-bold mb-4 text-left ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
 
             <button
                 onClick={scrollLeft}
-                className="absolute left-0 w-[50px] h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-[15px] bg-white"
+                className="absolute left-0 w-[50px] h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-[15px] bg-white dark:bg-black"
                 style={{ top: '140px' }}
                 aria-label="왼쪽으로 스크롤"
             >
-                <span className="text-xl rotate-180" style={{ color: isAtStart ? '#A2A2A2' : 'black' }}>{'>'}</span>
+                <span className="text-xl rotate-180 text-black dark:text-white" style={{ opacity: isAtStart ? 0.4 : 1 }}>{'>'}</span>
             </button>
 
             <button
                 onClick={scrollRight}
-                className="absolute right-0 w-[50px] h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-[15px] bg-white"
+                className="absolute right-0 w-[50px] h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-[15px] bg-white dark:bg-black"
                 style={{ top: '140px' }}
                 aria-label="오른쪽으로 스크롤"
             >
-                <span className="text-xl" style={{ color: isAtEnd ? '#A2A2A2' : 'black' }}>{'>'}</span>
+                <span className="text-xl text-black dark:text-white" style={{ opacity: isAtEnd ? 0.4 : 1 }}>{'>'}</span>
             </button>
 
             {/* 프로젝트 카드 리스트 */}

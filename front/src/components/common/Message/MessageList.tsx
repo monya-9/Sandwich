@@ -18,7 +18,7 @@ const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
             </div>
 
             {/* 리스트 */}
-            <div className="flex-1 overflow-y-auto divide-y">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-[var(--border-color)]">
                 {messages.map((msg) => {
                     const roomId = (msg as any).roomId ?? msg.id;
                     const name = (msg as any).title ?? msg.sender ?? "사용자";

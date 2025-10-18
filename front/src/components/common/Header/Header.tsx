@@ -55,7 +55,7 @@ const Header = () => {
                 closable={true}
                 onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
             />
-            <header className="w-full border-b-[1.5px] border-[#068334] font-gmarket bg-white fixed top-0 left-0 z-50">
+            <header className="w-full border-b-[1.5px] border-[#068334] font-gmarket bg-white dark:bg-black fixed top-0 left-0 z-50">
             <div className="w-full px-6 py-3 flex items-center justify-between">
                 {/* PC 전용 네비 */}
                 <div className="hidden md:flex w-full">

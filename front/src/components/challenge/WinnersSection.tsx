@@ -13,16 +13,16 @@ function WinnerCard({ data }: { data: WinnerEntry }) {
         <div className="flex flex-col items-center gap-2">
             <Medal className={`h-6 w-6 ${rankColor(data.rank)}`} />
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white font-semibold text-[13px]">
                 {data.userInitial}
             </div>
 
             <div className="text-center leading-tight">
-                <div className="text-[13px] font-semibold text-neutral-900">{data.name}</div>
-                {data.teamName && <div className="text-[12px] text-neutral-500">{data.teamName}</div>}
+                <div className="text-[13px] font-semibold text-neutral-900 dark:text-white">{data.name}</div>
+                {data.teamName && <div className="text-[12px] text-neutral-500 dark:text-white/70">{data.teamName}</div>}
             </div>
 
-            <div className="rounded-xl bg-neutral-900/90 px-3 py-1 text-[12px] font-semibold text-white shadow-sm">
+            <div className="rounded-xl bg-neutral-900/90 border border-neutral-300/40 dark:border-white/20 px-3 py-1 text-[12px] font-semibold text-white shadow-sm">
                 {data.credits.toLocaleString()} 크레딧
             </div>
         </div>

@@ -88,21 +88,21 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
       {/* 검색 입력창 */}
       <div className="flex-1 relative">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 w-5 h-5" />
           <input
             type="text"
             value={searchQuery}
             onChange={handleQueryChange}
             onKeyPress={handleKeyPress}
             placeholder="프로젝트를 검색해보세요..."
-            className="w-full pl-10 pr-12 py-3 rounded-lg outline-none border-0 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
+            className="w-full pl-10 pr-12 py-3 rounded-lg outline-none border-0 ring-1 ring-gray-300 dark:ring-white/20 bg-white dark:bg-black text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/70 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
             disabled={false}
           />
           {/* X 버튼 */}
           {searchQuery && (
             <button
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 hover:text-gray-600 dark:hover:text-white transition-colors"
               type="button"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
