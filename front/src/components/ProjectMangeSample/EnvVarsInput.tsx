@@ -64,12 +64,28 @@ const EnvVarsInput: React.FC<EnvVarsInputProps> = ({
                   {envVar.status === 'OK' ? (
                     <span className="text-green-600 text-sm">✓</span>
                   ) : (
-                    <span className="text-red-600 text-sm">✗</span>
-                  )}
-                  {envVar.status === 'FAILED' && envVar.message && (
-                    <span className="text-red-600 text-xs max-w-32 truncate" title={envVar.message}>
-                      {envVar.message}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-red-600 text-sm">✗</span>
+                      {envVar.message && (
+                        <span className="text-red-600 text-xs max-w-32 truncate" title={envVar.message}>
+                          {envVar.message}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // 재시도 로직 (부모 컴포넌트에서 처리)
+                          const event = new CustomEvent('retryEnvVar', { 
+                            detail: { index, envVar } 
+                          });
+                          window.dispatchEvent(event);
+                        }}
+                        className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                        title="재시도"
+                      >
+                        재시도
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
