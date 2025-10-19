@@ -43,8 +43,8 @@ type Props = {
 };
 
 /* ---------- 스타일 ---------- */
-const youBubble = "max-w-[520px] bg-gray-100 rounded-2xl px-4 py-3 shadow-sm";
-const meBubble = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
+const youBubble = "max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
+const meBubble = "max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
 
 /* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
@@ -479,26 +479,26 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 closable={true}
                 onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
             />
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)]">
             {/* 헤더 */}
-            <div className="px-6 py-4 border-b flex items-center gap-3">
+            <div className="px-6 py-4 border-b dark:border-[var(--border-color)] flex items-center gap-3 text-black dark:text-white">
                 {avatar ? (
                     <img src={avatar} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
                 ) : (
-                    <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
+                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] flex items-center justify-center text-sm font-semibold text-gray-700 dark:text-white">
                         {(displayName?.[0] || "?").toUpperCase()}
                     </div>
                 )}
                 <div className="flex flex-col">
                     <span className="font-semibold">{displayName}</span>
-                    <span className="text-xs text-gray-400">{timeAgo(headerTime)}</span>
+                    <span className="text-xs text-gray-400 dark:text-white/50">{timeAgo(headerTime)}</span>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                     <div className="relative">
                         <button
                             type="button"
                             aria-label="스크린샷"
-                            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                            className="text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white disabled:opacity-50"
                             disabled={!roomId || screenshotLoading}
                             onClick={() => setShowScreenshotMenu(!showScreenshotMenu)}
                         >
@@ -553,7 +553,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 </div>
             </div>
 
-            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-white dark:bg-[var(--surface)]">
                 {history.map((m) => {
                     const m2 = hydrated[m.messageId] ?? m;
                     const when = new Date(m2.createdAt || 0);
@@ -604,12 +604,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                         <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
                             {/* ⬇️ 시간 + 작은 다운로드 버튼 (오른쪽 정렬 라인) */}
                             <div className="flex items-center gap-1 order-1">
-                                <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                                 {attSrc && (
                                     <button
                                         type="button"
                                         onClick={() => downloadProtected(attSrc!, attName)}
-                                        className="p-0.5 rounded hover:bg-gray-100 text-gray-400"
+                                        className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-white/60"
                                         title="다운로드"
                                         aria-label="다운로드"
                                     >
@@ -628,14 +628,14 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                                     <button
                                         type="button"
                                         onClick={() => downloadProtected(attSrc!, attName)}
-                                        className="p-0.5 rounded hover:bg-gray-100 text-gray-400"
+                                        className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-white/60"
                                         title="다운로드"
-                                        aria-label="डाउन로드"
+                                        aria-label="다운로드"
                                     >
                                         <Download size={14} />
                                     </button>
                                 )}
-                                <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                             </div>
                         </div>
                     );
@@ -644,7 +644,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             </div>
 
             {/* 입력 */}
-            <div className="px-6 py-3 border-t flex flex-col gap-2">
+            <div className="px-6 py-3 border-t dark:border-[var(--border-color)] flex flex-col gap-2 bg-white dark:bg-[var(--surface)]">
                 <div className="flex items-end gap-2">
           <textarea
               ref={taRef}
@@ -660,13 +660,13 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
               onCompositionEnd={() => setIsComposing(false)}
               placeholder="메시지 입력 (Enter: 전송, Shift+Enter: 줄바꿈)"
               rows={1}
-              className="flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
+              className="flex-1 border border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-black rounded-xl px-4 py-2 text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
           />
                     <button
                         type="button"
                         onClick={handleSendText}
                         disabled={!text.trim() || sending || !targetUserId}
-                        className="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {sending ? "전송 중..." : "전송"}
                     </button>
@@ -674,7 +674,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
 
                 {/* 이모지/첨부 */}
                 <div className="relative flex items-center gap-3 pl-4">
-                    <button type="button" aria-label="이모지" className="text-gray-500 hover:text-gray-700" onClick={() => setShowEmoji((v) => !v)}>
+                    <button type="button" aria-label="이모지" className="text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white" onClick={() => setShowEmoji((v) => !v)}>
                         <Smile size={18} />
                     </button>
 
@@ -757,7 +757,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                     <button
                         type="button"
                         aria-label="파일"
-                        className="text-gray-500 hover:text-gray-700 disabled:opacity-40"
+                        className="text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white disabled:opacity-40"
                         disabled={!roomId || uploading}
                         onClick={() => fileInputRef.current?.click()}
                     >

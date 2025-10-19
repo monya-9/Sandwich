@@ -265,7 +265,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 									</div>
 								)}
 							</div>
-							<div className="mb-8 px-8">
+                            <div className="mb-8 px-8">
 								<ProjectStatsBox
 									likes={likesCount}
 									views={viewsCount}
@@ -273,11 +273,13 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 									projectName={projectName}
 									date={dateLabel}
 									category={category}
+                                    ownerName={finalOwnerName}
+                                    ownerEmail={storedEmail}
+                                    ownerImageUrl={undefined}
+                                    ownerId={0}
 								/>
 							</div>
-							<div className="px-8">
-                        <UserProfileBox userName={finalOwnerName} email={storedEmail} isOwner={true} />
-							</div>
+                            
 						</div>
 
 						{/* 본문 콘텐츠 미리보기 (커버가 있을 때는 하단에 표시) */}

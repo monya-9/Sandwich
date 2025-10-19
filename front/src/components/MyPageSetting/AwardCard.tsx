@@ -41,9 +41,9 @@ const AwardCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		visible: false,
 		commentId: null
 	});
-	const textMuted = "text-[#9CA3AF]";
-	const titleCls = `mt-4 text-[18px] font-medium ${isPrivate ? textMuted : "text-[#111827]"}`;
-	const subCls = `text-[14px] ${isPrivate ? textMuted : "text-[#6B7280]"}`;
+    const textMuted = "text-[#9CA3AF] dark:text-white/40";
+    const titleCls = `mt-4 text-[18px] font-medium ${isPrivate ? textMuted : "text-[#111827] dark:text-white"}`;
+    const subCls = `text-[14px] ${isPrivate ? textMuted : "text-[#6B7280] dark:text-white/60"}`;
 	const starCls = isPrivate ? textMuted : (item.isRepresentative ? "text-[#21B284] fill-[#21B284]" : "text-[#6B7280]");
 	const period = `${item.year}년 ${parseInt(String(item.month), 10)}월 수상`;
 
@@ -151,12 +151,12 @@ const AwardCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 							<button type="button" onClick={()=>setMenuOpen(true)} className="p-1 hover:opacity-80">
 								<MoreHorizontal size={22} className={isPrivate ? textMuted : "text-[#6B7280]"} />
 							</button>
-							{menuOpen && (
-								<div className="absolute right-0 top-full mt-0 w-48 bg-white border border-[#E5E7EB] rounded-xl shadow-lg py-1 z-10">
-									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA]" onClick={()=>{ setMenuOpen(false); onEdit && onEdit(item); }}>
-										<Pencil size={16} className="text-[#6B7280]" /> 수정하기
+                            {menuOpen && (
+                                <div className="absolute right-0 top-full mt-0 w-48 bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl shadow-lg py-1 z-10">
+                                    <button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] dark:hover:bg-white/5 text-[#111827] dark:text-white" onClick={()=>{ setMenuOpen(false); onEdit && onEdit(item); }}>
+                                        <Pencil size={16} className="text-[#6B7280] dark:text-white/70" /> 수정하기
 									</button>
-									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] text-[#EF4444]" onClick={()=>{ setMenuOpen(false); onDeleteClick(); }}>
+                                    <button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] dark:hover:bg-white/5 text-[#EF4444]" onClick={()=>{ setMenuOpen(false); onDeleteClick(); }}>
 										<X size={16} /> 삭제하기
 									</button>
 								</div>

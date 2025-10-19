@@ -50,7 +50,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
           className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
             filters.followingOnly
               ? 'bg-green-500 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
           }`}
         >
           팔로우 회원만
@@ -58,7 +58,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
 
         {/* 업로드 시간 */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">업로드 시간:</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-white">업로드 시간:</span>
           <div className="flex gap-1">
             {timeOptions.map((option) => (
               <button
@@ -67,7 +67,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
                 className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                   filters.uploadedWithin === option.value
                     ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
                 }`}
               >
                 {option.label}

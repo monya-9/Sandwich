@@ -7,6 +7,7 @@ import WorkTab from "./WorkTab";
 import LikesTab from "./LikesTab";
 import CollectionsTab from "./CollectionsTab";
 import DraftsTab from "./DraftsTab";
+import CreditWallet from "./CreditWallet";
 import { CareerProjectApi } from "../../api/careerProjectApi";
 import { CareerApi } from "../../api/careerApi";
 import { EducationApi } from "../../api/educationApi";
@@ -163,7 +164,7 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-full min-h-screen bg-white font-gmarket px-4 md:px-8 xl:px-14 pb-20">
+      <div className="w-full min-h-screen bg-white dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 pb-20 text-black dark:text-white">
         {showOfferSavedBanner && (
           <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full bg-black text-white text-[13px] px-3 py-1.5 shadow-lg flex items-center gap-2">
             <HiCheckCircle className="text-[#22C55E] w-4 h-4" />
@@ -171,9 +172,9 @@ export default function ProfilePage() {
           </div>
         )}
         {/* 배너 (네모, 헤더 하단 초록 라인까지 끌어올림, 가로 전체 확장) */}
-        <div className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] h-[300px] md:h-[360px] w-auto rounded-none">
+        <div className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] dark:bg-[#14181B] h-[300px] md:h-[360px] w-auto rounded-none border-b border-black/10 dark:border-white/10">
           <div className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center">
-            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border-2 border-white flex items-center justify-center overflow-hidden bg-transparent">
+            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full ring-2 ring-white border border-transparent flex items-center justify-center overflow-hidden bg-transparent">
               {/* 배경 이미지 업로드 아이콘 */}
               <FiPlus className="text-white text-[22px] md:text-[26px]" />
             </div>
@@ -186,25 +187,25 @@ export default function ProfilePage() {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-[minmax(300px,420px)_1fr] gap-8 items-start">
           {/* 좌측 프로필 카드 */}
           <aside
-            className="relative z-10 -mt-32 md:-mt-44 lg:-mt-56 xl:-mt-64 border border-[#ADADAD] rounded-[12px] p-6 md:p-8 bg-white overflow-hidden min-h-[1000px] flex flex-col"
+            className="relative z-10 -mt-32 md:-mt-44 lg:-mt-56 xl:-mt-64 border border-[#ADADAD] dark:border-[var(--border-color)] rounded-[12px] p-6 md:p-8 bg-white dark:bg-[var(--surface)] overflow-hidden min-h-[1000px] flex flex-col"
           >
             {/* 아바타 */}
             <div className="flex justify-center">
-              <div className="w-[120px] h-[120px] rounded-full bg-[#F3F4F6] flex items-center justify-center text-black text-3xl overflow-hidden">
+              <div className="w-[120px] h-[120px] rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] flex items-center justify-center text-black dark:text-white text-3xl overflow-hidden">
                 {profileImageUrl ? (
                   <img src={profileImageUrl} alt="profile" className="w-full h-full object-cover" />
                 ) : (
-                  <span>N</span>
+                  <span>{initial}</span>
                 )}
               </div>
             </div>
 
             {/* 이름/URL/소개 */}
-            <div className="mt-5 text-center text-[22px] md:text-[24px] text-black">{displayName}</div>
+            <div className="mt-5 text-center text-[22px] md:text-[24px] text-black dark:text-white">{displayName}</div>
             {!!oneLiner && (
-              <div className="mt-1 text-center text-[16px] md:text-[16px] text-black/80">{oneLiner}</div>
+              <div className="mt-1 text-center text-[16px] md:text-[16px] text-black/80 dark:text-white/80">{oneLiner}</div>
             )}
-            <div className="mt-2 text-center text-[13px] md:text-[14px] text-black/70 underline break-all">
+            <div className="mt-2 text-center text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">
               {profileUrlSlug ? `sandwich.com/${profileUrlSlug}` : "sandwich.com"}
             </div>
 
@@ -221,20 +222,23 @@ export default function ProfilePage() {
             {/* 소개: 값이 있을 때만 표시 */}
             {bioText && (
               <div className="mt-6 text-[14px] md:text-[16px]">
-                <div className="text-black/90">소개</div>
-                <div className="mt-2 text-black/80 whitespace-pre-line">{bioText}</div>
+                <div className="text-black/90 dark:text-white">소개</div>
+                <div className="mt-2 text-black/80 dark:text-white/80 whitespace-pre-line">{bioText}</div>
               </div>
             )}
 
             {/* 간격만 살짝 */}
             <div className="mt-20" />
 
+            {/* 크레딧 지갑 */}
+            <CreditWallet />
+
             {/* 커리어: 대표 항목 표시 */}
             <div className="mt-2 text-[14px] md:text-[16px]">
               <div className="flex items-center justify-between">
-                <div className="text-black/90">커리어</div>
+                <div className="text-black/90 dark:text-white">커리어</div>
                 {repCareers.length > 0 ? (
-                  <Link to="/profile/careers" className="text-[12px] text-black/50 hover:underline">자세히 보기 &gt;</Link>
+                  <Link to="/profile/careers" className="text-[12px] text-black/50 dark:text-white/60 hover:underline">자세히 보기 &gt;</Link>
                 ) : null}
               </div>
 
@@ -244,16 +248,16 @@ export default function ProfilePage() {
                     <div key={idx} className="flex items-start gap-3">
                       <span className="text-[18px]" aria-hidden>{iconForType(item.type)}</span>
                       <div className="flex-1">
-                        <div className="text-[14px] text-black font-medium">{item.title}</div>
-                        {!!item.subtitle && <div className="text-[13px] text-black/60">{item.subtitle}</div>}
+                        <div className="text-[14px] text-black dark:text-white font-medium">{item.title}</div>
+                        {!!item.subtitle && <div className="text-[13px] text-black/60 dark:text-white/60">{item.subtitle}</div>}
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="mt-4 w-full flex justify-center">
-                    <div className="inline-flex items-center gap-1 text-black/60">
+                    <div className="inline-flex items-center gap-1 text-black/60 dark:text-white/60">
                       <span>설정된 대표 커리어가 없습니다.</span>
-                      <span className="text-black/40" aria-hidden>ⓘ</span>
+                      <span className="text-black/40 dark:text-white/40" aria-hidden>ⓘ</span>
                     </div>
                   </div>
                 )}
@@ -266,7 +270,7 @@ export default function ProfilePage() {
 
             {/* 활동 정보 - 첫번째 사진 스타일 (숫자 위, 라벨 아래, 간격 작게) */}
             <div className="mt-4 text-[14px] md:text-[16px]">
-              <div className="text-black/90">활동 정보</div>
+              <div className="text-black/90 dark:text-white">활동 정보</div>
 
                 {/* 간격만 살짝 */}
               <div className="mt-5" />
@@ -274,25 +278,25 @@ export default function ProfilePage() {
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
                 <div className="flex flex-col gap-1">
                   <div className="text-[14px]">0</div>
-                  <div className="text-[14px] text-black/60">작업 보기</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">작업 보기</div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="text-[14px]">0</div>
-                  <div className="text-[14px] text-black/60">좋아요 받음</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">좋아요 받음</div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="text-[14px]">0</div>
-                  <div className="text-[14px] text-black/60">컬렉션 저장됨</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">컬렉션 저장됨</div>
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
                 <div className="flex flex-col gap-1">
                   <div className="text-[14px]">0</div>
-                  <div className="text-[14px] text-black/60">팔로잉</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">팔로잉</div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="text-[14px]">{me?.followerCount ?? 0}</div>
-                  <div className="text-[14px] text-black/60">팔로워</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">팔로워</div>
                 </div>
                 <div />
               </div>
@@ -302,12 +306,12 @@ export default function ProfilePage() {
           {/* 우측 콘텐츠 */}
           <section>
             {/* 탭 영역: 회색 선 + 활성 탭 진하게 */}
-            <div className="text-[15px] md:text-[16px] border-b border-[#E5E7EB]">
+            <div className="text-[15px] md:text-[16px] border-b border-[#E5E7EB] dark:border-[var(--border-color)]">
               <div className="flex items-center gap-6">
-                <Link to="/profile/work" onClick={()=>setActiveTab("work")} className={`pb-3 ${activeTab==="work" ? "font-semibold text-black" : "text-black/60"}`}>작업</Link>
-                <Link to="/profile/likes" onClick={()=>setActiveTab("like")} className={`pb-3 ${activeTab==="like" ? "font-semibold text-black" : "text-black/60"}`}>좋아요</Link>
-                <Link to="/profile/collections" onClick={()=>setActiveTab("collection")} className={`pb-3 ${activeTab==="collection" ? "font-semibold text-black" : "text-black/60"}`}>컬렉션</Link>
-                <Link to="/profile/drafts" onClick={()=>setActiveTab("draft")} className={`pb-3 ${activeTab==="draft" ? "font-semibold text-black" : "text-black/60"}`}>임시저장</Link>
+                <Link to="/profile/work" onClick={()=>setActiveTab("work")} className={`pb-3 ${activeTab==="work" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>작업</Link>
+                <Link to="/profile/likes" onClick={()=>setActiveTab("like")} className={`pb-3 ${activeTab==="like" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>좋아요</Link>
+                <Link to="/profile/collections" onClick={()=>setActiveTab("collection")} className={`pb-3 ${activeTab==="collection" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>컬렉션</Link>
+                <Link to="/profile/drafts" onClick={()=>setActiveTab("draft")} className={`pb-3 ${activeTab==="draft" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>임시저장</Link>
               </div>
             </div>
 
