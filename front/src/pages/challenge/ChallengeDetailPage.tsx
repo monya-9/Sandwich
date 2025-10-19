@@ -2,7 +2,6 @@ import React, { useState, useContext, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
     getChallengeDetail,
-    getDynamicChallengeDetail,
     type AnyChallengeDetail,
     type PortfolioChallengeDetail,
     type CodeChallengeDetail,
@@ -12,11 +11,12 @@ import { ChevronDown, ChevronLeft, AlertCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { 
-    fetchChallengeDetail, 
     fetchPortfolioLeaderboard, 
     fetchCodeTopSubmitters,
     type LeaderboardEntry 
 } from "../../api/challengeApi";
+import RewardClaimModal from "../../components/challenge/RewardClaimModal";
+import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
@@ -85,55 +85,6 @@ function RewardsTable({
     );
 }
 
-function SubmitExampleBox({
-                              repoUrl,
-                              demoUrl,
-                              desc,
-                              language,
-                              entrypoint,
-                          }: {
-    repoUrl?: string;
-    demoUrl?: string;
-    desc?: string;
-    language?: string;
-    entrypoint?: string;
-}) {
-    if (!repoUrl && !demoUrl && !desc && !language && !entrypoint) return null;
-    return (
-        <div className="mb-6">
-            <SectionTitle>📦 제출 예시</SectionTitle>
-            <GreenBox>
-                <div className="space-y-1 text-[13.5px] leading-7">
-                    {repoUrl && (
-                        <div>
-                            <span className="font-semibold">GitHub: </span>
-                            {repoUrl}
-                        </div>
-                    )}
-                    {demoUrl && (
-                        <div>
-                            <span className="font-semibold">데모 URL: </span>
-                            {demoUrl}
-                        </div>
-                    )}
-                    {language && (
-                        <div>
-                            <span className="font-semibold">언어: </span>
-                            {language}
-                        </div>
-                    )}
-                    {entrypoint && (
-                        <div>
-                            <span className="font-semibold">엔트리포인트: </span>
-                            {entrypoint}
-                        </div>
-                    )}
-                    {desc && <div className="whitespace-pre-line">{desc}</div>}
-                </div>
-            </GreenBox>
-        </div>
-    );
-}
 
 function AIScoringList({ items }: { items?: { label: string; weight: number }[] }) {
     if (!items?.length) return null;
@@ -355,6 +306,8 @@ export default function ChallengeDetailPage() {
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [showRewardModal, setShowRewardModal] = useState(false);
+    const [userReward, setUserReward] = useState<RewardItem | null>(null);
 
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
@@ -368,12 +321,12 @@ export default function ChallengeDetailPage() {
             fetchChallengeDetail(id)
                 .then((backendChallenge) => {
                     
-                    // ruleJson 파싱: 문자열일 수 있음
-                    let rule: any = {};
-                    try {
-                        const raw = backendChallenge?.ruleJson;
-                        rule = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
-                    } catch {}
+                    // ruleJson 파싱: 문자열일 수 있음 (현재 사용하지 않음)
+                    // let rule: any = {};
+                    // try {
+                    //     const raw = backendChallenge?.ruleJson;
+                    //     rule = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+                    // } catch {}
 
                     // 🚨 타입 불일치 체크 및 리디렉션
                     if (backendChallenge.type !== type) {
@@ -493,7 +446,34 @@ export default function ChallengeDetailPage() {
                     setLoading(false); // 실패 시에도 로딩 완료
                 });
         });
-    }, [id]); // data 의존성 제거로 무한 루프 방지
+    }, [id, navigate, type]); // data 의존성 제거로 무한 루프 방지
+
+    // 보상 수령 가능 여부 확인
+    useEffect(() => {
+        const checkReward = async () => {
+            if (!data || challengeStatus !== "ENDED" || !isLoggedIn) return;
+            
+            try {
+                const rewards = await fetchMyRewards();
+                const challengeReward = rewards.rewards.find(r => r.challengeId === id);
+                setUserReward(challengeReward || null);
+            } catch (error) {
+                console.error('보상 정보 조회 실패:', error);
+            }
+        };
+
+        checkReward();
+    }, [data, challengeStatus, isLoggedIn, id]);
+
+    const handleRewardClaim = () => {
+        setShowRewardModal(true);
+    };
+
+    const onRewardClaimed = () => {
+        // 보상 수령 후 데이터 새로고침
+        setShowRewardModal(false);
+        // 필요시 크레딧 데이터 새로고침
+    };
 
     const goPrimary = () => {
         if (!data) return;
@@ -572,6 +552,16 @@ export default function ChallengeDetailPage() {
                         className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
                     >
                         <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
+                    </button>
+                )}
+
+                {/* 보상 수령 버튼 (종료된 챌린지 + 보상이 있을 때) */}
+                {challengeStatus === "ENDED" && userReward && userReward.status === "PENDING" && (
+                    <button
+                        onClick={handleRewardClaim}
+                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1.5 text-[13px] font-semibold hover:from-orange-600 hover:to-yellow-600"
+                    >
+                        <span>🎁</span> 보상 수령하기 →
                     </button>
                 )}
 
@@ -778,6 +768,15 @@ export default function ChallengeDetailPage() {
                     </div>
                 </div>
             )}
+
+            {/* 보상 수령 모달 */}
+            <RewardClaimModal
+                isOpen={showRewardModal}
+                onClose={() => setShowRewardModal(false)}
+                challengeTitle={data?.title || ''}
+                userReward={userReward}
+                onRewardClaimed={onRewardClaimed}
+            />
         </div>
     );
 }
