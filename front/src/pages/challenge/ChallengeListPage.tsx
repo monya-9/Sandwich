@@ -1,5 +1,5 @@
 // src/pages/challenge/ChallengeListPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
@@ -9,6 +9,7 @@ import RewardClaimModal from "../../components/challenge/RewardClaimModal";
 import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { isAdmin } from "../../utils/authz";
 import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
+import { adminFetchChallenges, fetchChallengeDetail, type ChallengeListResponse, type ChallengeListItem, type ChallengeType, type ChallengeStatus } from "../../api/challengeApi";
 
 import { ChevronLeft, ChevronRight, Gift } from "lucide-react";
 
@@ -21,6 +22,25 @@ export default function ChallengeListPage() {
     const [showRewardModal, setShowRewardModal] = useState(false);
     const [pendingReward, setPendingReward] = useState<RewardItem | null>(null);
     const admin = isAdmin();
+
+    // ----- Admin: challenges table state -----
+    const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+    const [searchTitle, setSearchTitle] = useState("");
+    const [filterType, setFilterType] = useState<"" | ChallengeType>("");
+    const [filterStatus, setFilterStatus] = useState<"" | ChallengeStatus>("");
+    const [sort, setSort] = useState<string>("-startAt");
+    const [page, setPage] = useState<number>(0);
+    const [size, setSize] = useState<number>(10);
+    const [adminLoading, setAdminLoading] = useState(false);
+    const [adminError, setAdminError] = useState<string | null>(null);
+    const [adminList, setAdminList] = useState<ChallengeListResponse | null>(null);
+
+    // ----- Admin: rewards table state (per selected challenge) -----
+    const [selectedChallengeId, setSelectedChallengeId] = useState<number | null>(null);
+    const [selectedChallengeTitle, setSelectedChallengeTitle] = useState<string>("");
+    const [rewardsLoading, setRewardsLoading] = useState(false);
+    const [rewardsError, setRewardsError] = useState<string | null>(null);
+    const [rewardsRows, setRewardsRows] = useState<Array<Record<string, any>>>([]);
 
     // 현재 챌린지 데이터 가져오기
     useEffect(() => {
@@ -97,6 +117,120 @@ export default function ChallengeListPage() {
         checkPendingRewards();
     }, []);
 
+    // ----- Admin: load challenges list when filters change -----
+    useEffect(() => {
+        if (!admin) return;
+        setAdminLoading(true);
+        setAdminError(null);
+        adminFetchChallenges({
+            page,
+            size,
+            type: filterType || undefined,
+            status: filterStatus || undefined,
+            sort,
+        })
+            .then((resp) => {
+                setAdminList(resp);
+            })
+            .catch((e) => {
+                console.error(e);
+                setAdminError('관리자 챌린지 목록을 불러오지 못했습니다.');
+            })
+            .finally(() => setAdminLoading(false));
+    }, [admin, page, size, filterType, filterStatus, sort]);
+
+    const filteredAdminRows: ChallengeListItem[] = useMemo(() => {
+        const rows = adminList?.content ?? [];
+        if (!searchTitle.trim()) return rows;
+        const keyword = searchTitle.trim().toLowerCase();
+        return rows.filter(r => r.title?.toLowerCase().includes(keyword));
+    }, [adminList, searchTitle]);
+
+    const totalElementsText = useMemo(() => {
+        const total = adminList?.totalElements ?? 0;
+        const currentCount = filteredAdminRows.length;
+        return searchTitle ? `${currentCount} / ${total}` : String(total);
+    }, [adminList, filteredAdminRows.length, searchTitle]);
+
+    const handleExportChallengesCsv = () => {
+        const rows = filteredAdminRows;
+        const headers = [
+            'id','type','title','status','startAt','endAt','voteStartAt','voteEndAt','submissionCount','voteCount'
+        ];
+        const lines = [headers.join(',')].concat(
+            rows.map(r => [
+                r.id,
+                r.type,
+                escapeCsv(r.title),
+                r.status,
+                r.startAt,
+                r.endAt,
+                r.voteStartAt ?? '',
+                r.voteEndAt ?? '',
+                r.submissionCount,
+                r.voteCount
+            ].join(','))
+        );
+        downloadCsv(lines.join('\n'), `challenges_page${page + 1}.csv`);
+    };
+
+    const handleSelectChallengeForRewards = async (item: ChallengeListItem) => {
+        setSelectedChallengeId(item.id);
+        setSelectedChallengeTitle(item.title);
+        setRewardsLoading(true);
+        setRewardsError(null);
+        setRewardsRows([]);
+        try {
+            const detail: any = await fetchChallengeDetail(item.id);
+            const rewards = (detail && (detail.rewards || detail.rewardTiers || detail.reward || [])) as Array<any>;
+            if (Array.isArray(rewards)) {
+                // normalize keys to rank, credit, krw, note if possible
+                const normalized = rewards.map((r: any) => ({
+                    rank: r.rank ?? r.position ?? r.place ?? '',
+                    credit: r.credit ?? r.credits ?? r.amount ?? '',
+                    krw: r.krw ?? r.cash ?? '',
+                    note: r.note ?? r.desc ?? ''
+                }));
+                setRewardsRows(normalized);
+            } else {
+                setRewardsRows([]);
+            }
+        } catch (e) {
+            console.error(e);
+            setRewardsError('보상 정보를 불러오지 못했습니다.');
+        } finally {
+            setRewardsLoading(false);
+        }
+    };
+
+    const handleExportRewardsCsv = () => {
+        if (!selectedChallengeId) return;
+        const headers = ['rank','credit','krw','note'];
+        const lines = [headers.join(',')].concat(
+            rewardsRows.map(r => [r.rank, r.credit, r.krw ?? '', escapeCsv(String(r.note ?? ''))].join(','))
+        );
+        downloadCsv(lines.join('\n'), `challenge_${selectedChallengeId}_rewards.csv`);
+    };
+
+    function escapeCsv(value: string): string {
+        if (value == null) return '';
+        const mustQuote = /[",\n]/.test(value);
+        const v = String(value).replace(/"/g, '""');
+        return mustQuote ? `"${v}"` : v;
+    }
+
+    function downloadCsv(content: string, filename: string) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
     return (
         <div className="w-full bg-white">
             {/* 오렌지 공지 배너 */}
@@ -139,12 +273,18 @@ export default function ChallengeListPage() {
                 <WinnersSection />
                 {admin && (
                     <div className="mx-auto max-w-7xl px-4 md:px-6">
-                        <div className="mt-2 flex justify-end">
+                        <div className="mt-2 flex justify-end gap-2">
                             <button
                                 className="rounded-md bg-black text-white px-3 py-2 text-sm"
                                 onClick={() => navigate("/admin/challenges/new")}
                             >
                                 챌린지 생성
+                            </button>
+                            <button
+                                className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm hover:bg-neutral-50"
+                                onClick={() => navigate('/admin/challenges')}
+                            >
+                                챌린지/보상 테이블
                             </button>
                         </div>
                     </div>
@@ -260,6 +400,8 @@ export default function ChallengeListPage() {
                     </div>
                 </SectionCard>
             </main>
+
+            {/* ----- Admin tables removed; moved to dedicated page ----- */}
 
             {/* 보상 수령 모달 */}
             {pendingReward && (
