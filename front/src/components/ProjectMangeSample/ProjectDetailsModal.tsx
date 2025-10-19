@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { createProject, uploadImage, ProjectRequest, updateProject } from "../../api/projectApi";
+import { createProject, uploadImage, ProjectRequest, updateProject, addEnvVarsBulk, EnvVarRequest } from "../../api/projectApi";
 import { createGithubBranchAndPR } from "../../api/projectApi";
 import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
 import CoverCropper from "./CoverCropper";
 import TokenGuideModal from "./TokenGuideModal";
+import EnvVarsInput, { EnvVar } from "./EnvVarsInput";
 import Toast from "../common/Toast";
 import CustomDropdown from "../common/CustomDropdown";
 
@@ -135,8 +136,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [ghToken, setGhToken] = useState("");
   
   // 환경 변수 및 토큰 가이드 모달
-  const [envValues, setEnvValues] = useState("");
+  const [envVars, setEnvVars] = useState<EnvVar[]>([{key: '', value: ''}]);
   const [tokenGuideOpen, setTokenGuideOpen] = useState(false);
+  const [githubSyncEnabled, setGithubSyncEnabled] = useState(false);
+  const [envVarsSubmitted, setEnvVarsSubmitted] = useState(false);
 
   // 크롭 모달 상태
   const [cropOpen, setCropOpen] = useState(false);
@@ -206,6 +209,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       return [...prev, name];
     });
   };
+
 
   // 모달 오픈 시 바깥쪽 스크롤 잠금
   useEffect(() => {
@@ -366,17 +370,82 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         backendBuildCommand: backendBuildCommand || undefined,
         portNumber: portNumber === "" ? undefined : Number(portNumber),
       };
+      
+      let projectId: number;
       if (editMode && editOwnerId && editProjectId) {
         await updateProject(editOwnerId, editProjectId, payload);
+        projectId = editProjectId;
         onCreated?.(editProjectId, initialDetail?.previewUrl || "");
       } else {
         const res = await createProject(payload);
+        projectId = res.projectId;
         onCreated?.(res.projectId, res.previewUrl);
         setErrorToast({ visible: true, message: `프로젝트 생성 완료! 미리보기: ${res.previewUrl}` });
+      }
+
+      // 환경변수 등록 (별도 API 호출)
+      const validEnvVars = envVars.filter(env => env.key.trim() && env.value.trim());
+      if (validEnvVars.length > 0) {
         try {
-          if (ghOwner && ghRepo && ghBase && ghToken) {
-            await createGithubBranchAndPR(res.projectId, { owner: ghOwner, repo: ghRepo, baseBranch: ghBase, token: ghToken });
+          const envRequests: EnvVarRequest[] = validEnvVars.map(env => ({
+            keyName: env.key.trim(),
+            value: env.value.trim()
+          }));
+          
+          const envResponse = await addEnvVarsBulk(
+            projectId,
+            envRequests,
+            githubSyncEnabled ? (ghToken || undefined) : undefined,
+            githubSyncEnabled ? (ghOwner || undefined) : undefined,
+            githubSyncEnabled ? (ghRepo || undefined) : undefined
+          );
+          
+          console.log("환경변수 등록 결과:", envResponse);
+          
+          // 각 환경변수의 상태 업데이트
+          setEnvVars(prev => prev.map((envVar, index) => {
+            const responseItem = envResponse.items.find(item => item.keyName === envVar.key);
+            if (responseItem) {
+              return {
+                ...envVar,
+                status: responseItem.status,
+                message: responseItem.message || undefined
+              };
+            }
+            return envVar;
+          }));
+          
+          setEnvVarsSubmitted(true);
+          
+          // 전체 요약 알림
+          const successCount = envResponse.summary.created;
+          const githubSuccessCount = envResponse.summary.githubUploaded;
+          const githubFailCount = envResponse.summary.githubFailed || 0;
+          
+          if (githubFailCount > 0) {
+            setErrorToast({ 
+              visible: true, 
+              message: `환경변수 등록 완료 (DB: ${successCount}개, GitHub: ${githubSuccessCount}개 성공, ${githubFailCount}개 실패)` 
+            });
+          } else {
+            setErrorToast({ 
+              visible: true, 
+              message: `환경변수 등록 완료 (DB: ${successCount}개${githubSyncEnabled ? `, GitHub: ${githubSuccessCount}개` : ''})` 
+            });
           }
+        } catch (e: any) {
+          console.warn("환경변수 등록 실패:", e?.message);
+          setErrorToast({ 
+            visible: true, 
+            message: `환경변수 등록 실패: ${e?.message}` 
+          });
+        }
+      }
+
+      // GitHub 브랜치/PR 생성
+      if (ghOwner && ghRepo && ghBase && ghToken) {
+        try {
+          await createGithubBranchAndPR(projectId, { owner: ghOwner, repo: ghRepo, baseBranch: ghBase, token: ghToken });
         } catch (e: any) {
           console.warn("GH PR 트리거 실패:", e?.message);
         }
@@ -545,6 +614,25 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 토큰</div>
                 <input type="password" className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 h-12 w-full text-[16px] bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
+                
+                {/* GitHub 동기화 체크박스 - 토큰 입력 바로 아래 */}
+                <div className="mt-2">
+                  <label className="flex items-center gap-2 text-[14px] text-black dark:text-white">
+                    <input 
+                      type="checkbox" 
+                      className="scale-110 accent-black" 
+                      checked={githubSyncEnabled} 
+                      onChange={(e) => setGithubSyncEnabled(e.target.checked)} 
+                    /> 
+                    <span>GitHub 동기화 여부</span>
+                  </label>
+                  {githubSyncEnabled && (
+                    <div className="text-[12px] text-gray-500 dark:text-white/60 mt-1">
+                      환경변수가 GitHub Actions Secrets로도 등록됩니다.
+                    </div>
+                  )}
+                </div>
+                
                 <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
                 <button 
                   type="button" 
@@ -554,16 +642,11 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                   토큰 발급 설명서
                 </button>
               </div>
-              <div>
-                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">환경 변수 (env)</div>
-                <textarea 
-                  className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 py-3 w-full min-h-[100px] text-[14px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" 
-                  placeholder="KEY1=value1&#10;KEY2=value2&#10;KEY3=value3" 
-                  value={envValues} 
-                  onChange={e=>setEnvValues(e.target.value)} 
-                />
-              <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">환경 변수를 KEY=VALUE 형태로 입력하세요. 각 줄에 하나씩 입력합니다.</div>
-            </div>
+              <EnvVarsInput
+                envVars={envVars}
+                onEnvVarsChange={setEnvVars}
+                submitted={envVarsSubmitted}
+              />
 
               {/* 섹션 3: 카테고리 및 상세 설명 */}
               <div className="pt-4">

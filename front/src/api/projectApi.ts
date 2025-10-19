@@ -54,11 +54,34 @@ export type ProjectRequest = {
   backendBuildCommand?: string;
   portNumber?: number;
   extraRepoUrl?: string;
+  envValues?: string;
 };
 
 export type ProjectCreateResponse = {
   projectId: number;
   previewUrl: string;
+};
+
+// 환경변수 관련 타입들
+export type EnvVarRequest = {
+  keyName: string;
+  value: string;
+};
+
+export type EnvVarResponse = {
+  keyName: string;
+  status: 'OK' | 'FAILED';
+  message: string | null;
+};
+
+export type EnvBulkResponse = {
+  summary: {
+    total: number;
+    created: number;
+    githubUploaded: number;
+    githubFailed?: number;
+  };
+  items: EnvVarResponse[];
 };
 
 function getToken() {
@@ -244,4 +267,44 @@ export async function saveProjectContents(userId: number, projectId: number, ite
     return;
   }
   await api.post(`/projects/${userId}/${projectId}/contents`, items);
+}
+
+// 환경변수 bulk add API
+export async function addEnvVarsBulk(
+  projectId: number, 
+  envVars: EnvVarRequest[], 
+  githubToken?: string,
+  owner?: string,
+  repo?: string
+): Promise<EnvBulkResponse> {
+  const token = getToken();
+  if (!token) throw new Error("인증 토큰이 없습니다.");
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+  };
+
+  if (githubToken) {
+    headers["X-GitHub-Token"] = githubToken;
+  }
+
+  const queryParams = new URLSearchParams();
+  if (owner) queryParams.append("owner", owner);
+  if (repo) queryParams.append("repo", repo);
+
+  const url = `/api/env/add/${projectId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(envVars),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `환경변수 등록 실패: ${res.status}`);
+  }
+
+  return res.json();
 }
