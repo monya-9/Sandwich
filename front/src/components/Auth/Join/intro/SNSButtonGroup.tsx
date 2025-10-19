@@ -5,9 +5,10 @@ import googleIcon from "../../../../assets/icons/Google.png";
 import SNSButton from "./SNSButton";
 
 const SNSButtonGroup = () => {
+    const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8080";
     const handleSocialLogin = (provider: "google" | "github") => {
         // ✅ React 내부 경로로 먼저 이동 → 흰 화면 유지
-        window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+        window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
     };
 
     return (

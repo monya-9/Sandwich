@@ -58,8 +58,21 @@ public class JwtFilter extends OncePerRequestFilter {
             } catch (Exception e) {
                 log.warn("JWT 인증 실패: {}", e.getMessage());
             }
-  }
+        }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        // JWT 인증이 필요 없는 경로들
+        return path.equals("/health")
+                || path.startsWith("/api/auth/")
+                || path.startsWith("/oauth2/")
+                || path.startsWith("/swagger")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/internal/");
     }
 }

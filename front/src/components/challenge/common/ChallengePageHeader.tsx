@@ -6,9 +6,10 @@ interface ChallengePageHeaderProps {
     title: string;
     onBack: () => void;
     actionButton?: React.ReactNode;
+    titleExtra?: React.ReactNode;
 }
 
-export function ChallengePageHeader({ title, onBack, actionButton }: ChallengePageHeaderProps) {
+export function ChallengePageHeader({ title, onBack, actionButton, titleExtra }: ChallengePageHeaderProps) {
     return (
         <div className="mb-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -22,6 +23,7 @@ export function ChallengePageHeader({ title, onBack, actionButton }: ChallengePa
                 <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px] text-black dark:text-white">
                     {title}
                 </h1>
+                {titleExtra}
             </div>
             {actionButton}
         </div>
