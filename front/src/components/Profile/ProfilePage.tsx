@@ -7,6 +7,7 @@ import WorkTab from "./WorkTab";
 import LikesTab from "./LikesTab";
 import CollectionsTab from "./CollectionsTab";
 import DraftsTab from "./DraftsTab";
+import CreditWallet from "./CreditWallet";
 import { CareerProjectApi } from "../../api/careerProjectApi";
 import { CareerApi } from "../../api/careerApi";
 import { EducationApi } from "../../api/educationApi";
@@ -228,6 +229,9 @@ export default function ProfilePage() {
 
             {/* 간격만 살짝 */}
             <div className="mt-20" />
+
+            {/* 크레딧 지갑 */}
+            <CreditWallet />
 
             {/* 커리어: 대표 항목 표시 */}
             <div className="mt-2 text-[14px] md:text-[16px]">
