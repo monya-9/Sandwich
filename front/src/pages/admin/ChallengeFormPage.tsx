@@ -79,7 +79,10 @@ export default function ChallengeFormPage() {
     // 목록 패널 상태
     const [list, setList] = React.useState<Array<{ id:number; title:string; type?: string; status?: string }>>([]);
     const [listLoading, setListLoading] = React.useState(false);
-    const [showFullList, setShowFullList] = React.useState<boolean>(true);
+    const [showFullList, setShowFullList] = React.useState<boolean>(() => {
+        const p = location?.pathname || "";
+        return !/\/admin\/challenge\/(code|portfolio)\/.+\/edit$/.test(p);
+    });
     const [selectedTitle, setSelectedTitle] = React.useState<string>("");
     const manageInitRef = React.useRef<boolean>(false);
 
@@ -97,6 +100,63 @@ export default function ChallengeFormPage() {
         setVoteStartAt("");
         setVoteEndAt("");
         setCurrentStatus("DRAFT");
+    }, []);
+
+    // 유형별 수정 경로에서는 네비게이션 없이 동일 페이지에서 선택 항목의 상세를 로딩하여
+    // 입력 폼의 값이 사라지지 않도록 한다.
+    const loadForManageSelection = React.useCallback(async (targetId: number, opts?: { titleHint?: string; typeHint?: string }) => {
+        try {
+            setListLoading(true);
+            setEditingId(targetId);
+            const data = await fetchChallengeDetail(targetId);
+
+            const tRaw = (data?.type || data?.challengeType || data?.kind || opts?.typeHint || "CODE") as string;
+            const t = String(tRaw).toUpperCase();
+            setType(t.includes("PORT") ? "PORTFOLIO" : "CODE");
+
+            const loadedTitle = data?.title || data?.name || opts?.titleHint || "";
+            setTitle(loadedTitle);
+            setSelectedTitle(loadedTitle);
+            // summary는 ruleJson.summary > data.summary 우선으로 채우되, 문자열이 아닐 경우 대비
+            const rjRaw = (data?.ruleJson || data?.rule || data?.rules || data?.meta || {}) as any;
+            let rj: any = {};
+            try {
+                if (typeof rjRaw === "string") rj = JSON.parse(rjRaw);
+                else if (rjRaw && typeof rjRaw === "object") rj = rjRaw;
+            } catch { rj = {}; }
+            const summaryText = (typeof rj.summary === 'string' && rj.summary.length > 0)
+                ? rj.summary
+                : (typeof data?.summary === 'string' ? data.summary : "");
+            setSummary(summaryText);
+            if (data?.status) setCurrentStatus(data.status as ChallengeStatus);
+
+            const startRaw = data?.startAt || data?.start_at || data?.startDate || data?.openAt || data?.open_at;
+            const endRaw = data?.endAt || data?.end_at || data?.endDate || data?.closeAt || data?.close_at;
+            const vStartRaw = data?.voteStartAt || data?.vote_start_at || data?.voteStartDate;
+            const vEndRaw = data?.voteEndAt || data?.vote_end_at || data?.voteEndDate;
+            setStartAt(toLocalInputValue(startRaw));
+            setEndAt(toLocalInputValue(endRaw));
+            setVoteStartAt(toLocalInputValue(vStartRaw));
+            setVoteEndAt(toLocalInputValue(vEndRaw));
+
+            setYm(rj.ym || rj.month || "");
+            setWeek(rj.week || rj.weekKey || "");
+            const mustArr: string[] = Array.isArray(rj.must)
+                ? rj.must
+                : Array.isArray(rj.must_have)
+                ? rj.must_have
+                : [];
+            setMust(mustArr.join("\n"));
+            setMd(rj.md || rj.markdown || "");
+
+            setShowFullList(false);
+            (window as any).scrollTo?.(0, 0);
+        } catch (e) {
+            console.error("Failed to load challenge from manage list", e);
+            setError("선택한 항목을 불러오지 못했습니다.");
+        } finally {
+            setListLoading(false);
+        }
     }, []);
 
     React.useEffect(() => {
@@ -179,6 +239,7 @@ export default function ChallengeFormPage() {
                     setMd(mdText);
                     if (isTypeEditRoute) {
                         setSelectedTitle(loadedTitle);
+                        // 유형별 경로에서는 목록을 항상 접은 상태 유지
                         setShowFullList(false);
                     }
                 } catch (e) {
@@ -209,14 +270,13 @@ export default function ChallengeFormPage() {
                     const resp = await adminFetchChallenges({ page:0, size:50, sort:'-id' });
                     setList(resp.content.map(c => ({ id:c.id, title:c.title, type: ((c as any).type || (c as any).challengeType), status: (c as any).status })));
                 } finally { setListLoading(false); }
-                if (isTypeEditRoute && !manageInitRef.current) {
-                    // 유형별 수정 경로에서 관리 모드로 들어온 첫 렌더: 목록은 접고 현재 로드된 값 유지(편집 상태 유지)
+                if (isTypeEditRoute) {
+                    // 유형별 경로에서는 항상 목록 접힘 유지, 폼 값 유지
                     setShowFullList(false);
                     manageInitRef.current = true;
                 } else {
                     setShowFullList(true);
                     setSelectedTitle("");
-                    // 편집 경로에서는 폼 값을 유지해야 함
                     if (urlEditMode !== "edit") {
                         clearForm();
                     }
@@ -270,8 +330,9 @@ export default function ChallengeFormPage() {
                 summary: summaryKeep,
             }
         };
+        // 편집 시에도 status를 함께 전송하여 내용 저장만 했을 때도 상태가 일관되게 반영되도록 함
         const payload: ChallengeUpsertRequest = (editingId !== null)
-            ? payloadBase // 편집에서는 status를 보내지 않음(서버 상태 유지)
+            ? { ...payloadBase, status: currentStatus }
             : { ...payloadBase, status: "DRAFT" };
         if (!payload.title || !payload.startAt || !payload.endAt) {
             setError("제목, 시작일, 마감일은 필수입니다.");
@@ -379,8 +440,8 @@ export default function ChallengeFormPage() {
                                             </div>
                                             <div className="flex gap-2">
                                                 <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={() => {
-                                                    const kind = String(it.type || 'CODE').toUpperCase().includes('PORT') ? 'portfolio' : 'code';
-                                                    navigate(`/admin/challenge/${kind}/${it.id}/edit`);
+                                                    // 모든 경우 동일 화면 로딩으로 통일하여 깜빡임 제거
+                                                    loadForManageSelection(it.id, { titleHint: it.title, typeHint: String(it.type || 'CODE') });
                                                 }}>선택</button>
                                                 <button className="rounded-full border border-red-300 bg-white px-3 py-1 text-[12px] text-red-600 hover:bg-red-50" onClick={()=> setListDeleteConfirm({ open: true, id: it.id, title: it.title })}>삭제</button>
                                             </div>
@@ -404,10 +465,10 @@ export default function ChallengeFormPage() {
             {editingId !== null && (
                 <div className="mb-3 flex flex-wrap gap-2 items-center">
                     {(() => {
-                        // 상태 목록: CODE = DRAFT/OPEN/CLOSED, PORTFOLIO = DRAFT/OPEN/CLOSED/VOTING/ENDED
+                        // 상태 목록(CLOSED 포함): 일부 데이터는 CLOSED를 통해 전이될 수 있으므로 노출 유지
                         const options: ChallengeStatus[] = (
                             type === "CODE"
-                                ? ["DRAFT", "OPEN", "CLOSED"]
+                                ? ["DRAFT", "OPEN", "CLOSED", "ENDED"]
                                 : ["DRAFT", "OPEN", "CLOSED", "VOTING", "ENDED"]
                         );
                         return options.map((opt) => {
@@ -537,16 +598,26 @@ export default function ChallengeFormPage() {
                                 const effectiveId = (editingId !== null) ? editingId : (id ? Number(id) : null);
                                 if (!effectiveId || !statusConfirm.next) { setStatusConfirm({ open: false }); return; }
                                 try {
-                                    await changeChallengeStatus(effectiveId, statusConfirm.next);
+                                    const next = statusConfirm.next as ChallengeStatus;
+                                    // 낙관적 UI 업데이트 먼저 적용 → 반영 실패 시 롤백
+                                    const prevStatus = currentStatus;
+                                    setCurrentStatus(next);
+                                    setList(prev => prev.map(x => x.id === effectiveId ? { ...x, status: next } : x));
+                                    await changeChallengeStatus(effectiveId, next);
                                     setStatusConfirm({ open: false });
                                     // 서버 최종값으로 재동기화 (특히 DRAFT 전환 확인)
                                     try {
                                         const fresh = await fetchChallengeDetail(effectiveId);
                                         if (fresh?.status) setCurrentStatus(fresh.status as ChallengeStatus);
+                                        if (fresh?.title) setSelectedTitle(fresh.title);
+                                        // 관리 목록 패널에도 즉시 반영
+                                        setList(prev => prev.map(x => x.id === effectiveId ? { ...x, status: (fresh?.status as any) || x.status, title: fresh?.title || x.title } : x));
                                     } catch {}
                                 } catch (e) {
                                     console.error("status change failed", e);
                                     setStatusConfirm({ open: false });
+                                    // 실패 시 롤백
+                                    try { setCurrentStatus(current => current); } catch {}
                                     setError("상태 변경 중 오류가 발생했습니다.");
                                 }
                             }}>변경</button>

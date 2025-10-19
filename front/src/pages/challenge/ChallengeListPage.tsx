@@ -34,6 +34,35 @@ export default function ChallengeListPage() {
             });
     }, []);
 
+    // 새로고침 없이 마감 시점 정확히 전환: 각 카드의 expireAtMs를 기준으로 타이머를 1회 설정
+    useEffect(() => {
+        const timers: number[] = [];
+        const now = Date.now();
+        challenges.forEach((c) => {
+            if (!c.expireAtMs) return;
+            const delay = c.expireAtMs - now;
+            if (delay <= 0) return;
+            const t = window.setTimeout(async () => {
+                try {
+                    setLoading(true);
+                    const [freshCurrent, freshPast] = await Promise.all([
+                        getDynamicChallenges(),
+                        getPastChallenges(),
+                    ]);
+                    setChallenges(freshCurrent);
+                    setPastChallenges(freshPast);
+                } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.error('auto rollover refresh failed', e);
+                } finally {
+                    setLoading(false);
+                }
+            }, delay);
+            timers.push(t);
+        });
+        return () => { timers.forEach((t) => window.clearTimeout(t)); };
+    }, [challenges]);
+
     // 지난 챌린지 데이터 가져오기
     useEffect(() => {
         setPastLoading(true);
