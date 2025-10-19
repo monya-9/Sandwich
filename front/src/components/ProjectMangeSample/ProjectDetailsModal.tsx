@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { createProject, uploadImage, ProjectRequest, updateProject, addEnvVarsBulk, EnvVarRequest } from "../../api/projectApi";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { createProject, uploadImage, ProjectRequest, updateProject, addEnvVarsBulk, EnvVarRequest, getEnvVars } from "../../api/projectApi";
 import { createGithubBranchAndPR } from "../../api/projectApi";
 import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
@@ -148,23 +148,37 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [submitting, setSubmitting] = useState(false);
   const [errorToast, setErrorToast] = useState({ visible: false, message: "" });
 
+  // 함수들을 ref로 저장해서 무한 루프 방지
+  const onTitleChangeRef = useRef(onTitleChange);
+  const onSummaryChangeRef = useRef(onSummaryChange);
+  const onCategoriesChangeRef = useRef(onCategoriesChange);
+  const onCoverChangeRef = useRef(onCoverChange);
+
+  // ref 업데이트
+  useEffect(() => {
+    onTitleChangeRef.current = onTitleChange;
+    onSummaryChangeRef.current = onSummaryChange;
+    onCategoriesChangeRef.current = onCategoriesChange;
+    onCoverChangeRef.current = onCoverChange;
+  });
+
   useEffect(() => {
     if (!open) return;
     if (!editMode || !initialDetail) return;
     try {
-      setTitle(initialDetail.title || "");
-      setSummary(initialDetail.summary || initialDetail.description || "");
-      onTitleChange?.(initialDetail.title || "");
-      onSummaryChange?.(initialDetail.summary || initialDetail.description || "");
+      const titleValue = initialDetail.title || "";
+      const summaryValue = initialDetail.summary || initialDetail.description || "";
       const toolsCsv = initialDetail.tools || "";
       const arr = String(toolsCsv).split(",").map((s: string) => s.trim()).filter(Boolean);
+      
+      setTitle(titleValue);
+      setSummary(summaryValue);
       setTools(arr);
-      onCategoriesChange?.(arr);
+      
       if (initialDetail.startYear) setStartYear(Number(initialDetail.startYear));
       if (initialDetail.endYear) setEndYear(Number(initialDetail.endYear));
       if (typeof initialDetail.coverUrl === 'string' && initialDetail.coverUrl) {
         setCoverUrl(initialDetail.coverUrl);
-        onCoverChange?.(initialDetail.coverUrl);
       }
       setDetailDescription(initialDetail.description || " ");
       setRepositoryUrl(initialDetail.repositoryUrl || "");
@@ -173,18 +187,38 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       setPortNumber(initialDetail.portNumber || "");
       if (typeof initialDetail.qrCodeEnabled === 'boolean') setQrCodeEnabled(initialDetail.qrCodeEnabled);
 
-      // Prefill gh* UI states from existing fields
+      // Prefill GitHub information from existing fields
+      // GitHub 정보는 별도 필드가 없으므로 기존 필드들을 활용하거나 빈 값으로 설정
       setGhOwner(initialDetail.repositoryUrl || "");
       setGhRepo(initialDetail.extraRepoUrl || "");
-      setGhBase(initialDetail.frontendBuildCommand || "");
+      setGhBase(initialDetail.frontendBuildCommand || "main");
       setGhToken(initialDetail.backendBuildCommand || "");
+      
+      // 콜백 함수들은 별도 useEffect에서 호출
+      setTimeout(() => {
+        onTitleChangeRef.current?.(titleValue);
+        onSummaryChangeRef.current?.(summaryValue);
+        onCategoriesChangeRef.current?.(arr);
+        if (typeof initialDetail.coverUrl === 'string' && initialDetail.coverUrl) {
+          onCoverChangeRef.current?.(initialDetail.coverUrl);
+        }
+      }, 0);
     } catch {}
-  }, [open, editMode, initialDetail, onTitleChange, onSummaryChange, onCategoriesChange, onCoverChange]);
+  }, [open, editMode, initialDetail]);
 
-  useEffect(() => { onTitleChange?.(title); }, [title, onTitleChange]);
-  useEffect(() => { onSummaryChange?.(summary || detailDescription || ""); }, [summary, detailDescription, onSummaryChange]);
-  useEffect(() => { onCategoriesChange?.(tools); }, [tools, onCategoriesChange]);
-  useEffect(() => { onCoverChange?.(coverUrl); }, [coverUrl, onCoverChange]);
+  // 콜백 함수들은 상태 변경 시에만 호출 (ref 사용으로 무한 루프 방지)
+  useEffect(() => { 
+    onTitleChangeRef.current?.(title); 
+  }, [title]);
+  useEffect(() => { 
+    onSummaryChangeRef.current?.(summary || detailDescription || ""); 
+  }, [summary, detailDescription]);
+  useEffect(() => { 
+    onCategoriesChangeRef.current?.(tools); 
+  }, [tools]);
+  useEffect(() => { 
+    onCoverChangeRef.current?.(coverUrl); 
+  }, [coverUrl]);
 
   const coverIsUploaded = useMemo(() => {
     const v = String(coverUrl || "");
@@ -223,6 +257,38 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       document.documentElement.style.overflow = prevHtmlOverflow;
     };
   }, [open]);
+
+  // 수정 모드일 때 기존 환경변수 조회
+  useEffect(() => {
+    if (!open || !editMode || !editProjectId) return;
+    
+    const loadExistingEnvVars = async () => {
+      try {
+        console.log("기존 환경변수 조회 시작:", editProjectId);
+        const existingEnvVars = await getEnvVars(editProjectId);
+        console.log("기존 환경변수 조회 완료:", existingEnvVars);
+        
+        if (existingEnvVars.length > 0) {
+          const envVarsData = existingEnvVars.map((env: any) => ({
+            key: env.keyName,
+            value: '', // 보안상 값은 비워둠 (암호화되어 있어서)
+            status: undefined,
+            message: undefined
+          }));
+          setEnvVars(envVarsData);
+        } else {
+          // 기존 환경변수가 없으면 기본 빈 행 유지
+          setEnvVars([{key: '', value: ''}]);
+        }
+      } catch (e: any) {
+        console.warn("환경변수 조회 실패:", e?.message);
+        // 조회 실패해도 기본 빈 행은 유지
+        setEnvVars([{key: '', value: ''}]);
+      }
+    };
+
+    loadExistingEnvVars();
+  }, [open, editMode, editProjectId]);
 
   if (!open) return null;
 

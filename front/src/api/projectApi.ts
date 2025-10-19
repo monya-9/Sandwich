@@ -308,3 +308,96 @@ export async function addEnvVarsBulk(
 
   return res.json();
 }
+
+// 환경변수 개별 등록 API (백엔드 스펙에 맞게 추가)
+export async function addEnvVar(
+  projectId: number,
+  envVar: EnvVarRequest,
+  githubToken: string,
+  owner: string,
+  repo: string,
+  branch: string
+): Promise<EnvVarResponse> {
+  const token = getToken();
+  if (!token) throw new Error("인증 토큰이 없습니다.");
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "X-GitHub-Token": githubToken,
+  };
+
+  const queryParams = new URLSearchParams();
+  queryParams.append("owner", owner);
+  queryParams.append("repo", repo);
+  queryParams.append("branch", branch);
+
+  const url = `/api/env/${projectId}/env?${queryParams.toString()}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(envVar),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `환경변수 등록 실패: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+// 환경변수 GitHub 동기화 API (백엔드 스펙에 맞게 추가)
+export async function syncEnvVarsToGitHub(
+  projectId: number,
+  githubToken: string,
+  owner: string,
+  repo: string
+): Promise<any> {
+  const token = getToken();
+  if (!token) throw new Error("인증 토큰이 없습니다.");
+
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${token}`,
+    "X-GitHub-Token": githubToken,
+  };
+
+  const queryParams = new URLSearchParams();
+  queryParams.append("owner", owner);
+  queryParams.append("repo", repo);
+
+  const url = `/api/env/sync/${projectId}?${queryParams.toString()}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `GitHub 동기화 실패: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+// 환경변수 조회 API (백엔드 스펙에 맞게 추가)
+export async function getEnvVars(projectId: number): Promise<any[]> {
+  const token = getToken();
+  if (!token) throw new Error("인증 토큰이 없습니다.");
+
+  const res = await fetch(`/api/env/${projectId}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `환경변수 조회 실패: ${res.status}`);
+  }
+
+  return res.json();
+}

@@ -97,7 +97,12 @@ const EnvVarsInput: React.FC<EnvVarsInputProps> = ({
         ))}
       </div>
       <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
-        환경 변수를 변수명과 값으로 나누어 입력하세요.
+        환경 변수를 변수명과 값으로 나누어 입력하세요. Key name은 알파벳/숫자/_/-만 허용됩니다.
+        {submitted && (
+          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-700 dark:text-blue-300">
+            <strong>보안 안내:</strong> 기존 환경변수 값은 보안상 표시되지 않습니다. 새로운 값을 입력해주세요.
+          </div>
+        )}
       </div>
     </div>
   );
