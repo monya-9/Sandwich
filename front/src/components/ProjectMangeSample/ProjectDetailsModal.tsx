@@ -18,6 +18,9 @@ const getYearOptions = () => {
 // 월 옵션 생성 (01-12)
 const monthOptions = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
 
+// 팀원 수 옵션 생성 (01-20)
+const teamSizeOptions = Array.from({ length: 20 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -514,16 +517,14 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                   </label>
                   <div className="flex items-center gap-3">
                     <span className={isTeam ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-white/50"}>팀원 구성원 수</span>
-                    <select
-                      className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded h-12 px-3 w-24 text-[16px] focus:outline-none ${isTeam ? 'focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white' : 'bg-[#F3F4F6] dark:bg-white/5 text-gray-400 dark:text-white/40 cursor-not-allowed opacity-70'}`}
+                    <CustomDropdown
                       value={teamSize === '' ? '01' : String(teamSize).padStart(2,'0')}
-                      onChange={e=>setTeamSize(Number(e.target.value))}
+                      onChange={(value) => setTeamSize(Number(value))}
+                      options={teamSizeOptions}
+                      placeholder="01"
+                      className="w-24"
                       disabled={!isTeam}
-                      aria-disabled={!isTeam}
-                      title={isTeam ? '팀원 수를 선택하세요' : '팀 프로젝트를 선택하면 설정할 수 있어요'}
-                    >
-                      {Array.from({length:20},(_,i)=>String(i+1).padStart(2,'0')).map(n=> <option key={n} value={n}>{n}</option>)}
-                    </select>
+                    />
                   </div>
                 </div>
               </div>
