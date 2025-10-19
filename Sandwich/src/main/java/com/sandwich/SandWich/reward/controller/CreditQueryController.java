@@ -41,10 +41,15 @@ public class CreditQueryController {
     public List<Map<String,Object>> myRewards() {
         long uid = currentUser.currentUserId();
         return jdbc.queryForList("""
-          SELECT challenge_id, amount, rank, created_at
-          FROM reward_payout
-          WHERE user_id = ?
-          ORDER BY created_at DESC
-        """, uid);
+      SELECT r.challenge_id,
+             c.title AS challenge_title,
+             r.amount,
+             r.rank,
+             r.created_at
+      FROM reward_payout r
+      JOIN challenge c ON r.challenge_id = c.id
+      WHERE r.user_id = ?
+      ORDER BY r.created_at DESC
+    """, uid);
     }
 }
