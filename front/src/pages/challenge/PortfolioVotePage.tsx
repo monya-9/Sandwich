@@ -17,6 +17,7 @@ import {
 } from "../../api/challengeApi";
 import Toast from "../../components/common/Toast";
 import api from "../../api/axiosInstance";
+import AdminRebuildButton from "../../components/challenge/AdminRebuildButton";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -34,6 +35,8 @@ export default function PortfolioVotePage() {
     const [myVote, setMyVote] = useState<MyVoteResponse | null>(null);
     const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
     const [voteLoading, setVoteLoading] = useState(false);
+    // 재집계 성공 시 강제 재조회 트리거
+    const [reloadKey, setReloadKey] = useState(0);
     
     // 토스트 상태
     const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' }>({
@@ -50,7 +53,22 @@ export default function PortfolioVotePage() {
             setSubmissionsLoading(true);
             try {
                 const response = await fetchPortfolioSubmissions(id, 0, 20);
-                setSubmissions(response.content);
+                const content = (response.content || []).slice();
+                // 내림차순 정렬: 총점(totalScore) 우선, 없으면 voteCount → likeCount → id
+                content.sort((a: any, b: any) => {
+                    const aScore = a?.totalScore ?? -Infinity;
+                    const bScore = b?.totalScore ?? -Infinity;
+                    if (aScore !== bScore) return bScore - aScore;
+                    const aVotes = a?.voteCount ?? -Infinity;
+                    const bVotes = b?.voteCount ?? -Infinity;
+                    if (aVotes !== bVotes) return bVotes - aVotes;
+                    const aLike = a?.likeCount ?? -Infinity;
+                    const bLike = b?.likeCount ?? -Infinity;
+                    if (aLike !== bLike) return bLike - aLike;
+                    const aId = a?.id ?? 0; const bId = b?.id ?? 0;
+                    return bId - aId;
+                });
+                setSubmissions(content);
                 
                 // 각 제출물의 좋아요 상태 가져오기
                 const likesPromises = response.content.map(async (submission) => {
@@ -91,7 +109,7 @@ export default function PortfolioVotePage() {
         };
 
         fetchSubmissions();
-    }, [id]);
+    }, [id, reloadKey]);
 
     // 좋아요 토글 함수
     const handleLike = async (e: React.MouseEvent, submissionId: number) => {
@@ -274,11 +292,12 @@ export default function PortfolioVotePage() {
                     <ChallengePageHeader
                         title={`샌드위치 챌린지 투표: ${(detail?.title || '포트폴리오 챌린지').replace(/^포트폴리오 챌린지:\s*/, "")}`}
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
+                        titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
                             challengeStatus === "ENDED" ? undefined : (
-                            <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
-                                프로젝트 제출하기
-                            </CTAButton>
+                                <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
+                                    프로젝트 제출하기
+                                </CTAButton>
                             )
                         }
                     />

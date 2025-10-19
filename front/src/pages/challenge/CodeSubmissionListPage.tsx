@@ -7,6 +7,7 @@ import { fetchChallengeDetail } from "../../api/challengeApi";
 import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
 import api from "../../api/axiosInstance";
+import AdminRebuildButton from "../../components/challenge/AdminRebuildButton";
 
 export default function CodeSubmissionListPage() {
     const { id: idStr } = useParams();
@@ -27,6 +28,8 @@ export default function CodeSubmissionListPage() {
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
     const [submissionLikes, setSubmissionLikes] = useState<Record<number, { liked: boolean; count: number }>>({});
+    // 재집계 성공 시 강제 재조회 트리거
+    const [reloadKey, setReloadKey] = useState(0);
 
     // 백엔드 챌린지 데이터 로드 (우선순위)
     useEffect(() => {
@@ -66,7 +69,19 @@ export default function CodeSubmissionListPage() {
             setSubmissionsLoading(true);
             try {
                 const response = await fetchChallengeSubmissions(id, 0, 20);
-                setSubmissions(response.content || []);
+                const content = (response.content || []).slice();
+                // 내림차순 정렬: likeCount 우선, 없으면 totalScore, 없다면 id 기준
+                content.sort((a: any, b: any) => {
+                    const aLike = a?.likeCount ?? -Infinity;
+                    const bLike = b?.likeCount ?? -Infinity;
+                    if (aLike !== bLike) return bLike - aLike;
+                    const aScore = a?.totalScore ?? -Infinity;
+                    const bScore = b?.totalScore ?? -Infinity;
+                    if (aScore !== bScore) return bScore - aScore;
+                    const aId = a?.id ?? 0; const bId = b?.id ?? 0;
+                    return bId - aId;
+                });
+                setSubmissions(content);
                 
                 // 각 제출물의 좋아요 상태 가져오기
                 const likesPromises = (response.content || []).map(async (submission) => {
@@ -108,7 +123,7 @@ export default function CodeSubmissionListPage() {
         };
 
         fetchSubmissions();
-    }, [id]);
+    }, [id, reloadKey]);
 
     // 좋아요 토글 함수
     const handleLike = async (e: React.MouseEvent, submissionId: number) => {
@@ -165,6 +180,7 @@ export default function CodeSubmissionListPage() {
             <ChallengePageHeader
                 title={getHeaderTitle()}
                 onBack={() => nav(`/challenge/code/${id}`)}
+                titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                 actionButton={
                     challengeStatus === "ENDED" ? undefined : (
                         <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>

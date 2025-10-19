@@ -313,6 +313,11 @@ export async function adminFetchChallenges(params?: {
 
 // ===== 리더보드/우승자 관련 =====
 
+/** 관리자: 리더보드 재집계 트리거 */
+export async function rebuildLeaderboard(challengeId: number): Promise<void> {
+  await api.post(`/admin/challenges/${challengeId}/rebuild-leaderboard`, {}, { withCredentials: true });
+}
+
 export type LeaderboardEntry = {
   rank: number;
   submissionId?: number;
