@@ -302,7 +302,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           value: envVar.value.trim()
         };
         
-        await addEnvVarsBulk(
+        const retryResponse = await addEnvVarsBulk(
           editProjectId || 0,
           [envRequest],
           githubSyncEnabled ? ghToken : undefined,
@@ -310,10 +310,20 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           githubSyncEnabled ? ghRepo : undefined
         );
         
-        // 해당 환경변수 상태 업데이트
-        setEnvVars(prev => prev.map((item, i) => 
-          i === index ? { ...item, status: 'OK', message: undefined } : item
-        ));
+        // 재시도 응답 처리
+        if (Array.isArray(retryResponse)) {
+          const responseItem = retryResponse.find(item => item.keyName === envVar.key);
+          if (responseItem) {
+            setEnvVars(prev => prev.map((item, i) => 
+              i === index ? { ...item, status: 'OK', message: undefined } : item
+            ));
+          }
+        } else {
+          // 문자열 응답인 경우
+          setEnvVars(prev => prev.map((item, i) => 
+            i === index ? { ...item, status: 'OK', message: undefined } : item
+          ));
+        }
         
         setErrorToast({ 
           visible: true, 
@@ -541,44 +551,46 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           
           console.log("환경변수 등록 결과:", envResponse);
           
-          // 가이드에 맞는 응답 처리 (백엔드가 단순 문자열을 반환하므로 프론트엔드에서 처리)
-          const mockResponse = {
-            summary: {
-              total: validEnvVars.length,
-              created: validEnvVars.length,
-              githubUploaded: githubSyncEnabled ? validEnvVars.length : 0,
-              githubFailed: 0
-            },
-            items: validEnvVars.map(env => ({
-              keyName: env.key.trim(),
-              status: 'OK' as const,
-              message: null
-            }))
-          };
-          
-          // 각 환경변수의 상태 업데이트
-          setEnvVars(prev => prev.map((envVar, index) => {
-            const responseItem = mockResponse.items.find(item => item.keyName === envVar.key);
-            if (responseItem) {
-              return {
-                ...envVar,
-                status: responseItem.status,
-                message: responseItem.message || undefined
-              };
-            }
-            return envVar;
-          }));
-          
-          setEnvVarsSubmitted(true);
-          
-          // 전체 요약 알림
-          const successCount = mockResponse.summary.created;
-          const githubSuccessCount = mockResponse.summary.githubUploaded;
-          
-          setErrorToast({ 
-            visible: true, 
-            message: `환경변수 등록 완료 (DB: ${successCount}개${githubSyncEnabled ? `, GitHub: ${githubSuccessCount}개` : ''})` 
-          });
+          // 실제 백엔드 응답 처리
+          if (Array.isArray(envResponse)) {
+            // 백엔드가 배열 형태로 반환하는 경우 (실제 응답)
+            setEnvVars(prev => prev.map((envVar, index) => {
+              const responseItem = envResponse.find(item => item.keyName === envVar.key);
+              if (responseItem) {
+                return {
+                  ...envVar,
+                  status: 'OK',
+                  message: undefined
+                };
+              }
+              return envVar;
+            }));
+            
+            setEnvVarsSubmitted(true);
+            
+            // 전체 요약 알림
+            const successCount = envResponse.length;
+            const githubSuccessCount = githubSyncEnabled ? successCount : 0;
+            
+            setErrorToast({ 
+              visible: true, 
+              message: `환경변수 등록 완료 (DB: ${successCount}개${githubSyncEnabled ? `, GitHub: ${githubSuccessCount}개` : ''})` 
+            });
+          } else {
+            // 백엔드가 문자열을 반환하는 경우 (기존 방식)
+            setEnvVars(prev => prev.map(envVar => ({
+              ...envVar,
+              status: 'OK',
+              message: undefined
+            })));
+            
+            setEnvVarsSubmitted(true);
+            
+            setErrorToast({ 
+              visible: true, 
+              message: `환경변수 등록 완료 (${validEnvVars.length}개)` 
+            });
+          }
         } catch (e: any) {
           console.warn("환경변수 등록 실패:", e?.message);
           setErrorToast({ 
