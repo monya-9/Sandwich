@@ -5,6 +5,7 @@ import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
 import CoverCropper from "./CoverCropper";
+import TokenGuideModal from "./TokenGuideModal";
 import Toast from "../common/Toast";
 import CustomDropdown from "../common/CustomDropdown";
 
@@ -46,25 +47,6 @@ const ModalFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </div>
 );
 
-const StepIndicator: React.FC<{ step: number; total: number }> = ({ step, total }) => (
-  <div className="px-6 py-3 text-sm text-gray-600 border-b">단계 {step} / {total}</div>
-);
-
-const FileButton: React.FC<{ label: string; onPick: (file: File) => void }> = ({ label, onPick }) => {
-  const onClick = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = () => {
-      const file = input.files && input.files[0];
-      if (file) onPick(file);
-    };
-    input.click();
-  };
-  return (
-    <button type="button" onClick={onClick} className="h-10 px-4 border rounded">{label}</button>
-  );
-};
 
 // CoverCropper extracted to its own file
 
@@ -119,11 +101,6 @@ const MediaPicker: React.FC<{
 };
 
 const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, libraryImages, editMode = false, initialDetail, editOwnerId, editProjectId, onTitleChange, onSummaryChange, onCategoriesChange, onCoverChange }) => {
-  const totalSteps = 4;
-  const [step, setStep] = useState(1);
-  const gotoNext = () => setStep(s => Math.min(totalSteps, s + 1));
-  const gotoPrev = () => setStep(s => Math.max(1, s - 1));
-
   const [coverUrl, setCoverUrl] = useState<string>(logoPng);
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null); // 업로드 실패 시 지연 업로드용
   const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
@@ -153,8 +130,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [ghRepo, setGhRepo] = useState("");
   const [ghBase, setGhBase] = useState("main");
   const [ghToken, setGhToken] = useState("");
-  const [ghBusy, setGhBusy] = useState(false);
-  const [ghResult, setGhResult] = useState<string | null>(null);
+  
+  // 환경 변수 및 토큰 가이드 모달
+  const [envValues, setEnvValues] = useState("");
+  const [tokenGuideOpen, setTokenGuideOpen] = useState(false);
 
   // 크롭 모달 상태
   const [cropOpen, setCropOpen] = useState(false);
@@ -194,12 +173,12 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       setGhBase(initialDetail.frontendBuildCommand || "");
       setGhToken(initialDetail.backendBuildCommand || "");
     } catch {}
-  }, [open, editMode, initialDetail]);
+  }, [open, editMode, initialDetail, onTitleChange, onSummaryChange, onCategoriesChange, onCoverChange]);
 
-  useEffect(() => { onTitleChange?.(title); }, [title]);
-  useEffect(() => { onSummaryChange?.(summary || detailDescription || ""); }, [summary, detailDescription]);
-  useEffect(() => { onCategoriesChange?.(tools); }, [tools]);
-  useEffect(() => { onCoverChange?.(coverUrl); }, [coverUrl]);
+  useEffect(() => { onTitleChange?.(title); }, [title, onTitleChange]);
+  useEffect(() => { onSummaryChange?.(summary || detailDescription || ""); }, [summary, detailDescription, onSummaryChange]);
+  useEffect(() => { onCategoriesChange?.(tools); }, [tools, onCategoriesChange]);
+  useEffect(() => { onCoverChange?.(coverUrl); }, [coverUrl, onCoverChange]);
 
   const coverIsUploaded = useMemo(() => {
     const v = String(coverUrl || "");
@@ -551,11 +530,11 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
               {/* 섹션 2: 저장소/빌드/포트 */}
               <div className="pt-4">
-                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">깃 이름</div>
-                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="owner (깃 사용자/조직)" value={ghOwner} onChange={e=>setGhOwner(e.target.value)} />
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 이름</div>
+                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="owner (Github 사용자/조직)" value={ghOwner} onChange={e=>setGhOwner(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">깃 레포명</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 레포명</div>
                 <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="repo (레포 이름)" value={ghRepo} onChange={e=>setGhRepo(e.target.value)} />
               </div>
               <div>
@@ -563,13 +542,27 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="baseBranch (기본 main)" value={ghBase} onChange={e=>setGhBase(e.target.value)} />
               </div>
               <div>
-                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">깃 토큰</div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 토큰</div>
                 <input type="password" className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 h-12 w-full text-[16px] bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
                 <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
+                <button 
+                  type="button" 
+                  className="mt-2 px-4 py-2 text-sm bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded hover:from-orange-600 hover:to-yellow-600 transition-colors"
+                  onClick={() => setTokenGuideOpen(true)}
+                >
+                  토큰 발급 설명서
+                </button>
               </div>
-              {ghResult && (
-                <div className="text-sm mt-2 text-gray-600">{ghResult}</div>
-              )}
+              <div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">환경 변수 (env)</div>
+                <textarea 
+                  className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 py-3 w-full min-h-[100px] text-[14px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" 
+                  placeholder="KEY1=value1&#10;KEY2=value2&#10;KEY3=value3" 
+                  value={envValues} 
+                  onChange={e=>setEnvValues(e.target.value)} 
+                />
+              <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">환경 변수를 KEY=VALUE 형태로 입력하세요. 각 줄에 하나씩 입력합니다.</div>
+            </div>
 
               {/* 섹션 3: 카테고리 및 상세 설명 */}
               <div className="pt-4">
@@ -619,6 +612,9 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         )}
         {cropOpen && (
           <CoverCropper open={cropOpen} src={cropSrc} onClose={()=>{setCropOpen(false); setCropSrc(null);}} onCropped={onCropDone} />
+        )}
+        {tokenGuideOpen && (
+          <TokenGuideModal open={tokenGuideOpen} onClose={() => setTokenGuideOpen(false)} />
         )}
       </ModalFrame>
     </>
