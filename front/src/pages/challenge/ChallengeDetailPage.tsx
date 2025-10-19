@@ -561,7 +561,7 @@ export default function ChallengeDetailPage() {
                         onClick={handleRewardClaim}
                         className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1.5 text-[13px] font-semibold hover:from-orange-600 hover:to-yellow-600"
                     >
-                        <span>🎁</span> 보상 수령하기 →
+                        보상 수령하기 →
                     </button>
                 )}
 

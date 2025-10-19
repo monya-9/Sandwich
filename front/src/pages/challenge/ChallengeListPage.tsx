@@ -5,10 +5,12 @@ import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
+import RewardClaimModal from "../../components/challenge/RewardClaimModal";
+import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { isAdmin } from "../../utils/authz";
 import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Gift } from "lucide-react";
 
 export default function ChallengeListPage() {
     const navigate = useNavigate();
@@ -16,6 +18,8 @@ export default function ChallengeListPage() {
     const [pastChallenges, setPastChallenges] = useState<ChallengeCardData[]>([]);
     const [loading, setLoading] = useState(false);
     const [pastLoading, setPastLoading] = useState(false);
+    const [showRewardModal, setShowRewardModal] = useState(false);
+    const [pendingReward, setPendingReward] = useState<RewardItem | null>(null);
     const admin = isAdmin();
 
     // 현재 챌린지 데이터 가져오기
@@ -78,6 +82,21 @@ export default function ChallengeListPage() {
             });
     }, []);
 
+    // 수령 대기 중인 보상 확인
+    useEffect(() => {
+        const checkPendingRewards = async () => {
+            try {
+                const rewards = await fetchMyRewards();
+                const pending = rewards.rewards.find(reward => reward.status === 'PENDING');
+                setPendingReward(pending || null);
+            } catch (error) {
+                console.error('보상 상태 확인 실패:', error);
+                setPendingReward(null);
+            }
+        };
+        checkPendingRewards();
+    }, []);
+
     return (
         <div className="w-full bg-white">
             {/* 오렌지 공지 배너 */}
@@ -94,6 +113,21 @@ export default function ChallengeListPage() {
                     </div>
                 </div>
             </div>
+
+            {/* 수령 대기 중인 보상이 있을 때만 표시 */}
+            {pendingReward && (
+                <div className="mx-auto max-w-7xl px-4 md:px-6 mt-4">
+                    <div className="flex justify-center">
+                        <button
+                            onClick={() => setShowRewardModal(true)}
+                            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-3 text-[14px] font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all duration-200"
+                        >
+                            <Gift className="w-4 h-4" />
+                            보상 수령하기
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* WinnersSection + Admin Actions */}
             <div className="mx-auto max-w-7xl px-4 md:px-6">
@@ -226,6 +260,21 @@ export default function ChallengeListPage() {
                     </div>
                 </SectionCard>
             </main>
+
+            {/* 보상 수령 모달 */}
+            {pendingReward && (
+                <RewardClaimModal
+                    isOpen={showRewardModal}
+                    onClose={() => setShowRewardModal(false)}
+                    challengeTitle={pendingReward.challengeTitle}
+                    userReward={pendingReward}
+                    onRewardClaimed={() => {
+                        setShowRewardModal(false);
+                        setPendingReward(null); // 수령 완료 후 상태 업데이트
+                        console.log("보상 수령 완료!");
+                    }}
+                />
+            )}
         </div>
     );
 }
