@@ -15,6 +15,7 @@ import com.sandwich.SandWich.user.domain.*;
 import com.sandwich.SandWich.user.dto.*;
 import com.sandwich.SandWich.user.repository.*;
 import com.sandwich.SandWich.user.domain.User;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +40,7 @@ public class UserService {
     private final UserInterestRepository userInterestRepository;
     private final ProjectRepository projectRepository;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
+    private final JdbcTemplate jdbc;
 
 
     @Transactional
@@ -86,6 +87,7 @@ public class UserService {
 
         // 저장
         userRepository.save(user);
+        ensureWallet(user.getId());
     }
 
     @Transactional
@@ -135,6 +137,7 @@ public class UserService {
         return user;
     }
 
+    @Transactional
     public void saveBasicProfile(User user, SignupRequest req) {
         // nickname 중복 검사
         if (profileRepository.existsByNickname(req.getNickname())) {
@@ -165,6 +168,7 @@ public class UserService {
         }
         user.setIsProfileSet(true);
         userRepository.save(user);
+        ensureWallet(user.getId());
     }
 
     @Transactional
@@ -340,5 +344,12 @@ public class UserService {
                 posName,
                 interestNames
         );
+    }
+    private void ensureWallet(long userId) {
+        jdbc.update("""
+        INSERT INTO credit_wallet(user_id, balance, created_at, updated_at)
+        VALUES (?, 0, now(), now())
+        ON CONFLICT (user_id) DO NOTHING
+    """, userId);
     }
 }
