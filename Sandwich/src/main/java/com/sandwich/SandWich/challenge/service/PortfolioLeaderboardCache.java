@@ -3,6 +3,8 @@ package com.sandwich.SandWich.challenge.service;
 
 import com.sandwich.SandWich.challenge.dto.LeaderboardDtos;
 import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
+import com.sandwich.SandWich.user.repository.UserRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,10 @@ public class PortfolioLeaderboardCache {
 
     private final RedisTemplate<String, Object> redis;
     private final PortfolioVoteRepository voteRepo;
+
+    private final SubmissionRepository submissionRepo;
+    private final UserRepository userRepo;
+
 
     private static int toInt(Object o) {
         if (o == null) return 0;
@@ -39,10 +45,14 @@ public class PortfolioLeaderboardCache {
     public PortfolioLeaderboardCache(
             @org.springframework.beans.factory.annotation.Qualifier("redisJsonTemplate")
             org.springframework.data.redis.core.RedisTemplate<String, Object> redis,
-            PortfolioVoteRepository voteRepo
+            PortfolioVoteRepository voteRepo,
+            SubmissionRepository submissionRepo,
+            UserRepository userRepo
     ) {
         this.redis = redis;
         this.voteRepo = voteRepo;
+        this.submissionRepo = submissionRepo;
+        this.userRepo = userRepo;
     }
 
     private String keyStats(long chId) { return "challenge:%d:lb:stats".formatted(chId); }
@@ -165,6 +175,63 @@ public class PortfolioLeaderboardCache {
                     .rank(r++).build());
             if (limit>0 && ranked.size()>=limit) break;
         }
+
+        if (!ranked.isEmpty()) {
+            var ids = ranked.stream().map(LeaderboardDtos.Item::submissionId).toList();
+
+            // 제출물 로드
+            var subs = submissionRepo.findAllById(ids);
+            var subMap = subs.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            com.sandwich.SandWich.challenge.domain.Submission::getId,
+                            java.util.function.Function.identity(),
+                            (a,b)->a
+                    ));
+
+            // 오너 로드
+            var ownerIds = subs.stream().map(com.sandwich.SandWich.challenge.domain.Submission::getOwnerId).toList();
+            var users = userRepo.findAllById(ownerIds);
+            var userMap = users.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            com.sandwich.SandWich.user.domain.User::getId,
+                            java.util.function.Function.identity(),
+                            (a,b)->a
+                    ));
+
+            // 최종 enrich된 리스트 구성
+            var enriched = new java.util.ArrayList<LeaderboardDtos.Item>(ranked.size());
+            for (var it : ranked) {
+                var sub = subMap.get(it.submissionId());
+                String teamName = (sub == null) ? null : sub.getTeamName();
+
+                LeaderboardDtos.Owner ownerDto = null;
+                if (sub != null) {
+                    var u = userMap.get(sub.getOwnerId());
+                    if (u != null) {
+                        ownerDto = LeaderboardDtos.Owner.builder()
+                                .userId(u.getId())
+                                .username(u.getNickname())
+                                .profileImageUrl(u.getProfileImageUrl())
+                                .build();
+                    }
+                }
+
+                enriched.add(LeaderboardDtos.Item.builder()
+                        .submissionId(it.submissionId())
+                        .voteCount(it.voteCount())
+                        .uiUxAvg(it.uiUxAvg())
+                        .creativityAvg(it.creativityAvg())
+                        .codeQualityAvg(it.codeQualityAvg())
+                        .difficultyAvg(it.difficultyAvg())
+                        .totalScore(it.totalScore())
+                        .rank(it.rank())
+                        .teamName(teamName)      // ★ set
+                        .owner(ownerDto)         // ★ set
+                        .build());
+            }
+            ranked = enriched;
+        }
+
         return LeaderboardDtos.Resp.builder()
                 .items(ranked)
                 .cacheHit(cacheHit)

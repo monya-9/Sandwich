@@ -32,8 +32,8 @@ const MainCategoryFilter: React.FC<Props> = ({
             onClick={() => onSelectCategory(category)}
             className={`text-base font-semibold px-4 pb-1 transition-all duration-200 ${
               selectedCategory === category
-                ? 'text-green-600 border-b-2 border-green-600 font-bold'
-                : 'text-black border-b-2 border-transparent'
+                ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400 font-bold'
+                : 'text-black dark:text-gray-200 border-b-2 border-transparent'
             }`}
           >
             {category}
@@ -41,12 +41,12 @@ const MainCategoryFilter: React.FC<Props> = ({
         ))}
 
         {/* 구분선 */}
-        <div className="w-px h-5 bg-gray-300 mx-4" />
+        <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-4" />
 
         {/* 정렬 버튼도 동일한 스타일 적용 */}
         <button
           onClick={onOpenSortModal}
-          className="text-base font-semibold px-4 pb-1 transition-all duration-200 text-black hover:text-green-600"
+          className="text-base font-semibold px-4 pb-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400"
         >
           ↕ 정렬
         </button>

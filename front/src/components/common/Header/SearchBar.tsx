@@ -91,11 +91,11 @@ const SearchBar = () => {
     return (
         <>
             {/* PC 검색창 */}
-            <div className="hidden md:flex w-[310px] h-[36px] items-center px-3 border border-black/30 rounded-full text-[14px] text-black/50 relative" ref={dropdownRef}>
+            <div className="hidden md:flex w-[310px] h-[36px] items-center px-3 border border-black/30 dark:border-white/20 bg-white dark:bg-black rounded-full text-[14px] text-black/70 dark:text-white relative" ref={dropdownRef}>
                 <input
                     type="text"
                     placeholder="검색어를 입력하세요"
-                    className="w-full bg-transparent outline-none"
+                    className="w-full bg-transparent outline-none placeholder:text-black/50 dark:placeholder:text-white/70 text-black dark:text-white"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={handleFocus}
@@ -107,7 +107,7 @@ const SearchBar = () => {
                 />
                 <button
                     onClick={() => handleSearch(searchTerm)}
-                    className="flex-shrink-0 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    className="flex-shrink-0 p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"
                     type="button"
                 >
                     <svg
@@ -128,16 +128,16 @@ const SearchBar = () => {
 
                 {/* 드롭다운 */}
                 {isOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-white/20 rounded-lg shadow-lg z-50">
                         {/* 추천 검색어 */}
-                        <div className="p-4 border-b border-gray-100">
-                            <h3 className="text-sm font-medium text-gray-900 mb-3">추천 검색어</h3>
+                        <div className="p-4 border-b border-gray-100 dark:border-white/10">
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">추천 검색어</h3>
                             <div className="flex flex-wrap gap-2">
                                 {recommendedSearches.map((term) => (
                                     <button
                                         key={term}
                                         onClick={() => handleSearch(term)}
-                                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-gray-200 transition-colors"
+                                        className="px-3 py-1 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white text-sm rounded-full hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                                     >
                                         {term}
                                     </button>
@@ -149,10 +149,10 @@ const SearchBar = () => {
                         {isLoggedIn && recentSearches.length > 0 && (
                             <div className="p-4">
                                 <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-sm font-medium text-gray-900">최근 검색어</h3>
+                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">최근 검색어</h3>
                                     <button
                                         onClick={handleClearAllRecentSearches}
-                                        className="text-xs text-gray-500 hover:text-gray-700"
+                                        className="text-xs text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white"
                                     >
                                         모두 삭제하기
                                     </button>
@@ -162,10 +162,10 @@ const SearchBar = () => {
                                         <div key={searchItem.id} className="flex items-center justify-between group">
                                             <button
                                                 onClick={() => handleSearch(searchItem.keyword)}
-                                                className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                                                className="flex items-center text-sm text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white"
                                             >
                                                 <svg
-                                                    className="w-4 h-4 mr-2 text-gray-400"
+                                                    className="w-4 h-4 mr-2 text-gray-400 dark:text-white/60"
                                                     fill="none"
                                                     stroke="currentColor"
                                                     viewBox="0 0 24 24"
@@ -184,7 +184,7 @@ const SearchBar = () => {
                                                     e.stopPropagation();
                                                     handleDeleteRecentSearch(searchItem.id);
                                                 }}
-                                                className="opacity-60 hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                                                className="opacity-60 hover:opacity-100 text-gray-400 dark:text-white/60 hover:text-red-500 transition-all"
                                                 title="삭제"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,10 +200,10 @@ const SearchBar = () => {
                                                 <div key={searchItem.id} className="flex items-center justify-between group">
                                                     <button
                                                         onClick={() => handleSearch(searchItem.keyword)}
-                                                        className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                                                        className="flex items-center text-sm text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white"
                                                     >
                                                         <svg
-                                                            className="w-4 h-4 mr-2 text-gray-400"
+                                                            className="w-4 h-4 mr-2 text-gray-400 dark:text-white/60"
                                                             fill="none"
                                                             stroke="currentColor"
                                                             viewBox="0 0 24 24"
@@ -222,7 +222,7 @@ const SearchBar = () => {
                                                             e.stopPropagation();
                                                             handleDeleteRecentSearch(searchItem.id);
                                                         }}
-                                                        className="opacity-60 hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                                                        className="opacity-60 hover:opacity-100 text-gray-400 dark:text-white/60 hover:text-red-500 transition-all"
                                                         title="삭제"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -140,31 +140,34 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
       <div className="relative">
         <button
           aria-label="좋아요"
-          className="flex flex-col items-center group focus:outline-none"
+          className="flex flex-col items-center gap-1 group focus:outline-none"
           onClick={handleLike}
           disabled={loading}
         >
           <div
-            className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 transition-all duration-150
+            className={`w-14 h-14 rounded-full shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1 transition-all duration-150
               ${liked ? "bg-[#FF6688]" : "bg-white"}`}
             style={{ position: "relative" }}
           >
             <FaHeart
-              className={`w-6 h-6 transition-colors duration-150
+              className={`w-7 h-7 transition-colors duration-150
                   ${liked ? "text-white" : "text-gray-800"}`}
             />
+            {count > 0 && (
+              <span
+                className={`absolute -top-[10px] -right-[10px] z-10 min-w-[28px] h-[28px] px-1 rounded-full ${liked ? "bg-[#BE185D]" : "bg-[#FF6688]"} text-white text-[13px] leading-[28px] text-center font-bold shadow cursor-pointer`}
+                title="좋아요한 사람 보기"
+                onClick={(e) => { e.stopPropagation(); setShowLikedUsers(true); }}
+              >
+                {count}
+              </span>
+            )}
           </div>
           <span
-            className="text-xs text-white font-semibold text-center"
-            onClick={(e) => {
-              if (count > 0) {
-                e.stopPropagation();
-                setShowLikedUsers(true);
-              }
-            }}
-            style={{ cursor: count > 0 ? "pointer" : "default" }}
+            className="text-sm text-white font-semibold text-center"
+            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
           >
-            {count > 0 ? count : "좋아요"}
+            좋아요
           </span>
         </button>
       </div>

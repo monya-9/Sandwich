@@ -31,11 +31,11 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-[var(--surface)] rounded-lg border border-gray-200 dark:border-[var(--border-color)] p-4 hover:shadow-md transition-shadow">
       {/* 프로필 헤더 - 스크린샷처럼 좌측 정렬, 클릭 가능 */}
       <div className="flex items-start space-x-3 mb-3 cursor-pointer" onClick={handleProfileClick}>
         {/* 프로필 이미지 - 위 드롭다운과 동일한 스타일 */}
-        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] flex items-center justify-center overflow-hidden flex-shrink-0">
           {avatarUrl ? (
             <img 
               src={avatarUrl} 
@@ -43,7 +43,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-700 font-bold text-lg">
+            <div className="w-full h-full bg-gray-200 dark:bg-[var(--avatar-bg)] flex items-center justify-center text-gray-700 dark:text-white font-bold text-lg">
               {getInitial()}
             </div>
           )}
@@ -51,14 +51,14 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
 
         {/* 사용자 정보 */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 mb-1 hover:text-blue-600 transition-colors">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             <span 
               dangerouslySetInnerHTML={{ 
                 __html: highlightSearchTerm(nickname, searchTerm) 
               }}
             />
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-white">
             {position || (isVerified ? '인증된 사용자' : '일반 사용자')}
           </p>
         </div>

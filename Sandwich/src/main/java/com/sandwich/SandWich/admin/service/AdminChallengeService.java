@@ -85,12 +85,7 @@ public class AdminChallengeService {
         audit("PATCH_CHALLENGE", "CHALLENGE", id, req); // no-op
     }
 
-    @Transactional
-    public int publishResults(Long challengeId, RewardRule rule) {
-        int inserted = reward.publishPortfolioResults(challengeId, rule);
-        audit("PUBLISH_RESULTS", "CHALLENGE", challengeId, rule); // no-op
-        return inserted;
-    }
+    
 
     @Transactional
     public void rebuildLeaderboard(Long challengeId) {
@@ -98,6 +93,13 @@ public class AdminChallengeService {
             leaderboard.rebuild(challengeId); // 네 구현: void
             audit("REBUILD_LEADERBOARD", "CHALLENGE", challengeId, "rebuilt"); // no-op
         }
+    }
+
+    @Transactional
+    public int publishResults(Long challengeId, RewardRule rule) {
+        int inserted = reward.publishPortfolioResults(challengeId, rule);
+        audit("PUBLISH_RESULTS", "CHALLENGE", challengeId, rule); // no-op
+        return inserted;
     }
 
     /** DB CHECK와 동일: start<end && ((vs,ve 둘다 null) || (둘다 not null && end<=vs && vs<ve)) */

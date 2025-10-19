@@ -6,3 +6,5 @@ export { Row, Label, Help, GreenBox } from "./FormComponents";
 export { ChallengePageHeader } from "./ChallengePageHeader";
 export { SubmissionCard } from "./SubmissionCard";
 export type { SubmissionCardData } from "./SubmissionCard";
+export { default as ChallengeCommentSection } from "./ChallengeCommentSection";
+export type { CommentResponse } from "./ChallengeCommentSection";

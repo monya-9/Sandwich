@@ -68,7 +68,7 @@ export type SubmissionListItem = {
 };
 
 export type SubmissionDetailResponse = {
-  submissionId: number;
+  id: number; // 백엔드에서는 id 필드가 제출물 ID
   title: string;
   desc: string;
   repoUrl: string;

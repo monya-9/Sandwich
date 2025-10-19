@@ -89,10 +89,10 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
                 onClick={handleCardClick}
             >
                 {/* 핵심: 비율 고정 */}
-                <div className="relative w-full aspect-[4/3] bg-gray-200">
+                <div className="relative w-full aspect-[4/3] bg-gray-200 dark:bg-gray-700">
                     {imgErr ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                            <span className="text-sm text-gray-500">{(project.title || '프로젝트').slice(0, 14)}</span>
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                            <span className="text-sm text-gray-500 dark:text-gray-300">{(project.title || '프로젝트').slice(0, 14)}</span>
                         </div>
                     ) : (
                         <img
@@ -115,12 +115,12 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
             {/* 작성자 + 정보 영역 */}
             <div className="w-full mt-1 flex justify-between items-center px-1">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gray-200 text-xs font-semibold flex items-center justify-center text-gray-700">
+                    <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-semibold flex items-center justify-center text-gray-700 dark:text-gray-100">
                         {initial}
                     </div>
-                    <span className="text-sm text-black">{username}</span>
+                    <span className="text-sm text-black dark:text-gray-100">{username}</span>
                 </div>
-                <div className="text-xs text-gray-600 flex gap-3">
+                <div className="text-xs text-gray-600 dark:text-gray-300 flex gap-3">
                     <span>👁 {project.views || 0}</span>
                     <span>♥ {project.likes || 0}</span>
                     <span>💬 {project.comments || 0}</span>
