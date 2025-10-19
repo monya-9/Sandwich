@@ -645,10 +645,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프로젝트 여부</div>
                 <div className="flex flex-col gap-3 text-[16px]">
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" className="scale-110 accent-black" checked={!isTeam} onChange={(e)=>setIsTeam(!e.target.checked)} /> <span className="text-black dark:text-white">개인 프로젝트</span>
+                    <input type="checkbox" className="scale-110" checked={!isTeam} onChange={(e)=>setIsTeam(!e.target.checked)} /> <span className="text-black dark:text-white">개인 프로젝트</span>
                   </label>
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" className="scale-110 accent-black" checked={isTeam} onChange={(e)=>setIsTeam(e.target.checked)} /> <span className="text-black dark:text-white">팀 프로젝트</span>
+                    <input type="checkbox" className="scale-110" checked={isTeam} onChange={(e)=>setIsTeam(e.target.checked)} /> <span className="text-black dark:text-white">팀 프로젝트</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <span className={isTeam ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-white/50"}>팀원 구성원 수</span>
@@ -686,7 +686,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                   <label className="flex items-center gap-2 text-[14px] text-black dark:text-white">
                     <input 
                       type="checkbox" 
-                      className="scale-110 accent-black" 
+                      className="scale-110" 
                       checked={githubSyncEnabled} 
                       onChange={(e) => setGithubSyncEnabled(e.target.checked)} 
                     /> 
@@ -720,7 +720,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <div className="flex flex-wrap gap-x-6 gap-y-3">
                   {toolOptions.map(opt => (
                     <label key={opt} className="flex items-center gap-2 text-[15px] text-black dark:text-white">
-                      <input type="checkbox" className="scale-110 accent-black" checked={tools.includes(opt)} onChange={()=>toggleTool(opt)} /> {opt}
+                      <input type="checkbox" className="scale-110" checked={tools.includes(opt)} onChange={()=>toggleTool(opt)} /> {opt}
                     </label>
                   ))}
                 </div>
@@ -734,8 +734,8 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">QR 코드 자동 생성 여부 (기본 자동 생성)</div>
                 <div className="flex items-center gap-8">
-                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="accent-black" checked={qrCodeEnabled} onChange={()=>setQrCodeEnabled(true)} /> <span className="text-black dark:text-white">생성</span></label>
-                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="accent-black" checked={!qrCodeEnabled} onChange={()=>setQrCodeEnabled(false)} /> <span className="text-black dark:text-white">생성 안 함</span></label>
+                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="" checked={qrCodeEnabled} onChange={()=>setQrCodeEnabled(true)} /> <span className="text-black dark:text-white">생성</span></label>
+                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="" checked={!qrCodeEnabled} onChange={()=>setQrCodeEnabled(false)} /> <span className="text-black dark:text-white">생성 안 함</span></label>
                 </div>
               </div>
             </div>

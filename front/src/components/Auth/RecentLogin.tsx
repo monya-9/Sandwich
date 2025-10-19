@@ -20,8 +20,8 @@ const RecentLogin = () => {
                     lastLogin;
 
     return (
-        <p className="text-sm text-gray-500 mt-2">
-            최근 로그인: <span className="font-medium text-green-700">{providerName}</span>
+        <p className="text-sm text-gray-500 dark:text-white mt-2">
+            최근 로그인: <span className="font-medium text-green-700 dark:text-green-400">{providerName}</span>
         </p>
     );
 };

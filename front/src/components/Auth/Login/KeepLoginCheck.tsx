@@ -32,7 +32,7 @@ const KeepLoginCheck: React.FC<Props> = ({
             />
             <label
                 htmlFor="keepLogin"
-                className="cursor-pointer select-none text-sm text-gray-700"
+                className="cursor-pointer select-none text-sm text-gray-700 dark:text-white"
             >
                 로그인 유지
             </label>
