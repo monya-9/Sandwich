@@ -31,6 +31,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -72,9 +73,46 @@ public class SecurityConfig {
         return new RestAccessDeniedHandler();
     }
 
+    // CORS 설정 Bean
+    @Value("${management.endpoints.web.cors.allowed-origins}")
+    private String allowedOriginsCsv;
+
+    @Value("${management.endpoints.web.cors.allowed-methods}")
+    private String allowedMethodsCsv;
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        List<String> origins = Arrays.stream(allowedOriginsCsv.split(","))
+                .map(String::trim)
+                .toList();
+
+        List<String> methods = Arrays.stream(allowedMethodsCsv.split(","))
+                .map(String::trim)
+                .toList();
+
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(methods);
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                .requestMatchers(HttpMethod.GET, "/health");
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ObjectProvider<ClientRegistrationRepository> repoProvider) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/internal/**")  // 내부 API는 CSRF 미적용
                         .disable()
@@ -82,11 +120,6 @@ public class SecurityConfig {
 
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-
-                        // ==== 배포 ====
-                        // 로드밸런싱 용 HealthCheck
-                        .requestMatchers(HttpMethod.GET, "/health").permitAll()
-                        // ==== 배포 End ====
 
                         .requestMatchers("/error", "/error/**").permitAll()
                         // === Device management ===
