@@ -16,9 +16,9 @@ module.exports = function (app) {
         return next();
     });
 
-    // REST & OAuth
+    // REST & OAuth (원래대로 통합)
     app.use(
-        ["/api", "/oauth2/authorization", "/login/oauth2"],
+        ["/api", "/admin", "/oauth2/authorization", "/login/oauth2"],
         createProxyMiddleware({
             target,
             changeOrigin: true,
@@ -36,6 +36,18 @@ module.exports = function (app) {
             ws: false,
             secure: true,
             pathRewrite: { "^/ext": "/api" },
+            logLevel: "warn",
+        })
+    );
+
+    // Prometheus (개발 전용): http://localhost:9091 -> /prom
+    app.use(
+        "/prom",
+        createProxyMiddleware({
+            target: process.env.REACT_APP_PROM_BASE || "http://localhost:9091",
+            changeOrigin: true,
+            ws: false,
+            pathRewrite: { "^/prom": "" },
             logLevel: "warn",
         })
     );

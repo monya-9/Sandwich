@@ -12,6 +12,25 @@ interface Props {
 
 type ThemeMode = 'system' | 'light' | 'dark';
 
+function isAdminFromStoredToken(): boolean {
+    try {
+        const token =
+            (typeof window !== 'undefined' && (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken'))) || '';
+        if (!token) return false;
+        const parts = token.split('.');
+        if (parts.length !== 3) return false;
+        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const json = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf-8');
+        const payload = JSON.parse(decodeURIComponent(Array.prototype.map.call(json, (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+        const candidates = [payload.roles, payload.authorities, payload.auth, payload.scope, payload.scopes, payload.role];
+        const toStr = (v: any) => (typeof v === 'string' ? v : Array.isArray(v) ? v.join(' ') : '');
+        const txt = toStr(candidates.find(Boolean)).toUpperCase();
+        return txt.includes('ROLE_ADMIN') || txt.split(/[ ,]/).includes('ADMIN');
+    } catch {
+        return false;
+    }
+}
+
 const ProfileDropdown = ({ email, username, onLogout }: Props) => {
     // 저장값이 없으면 system
     const initialMode: ThemeMode = useMemo(() => {
@@ -20,6 +39,7 @@ const ProfileDropdown = ({ email, username, onLogout }: Props) => {
     }, []);
 
     const [mode, setMode] = useState<ThemeMode>(initialMode);
+    const isAdmin = isAdminFromStoredToken();
 
     const resolveAndApply = useCallback((m: ThemeMode) => {
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -50,6 +70,16 @@ const ProfileDropdown = ({ email, username, onLogout }: Props) => {
                 <li><Link to="/project/edit" className="hover:text-green-600">새로운 작업 업로드</Link></li>
                 <li><Link to="/profile" className="hover:text-green-600">나의 포트폴리오</Link></li>
                 <li><Link to="/mypage" className="hover:text-green-600">마이 페이지</Link></li>
+                {isAdmin && (
+                    <li>
+                        <Link to="/admin/security/otp" className="hover:text-green-600">관리자 콘솔 - 보안탭 - OTP 이력</Link>
+                    </li>
+                )}
+                {isAdmin && (
+                    <li>
+                        <Link to="/admin/security/devices" className="hover:text-green-600">관리자 콘솔 - 보안탭 - 사용자 관리</Link>
+                    </li>
+                )}
             </ul>
 
             {/* 테마: 마이페이지 바로 아래 (선 위) */}

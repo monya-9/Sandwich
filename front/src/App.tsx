@@ -56,6 +56,9 @@ import ChallengeEditSinglePage from "./pages/admin/ChallengeEditSinglePage";
 import ChallengeEditCodePage from "./pages/admin/ChallengeEditCodePage";
 import ChallengeEditPortfolioPage from "./pages/admin/ChallengeEditPortfolioPage";
 import ChallengeManagePage from "./pages/admin/ChallengeManagePage";
+import SecurityOtpHistoryPage from "./pages/admin/SecurityOtpHistoryPage";
+import SecurityDeviceManagePage from "./pages/admin/SecurityDeviceManagePage";
+import DeviceManagePage from "./pages/mypage/DeviceManagePage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -116,6 +119,7 @@ function App() {
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
+                                <Route path="/mypage/devices" element={<DeviceManagePage />} />
 
                                 {/* 프로필 페이지 */}
                                 <Route path="/profile" element={<ProfilePage />} />
@@ -157,6 +161,10 @@ function App() {
                                     {/* 유형별 수정 경로(각 타입 전용 페이지가 필요하면 아래 두 줄을 별도 페이지로 분리 가능) */}
                                     <Route path="challenge/code/:id/edit" element={<ChallengeEditCodePage />} />
                                     <Route path="challenge/portfolio/:id/edit" element={<ChallengeEditPortfolioPage />} />
+                                    {/* 보안 ▸ OTP 이력 */}
+                                    <Route path="security/otp" element={<SecurityOtpHistoryPage />} />
+                                    {/* 보안 ▸ 사용자 관리(관리자 전용: 특정 사용자 전체 무효화) */}
+                                    <Route path="security/devices" element={<SecurityDeviceManagePage />} />
                                 </Route>
                             </Route>
 

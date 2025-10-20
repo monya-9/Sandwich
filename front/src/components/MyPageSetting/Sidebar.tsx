@@ -7,6 +7,7 @@ const Sidebar: React.FC = () => {
 	const isCareer = pathname.startsWith("/mypage/career");
 	const isNotifications = pathname.startsWith("/mypage/notifications");
 	const isPush = pathname.startsWith("/mypage/push");
+	const isDevices = pathname.startsWith("/mypage/devices");
 
     const item = (
         label: string,
@@ -38,6 +39,9 @@ const Sidebar: React.FC = () => {
             <div className="text-[#ADADAD] dark:text-white/40 text-[14px] sm:text-[16px] mb-3 sm:mb-4">알림 설정</div>
             {item("이메일/SMS 알림", "/mypage/notifications", isNotifications)}
             {item("푸시 알림(APP)", "/mypage/push", isPush)}
+            <hr className="border-[#E5E7EB] dark:border-[var(--border-color)] my-4 sm:my-6" />
+            <div className="text-[#ADADAD] dark:text-white/40 text-[14px] sm:text-[16px] mb-3 sm:mb-4">보안</div>
+            {item("디바이스 관리", "/mypage/devices", isDevices)}
         </div>
 	);
 };
