@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Generate mapping JSONs from real tables.
-Fix: ensure ALL projects are included even if table name differs.
-- Users: users where COALESCE(is_deleted,false)=false; u_idx == user_id
-- Projects: from 'project' or 'projects' table, no filters; 0..N-1
-- Only writes JSONs under project-root/data/mappings
-"""
 import os
 import json
 from pathlib import Path
