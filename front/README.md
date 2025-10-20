@@ -44,3 +44,15 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## 개발 프록시
+
+개발 서버에서 API는 `/api` 로 프록시되며, Prometheus는 `/prom` 으로 프록시되어 `http://localhost:9091` 로 전달됩니다.
+
+예)
+
+```
+GET /prom/api/v1/query?query=otp_verify_ok_total
+```
+
+관리자 보안 탭 경로: `/admin/security/otp`
