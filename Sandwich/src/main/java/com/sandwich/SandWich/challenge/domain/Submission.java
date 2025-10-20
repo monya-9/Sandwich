@@ -32,14 +32,27 @@ public class Submission extends BaseEntity {
     @Column(nullable=false, length=200)
     private String title;
 
-    @Column(columnDefinition = "text")
-    private String descr;
+    @Column(name="description", columnDefinition = "text")
+    private String desc;
 
     @Column(name="repo_url")
     private String repoUrl;
 
     @Column(name="demo_url")
     private String demoUrl;
+
+    @Column(name="cover_url", length = 2048)
+    private String coverUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name="participation_type", length=10)
+    private ParticipationType participationType;
+
+    @Column(name="team_name", length=200)
+    private String teamName;
+
+    @Column(name="members_text", columnDefinition = "text")
+    private String membersText;
 
     @Column(name = "extra_json", columnDefinition = "jsonb", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
@@ -49,4 +62,6 @@ public class Submission extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private SubmissionStatus status = SubmissionStatus.SUBMITTED;
+
+    public enum ParticipationType { SOLO, TEAM }
 }

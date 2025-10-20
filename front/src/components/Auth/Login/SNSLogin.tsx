@@ -4,9 +4,10 @@ import githubIcon from "../../../assets/icons/github.png";
 import googleIcon from "../../../assets/icons/Google.png";
 
 const SNSLogin: React.FC = () => {
+    const API_BASE = process.env.REACT_APP_API_BASE;
     const handleSocialLogin = (provider: "google" | "github") => {
         // ✅ 바로 백엔드 OAuth2 엔드포인트로 이동
-        window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+        window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
     };
 
     return (

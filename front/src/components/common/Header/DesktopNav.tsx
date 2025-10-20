@@ -135,7 +135,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         : noti.unread;
 
     const navCls = ({ isActive }: { isActive: boolean }) =>
-        `text-black ${isActive ? "font-semibold" : "font-medium"}`;
+        `text-black dark:text-gray-100 ${isActive ? "font-semibold" : "font-medium"}`;
 
     return (
         <div className="flex items-center justify-between w-full relative">
@@ -235,7 +235,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex gap-3 text-[14px] text-black">
+                    <div className="flex gap-3 text-[14px] text-black dark:text-gray-100">
                         <Link to="/login" className="hover:underline">로그인</Link>
                         <Link to="/join" className="hover:underline">회원가입</Link>
                     </div>

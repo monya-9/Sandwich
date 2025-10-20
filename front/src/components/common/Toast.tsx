@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
 
@@ -31,13 +31,19 @@ const Toast: React.FC<ToastProps> = ({
   onClose,
   icon,
 }) => {
+  // onClose를 ref로 저장하여 의존성 문제 해결
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   // 자동 닫힘
   useEffect(() => {
     if (visible && autoClose > 0) {
-      const timer = setTimeout(onClose, autoClose);
+      const timer = setTimeout(() => {
+        onCloseRef.current();
+      }, autoClose);
       return () => clearTimeout(timer);
     }
-  }, [visible, autoClose, onClose]);
+  }, [visible, autoClose]); // onClose 의존성 제거
 
   if (!visible) return null;
 
@@ -129,7 +135,7 @@ const Toast: React.FC<ToastProps> = ({
         top: '20px',
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 9999,
+        zIndex: 20000,
         background: typeStyles.background,
         color: '#fff',
         fontFamily: "'Gmarket Sans', sans-serif",

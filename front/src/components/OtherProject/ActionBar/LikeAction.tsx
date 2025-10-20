@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { FaHeart } from "react-icons/fa";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 import LikedUsersModal from "./LikedUsersModal";
 import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
 import Toast from "../../common/Toast";
 
 interface LikeActionProps {
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
+  targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
   targetId: number;
 }
 
@@ -31,14 +31,8 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
   useEffect(() => {
     const fetchLike = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        
-        const res = await axios.get(`/api/likes`, {
+        const res = await api.get(`/likes`, {
           params: { targetType, targetId },
-          withCredentials: true,
-          headers: token ? {
-            Authorization: `Bearer ${token}`,
-          } : {},
         });
         setLiked(res.data.likedByMe || false);
         setCount(res.data.likeCount || 0);
@@ -50,7 +44,6 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     };
     fetchLike();
   }, [targetType, targetId]);
-
 
   const handleLike = async () => {
     if (!isLoggedIn) {
@@ -67,15 +60,9 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
         return;
       }
 
-      const res = await axios.post(
-        "/api/likes",
-        { targetType, targetId },
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await api.post(
+        "/likes",
+        { targetType, targetId }
       );
       setLiked(res.data.likedByMe);
       setCount(res.data.likeCount);
@@ -95,6 +82,21 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
     }
   };
 
+  // 외부에서 트리거되는 좋아요 토글 이벤트 처리
+  useEffect(() => {
+    const onToggle = (e: any) => {
+      try {
+        const detail = e?.detail || {};
+        const typeMatches = !detail?.targetType || detail.targetType === targetType;
+        const idMatches = !detail?.targetId || detail.targetId === targetId;
+        if (typeMatches && idMatches) {
+          handleLike();
+        }
+      } catch {}
+    };
+    window.addEventListener("like:toggle", onToggle as any);
+    return () => window.removeEventListener("like:toggle", onToggle as any);
+  }, [targetType, targetId, isLoggedIn, loading]);
 
   return (
     <>
@@ -138,32 +140,35 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
       <div className="relative">
         <button
           aria-label="좋아요"
-          className="flex flex-col items-center group focus:outline-none"
+          className="flex flex-col items-center gap-1 group focus:outline-none"
           onClick={handleLike}
           disabled={loading}
         >
           <div
-            className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 transition-all duration-150
+            className={`w-14 h-14 rounded-full shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1 transition-all duration-150
               ${liked ? "bg-[#FF6688]" : "bg-white"}`}
             style={{ position: "relative" }}
           >
             <FaHeart
-              className={`w-6 h-6 transition-colors duration-150
+              className={`w-7 h-7 transition-colors duration-150
                   ${liked ? "text-white" : "text-gray-800"}`}
             />
+            {count > 0 && (
+              <span
+                className={`absolute -top-[10px] -right-[10px] z-10 min-w-[28px] h-[28px] px-1 rounded-full ${liked ? "bg-[#BE185D]" : "bg-[#FF6688]"} text-white text-[13px] leading-[28px] text-center font-bold shadow cursor-pointer`}
+                title="좋아요한 사람 보기"
+                onClick={(e) => { e.stopPropagation(); setShowLikedUsers(true); }}
+              >
+                {count}
+              </span>
+            )}
           </div>
-          		  <span
-						className="text-xs text-white font-semibold text-center"
-						onClick={(e) => {
-							if (count > 0) {
-								e.stopPropagation();
-								setShowLikedUsers(true);
-							}
-						}}
-						style={{ cursor: count > 0 ? "pointer" : "default" }}
-					  >
-						{count > 0 ? count : "좋아요"}
-					  </span>
+          <span
+            className="text-sm text-white font-semibold text-center"
+            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
+          >
+            좋아요
+          </span>
         </button>
       </div>
     </>

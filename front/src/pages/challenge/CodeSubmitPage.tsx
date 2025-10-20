@@ -3,18 +3,21 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
-import { SectionCard, CTAButton } from "../../components/challenge/common";
+import { SectionCard, CTAButton, Row, Label, Help, GreenBox } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import { ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { addCodeSubmission } from "../../data/Challenge/submissionsDummy";
+import { createChallengeSubmission } from "../../api/submissionApi";
 import Toast from "../../components/common/Toast";
+// import { useUserInfo } from "../../hooks/useUserInfo"; // 백엔드에서 자동으로 사용자 정보 처리
 
 type CodeSubmitPayload = {
     title: string;
     repoUrl: string;
     language: string;
     entrypoint: string;
+    commitSha?: string; // 커밋 SHA 추가
     note?: string;
 };
 
@@ -27,40 +30,103 @@ type AiStatus = {
     aiComment?: string;
 };
 
-const Row = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex flex-col gap-1">{children}</div>
-);
-const Label = ({ children }: { children: React.ReactNode }) => (
-    <label className="text-[13px] font-semibold text-neutral-800">{children}</label>
-);
-const Help = ({ children }: { children: React.ReactNode }) => (
-    <p className="text-[12px] text-neutral-500">{children}</p>
-);
-const GreenBox = ({ children }: { children: React.ReactNode }) => (
-    <div className="rounded-xl border-2 border-emerald-300/70 bg-white p-3">{children}</div>
-);
-
 export default function CodeSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 1);
-    const data = useMemo(() => getChallengeDetail(id) as CodeChallengeDetail, [id]);
+    
+    // 백엔드 챌린지 데이터 상태
+    const [data, setData] = useState<CodeChallengeDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    
+    // AI 주간 챌린지 데이터 상태 (보조용)
+    const [weeklyData, setWeeklyData] = useState<any>(null);
+    const [loadingWeekly, setLoadingWeekly] = useState(false);
+    const [weeklyError, setWeeklyError] = useState<string | null>(null);
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
+    // const userInfo = useUserInfo(); // 백엔드에서 자동으로 사용자 정보 처리
 
     useEffect(() => {
         if (!isLoggedIn) setLoginOpen(true);
     }, [isLoggedIn]);
 
+    // 백엔드 챌린지 데이터 로드
+    useEffect(() => {
+        const loadChallengeData = async () => {
+            setLoading(true);
+            try {
+                const { fetchChallengeDetail } = await import('../../api/challengeApi');
+                const backendChallenge = await fetchChallengeDetail(id);
+                
+                if (backendChallenge.type === "CODE") {
+                    // 백엔드 데이터 우선 사용
+                    let ruleData: any = null;
+                    let backendDescription: string | null = null;
+                    
+                    if (backendChallenge.ruleJson) {
+                        try {
+                            ruleData = typeof backendChallenge.ruleJson === 'string' 
+                                ? JSON.parse(backendChallenge.ruleJson) 
+                                : backendChallenge.ruleJson;
+                            backendDescription = ruleData.summary || ruleData.md;
+                        } catch (e) {
+                            // ruleJson 파싱 실패는 무시
+                        }
+                    }
+                    
+                    // 더미 데이터 기반으로 백엔드 데이터 적용
+                    const baseData = getChallengeDetail(id) as CodeChallengeDetail;
+                    const backendBasedData = {
+                        ...baseData,
+                        id: backendChallenge.id,
+                        title: `코드 챌린지: ${backendChallenge.title}`,
+                        subtitle: backendChallenge.title,
+                        description: backendDescription || baseData.description,
+                        startAt: backendChallenge.startAt,
+                        endAt: backendChallenge.endAt,
+                        status: backendChallenge.status,
+                    };
+                    
+                    setData(backendBasedData);
+                    setChallengeStatus(backendChallenge.status);
+                } else {
+                    setData(null);
+                }
+            } catch (err) {
+                // 에러 시 더미 데이터 사용
+                const fallbackData = getChallengeDetail(id) as CodeChallengeDetail;
+                setData(fallbackData);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadChallengeData();
+    }, [id]);
+
     const [tab, setTab] = useState<"edit" | "preview">("edit");
     const [form, setForm] = useState<CodeSubmitPayload>({
         title: "",
         repoUrl: "",
-        language: (data.submitExample?.language as any) || "node",
-        entrypoint: data.submitExample?.entrypoint || "npm start",
+        language: "node",
+        entrypoint: "npm start",
+        commitSha: "",
         note: "",
     });
+
+    // data가 로드된 후 form 초기값 설정
+    useEffect(() => {
+        if (data) {
+            setForm(prev => ({
+                ...prev,
+                language: (data.submitExample?.language as any) || "node",
+                entrypoint: data.submitExample?.entrypoint || "npm start",
+            }));
+        }
+    }, [data]);
     const [submitting, setSubmitting] = useState(false);
     const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
         visible: false,
@@ -71,31 +137,86 @@ export default function CodeSubmitPage() {
     const submissionId: number | null = null;
     const [aiStatus] = useState<AiStatus>({});
 
-    const canSubmit = !!form.title.trim();
+    const canSubmit = !!form.title.trim() && challengeStatus !== "ENDED";
+    const isChallengeEnded = challengeStatus === "ENDED";
+
+    // GitHub API에서 최신 커밋 SHA 가져오기
+    const fetchLatestCommitSha = async (repoUrl: string): Promise<string> => {
+        try {
+            // GitHub URL에서 owner/repo 추출
+            const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+            if (!match) return "a1b2c3d"; // 기본값
+            
+            const [, owner, repo] = match;
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`;
+            
+            const response = await fetch(apiUrl);
+            if (!response.ok) return "a1b2c3d"; // 기본값
+            
+            const commits = await response.json();
+            if (commits.length > 0 && commits[0].sha) {
+                return commits[0].sha.substring(0, 7); // 7자리로 자르기
+            }
+        } catch (error) {
+            console.warn('GitHub API 호출 실패:', error);
+        }
+        return "a1b2c3d"; // 기본값
+    };
 
     const handleSubmit = async () => {
         if (!canSubmit || submitting) return;
         setSubmitting(true);
         try {
-            addCodeSubmission(id, {
+            // GitHub에서 최신 커밋 SHA 가져오기
+            const commitSha = await fetchLatestCommitSha(form.repoUrl || "");
+            
+            const submissionData: any = {
                 title: form.title.trim(),
-                desc:
-                    form.note?.trim() ||
-                    `repo: ${form.repoUrl || "-"} / ${form.language} ${form.entrypoint}`,
-                snippet: undefined,
-                authorInitial: "L",
-                authorName: "허은진",
-                authorRole: "프론트엔드 개발자",
-            });
+                desc: form.note?.trim() || `repo: ${form.repoUrl || "-"} / ${form.language} ${form.entrypoint}`,
+                repoUrl: form.repoUrl || "",
+                participationType: "SOLO" as const,
+                // 코드 챌린지 필수 필드
+                code: {
+                    language: form.language || "node",
+                    entrypoint: (form.entrypoint || "npm_start")
+                        .replace(/\s+/g, "_") // 공백을 언더스코어로 변경
+                        .replace(/[^a-zA-Z0-9_\-.]/g, "_") // 특수문자를 언더스코어로 변경
+                        .replace(/_+/g, "_") // 연속된 언더스코어를 하나로
+                        .replace(/^_|_$/g, ""), // 앞뒤 언더스코어 제거
+                    commitSha: commitSha // GitHub API에서 가져온 실제 커밋 SHA
+                }
+            };
+            
+            await createChallengeSubmission(id, submissionData);
             setSuccessToast({
                 visible: true,
                 message: "제출이 접수되었습니다."
             });
             nav(`/challenge/code/${id}/submissions`, { replace: true });
+        } catch (error) {
+            console.error('제출 실패:', error);
+            setSuccessToast({
+                visible: true,
+                message: "제출 중 오류가 발생했습니다. 다시 시도해주세요."
+            });
         } finally {
             setSubmitting(false);
         }
     };
+
+    // 로딩 중일 때 로딩 화면 표시
+    if (loading || !data) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                        <span className="text-lg font-medium">챌린지 정보를 불러오는 중...</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -121,15 +242,24 @@ export default function CodeSubmitPage() {
                     <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">
-                    {data.title} — 코드 제출
+                    {weeklyData?.title || data.title} — 코드 제출
                 </h1>
             </div>
 
             {/* 문제 설명 */}
             <SectionCard className="!px-5 !py-5 mb-4">
-                <div className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">
-                    {data.description}
-                </div>
+                {loadingWeekly ? (
+                    <div className="flex items-center gap-2 text-neutral-600">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-[13.5px]">AI 챌린지 정보를 불러오는 중...</span>
+                    </div>
+                ) : weeklyError ? (
+                    <div className="text-red-600 text-[13.5px]">{weeklyError}</div>
+                ) : (
+                    <div className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">
+                        {weeklyData?.summary || data.description}
+                    </div>
+                )}
             </SectionCard>
 
             {/* 탭 */}
@@ -214,12 +344,31 @@ export default function CodeSubmitPage() {
                                 <Help>예: 추가 환경변수 / 빌드 스텝 / 샘플 입력 설명 등</Help>
                             </Row>
 
+                            {/* 종료된 챌린지 안내 */}
+                            {isChallengeEnded && (
+                                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div className="flex items-center gap-2 text-gray-700">
+                                        <span className="text-lg">🔒</span>
+                                        <div>
+                                            <div className="font-semibold">종료된 챌린지</div>
+                                            <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-end">
-                                <CTAButton as="button" onClick={handleSubmit} disabled={!canSubmit || submitting}>
+                                <CTAButton 
+                                    as="button" 
+                                    onClick={handleSubmit} 
+                                    disabled={!canSubmit || submitting}
+                                >
                                     {submitting ? (
                                         <>
                                             <Loader2 className="mr-1 h-4 w-4 animate-spin" /> 제출 중…
                                         </>
+                                    ) : isChallengeEnded ? (
+                                        "제출 불가"
                                     ) : (
                                         "제출하기"
                                     )}

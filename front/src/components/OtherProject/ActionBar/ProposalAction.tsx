@@ -2,20 +2,36 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { sendProjectProposal } from "../../../api/message.presets";
 import Toast from "../../common/Toast";
+import api from "../../../api/axiosInstance";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onBackToMenu?: () => void;
   targetUserId?: number;
+  initialProfile?: { id: number; nickname?: string | null; username?: string | null; email?: string | null; profileImage?: string | null } | null;
 };
 
 /** 프로젝트 의뢰 및 프리랜서 제안: 제어형 모달 컴포넌트 */
-export default function ProposalAction({ open, onClose, onBackToMenu, targetUserId }: Props) {
-  const safeGet = (k: string) => { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ""; } catch { return ""; } };
-  const storedEmail = safeGet("userEmail");
-  const displayName = (safeGet("userNickname").trim()) || (safeGet("userUsername").trim()) || "사용자";
-  const avatarInitial = ((storedEmail || displayName || "?").trim()[0] || "U").toUpperCase();
+export default function ProposalAction({ open, onClose, onBackToMenu, targetUserId, initialProfile }: Props) {
+  type PublicProfile = { id: number; nickname?: string | null; username?: string | null; email?: string | null; profileImage?: string | null };
+  const [profile, setProfile] = React.useState<PublicProfile | null>(initialProfile ?? null);
+  React.useEffect(() => {
+    let alive = true;
+    if (!open || !targetUserId) { setProfile(initialProfile ?? null); return; }
+    // 먼저 초기 프로필을 즉시 반영하여 깜빡임 제거
+    setProfile((prev) => prev || (initialProfile ?? null));
+    (async () => {
+      try {
+        const { data } = await api.get<PublicProfile>(`/users/${targetUserId}`);
+        if (alive) setProfile(data);
+      } catch { if (alive) setProfile(null); }
+    })();
+    return () => { alive = false; };
+  }, [open, targetUserId, initialProfile]);
+
+  const targetInitial = ((profile?.email || profile?.nickname || profile?.username || "?") as string).trim().charAt(0).toUpperCase() || "U";
+  const targetName = (profile?.nickname || profile?.username || "사용자") as string;
 
   // 토스트 상태
   const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
@@ -73,7 +89,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
     const prevBodyWidth = body.style.width;
     const lockY = window.scrollY;
 
-    html.style.overflowY = "scroll"; // 스크롤바 표시 유지
+    html.style.overflowY = "hidden"; // 페이지 스크롤 완전 잠금
     body.style.overflow = "hidden";  // 배경 스크롤 동작 차단
     // 물리적 스크롤까지 완전히 차단 (모바일 포함)
     body.style.position = "fixed";
@@ -222,7 +238,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={fixedModalSize ? { width: fixedModalSize.w, height: fixedModalSize.h } : undefined}
           >
             {/* 헤더: 뒤로가기/중앙 사용자/닫기(X) + 구분선 */}
@@ -235,10 +251,14 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
               >
                 ‹
               </button>
-              {/* 중앙 사용자 표시 */}
-              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800">
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[12px]">{avatarInitial}</div>
-                <div className="text-[14px] font-medium">{displayName}</div>
+              {/* 중앙 사용자 표시: 대상 사용자 */}
+              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[12px]">{targetInitial}</div>
+                )}
+                <div className="text-[14px] font-medium">{targetName}</div>
               </div>
               {/* 닫기(X): SuggestAction과 동일 크기/위치 */}
               <button
@@ -367,7 +387,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 하단 고정 버튼 바 */}
-            <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3">
+            <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
               <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 text-gray-700">취소</button>
               <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>

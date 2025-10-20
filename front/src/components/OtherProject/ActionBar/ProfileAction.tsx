@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaUser } from "react-icons/fa";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 import { useNavigate, useParams } from "react-router-dom";
 import LoginPrompt from "../LoginPrompt";
 import Toast from "../../common/Toast";
@@ -34,6 +34,8 @@ export default function ProfileAction({
 
   const btnRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cardTopPx, setCardTopPx] = useState<number | null>(null);
 
   const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
   const navigate = useNavigate();
@@ -58,7 +60,7 @@ export default function ProfileAction({
       try {
         const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
         if (!token || !targetUserId || targetUserId <= 0) { setIsFollowing(false); return; }
-        const res = await axios.get(`/api/users/${targetUserId}/follow-status`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        const res = await api.get(`/users/${targetUserId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     };
@@ -107,7 +109,7 @@ export default function ProfileAction({
     try {
       const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) return requireLogin();
-      await axios.post(`/api/users/${targetUserId}/follow`, null, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/users/${targetUserId}/follow`, null);
       setIsFollowing(true);
       setToast("follow");
       setFollowBtnHover(false);
@@ -125,7 +127,7 @@ export default function ProfileAction({
     try {
       const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
       if (!token) return requireLogin();
-      await axios.delete(`/api/users/${targetUserId}/unfollow`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+      await api.delete(`/users/${targetUserId}/unfollow`);
       setIsFollowing(false);
       setToast("unfollow");
       setFollowBtnHover(false);
@@ -142,46 +144,76 @@ export default function ProfileAction({
   );
 
   const avatar = profileImageUrl ? (
-    <button type="button" onClick={goProfile} className="w-[100px] h-[100px] rounded-full mb-4 border-2 border-gray-100 shadow focus:outline-none focus:ring-2 focus:ring-black/20" aria-label="프로필로 이동" style={{ backgroundImage: `url(${profileImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-[var(--border-color)] focus:outline-none" aria-label="프로필로 이동">
+      <img src={profileImageUrl} alt="avatar" className="w-full h-full object-cover" />
+    </button>
   ) : (
-    <button type="button" onClick={goProfile} className="w-[100px] h-[100px] rounded-full mb-4 border-2 border-gray-100 shadow bg-gray-200 text-gray-700 font-bold flex items-center justify-center text-4xl focus:outline-none focus:ring-2 focus:ring-black/20" aria-label="프로필로 이동">
+    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-gray-700 dark:text-white font-bold flex items-center justify-center text-2xl ring-1 ring-gray-300 dark:ring-[var(--border-color)] focus:outline-none" aria-label="프로필로 이동">
       {(email?.[0] || userName?.[0] || "?").toUpperCase()}
     </button>
   );
+
+  // 카드 고정 위치 계산: 아이콘 중앙에서 일정 오프셋(기존 50px) 유지
+  useEffect(() => {
+    const updateTop = () => {
+      try {
+        const container = containerRef.current;
+        const button = btnRef.current;
+        if (!container || !button) return;
+        const btnRect = button.getBoundingClientRect();
+        const contRect = container.getBoundingClientRect();
+        const relativeCenter = btnRect.top + btnRect.height / 2 - contRect.top;
+        const ARROW_OFFSET_PX = 60; // 살짝 아래로 조정
+        setCardTopPx(relativeCenter - ARROW_OFFSET_PX);
+      } catch {}
+    };
+    updateTop();
+    window.addEventListener("resize", updateTop);
+    window.addEventListener("scroll", updateTop, { passive: true } as any);
+    return () => {
+      window.removeEventListener("resize", updateTop);
+      window.removeEventListener("scroll", updateTop as any);
+    };
+  }, [hover, tooltipHover, isOwner]);
 
   return (
     <>
       <Toast visible={!!toast} message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."} type={toast === "follow" ? "success" : "info"} size="medium" autoClose={3000} closable={true} onClose={() => setToast(null)} icon={CheckIcon} />
       <Toast visible={errorToast.visible} message={errorToast.message} type="error" size="medium" autoClose={3000} closable={true} onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))} />
-      <div className="relative">
+      <div ref={containerRef} className="relative">
         {showLoginPrompt && (<LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />)}
 
         <button ref={btnRef} className="flex flex-col items-center gap-1 group" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={goProfile}>
-        		<div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-			<FaUser className="w-6 h-6" />
-		</div>
-		<span className="text-xs text-white font-semibold text-center">프로필</span>
+          <div className="w-14 h-14 rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1">
+            <FaUser className="w-7 h-7" />
+          </div>
+          <span className="text-sm text-white font-semibold text-center" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>프로필</span>
       </button>
 
       {(hover || tooltipHover) && (
         <>
-            <div className="absolute right-[calc(100%-10px)] top-1/2 -translate-y-1/2 z-50" style={{ width: 32, height: 32 }} onMouseEnter={() => setTooltipHover(true)} onMouseLeave={() => setTooltipHover(false)}>
-              <svg width="32" height="32" viewBox="0 0 32 32"><polygon points="32,16 0,0 0,32" fill="white" stroke="#e5e7eb" strokeWidth="1"/></svg>
-          </div>
-            <div ref={tooltipRef} className="absolute right-[calc(100%+18px)] top-[-70%] rounded-2xl bg-white shadow-xl border border-gray-300 flex flex-col gap-4 items-center z-50 pt-8 pb-6 w-[360px] h-[380px]" onMouseEnter={() => setTooltipHover(true)} onMouseLeave={() => { setTooltipHover(false); setFollowBtnHover(false); }} onMouseDown={e => e.stopPropagation()}>
-              {avatar}
-            <div className="text-2xl font-bold mb-1">{userName}</div>
+          <div
+            ref={tooltipRef}
+            className="absolute right-[calc(100%+14px)] rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-center z-50 px-7 py-6 gap-4 w-max min-w-[350px]"
+            style={{ top: (cardTopPx ?? 0) + "px" }}
+            onMouseEnter={() => setTooltipHover(true)}
+            onMouseLeave={() => { setTooltipHover(false); setFollowBtnHover(false); }}
+            onMouseDown={e => e.stopPropagation()}
+          >
+            <div className="absolute -right-2 top-5 w-4 h-4 bg-white rotate-45 rounded-[2px]" />
+            {avatar}
+            <div className="text-[20px] font-bold">{userName}</div>
+            <div className={isOwner ? "h-0 w-full overflow-hidden" : "h-auto w-full"}>
               {!isOwner && (
-                <>
-            {!isFollowing ? (
-                    <button className="bg-white border-2 border-black text-black rounded-full font-bold text-lg shadow hover:bg-gray-100 transition w-[320px] h-[68px] flex items-center justify-center" onClick={handleFollow}>팔로우</button>
-            ) : (
-                    <button className={`rounded-full font-bold text-lg transition shadow w-[320px] h-[68px] flex items-center justify-center ${followBtnHover ? "bg-[#F6323E] text-white border-2 border-[#F6323E]" : "bg-white border-2 border-black text-black"}`} onClick={handleUnfollow} onMouseEnter={() => setFollowBtnHover(true)} onMouseLeave={() => setFollowBtnHover(false)}>
-                {followBtnHover ? "팔로우 취소" : "팔로잉"}
-              </button>
-                  )}
-                </>
-            )}
+                !isFollowing ? (
+                  <button className="w-full h-10 rounded-full bg-white border border-gray-300 text-gray-800 font-semibold hover:bg-gray-50" onClick={handleFollow}>+ 팔로우</button>
+                ) : (
+                  <button className={`w-full h-10 rounded-full font-semibold border ${followBtnHover ? "bg-[#F6323E] text-white border-[#F6323E]" : "bg-white border-gray-300 text-gray-800 hover:bg-gray-50"}`} onClick={handleUnfollow} onMouseEnter={() => setFollowBtnHover(true)} onMouseLeave={() => setFollowBtnHover(false)}>
+                    {followBtnHover ? "팔로우 취소" : "팔로잉"}
+                  </button>
+                )
+              )}
+            </div>
           </div>
         </>
       )}

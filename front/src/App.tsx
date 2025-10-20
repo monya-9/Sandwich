@@ -46,7 +46,19 @@ import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
+import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
+import CollectionDetailPage from "./pages/CollectionDetailPage";
+import PublicCollectionDetailPage from "./pages/PublicCollectionDetailPage";
+import RequireAdmin from "./components/Auth/RequireAdmin";
+import ChallengeFormPage from "./pages/admin/ChallengeFormPage";
+import ChallengeEditSinglePage from "./pages/admin/ChallengeEditSinglePage";
+import ChallengeEditCodePage from "./pages/admin/ChallengeEditCodePage";
+import ChallengeEditPortfolioPage from "./pages/admin/ChallengeEditPortfolioPage";
+import ChallengeManagePage from "./pages/admin/ChallengeManagePage";
+import SecurityOtpHistoryPage from "./pages/admin/SecurityOtpHistoryPage";
+import SecurityDeviceManagePage from "./pages/admin/SecurityDeviceManagePage";
+import DeviceManagePage from "./pages/mypage/DeviceManagePage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -84,7 +96,7 @@ function App() {
                                 <Route index element={<MainPage />} />
                                 {/* Notefolio 스타일 상세 경로 */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
-                            
+                                
 
                                 {/* 신규/편집 업로드 경로 */}
                                 <Route path="/project/edit" element={<ProjectMangeSampleForm />} />
@@ -95,6 +107,7 @@ function App() {
                                 <Route path="other-project/:ownerId/:projectId" element={<OtherProjectPage />} />
                                 <Route path="l/:ownerId/:projectId" element={<ProjectDetailLightboxPage />} />
                                 <Route path="search" element={<ProjectFeedPage />} />
+                                <Route path="search/accounts" element={<AccountSearchPage />} />
                                 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
@@ -106,12 +119,16 @@ function App() {
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
+                                <Route path="/mypage/devices" element={<DeviceManagePage />} />
 
                                 {/* 프로필 페이지 */}
                                 <Route path="/profile" element={<ProfilePage />} />
                                 <Route path="/profile/work" element={<ProfilePage />} />
                                 <Route path="/profile/likes" element={<ProfilePage />} />
                                 <Route path="/profile/collections" element={<ProfilePage />} />
+                                <Route path="/collections/:id" element={<CollectionDetailPage />} />
+                                {/* 타인 프로필용 공개 컬렉션 상세 */}
+                                <Route path="/users/:userId/collections/:id" element={<PublicCollectionDetailPage />} />
                                 <Route path="/profile/drafts" element={<ProfilePage />} />
                                 <Route path="/profile/careers" element={<CareerDetailsPage />} />
                                 {/* ✅ 챌린지 라우팅 */}
@@ -134,6 +151,21 @@ function App() {
 
                                 {/* 공개 사용자 프로필 */}
                                 <Route path="/users/:id" element={<UserPublicProfilePage />} />
+
+                                {/* ✅ 어드민 보호 라우트: ROLE_ADMIN 아닐 시 전체 차단 및 리다이렉트 */}
+                                <Route path="/admin/*" element={<RequireAdmin />}> 
+                                    <Route path="challenges" element={<ChallengeManagePage />} />
+                                    <Route path="challenges/new" element={<ChallengeFormPage />} />
+                                    {/* 단일 수정 라우트: /admin/challenges/:id */}
+                                    <Route path="challenges/:id" element={<ChallengeEditSinglePage />} />
+                                    {/* 유형별 수정 경로(각 타입 전용 페이지가 필요하면 아래 두 줄을 별도 페이지로 분리 가능) */}
+                                    <Route path="challenge/code/:id/edit" element={<ChallengeEditCodePage />} />
+                                    <Route path="challenge/portfolio/:id/edit" element={<ChallengeEditPortfolioPage />} />
+                                    {/* 보안 ▸ OTP 이력 */}
+                                    <Route path="security/otp" element={<SecurityOtpHistoryPage />} />
+                                    {/* 보안 ▸ 사용자 관리(관리자 전용: 특정 사용자 전체 무효화) */}
+                                    <Route path="security/devices" element={<SecurityDeviceManagePage />} />
+                                </Route>
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />

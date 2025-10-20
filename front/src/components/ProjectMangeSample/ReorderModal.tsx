@@ -73,10 +73,10 @@ export default function ReorderModal({ open, blocks, onConfirm, onClose }: Props
 	return (
 		<div className="fixed inset-0 z-[9999] flex items-center justify-center">
 			<div className="absolute inset-0 bg-black/40" onClick={onClose} />
-			<div className="relative bg-white w-[650px] max-w-[95%] rounded-xl shadow-xl max-h-[90vh] overflow-auto">
-				<div className="px-6 py-4 border-b text-[18px] font-semibold">콘텐츠 재정렬</div>
+			<div className="relative bg-white dark:bg-[var(--surface)] w-[650px] max-w-[95%] rounded-xl shadow-xl max-h-[90vh] overflow-auto border border-black/10 dark:border-[var(--border-color)]">
+				<div className="px-6 py-4 border-b border-black/10 dark:border-[var(--border-color)] text-[18px] font-semibold text-black dark:text-white">콘텐츠 재정렬</div>
 				<div className="p-6">
-					<p className="text-sm text-gray-600 mb-3">마우스 드래그로 콘텐츠 순서를 변경하거나 삭제할 수 있습니다.</p>
+					<p className="text-sm text-gray-600 dark:text-white/70 mb-3">마우스 드래그로 콘텐츠 순서를 변경하거나 삭제할 수 있습니다.</p>
 					<div className={needsScroll ? "flex flex-col gap-2 mb-5 max-h-[50vh] overflow-auto pr-1" : "flex flex-col gap-2 mb-5"}>
 						{order.map(id => {
 							const item = blocks.find(i => i && i.id === id);
@@ -86,7 +86,7 @@ export default function ReorderModal({ open, blocks, onConfirm, onClose }: Props
 							const vidThumb = item.type === 'video' ? deriveVideoThumb(extractFirstIframeSrc(item.html)) : null;
 							return (
 								<div key={id}
-									className="flex items-center gap-3 border rounded-lg px-3 py-3 bg-white select-none"
+									className="flex items-center gap-3 border border-black/10 dark:border-[var(--border-color)] rounded-lg px-3 py-3 bg-white dark:bg-[var(--surface)] select-none"
 									draggable
 									onDragStart={(e) => onDragStart(e, id)}
 									onDragOver={onDragOver}
@@ -94,7 +94,7 @@ export default function ReorderModal({ open, blocks, onConfirm, onClose }: Props
 									<span className="cursor-move text-lg">≡</span>
 									{item.type === 'text' && (
 										<div className="relative w-[72px] h-[56px]">
-											<div className="w-full h-full rounded object-cover bg-gray-100 border border-gray-200 flex items-center justify-center">
+											<div className="w-full h-full rounded object-cover bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-[var(--border-color)] flex items-center justify-center">
 												<RiText className="w-5 h-5 text-gray-600" />
 											</div>
 										</div>
@@ -103,7 +103,7 @@ export default function ReorderModal({ open, blocks, onConfirm, onClose }: Props
 										imgSrc ? (
 											<img src={imgSrc} alt="이미지 미리보기" className="w-[72px] h-[56px] rounded object-cover bg-gray-100" />
 										) : (
-											<span className="w-[72px] h-[56px] flex items-center justify-center rounded-md bg-gray-100 text-gray-500"><FaImage className="text-[18px]" /></span>
+											<span className="w-[72px] h-[56px] flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 text-gray-500"><FaImage className="text-[18px]" /></span>
 										)
 									)}
 									{item.type === 'video' && (
@@ -113,24 +113,24 @@ export default function ReorderModal({ open, blocks, onConfirm, onClose }: Props
 												<span className="absolute inset-0 flex items-center justify-center text-white/95"><IoMdVideocam className="w-5 h-5 drop-shadow" /></span>
 											</div>
 										) : (
-											<span className="w-[72px] h-[56px] flex items-center justify-center rounded-md bg-gray-100 text-gray-500"><IoMdVideocam className="text-[18px]" /></span>
+											<span className="w-[72px] h-[56px] flex items-center justify-center rounded-md bg-gray-100 dark:bg-white/10 text-gray-500"><IoMdVideocam className="text-[18px]" /></span>
 										)
 									)}
 									<span className="text-[15px] flex-1 flex items-center gap-2 min-w-0">
-										<span className="text-gray-700 whitespace-nowrap text-[14px] font-medium">
+										<span className="text-gray-700 dark:text-white whitespace-nowrap text-[14px] font-medium">
 											{item.type === 'text' ? '텍스트' : item.type === 'image' ? '이미지' : '동영상'}
 										</span>
-										<span className="text-gray-500 truncate">
+										<span className="text-gray-500 dark:text-white/70 truncate">
 											{item.type === 'text' ? (item.text ? (item.text.slice(0, 30) + ((item.text.length > 30) ? '…' : '')) : '') : ''}
 										</span>
 									</span>
-									<button className="h-8 px-3 rounded-md border border-gray-300 hover:bg-gray-50" onClick={() => removeFromOrder(id)} type="button">삭제</button>
+									<button className="h-8 px-3 rounded-md border border-gray-300 dark:border-[var(--border-color)] hover:bg-gray-50 dark:hover:bg-white/5 text-black dark:text-white" onClick={() => removeFromOrder(id)} type="button">삭제</button>
 								</div>
 							);
 						})}
 					</div>
-					<div className="flex justify-end gap-2 border-t pt-4">
-						<button className="h-10 px-5 rounded-md border border-gray-300 hover:bg-gray-50" onClick={onClose}>취소</button>
+					<div className="flex justify-end gap-2 border-t border-black/10 dark:border-[var(--border-color)] pt-4">
+						<button className="h-10 px-5 rounded-md border border-gray-300 dark:border-[var(--border-color)] hover:bg-gray-50 dark:hover:bg-white/5 text-black dark:text-white" onClick={onClose}>취소</button>
 						<button className="h-10 px-5 rounded-md bg-black text-white" onClick={() => onConfirm(order)}>완료</button>
 					</div>
 				</div>

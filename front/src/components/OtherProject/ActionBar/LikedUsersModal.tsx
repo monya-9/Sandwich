@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import axios from "axios";
+import api from "../../../api/axiosInstance";
 
 interface LikedUser {
   userId: number;
@@ -11,7 +11,7 @@ interface LikedUser {
 interface LikedUsersModalProps {
   isOpen: boolean;
   onClose: () => void;
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
+  targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
   targetId: number;
 }
 
@@ -27,7 +27,7 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
     
     setLoading(true);
     try {
-      const response = await axios.get(`/api/likes/users`, {
+      const response = await api.get(`/likes/users`, {
         params: {
           targetType,
           targetId,
@@ -72,7 +72,7 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[11000]">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b">

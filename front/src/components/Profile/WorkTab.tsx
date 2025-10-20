@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 // import { dummyProjects } from "../../data/dummyProjects";
 import type { Project } from "../../types/Project";
@@ -8,12 +8,15 @@ import api from "../../api/axiosInstance";
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
 import ConfirmModal from "../common/ConfirmModal";
 import Toast from "../common/Toast";
+import { AuthContext } from "../../context/AuthContext";
 
 const STORAGE_KEY = "profile_work_order";
 const CACHE_KEY = "my_projects_cache_v1";
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
 
 const WorkTab: React.FC = () => {
+	// ✅ AuthContext에서 사용자 정보 가져오기
+	const { email } = useContext(AuthContext);
+	
 	// 실제: 내 프로젝트 목록
 	const [projects, setProjects] = useState<Project[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -23,19 +26,10 @@ const WorkTab: React.FC = () => {
 	useEffect(() => {
 		let mounted = true;
 
-		// 1) 캐시 즉시 표시 (있으면)
-		try {
-			const raw = localStorage.getItem(CACHE_KEY);
-			if (raw) {
-				const cached = JSON.parse(raw) as { updatedAt: number; items: Project[] };
-				if (cached?.items?.length) {
-					setProjects(cached.items);
-					setLoading(false);
-				}
-			}
-		} catch {}
+		// ✅ 캐시 사용하지 않음 (로그인 시 캐시가 삭제되므로)
+		// 바로 API 호출하여 현재 사용자의 프로젝트만 가져오기
 
-		// 2) 백그라운드 새로고침 (백엔드 사용자별 목록)
+		// 백그라운드 새로고침 (백엔드 사용자별 목록)
 		(async () => {
 			try {
 				let myId = 0;
@@ -43,7 +37,7 @@ const WorkTab: React.FC = () => {
 				if (!myId) {
 					try { const me = (await api.get<{ id: number }>("/users/me")).data; myId = me?.id || 0; } catch { myId = 0; }
 				}
-				if (!myId) { if (mounted && projects.length === 0) setLoading(false); return; }
+				if (!myId) { if (mounted) setLoading(false); return; }
 
 				let page = 0;
 				const size = 100;
@@ -82,12 +76,12 @@ const WorkTab: React.FC = () => {
 					setLoading(false);
 				}
 			} catch {
-				if (mounted && projects.length === 0) setLoading(false);
+				if (mounted) setLoading(false);
 			}
 		})();
 
 		return () => { mounted = false; };
-	}, []);
+	}, [email]); // ✅ email이 변경될 때마다 다시 로드
 
 	// 삭제 실행 핸들러 (모달 확인 시 호출)
 	const handleConfirmDelete = async () => {
@@ -168,16 +162,16 @@ const WorkTab: React.FC = () => {
 	return (
 		<div className="min-h-[360px]">
 			{/* 헤더 액션 */}
-			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-[15px] font-medium text-black/90">모든 작업 목록</h3>
-				<div className="flex gap-2">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[15px] font-medium text-black/90 dark:text-white">모든 작업 목록</h3>
+                <div className="flex gap-2">
 					{isReorderMode ? (
 						<>
-							<button className="h-[36px] px-4 rounded-[18px] border border-black/15 bg-white" onClick={handleCancelOrder}>취소</button>
-							<button className="h-[36px] px-4 rounded-[18px] bg-[#11B8A5] text-white" onClick={handleApplyOrder}>변경 완료</button>
+                            <button className="h-[36px] px-4 rounded-[18px] border border-black/15 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-black dark:text-white" onClick={handleCancelOrder}>취소</button>
+                            <button className="h-[36px] px-4 rounded-[18px] bg-[#11B8A5] text-white" onClick={handleApplyOrder}>변경 완료</button>
 						</>
 					) : (
-						<button className="h-[36px] px-4 rounded-[18px] border border-black/15 bg-white" onClick={() => setIsReorderMode(true)}>작업 순서 변경</button>
+                        <button className="h-[36px] px-4 rounded-[18px] border border-black/15 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-black dark:text-white" onClick={() => setIsReorderMode(true)}>작업 순서 변경</button>
 					)}
 				</div>
 			</div>
@@ -259,17 +253,17 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 					{(project as any).title || ''}
 				</div>
 				{/* 좌상단 점3 메뉴 버튼 (호버 시 표시) */}
-				<button type="button" className={`absolute ${isReorderMode ? 'top-2 right-2' : 'top-2 left-2'} w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity`} onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}>
+                <button type="button" className={`absolute ${isReorderMode ? 'top-2 right-2' : 'top-2 left-2'} w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow ring-1 ring-white/80 opacity-0 group-hover:opacity-100 transition-opacity`} onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}>
 					···
 				</button>
-				{menuOpen && (
-					<div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white rounded-md shadow-lg border border-black/10 overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
-						<button className="px-4 py-2 text-sm hover:bg-gray-100 w-full text-left" onClick={goEdit}>수정하기</button>
-						<button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
+                {menuOpen && (
+                    <div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
+                        <button className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left text-black dark:text-white" onClick={goEdit}>수정하기</button>
+                        <button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
 					</div>
 				)}
-				{isReorderMode && (
-					<div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[12px] font-medium text-black/80">
+                {isReorderMode && (
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white dark:bg-[var(--surface)] shadow flex items-center justify-center text-[12px] font-medium text-black/80 dark:text-white">
 						{indexInList + 1}
 					</div>
 				)}

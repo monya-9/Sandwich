@@ -86,7 +86,7 @@ export default function ProjectDetailLightboxPage() {
 
   const closeLightbox = () => { try { nav(-1); } catch { nav("/search"); } };
 
-    return (
+  return (
     <div className="min-h-screen w-full" style={{ background: pageBg }}>
       <div className="w-full flex justify-center items-start">
         <div className="flex flex-row items-start w-full" style={{ maxWidth: 1440 }}>
@@ -97,22 +97,22 @@ export default function ProjectDetailLightboxPage() {
                 <div className="ql-editor" dangerouslySetInnerHTML={{ __html: normalizedHtml }} />
               </div>
               <div className="mt-6">
-                <ProjectStatsBox likes={0} views={0} comments={0} projectName={projectDetail?.title || ""} date={new Date().toLocaleDateString()} category={projectDetail?.tools || ""} />
+                <ProjectStatsBox likes={0} views={0} comments={0} projectName={projectDetail?.title || ""} date={new Date().toLocaleDateString()} category={projectDetail?.tools || ""} projectId={projectId} />
               </div>
               {/* 작성자 하단 섹션 */}
-              <div className="mt-12 border-t pt-8">
-                <div className="text-center font-bold text-[18px]">{author?.nickname || "사용자"}</div>
+              <div className="mt-12 border-t dark:border-[var(--border-color)] pt-8">
+                <div className="text-center font-bold text-[18px] text-black dark:text-black">{author?.nickname || "사용자"}</div>
                 <div className="mt-6">
                   {others.length > 0 ? (
                     <div className="grid grid-cols-3 gap-4">
                       {others.slice(0, 3).map((it) => (
-                        <div key={it.id} className="aspect-square bg-gray-100 rounded overflow-hidden cursor-pointer" onClick={() => nav(`/other-project/${ownerId}/${it.id}`)}>
+                        <div key={it.id} className="aspect-square bg-gray-100 dark:bg-white/5 rounded overflow-hidden cursor-pointer border border-black/5 dark:border-[var(--border-color)]" onClick={() => nav(`/other-project/${ownerId}/${it.id}`)}>
                           <img src={it.coverUrl || ""} alt={it.title || "work"} className="w-full h-full object-cover" />
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center text-gray-500">등록된 다른 작업이 없습니다.</div>
+                    <div className="text-center text-gray-500 dark:text-white/60">등록된 다른 작업이 없습니다.</div>
                   )}
                 </div>
               </div>

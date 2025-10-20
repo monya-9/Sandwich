@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useContext } from 'react';
 import AccountCardGrid from './AccountCardGrid';
 import { useAccountSearch } from '../../hooks/useAccountSearch';
 import { ProjectPagination } from '../ProjectFeed/ProjectPagination';
@@ -6,6 +6,7 @@ import { Search, RotateCcw } from 'lucide-react';
 import { SearchTypeDropdown } from '../ProjectFeed/SearchTypeDropdown';
 import { saveRecentSearch } from '../../api/recentSearch';
 import { useSearchParams } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 interface AccountSearchContainerProps {
   initialSearchTerm?: string;
@@ -20,6 +21,9 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
 }) => {
   const [, setSearchParams] = useSearchParams();
   
+  // ✅ 로그인 상태 확인
+  const { isLoggedIn } = useContext(AuthContext);
+  
   const {
     accounts,
     loading,
@@ -27,6 +31,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
     searchTerm,
     currentPage,
     totalPages,
+    totalElements,
     handleSearch: originalHandleSearch,
     handlePageChange
   } = useAccountSearch();
@@ -35,15 +40,15 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
   const handleSearch = useCallback(async (term: string) => {
     originalHandleSearch(term);
     
-    // URL 업데이트
+    // URL 업데이트 (계정 검색 전용 라우트)
     if (term.trim()) {
       setSearchParams({ q: term });
     } else {
       setSearchParams({});
     }
     
-    // 검색어가 있고 빈 문자열이 아닌 경우에만 최근 검색어 저장
-    if (term.trim()) {
+    // ✅ 로그인한 사용자만 최근 검색어 저장
+    if (term.trim() && isLoggedIn) {
       try {
         await saveRecentSearch(term, 'ACCOUNT');
       } catch (error) {
@@ -51,7 +56,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
         // 에러가 발생해도 검색은 계속 진행
       }
     }
-  }, [originalHandleSearch, setSearchParams]);
+  }, [originalHandleSearch, setSearchParams, isLoggedIn]);
 
   // 검색어 입력 상태 관리
   const [inputValue, setInputValue] = useState(searchTerm);
@@ -87,12 +92,12 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
   }, [initialSearchTerm, handleSearch, searchTerm]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[var(--bg)]">
       {/* 검색바와 타입 전환 */}
-      <div className="bg-white border-b border-gray-200 px-4 py-6">
+      <div className="bg-white dark:bg-[var(--surface)] border-b border-gray-200 dark:border-[var(--border-color)] px-4 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">계정 검색</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">계정 검색</h1>
             <SearchTypeDropdown
               value={searchType}
               onChange={onSearchTypeChange}
@@ -107,10 +112,10 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
-                placeholder="계정 검색 (닉네임, 소개, 스킬, 포지션, 관심사) - 엔터키로 검색"
-                className="w-full px-4 py-3 pl-12 pr-12 rounded-lg outline-none border-0 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
+                placeholder="계정을 검색해주세요 - 엔터키로 검색"
+                className="w-full px-4 py-3 pl-12 pr-12 rounded-lg outline-none border-0 ring-1 ring-gray-300 dark:ring-white/20 bg-white dark:bg-black text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/70 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
               />
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 w-5 h-5" />
               {/* X 버튼 */}
               {inputValue && (
                 <button
@@ -118,7 +123,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
                     setInputValue('');
                     handleSearch('');
                   }}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 hover:text-gray-600 dark:hover:text-white transition-colors"
                   type="button"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +144,7 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
             {/* 초기화 버튼 - 검색바 바로 옆 */}
             <button
               onClick={handleClearAll}
-              className="h-[48px] min-w-[120px] px-4 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap flex items-center justify-center gap-2"
+              className="h-[48px] min-w-[120px] px-4 rounded-lg border border-gray-300 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-white/10 transition-colors whitespace-nowrap flex items-center justify-center gap-2"
             >
               <span className="leading-none">초기화</span>
               <RotateCcw className="w-4 h-4 flex-shrink-0" />
@@ -156,6 +161,8 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
           searchTerm={searchTerm}
           loading={loading}
           error={error}
+          currentPage={currentPage}
+          totalElements={totalElements}
         />
 
         {/* 페이지네이션 - 로딩 중이 아닐 때만 표시 */}
@@ -164,7 +171,14 @@ const AccountSearchContainer: React.FC<AccountSearchContainerProps> = ({
             <ProjectPagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={handlePageChange}
+              onPageChange={(page: number) => {
+                handlePageChange(page);
+                // ✅ URL 파라미터 업데이트 (page는 0-based이므로 +1)
+                const params = new URLSearchParams();
+                if (searchTerm) params.set('q', searchTerm);
+                if (page > 0) params.set('page', (page + 1).toString()); // ✅ UI 페이지 번호로 변환
+                window.history.pushState({}, '', `/search?${params.toString()}`);
+              }}
             />
           </div>
         )}

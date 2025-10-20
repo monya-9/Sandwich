@@ -54,16 +54,27 @@ public class WorkflowFileService {
         restTemplate.exchange(url, HttpMethod.PUT, request, String.class);
     }
 
-    public void commitSandwichJson(String token, String owner, String repo, String branch) {
-        String jsonContent = """
+    /**
+     * .sandwich.json 커밋 (빌드 명령 + Env 포함)
+     * envMap: key=Env 이름, value=Env 값 (복호화된 값)
+     */
+    public void commitSandwichJson(String token, String owner, String repo, String branch,
+                                   String frontendBuildCmd, String backendBuildCmd) {
+        StringBuilder envJson = new StringBuilder();
+
+        String jsonContent = String.format("""
             {
-              "buildCommand": "mkdir -p build && echo 'dummy content' > build/index.html",
+              "frontendBuildCommand": "%s",
+              "backendBuildCommand": "%s"
               "outputDirectory": "build"
             }
-        """;
+        """, frontendBuildCmd, backendBuildCmd);
+
         String base64Json = Base64.getEncoder().encodeToString(jsonContent.getBytes(StandardCharsets.UTF_8));
         String sha = getFileSha(token, owner, repo, branch, ".sandwich.json");
         commitFile(token, owner, repo, branch, ".sandwich.json", base64Json, "Add .sandwich.json config file", sha);
     }
+
+
 }
 

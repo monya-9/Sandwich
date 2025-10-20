@@ -22,6 +22,72 @@
 body {
   font-family: 'GmarketSans', sans-serif;
 }
+/* 기본 라이트/다크 배경/글자색 (전역) */
+:root {
+  color-scheme: light dark;
+  /* Notion-like light tokens (라이트는 기존 스타일 유지하므로 의미상 기본값) */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --text-primary: #111111;
+  --text-secondary: #4b5563; /* gray-600 */
+  --border-color: rgba(17, 17, 17, 0.12);
+  --avatar-bg: #e5e7eb; /* gray-200 */
+}
+.dark {
+  /* Vercel-like dark tokens */
+  --bg: #000000;                 /* page background: pure black */
+  --surface: #111111;            /* panels/inputs: near-black */
+  --text-primary: #ffffff;       /* main text */
+  --text-secondary: #A1A1AA;     /* secondary (zinc-400) */
+  --border-color: #2A2A2A;       /* subtle borders */
+  --avatar-bg: #2F2F31;          /* slightly lighter gray for avatars */
+}
+.dark body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+}
+
+/* Global dark-mode remap for common Tailwind utility classes (Vercel-like) */
+/* Text color adjustment */
+.dark .text-black { color: var(--text-primary) !important; }
+/* keep white text as white in dark mode */
+.dark .text-white { color: #ffffff !important; }
+/* ensure strongest titles remain bright */
+.dark .text-gray-800, .dark .text-neutral-800, .dark .text-gray-900, .dark .text-neutral-900 { color: var(--text-primary) !important; }
+
+/* Background mapping */
+.dark .bg-white { background-color: var(--surface) !important; }
+.dark .bg-black { background-color: #000000 !important; }
+.dark .bg-gray-50, .dark .bg-neutral-50, .dark .bg-gray-100, .dark .bg-neutral-100 { background-color: var(--surface) !important; }
+
+/* Border inversion/preservation */
+.dark .border-white { border-color: var(--bg) !important; }
+.dark .border-black { border-color: var(--text-primary) !important; }
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-gray-400,
+.dark .border-neutral-100,
+.dark .border-neutral-200,
+.dark .border-neutral-300,
+.dark .border-neutral-400 { border-color: var(--border-color) !important; }
+
+/* Gray text → Vercel-like secondary tone */
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-700 { color: var(--text-secondary) !important; }
+
+/* Hover helpers (escape Tailwind classes) */
+.dark .hover\:bg-gray-50:hover, .dark .hover\:bg-neutral-50:hover { background-color: #1a1a1a !important; }
+
+/* Form controls */
+.dark input, .dark textarea, .dark select { background-color: var(--surface); color: var(--text-primary); border-color: var(--border-color); }
+.dark ::placeholder { color: var(--text-secondary); }
+.dark hr { border-color: var(--border-color); }
+
+/* Common avatar-style circles (rounded + gray bg) unify to header tone */
+.dark .rounded-full.bg-gray-200, .dark .rounded-full.bg-gray-300, .dark .rounded-full.bg-neutral-200 { background-color: var(--avatar-bg) !important; color: var(--text-primary) !important; }
+.dark .rounded-full.bg-gray-200 *, .dark .rounded-full.bg-gray-300 *, .dark .rounded-full.bg-neutral-200 * { color: var(--text-primary) !important; }
 /* 스크롤은 가능, 바는 숨김 */
 .no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } /* IE/Firefox */

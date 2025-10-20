@@ -10,9 +10,9 @@ interface RightPanelActionsProps {
 }
 
 const Tile: React.FC<{ onClick: () => void; icon: React.ReactNode; label: React.ReactNode }> = ({ onClick, icon, label }) => (
-  <div className="border border-[#ADADAD] rounded-[10px] relative overflow-hidden" style={{ height: 130 }}>
+  <div className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded-[10px] relative overflow-hidden bg-white dark:bg-[var(--surface)]" style={{ height: 130 }}>
     <button
-      className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-[6px] hover:bg-gray-50 transition-colors duration-200"
+      className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-[6px] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 text-black dark:text-white"
       onClick={onClick}
       type="button"
     >
@@ -25,9 +25,9 @@ const Tile: React.FC<{ onClick: () => void; icon: React.ReactNode; label: React.
 const RightPanelActions: React.FC<RightPanelActionsProps> = ({ onImageAdd, onVideoAdd, onReorder }) => {
   return (
     <div className="flex flex-col gap-[10px]">
-      <Tile onClick={onImageAdd} icon={<FaImage className="w-[40px] h-[40px] text-black" />} label={<>이미지 추가</>} />
-      <Tile onClick={onVideoAdd} icon={<IoMdVideocam className="w-[40px] h-[40px] text-black" />} label={<>동영상 추가</>} />
-      <Tile onClick={onReorder} icon={<HiMiniArrowsUpDown className="w-[40px] h-[40px] text-black" />} label={<><span>콘텐츠 재정렬</span></>} />
+      <Tile onClick={onImageAdd} icon={<FaImage className="w-[40px] h-[40px] text-black dark:text-white" />} label={<>이미지 추가</>} />
+      <Tile onClick={onVideoAdd} icon={<IoMdVideocam className="w-[40px] h-[40px] text-black dark:text-white" />} label={<>동영상 추가</>} />
+      <Tile onClick={onReorder} icon={<HiMiniArrowsUpDown className="w-[40px] h-[40px] text-black dark:text-white" />} label={<><span>콘텐츠 재정렬</span></>} />
     </div>
   );
 };

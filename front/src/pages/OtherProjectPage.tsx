@@ -4,7 +4,6 @@ import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
 import ProjectThumbnail from "../components/OtherProject/ProjectThumbnail";
 import TagList from "../components/OtherProject/TagList";
 import ProjectStatsBox from "../components/OtherProject/ProjectStatsBox";
-import UserProfileBox from "../components/OtherProject/UserProfileBox";
 import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import QueenImg from "../assets/images/Queen.jpg";
@@ -62,6 +61,9 @@ export default function OtherProjectPage() {
     const [ownerProfile, setOwnerProfile] = useState<{ id: number; nickname?: string; email?: string; profileImage?: string | null }>(() => ({ id: ownerId || 0 }));
     const [contents, setContents] = useState<ProjectContentResponseItem[]>([]);
     const [initialFollow, setInitialFollow] = useState<boolean | undefined>(undefined);
+    // 카운트 상태 (뷰는 API가 별도 없으므로 일단 0 유지)
+    const [likesCount, setLikesCount] = useState(0);
+    const [commentsCount, setCommentsCount] = useState(0);
 
     useEffect(() => {
         if (ownerId && projectId) {
@@ -69,6 +71,35 @@ export default function OtherProjectPage() {
             fetchProjectContents(ownerId, projectId).then(setContents).catch(() => setContents([]));
         }
     }, [ownerId, projectId]);
+
+    // 좋아요 카운트 불러오기
+    useEffect(() => {
+        if (!projectId) return;
+        (async () => {
+            try {
+                const res = await api.get(`/likes`, { params: { targetType: "PROJECT", targetId: projectId } });
+                setLikesCount(res.data?.likeCount || 0);
+            } catch {
+                setLikesCount(0);
+            }
+        })();
+    }, [projectId]);
+
+    // 댓글 카운트 불러오기 (username 필요)
+    useEffect(() => {
+        if (!ownerProfile?.nickname || !projectId) return;
+        (async () => {
+            try {
+                const { fetchComments } = await import("../api/commentApi");
+                const res = await fetchComments(ownerProfile.nickname as string, projectId);
+                const list: any[] = res?.data || [];
+                const total = list.reduce((acc, c) => acc + 1 + ((c?.subComments?.length as number) || 0), 0);
+                setCommentsCount(total);
+            } catch {
+                setCommentsCount(0);
+            }
+        })();
+    }, [ownerProfile?.nickname, projectId]);
 
     useEffect(() => {
         // 1) 즉시 스토리지에서 me.id를 읽어 초기 렌더에 소유자 버튼을 최대한 빨리 노출
@@ -78,7 +109,7 @@ export default function OtherProjectPage() {
         } catch {}
 
         // 1.5) 작성자 캐시 즉시 반영
-        try {
+            try {
             if (ownerId) {
                 // 내 자신이면 로컬 스토리지의 닉네임/이메일 선반영
                 const myId = Number(localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0");
@@ -114,7 +145,7 @@ export default function OtherProjectPage() {
 
                 if (meRes.status === 'fulfilled') {
                     const me = (meRes.value as any).data as { id: number };
-                    setCurrentUserId(me?.id ?? null);
+                setCurrentUserId(me?.id ?? null);
                 } else {
                     setCurrentUserId((prev) => prev ?? null);
                 }
@@ -145,7 +176,7 @@ export default function OtherProjectPage() {
 
     const headerCategories = useMemo(() => {
         const toolsCsv = projectDetail?.tools || "";
-        return toolsCsv.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 2);
+        return toolsCsv.split(",").map((s) => s.trim()).filter(Boolean);
     }, [projectDetail?.tools]);
 
     const headerDate = useMemo(() => {
@@ -317,9 +348,20 @@ export default function OtherProjectPage() {
                                 </div>
                                 <TagList tags={headerCategories} />
                                 <div className="mb-8">
-                                    <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                                    <ProjectStatsBox
+                                        likes={likesCount}
+                                        views={0}
+                                        comments={commentsCount}
+                                        projectName={project.name}
+                                        date={headerDate}
+                                        category={project.category}
+                                        projectId={project.id}
+                                        ownerName={project.owner}
+                                        ownerEmail={project.ownerEmail}
+                                        ownerImageUrl={project.ownerImageUrl}
+                                        ownerId={project.ownerId}
+                                    />
                                 </div>
-                                <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                             </section>
                             {!commentOpen && (
                                 <div className={`hidden lg:flex flex-col ${forcePage ? 'op-actionbar' : ''}`} style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }}>
@@ -358,10 +400,21 @@ export default function OtherProjectPage() {
                                 </div>
                             </div>
                             <TagList tags={headerCategories} />
-                            <div className="mb-8">
-                                <ProjectStatsBox likes={0} views={0} comments={0} projectName={project.name} date={headerDate} category={project.category} />
+                                <div className="mb-8">
+                                <ProjectStatsBox
+                                    likes={likesCount}
+                                    views={0}
+                                    comments={commentsCount}
+                                    projectName={project.name}
+                                    date={headerDate}
+                                    category={project.category}
+                                    projectId={project.id}
+                                    ownerName={project.owner}
+                                    ownerEmail={project.ownerEmail}
+                                    ownerImageUrl={project.ownerImageUrl}
+                                    ownerId={project.ownerId}
+                                />
                             </div>
-                            <UserProfileBox userName={project.owner} ownerId={project.ownerId} isOwner={project.isOwner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} projectId={project.id} initialIsFollowing={initialFollow} />
                         </section>
                         {!commentOpen && (
                             <div className="hidden lg:flex flex-col" style={{ width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" }} onClick={(e) => e.stopPropagation()}>

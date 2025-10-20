@@ -97,6 +97,13 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
                     <Link to="/community" onClick={onClose} className="text-base font-medium">
                         커뮤니티
                     </Link>
+                    {/* 관리자 전용 메뉴는 App 라우트 가드(RequireAdmin)에서 실제 보호됨 */}
+                    <Link to="/admin/security/otp" onClick={onClose} className="text-base font-medium">
+                        보안 ▸ OTP 이력
+                    </Link>
+                    <Link to="/admin/security/devices" onClick={onClose} className="text-base font-medium">
+                        보안 ▸ 사용자 관리
+                    </Link>
                 </nav>
 
                 {isLoggedIn && (

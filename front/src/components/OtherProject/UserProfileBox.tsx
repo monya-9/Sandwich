@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import api from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import LoginPrompt from "./LoginPrompt";
 import Toast from "../common/Toast";
@@ -50,7 +50,7 @@ export default function UserProfileBox({
     if (!token || !ownerId || ownerId <= 0) { setIsFollowing(false); return; }
     (async () => {
       try {
-        const res = await axios.get(`/api/users/${ownerId}/follow-status`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        const res = await api.get(`/users/${ownerId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     })();
@@ -77,16 +77,15 @@ export default function UserProfileBox({
 
   const handleToggle = async () => {
     if (!ensureLogin()) return;
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!ownerId || ownerId <= 0) { setErrorToast({ visible: true, message: "대상 사용자를 확인할 수 없습니다." }); return; }
     try {
       if (isFollowing) {
-        await axios.delete(`/api/users/${ownerId}/unfollow`, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        await api.delete(`/users/${ownerId}/unfollow`);
         setIsFollowing(false);
         setToast("unfollow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: false } }));
       } else {
-        await axios.post(`/api/users/${ownerId}/follow`, null, { withCredentials: true, headers: { Authorization: `Bearer ${token}` } });
+        await api.post(`/users/${ownerId}/follow`, null);
         setIsFollowing(true);
         setToast("follow");
         window.dispatchEvent(new CustomEvent("followChanged", { detail: { userId: ownerId, isFollowing: true } }));
@@ -131,17 +130,7 @@ export default function UserProfileBox({
           {avatar}
         </div>
         <div className="text-2xl font-bold mb-3">{displayName}</div>
-        <div className="flex gap-6">
-          {!isOwner && (
-            <>
-              <button ref={followBtnRef} className={`${isFollowing ? (followBtnHover ? "bg-[#F6323E] text-white border-2 border-[#F6323E]" : "bg-white border-2 border-black text-black") : "bg-white border-2 border-black text-black"} rounded-full text-xl font-bold shadow transition px-14 py-5 inline-flex items-center justify-center whitespace-nowrap`} onClick={handleToggle} onMouseEnter={() => setFollowBtnHover(true)} onMouseLeave={() => setFollowBtnHover(false)}>
-            <span className="invisible">제안하기</span>
-            <span className="absolute">{isFollowing ? (followBtnHover ? "팔로우 취소" : "팔로잉") : "+ 팔로우"}</span>
-          </button>
-              <button className="bg-cyan-400 text-white rounded-full text-xl font-bold shadow hover:bg-cyan-500 transition px-14 py-5 inline-flex items-center justify-center" onClick={handleSuggest}>제안하기</button>
-            </>
-          )}
-        </div>
+        <div className="flex gap-6" />
       </div>
     </>
   );

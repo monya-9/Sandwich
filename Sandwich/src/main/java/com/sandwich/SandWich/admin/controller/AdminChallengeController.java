@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/admin/challenges")
+@RequestMapping({"/admin/challenges", "/api/admin/challenges"})
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminChallengeController {
@@ -55,6 +55,15 @@ public class AdminChallengeController {
         return Map.of("ok", true);
     }
 
+    @DeleteMapping("/{id}")
+    public Map<String,Object> delete(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "false") boolean force
+    ) {
+        service.delete(id, force);
+        return Map.of("ok", true);
+    }
+
     @GetMapping
     public Page<AdminChallengeDtos.ListItem> list(
             @RequestParam(required=false) String q,
@@ -62,6 +71,9 @@ public class AdminChallengeController {
             @RequestParam(required=false) ChallengeStatus status,
             @RequestParam(required=false) OffsetDateTime from,
             @RequestParam(required=false) OffsetDateTime to,
+            @RequestParam(required=false) String source,
+            @RequestParam(required=false) String aiMonth,
+            @RequestParam(required=false) String aiWeek,
             @RequestParam(defaultValue="0") int page,
             @RequestParam(defaultValue="20") int size,
             @RequestParam(required=false, defaultValue="-startAt") String sort
@@ -69,7 +81,7 @@ public class AdminChallengeController {
         Sort.Direction dir = sort.startsWith("-") ? Sort.Direction.DESC : Sort.Direction.ASC;
         String prop = sort.replaceFirst("^[+-]", "");
         Pageable pageable = PageRequest.of(page, size, Sort.by(dir, prop));
-        return queryService.searchChallenges(q, type, status, from, to, pageable);
+        return queryService.searchChallenges(q, type, status, from, to, source, aiMonth, aiWeek, pageable);
     }
 
     @PostMapping("/{id}/publish-results")

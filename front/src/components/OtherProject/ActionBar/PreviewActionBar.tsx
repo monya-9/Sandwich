@@ -17,19 +17,33 @@ interface PreviewActionBarProps {
 		owner: string;
 		category: string;
 		ownerId: number;
-
 		shareUrl?: string;
 		coverUrl?: string;
 	};
 }
 
 export default function PreviewActionBar({ onCommentClick, project }: PreviewActionBarProps) {
-	const cloudfrontBase = (process.env.REACT_APP_CLOUDFRONT_BASE || "").replace(/\/$/, "");
-	const cfUrl = cloudfrontBase && project.ownerId && project.id ? `${cloudfrontBase}/${project.ownerId}/${project.id}/` : undefined;
+	const normalizeBase = (u?: string) => {
+		let s = String(u || "").trim();
+		if (!s) return "";
+		if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`;
+		return s.replace(/\/$/, "");
+	};
+	const cloudfrontBase = normalizeBase(process.env.REACT_APP_CLOUDFRONT_BASE as any);
+	const numericPath = project.ownerId && project.id ? `/${project.ownerId}/${project.id}/` : undefined;
+	const cfUrl = numericPath ? (cloudfrontBase ? `${cloudfrontBase}${numericPath}` : numericPath) : undefined;
 	const serverShare = project.shareUrl || undefined;
+
+	const ensureIndexHtml = (u?: string) => {
+		if (!u) return undefined;
+		if (/index\.html$/i.test(u)) return u;
+		if (/\/\d+\/\d+\/?$/.test(u) || /\/$/.test(u)) return u.replace(/\/?$/, "/index.html");
+		return u;
+	};
+
 	const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
 	const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
-	const liveUrl = shareUrlFinal || cfUrl;
+	const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl) || (typeof window !== "undefined" ? window.location.href : "#");
 
 	return (
 		<aside className="flex flex-col items-center gap-4">

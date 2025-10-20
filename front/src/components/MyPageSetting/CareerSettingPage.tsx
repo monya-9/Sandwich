@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useContext, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { HiOutlineArrowUpTray } from "react-icons/hi2";
 import Sidebar from "./Sidebar";
@@ -32,6 +33,7 @@ const sortRepFirst = <T extends { isRepresentative?: boolean; id?: number }>(arr
 };
 
 const CareerSettingPage: React.FC = () => {
+    const navigate = useNavigate();
 	const [showCareerForm, setShowCareerForm] = useState(false);
 	const [showEducationForm, setShowEducationForm] = useState(false);
 	const [showProjectForm, setShowProjectForm] = useState(false);
@@ -107,20 +109,27 @@ const CareerSettingPage: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
+		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] dark:bg-[var(--bg)] text-black dark:text-white">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
-				<div className="flex gap-6">
+				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					{/* 좌측 사이드바 */}
-					<aside className="w-[320px] shrink-0">
+					<aside className="hidden lg:block w-full lg:w-[320px] shrink-0">
 						<Sidebar />
 					</aside>
-					<main className="flex-1 space-y-6">
+					<main className="flex-1 space-y-0">
+						{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
+						<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
+							<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+							<div className="justify-self-center text-[16px] font-medium text-center">커리어 설정</div>
+							<span />
+						</div>
+						<div className="space-y-6">
 						{/* 경력 */}
-						<section className={`bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showCareerForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showCareerForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>💼</EmojiBadge>
-									<div className="ml-[5px] text-[16px] font-medium text-[#111827]">경력</div>
+									<div className="ml-[5px] text-[16px] font-medium text-[#111827] dark:text-white">경력</div>
 								</div>
 								{!showCareerForm && !editingCareer ? (
 									<button onClick={() => { setEditingCareer(null); setShowCareerForm(true); }} className="text-[14px] text-green-500 hover:underline">+ 경력 정보 추가</button>
@@ -142,11 +151,11 @@ const CareerSettingPage: React.FC = () => {
 						</section>
 
 						{/* 프로젝트 */}
-						<section className={`bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showProjectForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showProjectForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>🧩</EmojiBadge>
-									<div className="ml-[5px] text-[16px] font-medium text-[#111827]">프로젝트</div>
+									<div className="ml-[5px] text-[16px] font-medium text-[#111827] dark:text-white">프로젝트</div>
 								</div>
 								{!showProjectForm && !editingProject ? (
 									<button onClick={() => { setEditingProject(null); setShowProjectForm(true); }} className="text-[14px] text-green-500 hover:underline">+ 프로젝트 추가</button>
@@ -168,11 +177,11 @@ const CareerSettingPage: React.FC = () => {
 						</section>
 
 						{/* 수상 */}
-						<section className={`bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showAwardForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showAwardForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>🏆</EmojiBadge>
-									<div className="ml-[5px] text-[16px] font-medium text-[#111827]">수상</div>
+									<div className="ml-[5px] text-[16px] font-medium text-[#111827] dark:text-white">수상</div>
 								</div>
 								{!showAwardForm && !editingAward ? (
 									<button onClick={() => { setEditingAward(null); setShowAwardForm(true); }} className="text-[14px] text-green-500 hover:underline">+ 수상 내역 추가</button>
@@ -194,11 +203,11 @@ const CareerSettingPage: React.FC = () => {
 						</section>
 
 						{/* 학력 (맨 아래) */}
-						<section className={`bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showEducationForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showEducationForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>🎓</EmojiBadge>
-									<div className="ml-[5px] text-[16px] font-medium text-[#111827]">학력</div>
+									<div className="ml-[5px] text-[16px] font-medium text-[#111827] dark:text-white">학력</div>
 								</div>
 								{!showEducationForm && !editingEducation ? (
 									<button onClick={() => { setEditingEducation(null); setShowEducationForm(true); }} className="text-[14px] text-green-500 hover:underline">+ 학력 정보 추가</button>
@@ -218,6 +227,7 @@ const CareerSettingPage: React.FC = () => {
 								)
 							)}
 						</section>
+						</div>
 					</main>
 				</div>
 			</div>

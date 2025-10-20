@@ -20,6 +20,10 @@ public class RecaptchaV2Service {
     private final RestTemplate rest = new RestTemplate();
 
     public void verifyOrThrow(String token) {
+
+        log.info("[reCAPTCHA v2] enabled={}, token={}, bypass={}",
+                enabled, token, testBypassToken);
+
         if (!enabled) return; // 끔 상태면 통과
         if (token == null || token.isBlank())
             throw new BadRequestException("RECAPTCHA_FAIL", "reCAPTCHA 검증 실패");

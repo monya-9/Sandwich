@@ -1,7 +1,7 @@
 // src/setupProxy.js
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
-const target = process.env.REACT_APP_API_BASE || "http://localhost:8080";
+const target = process.env.REACT_APP_API_BASE;
 
 /**
  * 주의:
@@ -16,13 +16,38 @@ module.exports = function (app) {
         return next();
     });
 
-    // REST & OAuth
+    // REST & OAuth (원래대로 통합)
     app.use(
-        ["/api", "/oauth2/authorization", "/login/oauth2"],
+        ["/api", "/admin", "/oauth2/authorization", "/login/oauth2"],
         createProxyMiddleware({
             target,
             changeOrigin: true,
             ws: false,          // ← REST 쪽은 WS 업그레이드 비활성화
+            logLevel: "warn",
+        })
+    );
+
+    // 외부 공개 추천 API 프록시 (개발 환경 CORS 우회): /ext → https://api.dnutzs.org/api
+    app.use(
+        "/ext",
+        createProxyMiddleware({
+            target: "https://api.dnutzs.org",
+            changeOrigin: true,
+            ws: false,
+            secure: true,
+            pathRewrite: { "^/ext": "/api" },
+            logLevel: "warn",
+        })
+    );
+
+    // Prometheus (개발 전용): http://localhost:9091 -> /prom
+    app.use(
+        "/prom",
+        createProxyMiddleware({
+            target: process.env.REACT_APP_PROM_BASE || "http://localhost:9091",
+            changeOrigin: true,
+            ws: false,
+            pathRewrite: { "^/prom": "" },
             logLevel: "warn",
         })
     );

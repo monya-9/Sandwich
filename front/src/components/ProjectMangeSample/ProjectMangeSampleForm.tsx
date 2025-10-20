@@ -17,6 +17,7 @@ import UploadDoneModal from "./UploadDoneModal";
 import Toast from "../common/Toast";
 import SettingsPanel from "./SettingsPanel";
 import RightPanelActions from "./RightPanelActions";
+import api from "../../api/axiosInstance";
 
 // Quill size whitelist to show pt values like 16pt
 const SizeAttributor = Quill.import("attributors/style/size");
@@ -66,8 +67,13 @@ export default function ProjectMangeSampleForm() {
 	const [showEmptyToast, setShowEmptyToast] = useState(false);
 	const toastTimerRef = useRef<number | null>(null);
 	const [isReorderOpen, setIsReorderOpen] = useState(false);
-	const [backgroundColor, setBackgroundColor] = useState<string>("#FFFFFF");
-	const [contentGapPx, setContentGapPx] = useState<number>(10);
+    const getDefaultBg = () => {
+        try { return document.documentElement.classList.contains('dark') ? '#000000' : '#FFFFFF'; } catch { return '#FFFFFF'; }
+    };
+    const [backgroundColor, setBackgroundColor] = useState<string>(getDefaultBg());
+    const [contentGapPx, setContentGapPx] = useState<number>(10);
+    const userBgRef = useRef<boolean>(false);
+    const bgColorRef = useRef<string>("#FFFFFF");
 	const modulesCacheRef = useRef<Record<string, any>>({});
 	const [reorderBlocks, setReorderBlocks] = useState<ModalBlock[]>([]);
 
@@ -528,6 +534,39 @@ export default function ProjectMangeSampleForm() {
 				}, []);
 
    useEffect(() => { hoverElRef.current = hoverEl; }, [hoverEl]);
+
+  // 다크/라이트 전환 시, 사용자가 직접 바꾸지 않았다면 기본 배경을 모드에 맞게 동기화
+  useEffect(() => { bgColorRef.current = (backgroundColor || '').toUpperCase(); }, [backgroundColor]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      try {
+        const isDark = document.documentElement.classList.contains('dark') || mq.matches;
+        const cur = bgColorRef.current;
+        // 사용자가 직접 바꾸지 않았거나, 현재값이 반대 모드의 기본값이면 모드 기본값으로 동기화
+        if (isDark) {
+          if (!userBgRef.current || cur === '#FFFFFF') setBackgroundColor('#000000');
+        } else {
+          if (!userBgRef.current || cur === '#000000') setBackgroundColor('#FFFFFF');
+        }
+      } catch {}
+    };
+    // 초기 적용
+    apply();
+    // 시스템 모드 변경
+    try { mq.addEventListener('change', apply); } catch { try { (mq as any).addListener(apply); } catch {} }
+    // Tailwind 다크 클래스 변경 감지
+    let obs: MutationObserver | null = null;
+    try {
+      obs = new MutationObserver(apply);
+      obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    } catch {}
+    return () => {
+      try { mq.removeEventListener('change', apply); } catch { try { (mq as any).removeListener(apply); } catch {} }
+      try { obs && obs.disconnect(); } catch {}
+    };
+  }, []);
 
    useEffect(() => {
       const bootstrapEdit = async () => {
@@ -1214,13 +1253,13 @@ export default function ProjectMangeSampleForm() {
 				closable={true}
 				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
 			/>
-			<div className="min-h-screen font-gmarket relative pt-[76px] md:pt-[92px]">
+            <div className="min-h-screen font-gmarket relative pt-[76px] md:pt-[92px] dark:bg-[var(--bg)]">
 			<style>{`
 				.pm-sample-editor { width: 100%; }
 				.pm-sample-editor .ql-toolbar { border-radius: 10px 10px 0 0; }
 				/* Remove fixed height; let page scroll */
-				.pm-sample-editor .ql-container { height: auto; min-height: 800px; border-radius: 0 0 10px 10px; margin-top: 0; border: none; background: transparent; width: 100%; box-sizing: border-box; }
-				.pm-sample-editor .ql-editor { min-height: 800px; height: auto; font-size: 18px; padding: 0; overflow-x: hidden; scrollbar-gutter: stable both-edges; }
+                .pm-sample-editor .ql-container { height: auto; min-height: 1600px; border-radius: 0 0 10px 10px; margin-top: 0; border: none; background: transparent; width: 100%; box-sizing: border-box; }
+                .pm-sample-editor .ql-editor { min-height: 1600px; height: auto; font-size: 18px; padding: 0; overflow-x: hidden; scrollbar-gutter: stable both-edges; }
 				/* Hide scrollbars visually while keeping scroll ability */
 				.pm-sample-editor .ql-editor { scrollbar-width: none; }
 				.pm-sample-editor .ql-editor::-webkit-scrollbar { width: 0; height: 0; display: none; }
@@ -1234,8 +1273,15 @@ export default function ProjectMangeSampleForm() {
 				body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 				body { scrollbar-width: none; }
 				/* editor background color is applied here dynamically via inline style */
-				.pm-toolbar-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; margin-bottom: 0; box-sizing: border-box; background: #FFFFFF; border-radius: 10px 10px 0 0; }
-				.pm-toolbar-left.ql-toolbar { border: none; border-bottom: none; border-radius: 10px 10px 0 0; padding: 6px 10px; min-height: 60px; margin-bottom: 0; display: flex; flex-wrap: nowrap; align-items: center; background: #FFFFFF; }
+                .pm-toolbar-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; margin-bottom: 0; box-sizing: border-box; background: #FFFFFF; border-radius: 10px 10px 0 0; }
+                .dark .pm-toolbar-row { background: var(--surface); }
+                .pm-toolbar-left.ql-toolbar { border: none; border-bottom: none; border-radius: 10px 10px 0 0; padding: 6px 10px; min-height: 60px; margin-bottom: 0; display: flex; flex-wrap: nowrap; align-items: center; background: #FFFFFF; color: #111; }
+                .dark .pm-toolbar-left.ql-toolbar { background: var(--surface); color: #fff; }
+                .dark .pm-toolbar-left .ql-picker, .dark .pm-toolbar-left .ql-formats button { color: #fff; }
+                .dark .pm-toolbar-left .ql-stroke { stroke: #fff; }
+                .dark .pm-toolbar-left .ql-fill { fill: #fff; }
+                .dark .ql-snow .ql-picker-options { background: var(--surface); color: #fff; border-color: var(--border-color); }
+                .dark .ql-snow .ql-tooltip, .dark .ql-snow .ql-tooltip input { background: var(--surface); color: #fff; border-color: var(--border-color); }
 				.pm-toolbar-left .ql-formats { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; }
 				.pm-toolbar-left .ql-formats button, .pm-toolbar-left .ql-formats .ql-picker { height: 50px; }
 				.pm-toolbar-left .ql-picker { height: 50px; }
@@ -1267,7 +1313,8 @@ export default function ProjectMangeSampleForm() {
 				/* When overall gap is 0, force vertical padding to 0 so contents stick */
 						/* Use :root variable to avoid touching element inline styles when gap changes */
 				/* Editor frame */
-				.pm-editor-frame { width: 1200px; border: none; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
+                .pm-editor-frame { width: 1200px; border: 1px solid #ADADAD; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
+                .dark .pm-editor-frame { border-color: var(--border-color); }
 				/* Overlay toolbar */
 				.pm-embed-toolbar { width: 220px; background: rgba(0,0,0,0.72); color: white; padding: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
 				.pm-embed-toolbar button { display: inline-flex; gap: 6px; align-items: center; background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 8px; border-radius: 6px; font-size: 12px; }
@@ -1302,8 +1349,8 @@ export default function ProjectMangeSampleForm() {
 			)}
 			<main className="w-full max-w-[1800px] mx-auto">
 				<div className="grid grid-cols-[1fr_1200px_1fr] items-start gap-[28px] px-[30px] pt-[40px]">
-					<section className="w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 pb-40 col-start-2" style={{ backgroundColor }}>
-						<div className="pointer-events-none absolute inset-0 rounded-[10px] z-20" style={{ boxShadow: 'inset 0 0 0 1px #ADADAD' }} />
+                    <section className="w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 pb-40 col-start-2" style={{ backgroundColor }}>
+                        <div className="pointer-events-none absolute inset-0 rounded-[10px] z-20" style={{ boxShadow: 'inset 0 0 0 1px var(--editor-border, #ADADAD)' }} />
 						<div className="w-full flex flex-col items-center" style={{ gap: `${contentGapPx}px` }}>
 							<div className="pm-editor-frame">
 						<div className="pm-toolbar-row">
@@ -1352,9 +1399,10 @@ export default function ProjectMangeSampleForm() {
 																			formats={quillFormats}
 																		/>
 									{/* Apply editor inner content spacing; toolbar fixed white; editor follows backgroundColor */}
-									<style>{`
-										.pm-sample-editor .ql-container { background: transparent; }
-						.pm-sample-editor .ql-editor { background: ${backgroundColor}; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; }
+                                    <style>{`
+                                        .pm-sample-editor .ql-container { background: transparent; }
+                        .pm-sample-editor .ql-editor { background: ${backgroundColor}; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; color: var(--editor-fg, #111); }
+                        .dark .pm-sample-editor .ql-editor { color: #fff; }
 																	/* removed pm-vpad-factor to preserve user padding at gap 0 */
 																								/* universal block gap: allow per-block override via --pm-top-gap */
 																		.pm-sample-editor .ql-editor > * + * { margin-top: var(--pm-top-gap, var(--pm-gap)) !important; }
@@ -1503,12 +1551,12 @@ export default function ProjectMangeSampleForm() {
 							</div>
 						</section>
 
-					<aside className="w-[357px] flex flex-col gap-[16px] mt-[0px] sticky top-[24px] self-start col-start-3">
+                    <aside className="w-[357px] flex flex-col gap-[16px] mt-[0px] sticky top-[24px] self-start col-start-3">
 						<RightPanelActions onImageAdd={triggerImageAdd} onVideoAdd={triggerVideoAdd} onReorder={openReorder} />
-						<SettingsPanel backgroundColor={backgroundColor} onBackgroundColorChange={setBackgroundColor} contentGapPx={contentGapPx} onContentGapChange={setContentGapPx} />
+                        <SettingsPanel backgroundColor={backgroundColor} onBackgroundColorChange={(hex) => { userBgRef.current = true; setBackgroundColor((hex || '').toUpperCase()); }} contentGapPx={contentGapPx} onContentGapChange={setContentGapPx} />
 												<div className="flex flex-col gap-[12px]">
 							<button
-								className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] cursor-not-allowed'} rounded-[30px] w-[357px] h-[82px] text-black text-[24px] transition-colors duration-200`}
+                                className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] dark:bg-white/10 cursor-not-allowed'} rounded-[30px] w-[357px] h-[82px] text-black dark:text-white text-[24px] transition-colors duration-200`}
 								type="button"
 								onClick={handleSubmit}
 								disabled={!hasContent}
@@ -1516,7 +1564,7 @@ export default function ProjectMangeSampleForm() {
 								다음
 							</button>
 							<button
-								className="w-[357px] h-[45px] text-[#6B7280] text-[20px] inline-flex items-center justify-center gap-2 hover:text-black"
+                                className="w-[357px] h-[45px] text-[#6B7280] dark:text-white/70 text-[20px] inline-flex items-center justify-center gap-2 hover:text-black dark:hover:text-white"
 								type="button"
 								onClick={openPreview}
 							>
@@ -1536,7 +1584,16 @@ export default function ProjectMangeSampleForm() {
                      const uidStr = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
                      const currentUid = Number(uidStr) || 0;
                      const isEdit = !!(editOwnerId && editProjectId);
-                     const pathUserId = isEdit && editOwnerId ? editOwnerId : currentUid;
+                     let pathUserId = isEdit && editOwnerId ? editOwnerId : currentUid;
+                     if (!pathUserId || !Number.isFinite(pathUserId) || pathUserId <= 0) {
+                        try {
+                           const me = (await api.get('/users/me')).data as { id?: number };
+                           if (me && typeof me.id === 'number' && me.id > 0) {
+                              pathUserId = me.id;
+                              try { localStorage.setItem('userId', String(me.id)); } catch {}
+                           }
+                        } catch {}
+                     }
                      await persistContents(pathUserId, createdProjectId, isEdit);
 
                      // 1) 내 작업 캐시 즉시 갱신 (WorkTab 사용 캐시)
@@ -1554,7 +1611,7 @@ export default function ProjectMangeSampleForm() {
                            shareUrl: previewUrl || undefined,
                            owner: { id: pathUserId, nickname: ownerNickname, email: ownerEmail, avatarUrl: null, username: ownerUsername },
                            authorId: pathUserId,
-                           categories: Array.isArray(previewCategories) ? previewCategories.slice(0, 2) : [],
+                           categories: Array.isArray(previewCategories) ? previewCategories : [],
                            uploadDate: new Date().toISOString(),
                         };
                         const nextItems = (() => {
@@ -1576,7 +1633,7 @@ export default function ProjectMangeSampleForm() {
                            projectId: createdProjectId,
                            project: {
                               title: previewTitle || '새 프로젝트',
-                              tools: (Array.isArray(previewCategories) ? previewCategories.slice(0, 2).join(',') : ''),
+                              tools: (Array.isArray(previewCategories) ? previewCategories.join(',') : ''),
                               coverUrl: (previewCoverUrl || null),
                               shareUrl: previewUrl || undefined,
                               description: getEditorHtml(),
@@ -1607,7 +1664,7 @@ export default function ProjectMangeSampleForm() {
                onClose={() => setIsPreviewOpen(false)}
                projectName={previewTitle}
                summary={previewSummary}
-               category={(previewCategories[0] && previewCategories[1]) ? `${previewCategories[0]} / ${previewCategories[1]}` : (previewCategories[0] || "")}
+               category={Array.isArray(previewCategories) ? previewCategories.filter(Boolean).join(' / ') : ''}
                coverUrl={previewCoverUrl}
                backgroundColor={backgroundColor}
                contentGapPx={contentGapPx}
