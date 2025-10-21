@@ -1,265 +1,379 @@
-// src/index.js
 export default {
   async fetch(request, env) {
-    try {
-      const url = new URL(request.url);
-      if (!url.pathname.startsWith("/api/reco/")) {
-        return sendJSON({ error: "not_found" }, 404);
-      }
+    const url = new URL(request.url);
 
-      // 개인화 추천 조회
-      const mUserGet = url.pathname.match(/^\/api\/reco\/user\/(\d+)$/);
-      if (mUserGet && request.method === "GET") {
-        const uidx = toInt(mUserGet[1]);
-        return getUserRecs(env, uidx);
-      }
-
-      // 개인화 추천 업서트(배치)
-      if (url.pathname === "/api/reco/admin/upsert/user" && request.method === "POST") {
-        if (!needKey(request, env)) return sendJSON({ error: "unauthorized" }, 401);
-        const body = await readJsonSafe(request);
-        return upsertUserRecs(env, body);
-      }
-
-    const sendJSON = (obj, status = 200) =>
+    const json = (obj, status = 200) =>
       new Response(JSON.stringify(obj), {
         status,
-        headers: { "content-type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
       });
 
-    // ---- Asia/Seoul 기준 날짜/주 계산 ----
-    const nowSeoul = () => {
-      const now = new Date();
-      // Asia/Seoul 오프셋(+09:00) 고정 사용
-      const offsetMs = 9 * 60 * 60 * 1000;
-      return new Date(now.getTime() + offsetMs - now.getTimezoneOffset() * 60000);
+    const needKey = (req) => {
+      const headerName = env.AI_HEADER || "X-AI-API-Key";
+      const must = env.AI_API_KEY;
+      if (!must) return true;
+      const got = req.headers.get(headerName);
+      return got === must;
     };
-    const todayYMD = () => {
-      const d = nowSeoul();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${y}${m}${dd}`;
+
+    const parseItems = (txt) => {
+      if (!txt) return [];
+      try { return JSON.parse(txt); }
+      catch (_) {
+        try { return JSON.parse(txt.replace(/""/g, '"')); }
+        catch { return []; }
+      }
     };
-    const thisISOWeek = () => {
-      // ISO week 계산(Seoul 기준)
-      const d = nowSeoul();
-      // 목요일 기준
-      const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNr = (target.getUTCDay() + 6) % 7; // 0=월
-      target.setUTCDate(target.getUTCDate() - dayNr + 3);
-      const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-      const dayDiff = (target - firstThursday) / 86400000;
-      const week = 1 + Math.round(dayDiff / 7);
-      const year = target.getUTCFullYear();
+
+    // helper: ISO 주차 YYYYWww 생성
+    const isoWeekStr = (date) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); // 목요일 기준
+      const year = d.getUTCFullYear();
+      const yearStart = new Date(Date.UTC(year, 0, 1));
+      const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
       return `${year}W${String(week).padStart(2, "0")}`;
     };
 
-    // ---- top_week 컬럼명 자동감지(week | iso_week) ----
-    async function detectWeekCol(env) {
-      // 간단 캐시
-      if (env.__weekCol) return env.__weekCol;
+    // health
+    if (url.pathname === "/api/reco/health") return json({ ok: true });
+
+    // ---------- user recs read ----------
+    if (url.pathname.startsWith("/api/reco/user/") && request.method === "GET") {
+      const u = Number(url.pathname.split("/").pop());
+      const limit = Number(url.searchParams.get("limit") || "10");
       const rows = await env.SANDWICH_RECO.prepare(
-        `PRAGMA table_info(top_week);`
-      ).all();
-      const cols = new Set((rows?.results || []).map(r => r.name));
-      env.__weekCol = cols.has("week") ? "week" : "iso_week";
-      return env.__weekCol;
+        `SELECT project_id, score
+           FROM user_recs
+          WHERE u_idx = ?
+          ORDER BY score DESC, project_id ASC
+          LIMIT ?`
+      ).bind(u, limit).all();
+      return json({ u_idx: u, total: rows.results?.length || 0, data: rows.results || [] });
     }
 
-    // ================== READ APIs ==================
+    // ---------- user recs upsert (admin) ----------
+    if (url.pathname === "/api/reco/admin/upsert/user" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
 
-    // 일간 TOP 읽기: /api/reco/top/day?ymd=YYYYMMDD
-    if (url.pathname === "/api/reco/top/day") {
-      let ymd = url.searchParams.get("ymd") || todayYMD();
+      const u_idx = Number(body.u_idx ?? body.user ?? body.user_id ?? body.uid);
+      if (!Number.isFinite(u_idx)) return json({ error: "missing_u_idx" }, 400);
 
-      // 1차 조회
-      let row = await env.SANDWICH_RECO
-        .prepare(`SELECT items FROM top_day WHERE ymd=?`)
-        .bind(ymd)
-        .first();
+      const items = Array.isArray(body.items) ? body.items : [];
+      const replace = !!body.replace;
+      const now = Math.floor(Date.now() / 1000);
 
-      // 없으면 최신 1건 fallback
-      if (!row) {
-        row = await env.SANDWICH_RECO
-          .prepare(`SELECT items FROM top_day ORDER BY ymd DESC LIMIT 1`)
-          .first();
-        if (!row) return new Response("[]", { headers: { "content-type": "application/json" } });
+      const stmts = [];
+      if (replace) stmts.push(env.SANDWICH_RECO.prepare(`DELETE FROM user_recs WHERE u_idx=?`).bind(u_idx));
+
+      for (const it of items) {
+        const pid = Number(it.project_id ?? it.pid ?? it.id);
+        const score = Number(it.score ?? it.s);
+        if (!Number.isFinite(pid) || !Number.isFinite(score)) continue;
+        stmts.push(
+          env.SANDWICH_RECO.prepare(
+            `INSERT INTO user_recs (u_idx, project_id, score, updated_at)
+             VALUES (?,?,?,?)
+             ON CONFLICT(u_idx, project_id) DO UPDATE SET
+               score=excluded.score, updated_at=excluded.updated_at`
+          ).bind(u_idx, pid, score, now)
+        );
       }
+      if (stmts.length) await env.SANDWICH_RECO.batch(stmts);
+      return json({ ok: true, u_idx, count: items.length, replaced: replace });
+    }
 
-      // items 원문(JSON 문자열) 그대로 반환
-      return new Response(row.items ?? "[]", {
-        headers: { "content-type": "application/json" },
+    // ---------- daily top read ----------
+    if (url.pathname === "/api/reco/top/day" && request.method === "GET") {
+      let ymd = url.searchParams.get("ymd");
+      if (!ymd) {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        ymd = `${now.getFullYear()}${mm}${dd}`;
+      }
+      const limit = Number(url.searchParams.get("k") || url.searchParams.get("limit") || "0");
+      const row = await env.SANDWICH_RECO.prepare(`SELECT items FROM top_day WHERE ymd=?`).bind(ymd).first();
+      if (!row) return json({ ymd, total: 0, data: [] });
+      let items = parseItems(row.items);
+      if (limit > 0) items = items.slice(0, limit);
+      return json({ ymd, total: items.length, data: items });
+    }
+
+    // ---------- weekly top read ----------
+    if (url.pathname === "/api/reco/top/week" && request.method === "GET") {
+      let week = (url.searchParams.get("week") || url.searchParams.get("iso") || "").trim();
+      if (!week) week = isoWeekStr(new Date()); // 기본값: 현재 ISO 주
+      const limit = Number(url.searchParams.get("k") || url.searchParams.get("limit") || "0");
+      const row = await env.SANDWICH_RECO.prepare(`SELECT items FROM top_week WHERE week=?`).bind(week).first();
+      if (!row) return json({ week, total: 0, data: [] });
+      let items = parseItems(row.items);
+      if (limit > 0) items = items.slice(0, limit);
+      return json({ week, total: items.length, data: items });
+    }
+
+    // ---------- monthly topics read (latest, no md) ----------
+    if (url.pathname === "/api/reco/monthly" && request.method === "GET") {
+      const row = await env.SANDWICH_RECO.prepare(
+        `SELECT ym, title, summary, must_json, updated_at
+           FROM monthly_topics
+          ORDER BY updated_at DESC, ym DESC
+          LIMIT 1`
+      ).first();
+      if (!row) return json({ found: false, data: null });
+      return json({
+        ym: row.ym, found: true,
+        data: { title: row.title, summary: row.summary, must_have: JSON.parse(row.must_json || "[]"), updated_at: row.updated_at }
       });
     }
 
-    // 주간 TOP 읽기: /api/reco/top/week?week=YYYYWww (또는 ?iso=YYYYWww)
-    if (url.pathname === "/api/reco/top/week") {
-      let week = url.searchParams.get("week") || url.searchParams.get("iso") || thisISOWeek();
-      const weekCol = await detectWeekCol(env);
-
-      // 1차 조회
-      let row = await env.SANDWICH_RECO
-        .prepare(`SELECT items FROM top_week WHERE ${weekCol}=?`)
-        .bind(week)
-        .first();
-
-      // 없으면 최신 1건 fallback
-      if (!row) {
-        row = await env.SANDWICH_RECO
-          .prepare(`SELECT items FROM top_week ORDER BY ${weekCol} DESC LIMIT 1`)
-          .first();
-        if (!row) return new Response("[]", { headers: { "content-type": "application/json" } });
-      }
-
-      return new Response(row.items ?? "[]", {
-        headers: { "content-type": "application/json" },
+    // ---------- monthly topics read (by ym, no md) ----------
+    if (url.pathname === "/api/reco/topics/monthly" && request.method === "GET") {
+      const ym = (url.searchParams.get("ym") || "").trim();
+      if (!ym) return json({ error: "missing_ym" }, 400);
+      const row = await env.SANDWICH_RECO.prepare(
+        `SELECT ym, title, summary, must_json, updated_at
+           FROM monthly_topics
+          WHERE ym=?`
+      ).bind(ym).first();
+      if (!row) return json({ ym, found: false, data: [] });
+      return json({
+        ym, found: true,
+        data: { title: row.title, summary: row.summary, must_have: JSON.parse(row.must_json || "[]"), updated_at: row.updated_at }
       });
     }
 
-      // 일간 TOP 업서트
-      if (url.pathname === "/api/reco/admin/upsert/top/day" && request.method === "POST") {
-        if (!needKey(request, env)) return sendJSON({ error: "unauthorized" }, 401);
-        const body = await readJsonSafe(request);
-        return upsertTopDay(env, body);
-      }
-
-      // 주간 TOP 업서트
-      if (url.pathname === "/api/reco/admin/upsert/top/week" && request.method === "POST") {
-        if (!needKey(request, env)) return sendJSON({ error: "unauthorized" }, 401);
-        const body = await readJsonSafe(request);
-        return upsertTopWeek(env, body);
-      }
-
-      return sendJSON({ error: "not_found" }, 404);
-    } catch (e) {
-      return sendJSON({ error: "exception", message: String(e?.stack || e) }, 500);
+    // ---------- weekly topics read (latest, no md) ----------
+    if (url.pathname === "/api/reco/weekly" && request.method === "GET") {
+      const row = await env.SANDWICH_RECO.prepare(
+        `SELECT week, title, summary, must_json, updated_at
+           FROM weekly_topics
+          ORDER BY updated_at DESC, week DESC
+          LIMIT 1`
+      ).first();
+      if (!row) return json({ found: false, data: null });
+      return json({
+        week: row.week, found: true,
+        data: { title: row.title, summary: row.summary, must_have: JSON.parse(row.must_json || "[]"), updated_at: row.updated_at }
+      });
     }
+
+    // ---------- weekly topics read (by week, no md) ----------
+    if (url.pathname === "/api/reco/topics/weekly" && request.method === "GET") {
+      const week = (url.searchParams.get("week") || "").trim();
+      if (!week) return json({ error: "missing_week" }, 400);
+      const row = await env.SANDWICH_RECO.prepare(
+        `SELECT week, title, summary, must_json, updated_at
+           FROM weekly_topics
+          WHERE week=?`
+      ).bind(week).first();
+      if (!row) return json({ week, found: false, data: [] });
+      return json({
+        week, found: true,
+        data: { title: row.title, summary: row.summary, must_have: JSON.parse(row.must_json || "[]"), updated_at: row.updated_at }
+      });
+    }
+
+    // ---------- monthly topics upsert (admin) ----------
+    if (url.pathname === "/api/reco/admin/upsert/topics/monthly" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+      const ym = String(body.ym ?? body.month ?? body["YYYY-MM"] ?? body.date ?? "").trim();
+      const title = String(body.title ?? body.topic ?? body.name ?? "").trim();
+      const summary = String(body.summary ?? body.desc ?? body.description ?? "").trim();
+      const must = Array.isArray(body.must) ? body.must
+                 : Array.isArray(body.must_have) ? body.must_have
+                 : [];
+      const md = String(body.md ?? body.markdown ?? body.content ?? "").trim();
+
+      if (!ym || !title || !summary) return json({ error: "missing_fields" }, 400);
+      const now = Math.floor(Date.now() / 1000);
+      await env.SANDWICH_RECO.prepare(
+        `INSERT INTO monthly_topics (ym, title, summary, must_json, md, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(ym) DO UPDATE SET
+           title=excluded.title,
+           summary=excluded.summary,
+           must_json=excluded.must_json,
+           md=excluded.md,
+           updated_at=excluded.updated_at`
+      ).bind(ym, title, summary, JSON.stringify(must || []), md, now, now).run();
+      return json({ ok: true, ym });
+    }
+
+    // ---------- weekly topics upsert (admin) ----------
+    if (url.pathname === "/api/reco/admin/upsert/topics/weekly" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+      const week = String(body.week ?? body.iso ?? body.iso_week ?? body["YYYYWww"] ?? "").trim();
+      const title = String(body.title ?? body.topic ?? body.name ?? "").trim();
+      const summary = String(body.summary ?? body.desc ?? body.description ?? "").trim();
+      const must = Array.isArray(body.must) ? body.must
+                 : Array.isArray(body.must_have) ? body.must_have
+                 : [];
+      const md = String(body.md ?? body.markdown ?? body.content ?? "").trim();
+
+      if (!week || !title || !summary) return json({ error: "missing_fields" }, 400);
+      const now = Math.floor(Date.now() / 1000);
+      await env.SANDWICH_RECO.prepare(
+        `INSERT INTO weekly_topics (week, title, summary, must_json, md, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(week) DO UPDATE SET
+           title=excluded.title,
+           summary=excluded.summary,
+           must_json=excluded.must_json,
+           md=excluded.md,
+           updated_at=excluded.updated_at`
+      ).bind(week, title, summary, JSON.stringify(must || []), md, now, now).run();
+      return json({ ok: true, week });
+    }
+
+    // ---------- NEW: daily top upsert (admin) ----------
+    if (url.pathname === "/api/reco/admin/upsert/top/day" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+      const ymd = String(body.ymd ?? "").trim();
+      if (!/^\d{8}$/.test(ymd)) return json({ error: "bad_ymd_YYYYMMDD" }, 400);
+
+      const rawItems = Array.isArray(body.items) ? body.items : [];
+      const items = [];
+      for (const it of rawItems) {
+        const pid = Number(it.project_id ?? it.pid ?? it.id);
+        const score = Number(it.score ?? it.s);
+        if (Number.isFinite(pid) && Number.isFinite(score)) items.push({ project_id: pid, score });
+      }
+      const now = Math.floor(Date.now() / 1000);
+      await env.SANDWICH_RECO.prepare(
+        `INSERT INTO top_day (ymd, items, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(ymd) DO UPDATE SET
+           items=excluded.items,
+           updated_at=excluded.updated_at`
+      ).bind(ymd, JSON.stringify(items), now).run();
+      return json({ ok: true, ymd, count: items.length });
+    }
+
+    // ---------- NEW: weekly top upsert (admin) ----------
+    if (url.pathname === "/api/reco/admin/upsert/top/week" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+      const week = String(body.week ?? body.iso ?? body.iso_week ?? "").trim();
+      if (!/^20\d{2}W\d{2}$/.test(week)) return json({ error: "bad_week_YYYYWww" }, 400);
+
+      const rawItems = Array.isArray(body.items) ? body.items : [];
+      const items = [];
+      for (const it of rawItems) {
+        const pid = Number(it.project_id ?? it.pid ?? it.id);
+        const score = Number(it.score ?? it.s);
+        if (Number.isFinite(pid) && Number.isFinite(score)) items.push({ project_id: pid, score });
+      }
+      const now = Math.floor(Date.now() / 1000);
+      await env.SANDWICH_RECO.prepare(
+        `INSERT INTO top_week (week, items, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(week) DO UPDATE SET
+           items=excluded.items,
+           updated_at=excluded.updated_at`
+      ).bind(week, JSON.stringify(items), now).run();
+      return json({ ok: true, week, count: items.length });
+    }
+    // GET /api/reco/judge/leaderboard/:week
+    if (request.method === "GET") {
+      const m = url.pathname.match(/^\/api\/reco\/judge\/leaderboard\/([A-Za-z0-9W]+)$/);
+      if (m) {
+        const week = m[1];
+        const rs = await env.SANDWICH_RECO.prepare(
+          `SELECT user, rank, score
+             FROM weekly_ranks
+            WHERE week=?
+            ORDER BY rank ASC`
+        ).bind(week).all();
+        return json({ week, leaderboard: rs.results ?? [] });
+      }
+    }
+
+
+    // GET /api/reco/judge/result/:week/:user
+    if (request.method === "GET") {
+      const m = url.pathname.match(/^\/api\/reco\/judge\/result\/([A-Za-z0-9W]+)\/(.+)$/);
+      if (m) {
+        const week = m[1];
+        const user = decodeURIComponent(m[2]);
+        const row = await env.SANDWICH_RECO.prepare(
+          `SELECT user, message
+             FROM weekly_results
+            WHERE week=? AND user=?`
+        ).bind(week, user).first();
+        return json({ week, result: row ?? null });
+      }
+    }
+
+
+    // POST /api/reco/judge/ingest
+if (url.pathname === "/api/reco/judge/ingest" && request.method === "POST") {
+  if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+  let p; try { p = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+  // 유효성
+  if (!p || !p.week) return json({ error: "missing_week" }, 400);
+  const DB = env.SANDWICH_RECO;
+
+  try {
+    // upsert 준비
+    const stmts = [];
+    for (const e of (p.leaderboard || [])) {
+      stmts.push(
+        DB.prepare(
+          `INSERT INTO weekly_ranks
+           (week,user,rank,score,accuracy,time_med_sec,time_mean_sec,time_p95_sec,mem_med_mb,mem_p95_mb)
+           VALUES (?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(week,user) DO UPDATE SET
+             rank=excluded.rank, score=excluded.score, accuracy=excluded.accuracy,
+             time_med_sec=excluded.time_med_sec, time_mean_sec=excluded.time_mean_sec,
+             time_p95_sec=excluded.time_p95_sec, mem_med_mb=excluded.mem_med_mb, mem_p95_mb=excluded.mem_p95_mb`
+        ).bind(
+          p.week, e.user, e.rank, e.score, e.accuracy,
+          e.time_med_sec ?? null, e.time_mean_sec ?? null, e.time_p95_sec ?? null,
+          e.mem_med_mb ?? null, e.mem_p95_mb ?? null
+        )
+      );
+    }
+    for (const r of (p.results || [])) {
+      stmts.push(
+        DB.prepare(
+          `INSERT INTO weekly_results
+           (week,user,passed_all,message,first_fail_case,reason,hint,diff)
+           VALUES (?,?,?,?,?,?,?,?)
+           ON CONFLICT(week,user) DO UPDATE SET
+             passed_all=excluded.passed_all, message=excluded.message,
+             first_fail_case=excluded.first_fail_case, reason=excluded.reason,
+             hint=excluded.hint, diff=excluded.diff`
+        ).bind(
+          p.week, r.user, r.passed_all ? 1 : 0, r.message,
+          r.first_fail_case ?? null, r.reason ?? null, r.hint ?? null, r.diff ?? null
+        )
+      );
+    }
+
+    // D1 batch는 너무 크면 실패할 수 있음 → 40개씩 끊어서 실행
+    let wrote = 0;
+    for (let i = 0; i < stmts.length; i += 40) {
+      const chunk = stmts.slice(i, i + 40);
+      const res = await DB.batch(chunk);
+      wrote += res.length;
+    }
+    return json({ ok: true, wrote });
+  } catch (err) {
+    // 에러 원인 확인용 상세 반환
+    return json({ error: "d1_batch_failed", detail: String(err) }, 500);
+  }
+}
+
+    return json({ error: "not_found" }, 404);
   },
 };
-
-/* ========== 공통 유틸 ========== */
-function sendJSON(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "access-control-allow-origin": "*",
-      "access-control-allow-headers": "Content-Type,X-AI-API-Key",
-      "access-control-allow-methods": "GET,POST,OPTIONS",
-    },
-  });
-}
-
-function toInt(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : NaN;
-}
-
-function needKey(request, env) {
-  const need = env.AI_API_KEY;
-  if (!need) return true;
-  const got = request.headers.get("X-AI-API-Key");
-  return got === need;
-}
-
-async function readJsonSafe(request) {
-  try { return await request.json(); } catch { return {}; }
-}
-
-/* ========== D1: 개인화(user_recs) ========== */
-async function getUserRecs(env, uidx) {
-  if (!Number.isFinite(uidx)) return sendJSON({ error: "bad_u_idx" }, 400);
-  const rs = await env.SANDWICH_RECO.prepare(`
-    SELECT project_id, score
-    FROM user_recs
-    WHERE u_idx = ?
-    ORDER BY score DESC, project_id ASC
-  `).bind(uidx).all();
-
-  const rows = rs.results || [];
-  return sendJSON({
-    u_idx: uidx,
-    total: rows.length,
-    data: rows.map(r => ({ project_id: Number(r.project_id), score: Number(r.score) })),
-  });
-}
-
-async function upsertUserRecs(env, body) {
-  const u_idx = toInt(body.u_idx ?? body.uIdx);
-  if (!Number.isFinite(u_idx)) return sendJSON({ error: "missing_u_idx" }, 400);
-
-  const items = Array.isArray(body.items) ? body.items : [];
-  const replace = !!body.replace;
-
-  const batch = [];
-  if (replace) {
-    batch.push(env.SANDWICH_RECO.prepare(`DELETE FROM user_recs WHERE u_idx = ?`).bind(u_idx));
-  }
-  for (const it of items) {
-    const pid = toInt(it.project_id ?? it.projectId);
-    const score = Number(it.score);
-    if (!Number.isFinite(pid) || !Number.isFinite(score)) continue;
-    batch.push(
-      env.SANDWICH_RECO.prepare(
-        `INSERT INTO user_recs (u_idx, project_id, score, updated_at)
-         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-         ON CONFLICT(u_idx, project_id)
-         DO UPDATE SET score=excluded.score, updated_at=CURRENT_TIMESTAMP`
-      ).bind(u_idx, pid, score)
-    );
-  }
-
-  if (batch.length === 0) return sendJSON({ ok: true, u_idx, upserted: 0, replaced: replace });
-  const res = await env.SANDWICH_RECO.batch(batch, "exclusive");
-  return sendJSON({ ok: true, u_idx, upserted: items.length, replaced: replace, tx: res.length });
-}
-
-/* ========== D1: 일간/주간 TOP (items JSON 그대로 반환) ========== */
-async function getTopDay(env, ymd) {
-  if (!/^\d{8}$/.test(ymd)) return sendJSON({ error: "bad_date_YYYYMMDD" }, 400);
-  const row = await env.SANDWICH_RECO.prepare(`SELECT items FROM top_day WHERE ymd = ?`).bind(ymd).first();
-  if (!row) return sendJSON({ ymd, total: 0, data: [] });
-
-  let items;
-  try { items = JSON.parse(row.items || "[]"); } catch { items = []; }
-  return sendJSON({ ymd, total: Array.isArray(items) ? items.length : 0, data: items });
-}
-
-async function getTopWeek(env, week) {
-  if (!/^\d{4}W\d{2}$/.test(week)) return sendJSON({ error: "bad_week_YYYYWww" }, 400);
-  const row = await env.SANDWICH_RECO.prepare(`SELECT items FROM top_week WHERE week = ?`).bind(week).first();
-  if (!row) return sendJSON({ week, total: 0, data: [] });
-
-  let items;
-  try { items = JSON.parse(row.items || "[]"); } catch { items = []; }
-  return sendJSON({ week, total: Array.isArray(items) ? items.length : 0, data: items });
-}
-
-async function upsertTopDay(env, body) {
-  const ymd = String(body.ymd || "").trim();
-  if (!/^\d{8}$/.test(ymd)) return sendJSON({ error: "bad_date_YYYYMMDD" }, 400);
-
-  const itemsJson = JSON.stringify(Array.isArray(body.items) ? body.items : []);
-  await env.SANDWICH_RECO.prepare(
-    `INSERT INTO top_day (ymd, items, updated_at)
-     VALUES (?, ?, CURRENT_TIMESTAMP)
-     ON CONFLICT(ymd) DO UPDATE SET items=excluded.items, updated_at=CURRENT_TIMESTAMP`
-  ).bind(ymd, itemsJson).run();
-
-  return sendJSON({ ok: true, ymd });
-}
-
-async function upsertTopWeek(env, body) {
-  const week = String(body.week || body.iso || "").trim();
-  if (!/^\d{4}W\d{2}$/.test(week)) return sendJSON({ error: "bad_week_YYYYWww" }, 400);
-
-  const itemsJson = JSON.stringify(Array.isArray(body.items) ? body.items : []);
-  await env.SANDWICH_RECO.prepare(
-    `INSERT INTO top_week (week, items, updated_at)
-     VALUES (?, ?, CURRENT_TIMESTAMP)
-     ON CONFLICT(week) DO UPDATE SET items=excluded.items, updated_at=CURRENT_TIMESTAMP`
-  ).bind(week, itemsJson).run();
-
-  return sendJSON({ ok: true, week });
-}
