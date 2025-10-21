@@ -119,6 +119,8 @@ export async function fetchChallenges(
   const response = await api.get('/challenges', {
     params,
     withCredentials: true,
+    timeout: 8000,
+    headers: { 'X-Skip-Auth-Refresh': '1' },
   });
   return response.data;
 }
@@ -129,6 +131,8 @@ export async function fetchChallenges(
 export async function fetchChallengeDetail(challengeId: number): Promise<any> {
   const response = await api.get(`/challenges/${challengeId}`, {
     withCredentials: true,
+    timeout: 8000,
+    headers: { 'X-Skip-Auth-Refresh': '1' },
   });
   return response.data;
 }
@@ -204,7 +208,7 @@ export async function createChallenge(payload: ChallengeUpsertRequest): Promise<
     ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
   });
 
-  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body), { withCredentials: true })).data;
+  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body), { withCredentials: true, baseURL: path.startsWith('/admin/') ? '' : undefined })).data;
   try {
     return await post('/admin/challenges', payload);
   } catch (e: any) {
@@ -248,7 +252,7 @@ export async function updateChallenge(challengeId: number, payload: ChallengeUps
     ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
   });
 
-  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body), { withCredentials: true });
+  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body), { withCredentials: true, baseURL: path.startsWith('/admin/') ? '' : undefined });
   try {
     await patch(`/admin/challenges/${challengeId}`, payload);
   } catch (e: any) {
@@ -283,14 +287,14 @@ export async function changeChallengeStatus(
   challengeId: number,
   status: ChallengeStatus
 ): Promise<void> {
-  await api.patch(`/admin/challenges/${challengeId}`, { status }, { withCredentials: true });
+  await api.patch(`/admin/challenges/${challengeId}`, { status }, { withCredentials: true, baseURL: '' });
 }
 
 // 관리자: 챌린지 삭제
 export async function deleteChallenge(challengeId: number, opts?: { force?: boolean }): Promise<void> {
   const params: any = {};
   if (opts?.force) params.force = true;
-  await api.delete(`/admin/challenges/${challengeId}`, { params, withCredentials: true });
+  await api.delete(`/admin/challenges/${challengeId}`, { params, withCredentials: true, baseURL: '' });
 }
 
 // 관리자: 챌린지 목록 조회 (admin 전용)
@@ -307,7 +311,7 @@ export async function adminFetchChallenges(params?: {
   const p: any = { page: 0, size: 20, sort: '-startAt', ...(params || {}) };
   if (params?.ym) p.aiMonth = params.ym;
   if (params?.week) p.aiWeek = params.week;
-  const res = await api.get('/admin/challenges', { params: p, withCredentials: true });
+  const res = await api.get('/admin/challenges', { params: p, withCredentials: true, timeout: 10000, baseURL: '' });
   return res.data as ChallengeListResponse;
 }
 
@@ -315,7 +319,7 @@ export async function adminFetchChallenges(params?: {
 
 /** 관리자: 리더보드 재집계 트리거 */
 export async function rebuildLeaderboard(challengeId: number): Promise<void> {
-  await api.post(`/admin/challenges/${challengeId}/rebuild-leaderboard`, {}, { withCredentials: true });
+  await api.post(`/admin/challenges/${challengeId}/rebuild-leaderboard`, {}, { withCredentials: true, baseURL: '' });
 }
 
 export type LeaderboardEntry = {
