@@ -23,6 +23,10 @@ export type ChallengeCardData = {
     startDate?: string;     // 시작일 정보
     /** 마감 기준 시간(코드:endAt, 포트폴리오:voteEndAt|endAt) – 메인 자동 이동 스케줄링용 */
     expireAtMs?: number;
+    /** 상태 배지 텍스트 (선택) */
+    statusBadge?: string;
+    /** 상태 배지 스타일 클래스 (선택) */
+    statusBadgeClass?: string;
 };
 
 const detailHref = (type: "CODE" | "PORTFOLIO", id: number) =>
@@ -37,8 +41,17 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
     return (
         <section className="mb-8">
             {/* 제목 */}
-            <h3 className="text-2xl font-extrabold mb-4 text-left ml-[15px] text-black dark:text-white">
-                {item.title}
+            <h3 className="text-2xl font-extrabold mb-4 text-left ml-[15px] text-black dark:text-white flex items-center gap-2">
+                <span>{item.title}</span>
+                {item.statusBadge && (
+                    <span
+                        className={`inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium ${
+                            item.statusBadgeClass || 'border-neutral-300 text-neutral-600'
+                        }`}
+                    >
+                        {item.statusBadge}
+                    </span>
+                )}
             </h3>
 
             {/* 카드 본문 */}
