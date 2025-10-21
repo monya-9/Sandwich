@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.reward.service;
 
+import com.sandwich.SandWich.common.util.RedisUtil;
 import com.sandwich.SandWich.reward.RewardProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,6 +17,7 @@ public class RewardPayoutService {
     private final JdbcTemplate jdbc;
     private final RewardProperties props;
     private final AiJudgeClient aiJudgeClient;
+    private final RedisUtil redisUtil;
 
     @Transactional(readOnly = true)
     public boolean isPublished(long challengeId) {
@@ -146,16 +148,48 @@ public class RewardPayoutService {
         }
     }
 
+    private Long findUserIdByUsername(String username) {
+        List<Long> list = jdbc.query("""
+        SELECT id FROM users
+        WHERE username = ? AND is_deleted = false
+        LIMIT 1
+    """, (rs, i) -> rs.getLong(1), username);
+        return list.isEmpty() ? null : list.get(0);
+    }
 
-    private int payoutOne(long challengeId, long userId, long amount, Integer rank) {
+    @Transactional
+    public int publishCustomPayout(long challengeId, long userId, long amount,
+                                   @org.springframework.lang.Nullable Integer rank,
+                                   String reason,  // 예: "REWARD_CUSTOM"
+                                   @org.springframework.lang.Nullable String memo,
+                                   @org.springframework.lang.Nullable String idempotencyKey) {
+        // (A) 멱등키가 오면 5~10분 잠금으로 재클릭 방지
+        if (idempotencyKey != null && !idempotencyKey.isBlank() && redisUtil != null) {
+            String key = "idem:reward:custom:%s".formatted(idempotencyKey);
+            if (Boolean.TRUE.equals(redisUtil.hasKey(key))) {
+                throw new com.sandwich.SandWich.common.exception.exceptiontype.ConflictException(
+                        "IDEMPOTENT_REPLAY", "이미 처리된 커스텀 지급입니다.");
+            }
+            redisUtil.setDuplicateTTLKey(key, 10, java.util.concurrent.TimeUnit.MINUTES);
+        }
+
+        // (B) 지급 실행 — 집계 테이블은 누적 가산, 트랜잭션은 라인아이템 기록
+        return payoutOneWithReason(challengeId, userId, amount, rank, reason, memo);
+    }
+
+    // 기존 publishPortfolioResults/publishCodeResults 내부에서 쓰던 메서드의 확장 버전
+    private int payoutOneWithReason(long challengeId, long userId, long amount,
+                                    @org.springframework.lang.Nullable Integer rank,
+                                    String reason, @org.springframework.lang.Nullable String memo) {
+        // 1) reward_payout: (challenge_id, user_id) 단일 행에 누적
         int upserted = jdbc.update("""
-        INSERT INTO reward_payout (challenge_id, user_id, amount, rank, created_at, updated_at)
-        VALUES (?, ?, ?, ?, now(), now())
-        ON CONFLICT (challenge_id, user_id) DO UPDATE
-        SET amount    = reward_payout.amount + EXCLUDED.amount,
-            rank      = COALESCE(LEAST(reward_payout.rank, EXCLUDED.rank), EXCLUDED.rank),
-            updated_at= now()
-    """, ps -> {
+          INSERT INTO reward_payout (challenge_id, user_id, amount, rank, created_at, updated_at)
+          VALUES (?, ?, ?, ?, now(), now())
+          ON CONFLICT (challenge_id, user_id) DO UPDATE
+          SET amount     = reward_payout.amount + EXCLUDED.amount,
+              rank       = COALESCE(LEAST(reward_payout.rank, EXCLUDED.rank), EXCLUDED.rank),
+              updated_at = now()
+        """, ps -> {
             ps.setLong(1, challengeId);
             ps.setLong(2, userId);
             ps.setLong(3, amount);
@@ -164,29 +198,29 @@ public class RewardPayoutService {
         });
 
         if (upserted > 0 && props.isApplyCredits()) {
-            // 크레딧 트랜잭션은 '누적 지급'마다 기록 남기는 것이 맞음
+            // 2) credit_txn: 라인아이템으로 항상 기록 (이력이 여기 남음)
             jdbc.update("""
-          INSERT INTO credit_txn(user_id, amount, reason, ref_id, created_at, updated_at)
-          VALUES (?, ?, 'REWARD', ?, now(), now())
-        """, userId, amount, challengeId);
+              INSERT INTO credit_txn(user_id, amount, reason, ref_id, created_at, updated_at)
+              VALUES (?, ?, ?, ?, now(), now())
+            """, userId, amount, (reason==null||reason.isBlank()?"REWARD":reason), challengeId);
 
+            // (선택) memo 저장을 원하면 credit_txn 테이블에 meta_json 같은 컬럼을 추가하세요.
+            // 없으면 memo는 AdminAuditLog 쪽에 남기는 것으로 충분합니다.
+
+            // 3) wallet 반영
             jdbc.update("""
-          INSERT INTO credit_wallet(user_id, balance, created_at, updated_at)
-          VALUES (?, ?, now(), now())
-          ON CONFLICT (user_id) DO UPDATE SET
-            balance    = credit_wallet.balance + EXCLUDED.balance,
-            updated_at = now()
-        """, userId, amount);
+              INSERT INTO credit_wallet(user_id, balance, created_at, updated_at)
+              VALUES (?, ?, now(), now())
+              ON CONFLICT (user_id) DO UPDATE SET
+                balance    = credit_wallet.balance + EXCLUDED.balance,
+                updated_at = now()
+            """, userId, amount);
         }
         return upserted;
     }
 
-    private Long findUserIdByUsername(String username) {
-        List<Long> list = jdbc.query("""
-        SELECT id FROM users
-        WHERE username = ? AND is_deleted = false
-        LIMIT 1
-    """, (rs, i) -> rs.getLong(1), username);
-        return list.isEmpty() ? null : list.get(0);
+    // 호환성을 위해 기존 호출부는 그대로:
+    private int payoutOne(long challengeId, long userId, long amount, Integer rank) {
+        return payoutOneWithReason(challengeId, userId, amount, rank, "REWARD", null);
     }
 }

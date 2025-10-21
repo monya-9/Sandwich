@@ -23,6 +23,9 @@ public class RewardAdminController {
     private final RewardPayoutService service;
     private final JdbcTemplate jdbc;
     public record PublishReq(List<Long> top, Long participant) {}
+    private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository audit;
+    private final com.sandwich.SandWich.auth.CurrentUserProvider current;
+    public record CustomReq(Long userId, Long amount, Integer rank, String memo, String reason) {}
 
     @PostMapping("/{id}/publish-results")
     @PreAuthorize("hasRole('ADMIN')")
@@ -50,5 +53,35 @@ public class RewardAdminController {
         var rule = new RewardRule(List.of(10000L, 5000L, 3000L), 500L);
         int inserted = service.publishPortfolioResults(id, rule);
         return Map.of("inserted", inserted, "default", true);
+    }
+
+
+    @PostMapping("/{id}/custom-payout")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String,Object> customPayout(@PathVariable long id,
+                                           @RequestBody CustomReq req,
+                                           @RequestHeader(value="Idempotency-Key", required=false) String idemKey) {
+        // 기본 검증
+        if (req.userId()==null || req.amount()==null) {
+            throw new org.springframework.web.server.ResponseStatusException(BAD_REQUEST, "userId/amount required");
+        }
+        // 챌린지 존재/상태 점검은 필요시 추가
+        int n = service.publishCustomPayout(
+                id, req.userId(), req.amount(),
+                req.rank(), (req.reason()==null?"REWARD_CUSTOM":req.reason()),
+                req.memo(), idemKey
+        );
+
+        // 감사 로그
+        try {
+            Long adminId = current.currentUserId();
+            audit.save(com.sandwich.SandWich.admin.store.AdminAuditLog.of(
+                    adminId, "CUSTOM_PAYOUT", "CHALLENGE", id,
+                    Map.of("userId", req.userId(), "amount", req.amount(), "rank", req.rank(),
+                            "memo", req.memo(), "reason", req.reason(), "idemKey", idemKey)
+            ));
+        } catch (Exception ignore) {}
+
+        return Map.of("ok", true, "updated", n);
     }
 }
