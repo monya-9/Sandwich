@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { createProject, uploadImage, ProjectRequest, updateProject, addEnvVarsBulk, EnvVarRequest, getEnvVars } from "../../api/projectApi";
+import { createProject, uploadImage, ProjectRequest, updateProject, addEnvVarsBulk, EnvVarRequest, getEnvVars, uploadDeployFile, deleteDeployFile } from "../../api/projectApi";
 import { createGithubBranchAndPR } from "../../api/projectApi";
 import logoPng from "../../assets/logo.png";
 import { FiImage } from "react-icons/fi";
@@ -141,12 +141,17 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [githubSyncEnabled, setGithubSyncEnabled] = useState(false);
   const [envVarsSubmitted, setEnvVarsSubmitted] = useState(false);
 
+  // 배포 파일 관리
+  const [deployFiles, setDeployFiles] = useState<Array<{name: string; url: string}>>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
   // 크롭 모달 상태
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorToast, setErrorToast] = useState({ visible: false, message: "" });
+  const [successToast, setSuccessToast] = useState({ visible: false, message: "" });
 
   // 함수들을 ref로 저장해서 무한 루프 방지
   const onTitleChangeRef = useRef(onTitleChange);
@@ -191,8 +196,8 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       // GitHub 정보는 별도 필드가 없으므로 기존 필드들을 활용하거나 빈 값으로 설정
       setGhOwner(initialDetail.repositoryUrl || "");
       setGhRepo(initialDetail.extraRepoUrl || "");
-      setGhBase(initialDetail.frontendBuildCommand || "main");
-      setGhToken(initialDetail.backendBuildCommand || "");
+      setGhBase("main"); // 기본값으로 설정 (프로젝트 상세에는 브랜치 정보가 없음)
+      setGhToken(""); // 토큰은 보안상 저장되지 않으므로 빈 값
       
       // 콜백 함수들은 별도 useEffect에서 호출
       setTimeout(() => {
@@ -465,6 +470,44 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     }
   };
 
+  // 배포 파일 업로드
+  const handleDeployFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!editOwnerId && !editProjectId) {
+      setErrorToast({ visible: true, message: "프로젝트를 먼저 생성해야 배포 파일을 업로드할 수 있습니다." });
+      return;
+    }
+
+    setUploadingFile(true);
+    const userId = editOwnerId || 0;
+    const projectId = editProjectId || 0;
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const fileUrl = await uploadDeployFile(userId, projectId, file);
+        return { name: file.name, url: fileUrl };
+      });
+        const uploaded = await Promise.all(uploadPromises);
+        setDeployFiles(prev => [...prev, ...uploaded]);
+        setSuccessToast({ visible: true, message: `${uploaded.length}개 파일 업로드 완료` });
+    } catch (e: any) {
+      setErrorToast({ visible: true, message: `업로드 실패: ${e?.message}` });
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  // 배포 파일 삭제
+  const handleDeployFileDelete = async (fileUrl: string, fileName: string) => {
+    try {
+        await deleteDeployFile(fileUrl);
+        setDeployFiles(prev => prev.filter(f => f.url !== fileUrl));
+        setSuccessToast({ visible: true, message: `"${fileName}" 삭제 완료` });
+    } catch (e: any) {
+      setErrorToast({ visible: true, message: `삭제 실패: ${e?.message}` });
+    }
+  };
+
   const onSubmit = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -541,12 +584,18 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             value: env.value.trim()
           }));
           
+          console.log("환경변수 요청 데이터:", envRequests);
+          console.log("GitHub 동기화:", githubSyncEnabled);
+          console.log("GitHub 토큰:", ghToken ? "있음" : "없음");
+          console.log("Owner:", ghOwner);
+          console.log("Repo:", ghRepo);
+          
           const envResponse = await addEnvVarsBulk(
             projectId,
             envRequests,
             githubSyncEnabled ? ghToken : undefined,
-            githubSyncEnabled ? ghOwner : undefined,
-            githubSyncEnabled ? ghRepo : undefined
+            ghOwner || "",  // 항상 전달 (빈 문자열이라도)
+            ghRepo || ""    // 항상 전달 (빈 문자열이라도)
           );
           
           console.log("환경변수 등록 결과:", envResponse);
@@ -592,10 +641,22 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             });
           }
         } catch (e: any) {
-          console.warn("환경변수 등록 실패:", e?.message);
+          console.error("환경변수 등록 실패:", e);
+          console.error("에러 상세:", e);
+          console.error("에러 응답:", e?.response?.data);
+          console.error("에러 상태:", e?.response?.status);
+          
+          // 백엔드 응답에서 더 자세한 에러 메시지 추출
+          let errorMessage = e?.message || "알 수 없는 오류";
+          if (e?.response?.data?.message) {
+            errorMessage = e.response.data.message;
+          } else if (e?.response?.data) {
+            errorMessage = JSON.stringify(e.response.data);
+          }
+          
           setErrorToast({ 
             visible: true, 
-            message: `환경변수 등록 실패: ${e?.message}` 
+            message: `환경변수 등록 실패: ${errorMessage}` 
           });
         }
       }
@@ -603,9 +664,26 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       // GitHub 브랜치/PR 생성
       if (ghOwner && ghRepo && ghBase && ghToken) {
         try {
-          await createGithubBranchAndPR(projectId, { owner: ghOwner, repo: ghRepo, baseBranch: ghBase, token: ghToken });
+          await createGithubBranchAndPR(projectId, { 
+            owner: ghOwner, 
+            repo: ghRepo, 
+            baseBranch: ghBase, 
+            token: ghToken,
+            frontendBuildCommand: frontendBuildCommand || "",
+            backendBuildCommand: backendBuildCommand || ""
+          });
         } catch (e: any) {
           console.warn("GH PR 트리거 실패:", e?.message);
+          
+          // 브랜치가 이미 존재하는 경우는 경고만 표시
+          if (e?.message?.includes("Reference already exists")) {
+            console.warn("브랜치가 이미 존재합니다. 기존 브랜치를 사용합니다.");
+          } else {
+            setErrorToast({ 
+              visible: true, 
+              message: `GitHub PR 생성 실패: ${e?.message}` 
+            });
+          }
         }
       }
       onClose();
@@ -621,15 +699,24 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   return (
     <>
-      <Toast
-        visible={errorToast.visible}
-        message={errorToast.message}
-        type="error"
-        size="medium"
-        autoClose={3000}
-        closable={true}
-        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
-      />
+        <Toast
+          visible={errorToast.visible}
+          message={errorToast.message}
+          type="error"
+          size="medium"
+          autoClose={3000}
+          closable={true}
+          onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+        />
+        <Toast
+          visible={successToast.visible}
+          message={successToast.message}
+          type="success"
+          size="medium"
+          autoClose={3000}
+          closable={true}
+          onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
+        />
       {cropOpen ? (
         <div className="fixed inset-0 z-[9998]" />
       ) : (
@@ -769,6 +856,25 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">레포 메인 브랜치명</div>
                 <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="baseBranch (기본 main)" value={ghBase} onChange={e=>setGhBase(e.target.value)} />
               </div>
+              {/* 빌드 커맨드 입력 */}
+              <div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프론트 빌드 명령어</div>
+                <input
+                  className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white"
+                  placeholder="예: npm run build"
+                  value={frontendBuildCommand}
+                  onChange={(e) => setFrontendBuildCommand(e.target.value)}
+                />
+              </div>
+              <div>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">백엔드 빌드 명령어</div>
+                <input
+                  className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white"
+                  placeholder="예: ./gradlew build"
+                  value={backendBuildCommand}
+                  onChange={(e) => setBackendBuildCommand(e.target.value)}
+                />
+              </div>
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 토큰</div>
                 <input type="password" className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 h-12 w-full text-[16px] bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
@@ -800,6 +906,65 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                   토큰 발급 설명서
                 </button>
               </div>
+              {/* 배포용 추가 파일 업로드 - 수정 모드에서만 표시 */}
+              {editMode && editOwnerId && editProjectId && (
+                <div className="pt-4">
+                  <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">
+                    배포용 추가 파일
+                    <span className="text-[12px] text-gray-500 dark:text-white/60 ml-2 font-normal">
+                      (config.json, nginx.conf 등)
+                    </span>
+                  </div>
+                  
+                  {/* 파일 업로드 버튼 */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleDeployFileUpload(e.target.files)}
+                        disabled={uploadingFile}
+                      />
+                      <div className={`px-4 py-2 rounded border text-sm transition-colors ${
+                        uploadingFile
+                          ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-white/40 border-gray-300 dark:border-white/20 cursor-not-allowed'
+                          : 'bg-white dark:bg-[var(--surface)] text-black dark:text-white border-[#ADADAD] dark:border-[var(--border-color)] hover:bg-gray-50 dark:hover:bg-white/5'
+                      }`}>
+                        {uploadingFile ? '업로드 중...' : '📁 파일 선택'}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* 업로드된 파일 목록 */}
+                  {deployFiles.length > 0 && (
+                    <div className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded p-3 space-y-2">
+                      <div className="text-[14px] font-semibold text-gray-700 dark:text-white/80 mb-2">
+                        업로드된 파일 ({deployFiles.length}개)
+                      </div>
+                      {deployFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-white/5 rounded">
+                          <span className="text-[14px] text-black dark:text-white truncate flex-1">
+                            📄 {file.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeployFileDelete(file.url, file.name)}
+                            className="ml-3 px-3 py-1 text-[12px] bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
+                    배포 시 GitHub Actions에서 자동으로 다운로드하여 사용됩니다.
+                  </div>
+                </div>
+              )}
+
               <EnvVarsInput
                 envVars={envVars}
                 onEnvVarsChange={setEnvVars}

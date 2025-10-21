@@ -23,17 +23,21 @@ export type ProjectDetailResponse = {
 };
 
 export async function fetchProjectDetail(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectDetailResponse> {
-  const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
-  const res = await fetch(url, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`프로젝트 상세 조회 실패: ${res.status}`);
+  if (baseUrl) {
+    const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
+    const res = await fetch(url, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`프로젝트 상세 조회 실패: ${res.status}`);
+    }
+    return res.json();
   }
-  return res.json();
+  const res = await api.get(`/projects/${userId}/${projectId}`);
+  return res.data;
 }
 
 export type ProjectRequest = {
@@ -193,26 +197,7 @@ export async function deleteAllProjectContents(userId: number, projectId: number
 
 export type ImageUploadResponse = { url: string };
 
-export async function uploadImage(file: File, baseUrl: string = ""): Promise<ImageUploadResponse> {
-  if (baseUrl) {
-    const url = `${baseUrl}/api/upload/image`.replace(/\/+/, "/");
-    const token = getToken();
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: form,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`이미지 업로드 실패: ${res.status}${text ? ` - ${text}` : ""}`);
-    }
-    return res.json();
-  }
+export async function uploadImage(file: File): Promise<ImageUploadResponse> {
   const form = new FormData();
   form.append("file", file);
   const r = await api.post(`/upload/image`, form);
@@ -225,24 +210,60 @@ export type ProjectContentItem = {
   order: number;
 };
 
-export async function createGithubBranchAndPR(projectId: number, params: { owner: string; repo: string; baseBranch: string; token: string }, baseUrl: string = ""): Promise<string> {
-  const url = `${baseUrl}/api/github/${projectId}/branches-with-file-and-pr`.replace(/\/+/, "/");
-  const token = getToken();
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "X-GitHub-Token": params.token,
-    },
-    body: new URLSearchParams({ owner: params.owner, repo: params.repo, baseBranch: params.baseBranch }).toString(),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`GitHub 브랜치/PR 생성 실패: ${res.status}${text ? ` - ${text}` : ""}`);
+export async function createGithubBranchAndPR(
+  projectId: number,
+  params: {
+    owner: string;
+    repo: string;
+    baseBranch: string;
+    token: string;
+    frontendBuildCommand: string;
+    backendBuildCommand: string;
+  },
+  baseUrl: string = ""
+): Promise<string> {
+  if (baseUrl) {
+    const url = `${baseUrl}/api/github/${projectId}/branches-with-file-and-pr`.replace(/\/+/, "/");
+    const token = getToken();
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "X-GitHub-Token": params.token,
+      },
+      body: new URLSearchParams({
+        owner: params.owner,
+        repo: params.repo,
+        baseBranch: params.baseBranch,
+        frontendBuildCommand: params.frontendBuildCommand,
+        backendBuildCommand: params.backendBuildCommand,
+      }).toString(),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`GitHub 브랜치/PR 생성 실패: ${res.status}${text ? ` - ${text}` : ""}`);
+    }
+    return res.text();
   }
-  return res.text();
+  
+  const res = await api.post(`/github/${projectId}/branches-with-file-and-pr`, 
+    new URLSearchParams({
+      owner: params.owner,
+      repo: params.repo,
+      baseBranch: params.baseBranch,
+      frontendBuildCommand: params.frontendBuildCommand,
+      backendBuildCommand: params.backendBuildCommand,
+    }).toString(),
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "X-GitHub-Token": params.token,
+      }
+    }
+  );
+  return res.data;
 }
 
 export type ProjectContentUpsertItem = { type: "IMAGE" | "TEXT" | "VIDEO"; data: string; order: number }; // data may contain JSON with {src,pad,full} for IMAGE/VIDEO
@@ -277,13 +298,7 @@ export async function addEnvVarsBulk(
   owner?: string,
   repo?: string
 ): Promise<EnvBulkResponse> {
-  const token = getToken();
-  if (!token) throw new Error("인증 토큰이 없습니다.");
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
-  };
+  const headers: Record<string, string> = {};
 
   if (githubToken) {
     headers["X-GitHub-Token"] = githubToken;
@@ -293,20 +308,10 @@ export async function addEnvVarsBulk(
   if (owner) queryParams.append("owner", owner);
   if (repo) queryParams.append("repo", repo);
 
-  const url = `/api/env/add/${projectId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  const url = `/env/add/${projectId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(envVars),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `환경변수 등록 실패: ${res.status}`);
-  }
-
-  return res.json();
+  const res = await api.post(url, envVars, { headers });
+  return res.data;
 }
 
 // 환경변수 개별 등록 API (백엔드 스펙에 맞게 추가)
@@ -318,12 +323,7 @@ export async function addEnvVar(
   repo: string,
   branch: string
 ): Promise<EnvVarResponse> {
-  const token = getToken();
-  if (!token) throw new Error("인증 토큰이 없습니다.");
-
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
     "X-GitHub-Token": githubToken,
   };
 
@@ -332,20 +332,10 @@ export async function addEnvVar(
   queryParams.append("repo", repo);
   queryParams.append("branch", branch);
 
-  const url = `/api/env/${projectId}/env?${queryParams.toString()}`;
+  const url = `/env/${projectId}/env?${queryParams.toString()}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(envVar),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `환경변수 등록 실패: ${res.status}`);
-  }
-
-  return res.json();
+  const res = await api.post(url, envVar, { headers });
+  return res.data;
 }
 
 // 환경변수 GitHub 동기화 API (백엔드 스펙에 맞게 추가)
@@ -355,11 +345,7 @@ export async function syncEnvVarsToGitHub(
   owner: string,
   repo: string
 ): Promise<any> {
-  const token = getToken();
-  if (!token) throw new Error("인증 토큰이 없습니다.");
-
   const headers: Record<string, string> = {
-    "Authorization": `Bearer ${token}`,
     "X-GitHub-Token": githubToken,
   };
 
@@ -367,37 +353,31 @@ export async function syncEnvVarsToGitHub(
   queryParams.append("owner", owner);
   queryParams.append("repo", repo);
 
-  const url = `/api/env/sync/${projectId}?${queryParams.toString()}`;
+  const url = `/env/sync/${projectId}?${queryParams.toString()}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-  });
+  const res = await api.post(url, {}, { headers });
+  return res.data;
+}
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `GitHub 동기화 실패: ${res.status}`);
-  }
+// 배포 파일 업로드 (S3 - sandwich-user-projects)
+export async function uploadDeployFile(userId: number | string, projectId: number, file: File): Promise<string> {
+  const url = `/deploy/files/${userId}/${projectId}`;
+  const form = new FormData();
+  form.append("file", file);
+  
+  const res = await api.post(url, form);
+  return res.data; // 서버가 fileUrl 문자열을 반환
+}
 
-  return res.json();
+// 배포 파일 삭제 (fileUrl로 삭제)
+export async function deleteDeployFile(fileUrl: string): Promise<void> {
+  const url = `/deploy/files?${new URLSearchParams({ fileUrl }).toString()}`;
+  
+  await api.delete(url);
 }
 
 // 환경변수 조회 API (백엔드 스펙에 맞게 추가)
 export async function getEnvVars(projectId: number): Promise<any[]> {
-  const token = getToken();
-  if (!token) throw new Error("인증 토큰이 없습니다.");
-
-  const res = await fetch(`/api/env/${projectId}`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `환경변수 조회 실패: ${res.status}`);
-  }
-
-  return res.json();
+  const res = await api.get(`/env/${projectId}`);
+  return res.data;
 }
