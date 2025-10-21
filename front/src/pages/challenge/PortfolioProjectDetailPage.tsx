@@ -13,6 +13,7 @@ import {
     type MyVoteResponse
 } from "../../api/challengeApi";
 import api from "../../api/axiosInstance";
+import { isAdmin } from "../../utils/authz";
 
 function Stars({
                    value,
@@ -48,6 +49,7 @@ export default function PortfolioProjectDetailPage() {
     const id = Number(idStr);
     const pid = Number(pidStr);
     const nav = useNavigate();
+    const admin = isAdmin();
 
     const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -58,6 +60,7 @@ export default function PortfolioProjectDetailPage() {
     
     // 챌린지 상태 확인
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    const [timeline, setTimeline] = useState<{ startAt?: string; endAt?: string; voteStartAt?: string; voteEndAt?: string }>({});
     const [challengeLoading, setChallengeLoading] = useState(true);
 
     // 투표 관련 상태
@@ -85,6 +88,12 @@ export default function PortfolioProjectDetailPage() {
             try {
                 const backendChallenge = await fetchChallengeDetail(id);
                 setChallengeStatus(backendChallenge.status);
+                setTimeline({
+                    startAt: backendChallenge.startAt,
+                    endAt: backendChallenge.endAt,
+                    voteStartAt: backendChallenge.voteStartAt,
+                    voteEndAt: backendChallenge.voteEndAt,
+                });
             } catch (error) {
                 setChallengeStatus(null);
             } finally {
@@ -194,10 +203,21 @@ export default function PortfolioProjectDetailPage() {
         };
 
         // 투표 가능한 상태이거나 이미 투표한 상태라면 투표 데이터 로드
-        if ((challengeStatus === "OPEN" || challengeStatus === "VOTING") && item) {
+        // 투표 가능한 기간에만 투표 데이터 로드
+        const parseTs = (v?: string) => {
+            if (!v) return null;
+            const s = v.includes('T') ? v : v.replace(' ', 'T');
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        };
+        const now = new Date();
+        const vStart = parseTs(timeline.voteStartAt);
+        const vEnd = parseTs(timeline.voteEndAt);
+        const votingNow = !!(vStart && now >= vStart && (!vEnd || now <= vEnd));
+        if (votingNow && item) {
             loadVoteData();
         }
-    }, [id, challengeStatus, item]);
+    }, [id, challengeStatus, item, timeline.voteStartAt, timeline.voteEndAt]);
 
     // 페이지 로드 시 투표 상태 확인 (추가 보장)
     useEffect(() => {
@@ -407,14 +427,25 @@ export default function PortfolioProjectDetailPage() {
     );
 
     // ✅ 중복 제한 제거: 별점 모두 채웠는지만 체크 + 챌린지 종료 체크
-    const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0 && challengeStatus !== "ENDED";
-    const isChallengeEnded = challengeStatus === "ENDED";
+    const parseTs = (v?: string) => {
+        if (!v) return null;
+        const s = v.includes('T') ? v : v.replace(' ', 'T');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    const now = new Date();
+    const endAt = parseTs(timeline.endAt);
+    const vStart = parseTs(timeline.voteStartAt);
+    const vEnd = parseTs(timeline.voteEndAt);
+    const isVoting = !!(vStart && now >= vStart && (!vEnd || now <= vEnd));
+    const isChallengeEnded = !!(vEnd && now > vEnd);
+    const canVote = ux > 0 && tech > 0 && cre > 0 && plan > 0 && isVoting && !isChallengeEnded;
 
     // handleVote 함수는 위에서 이미 정의됨 (API 연결 버전)
 
 
     const toggleLike = async () => {
-        if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
+        if (isChallengeEnded) return; // 종료된 챌린지에서는 좋아요 불가
         try {
             const response = await api.post('/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
@@ -450,6 +481,27 @@ export default function PortfolioProjectDetailPage() {
                     <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
+                {/* 상태 배지 */}
+                {(() => {
+                    const now = new Date();
+                    const parseTs = (v?: string) => {
+                        if (!v) return null; const s = v.includes('T') ? v : v.replace(' ', 'T');
+                        const d = new Date(s); return isNaN(d.getTime()) ? null : d;
+                    };
+                    const vStart = parseTs(timeline.voteStartAt);
+                    const vEnd = parseTs(timeline.voteEndAt);
+                    const isEnded = !!(vEnd && now > vEnd);
+                    const isVoting = !!(vStart && now >= vStart && (!vEnd || now <= vEnd));
+                    const badge = isEnded
+                        ? { t: '종료', c: 'border-neutral-300 text-neutral-600' }
+                        : isVoting
+                        ? { t: '투표중', c: 'border-purple-300 text-purple-700 bg-purple-50' }
+                        : { t: '투표대기', c: 'border-amber-300 text-amber-700 bg-amber-50' };
+                    return (
+                        <span className={`ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11.5px] ${badge.c}`}>{badge.t}</span>
+                    );
+                })()}
+                {/* 관리자 수정 버튼 제거 요청에 따라 숨김 */}
             </div>
 
 
@@ -553,6 +605,16 @@ export default function PortfolioProjectDetailPage() {
                             <div>
                                 <div className="font-semibold">종료된 챌린지</div>
                                 <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 투표할 수 없습니다.</div>
+                            </div>
+                        </div>
+                    </div>
+                ) : !isVoting ? (
+                    <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-amber-800">
+                            <span className="text-lg">⏳</span>
+                            <div>
+                                <div className="font-semibold">투표 대기 중</div>
+                                <div className="text-sm">현재는 제출물만 확인할 수 있어요. 투표 시작 후 별점 입력이 활성화됩니다.</div>
                             </div>
                         </div>
                     </div>

@@ -64,6 +64,7 @@ export default function PortfolioSubmitPage() {
     const [challengeExists, setChallengeExists] = useState<boolean | null>(null);
     const [mustHave, setMustHave] = useState<string[]>([]);
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    const [timeline, setTimeline] = useState<{ startAt?: string; endAt?: string; voteStartAt?: string; voteEndAt?: string }>({});
 
     const { isLoggedIn } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
@@ -129,6 +130,12 @@ export default function PortfolioSubmitPage() {
                     
                     setData(backendBasedData);
                     setChallengeStatus(backendChallenge.status);
+                    setTimeline({
+                        startAt: backendChallenge.startAt,
+                        endAt: backendChallenge.endAt,
+                        voteStartAt: backendChallenge.voteStartAt,
+                        voteEndAt: backendChallenge.voteEndAt,
+                    });
                     
                     // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
                     if (!backendDescription && !ruleData?.must && !ruleData?.mustHave) {
@@ -187,9 +194,25 @@ export default function PortfolioSubmitPage() {
         images: [],
     });
 
-    // ✅ 제목 또는 설명만 있어도 제출 가능 (단, 챌린지가 종료되지 않았을 때만)
-    const canSubmit = (!!form.title.trim() || !!form.desc?.trim()) && challengeStatus !== "ENDED";
-    const isChallengeEnded = challengeStatus === "ENDED";
+    // ✅ 제목 또는 설명만 있어도 제출 가능 (제출 기간일 때만)
+    const parseTs = (v?: string) => {
+        if (!v) return null;
+        const s = v.includes('T') ? v : v.replace(' ', 'T');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" = (() => {
+        const now = new Date();
+        const endAt = parseTs(timeline.endAt);
+        const vStart = parseTs(timeline.voteStartAt);
+        const vEnd = parseTs(timeline.voteEndAt);
+        if (vEnd && now > vEnd) return "ENDED";
+        if (vStart && now >= vStart) return "VOTING";
+        if (endAt && now >= endAt) return "VOTE_WAITING";
+        return "SUBMISSION_OPEN";
+    })();
+    const isChallengeEnded = derivedStage === "ENDED";
+    const canSubmit = (!!form.title.trim() || !!form.desc?.trim()) && derivedStage === "SUBMISSION_OPEN";
 
     // 이미지 크롭 핸들러
     const handleCropDone = async (
@@ -672,13 +695,13 @@ export default function PortfolioSubmitPage() {
                             </Row>
 
                             {/* 종료된 챌린지 안내 */}
-                            {isChallengeEnded && (
+                            {derivedStage !== "SUBMISSION_OPEN" && (
                                 <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                                     <div className="flex items-center gap-2 text-gray-700">
                                         <span className="text-lg">🔒</span>
                                         <div>
-                                            <div className="font-semibold">종료된 챌린지</div>
-                                            <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                            <div className="font-semibold">제출 불가</div>
+                                            <div className="text-sm text-gray-600">제출 마감 이후에는 제출할 수 없습니다. 투표 시작 전까지는 제출물만 확인할 수 있어요.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -690,7 +713,7 @@ export default function PortfolioSubmitPage() {
                                     onClick={handleSubmit} 
                                     disabled={!canSubmit}
                                 >
-                                    {isChallengeEnded ? "제출 불가" : "제출하기"}
+                                    {derivedStage !== "SUBMISSION_OPEN" ? "제출 불가" : "제출하기"}
                                 </CTAButton>
                             </div>
                         </div>
@@ -770,13 +793,13 @@ export default function PortfolioSubmitPage() {
                         </div>
 
                         {/* 종료된 챌린지 안내 */}
-                        {isChallengeEnded && (
+                        {derivedStage !== "SUBMISSION_OPEN" && (
                             <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                                 <div className="flex items-center gap-2 text-gray-700">
                                     <span className="text-lg">🔒</span>
                                     <div>
-                                        <div className="font-semibold">종료된 챌린지</div>
-                                        <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                        <div className="font-semibold">제출 불가</div>
+                                        <div className="text-sm text-gray-600">제출 마감 이후에는 제출할 수 없습니다. 투표 시작 전까지는 제출물만 확인할 수 있어요.</div>
                                     </div>
                                 </div>
                             </div>
@@ -788,7 +811,7 @@ export default function PortfolioSubmitPage() {
                                 onClick={handleSubmit} 
                                 disabled={!canSubmit}
                             >
-                                {isChallengeEnded ? "제출 불가" : "제출하기"}
+                            {derivedStage !== "SUBMISSION_OPEN" ? "제출 불가" : "제출하기"}
                             </CTAButton>
                         </div>
                     </SectionCard>
