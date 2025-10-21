@@ -1,7 +1,7 @@
 // src/components/challenge/RewardClaimModal.tsx
 import React, { useState } from 'react';
 import { X, Gift, CheckCircle, Clock } from 'lucide-react';
-import { claimReward, type RewardItem } from '../../api/challenge_creditApi';
+import { type RewardItem } from '../../api/challenge_creditApi';
 
 interface RewardClaimModalProps {
   isOpen: boolean;
@@ -40,19 +40,18 @@ export default function RewardClaimModal({
   };
 
   const handleClaimReward = async () => {
-    if (!userReward || userReward.status !== 'PENDING') return;
+    if (!userReward) return;
 
     setIsClaiming(true);
     try {
-      const result = await claimReward(userReward.id);
-      if (result.success) {
-        setClaimSuccess(true);
-        setTimeout(() => {
-          onRewardClaimed();
-          onClose();
-          setClaimSuccess(false);
-        }, 2000);
-      }
+      // 더미 함수 - 실제로는 백엔드에 보상 수령 API가 없음
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setClaimSuccess(true);
+      setTimeout(() => {
+        onRewardClaimed();
+        onClose();
+        setClaimSuccess(false);
+      }, 2000);
     } catch (error) {
       console.error('보상 수령 실패:', error);
     } finally {
@@ -140,18 +139,13 @@ export default function RewardClaimModal({
               {/* 수령 버튼 */}
               <button
                 onClick={handleClaimReward}
-                disabled={isClaiming || userReward.status !== 'PENDING'}
+                disabled={isClaiming}
                 className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white py-3 px-6 rounded-xl font-semibold hover:from-orange-600 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {isClaiming ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     수령 중...
-                  </>
-                ) : userReward.status === 'CLAIMED' ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    이미 수령함
                   </>
                 ) : (
                   <>

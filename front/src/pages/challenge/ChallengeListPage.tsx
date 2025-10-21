@@ -90,7 +90,7 @@ export default function ChallengeListPage() {
 		const checkPendingRewards = async () => {
 			try {
 				const rewards = await fetchMyRewards();
-				const pending = rewards.rewards.find(reward => reward.status === 'PENDING');
+                                const pending = rewards.find((reward: any) => !reward.rank);
 				setPendingReward(pending || null);
 			} catch (error) {
 				console.error('보상 상태 확인 실패:', error);
@@ -280,7 +280,7 @@ export default function ChallengeListPage() {
 				<RewardClaimModal
 					isOpen={showRewardModal}
 					onClose={() => setShowRewardModal(false)}
-					challengeTitle={pendingReward.challengeTitle}
+                                       challengeTitle={pendingReward.challenge_title}
 					userReward={pendingReward}
 					onRewardClaimed={() => {
 						setShowRewardModal(false);
