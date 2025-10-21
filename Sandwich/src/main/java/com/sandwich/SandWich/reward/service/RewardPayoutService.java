@@ -1,15 +1,13 @@
 package com.sandwich.SandWich.reward.service;
 
-
 import com.sandwich.SandWich.reward.RewardProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.sandwich.SandWich.internal.ai.AiJudgeClient;
 import java.util.List;
 import java.util.Map;
-
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +15,7 @@ public class RewardPayoutService {
 
     private final JdbcTemplate jdbc;
     private final RewardProperties props;
+    private final AiJudgeClient aiJudgeClient;
 
     @Transactional(readOnly = true)
     public boolean isPublished(long challengeId) {
@@ -74,6 +73,45 @@ public class RewardPayoutService {
         return affected; // 이번 호출에서 실제 insert된 reward_payout 행 수
     }
 
+    @Transactional
+    public int publishCodeResults(long challengeId, RewardRule rule, String aiWeek) {
+        var resp = aiJudgeClient.getWeeklyLeaderboard(aiWeek);
+        if (resp == null || resp.leaderboard() == null || resp.leaderboard().isEmpty())
+            throw new IllegalStateException("AI 리더보드가 비었습니다: " + aiWeek);
+
+        int affected = 0;
+        List<AiJudgeClient.LeaderboardResp.Entry> entries = resp.leaderboard();
+
+        // 상위 N
+        int winners = Math.min(rule.top().size(), entries.size());
+        for (int i = 0; i < winners; i++) {
+            String username = entries.get(i).user();
+            Long userId = jdbc.queryForObject(
+                    "SELECT id FROM users WHERE username = ? AND is_deleted = false",
+                    Long.class, username
+            );
+            if (userId != null) {
+                long amount = rule.top().get(i);
+                affected += payoutOne(challengeId, userId, amount, i + 1);
+            }
+        }
+
+        // 참가자 공통 보상
+        if (rule.participant() != null && rule.participant() > 0) {
+            for (var entry : entries) {
+                String username = entry.user();
+                Long userId = jdbc.queryForObject(
+                        "SELECT id FROM users WHERE username = ? AND is_deleted = false",
+                        Long.class, username
+                );
+                if (userId != null) {
+                    affected += payoutOne(challengeId, userId, rule.participant(), null);
+                }
+            }
+        }
+        return affected;
+    }
+
     private int payoutOne(long challengeId, long userId, long amount, Integer rank) {
         // 멱등 upsert + 타임스탬프 명시
         int inserted = jdbc.update("""
@@ -106,5 +144,4 @@ public class RewardPayoutService {
         }
         return inserted;
     }
-
 }
