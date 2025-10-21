@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import {
     getChallengeDetail,
     type AnyChallengeDetail,
@@ -17,6 +17,9 @@ import {
 } from "../../api/challengeApi";
 import RewardClaimModal from "../../components/challenge/RewardClaimModal";
 import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
+import { getVoteSummary, type VoteSummaryResponse } from "../../api/challengeApi";
+import { isAdmin } from "../../utils/authz";
+import { deleteChallenge } from "../../api/challengeApi";
 
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
@@ -274,12 +277,17 @@ function secondaryHref(type: "CODE" | "PORTFOLIO", id: number) {
 function primaryLabel(type: "CODE" | "PORTFOLIO") {
     return type === "CODE" ? "코드 제출하기" : "포트폴리오 제출하기";
 }
-function secondaryLabel(type: "CODE" | "PORTFOLIO", challengeStatus?: string | null) {
+function secondaryLabel(
+    type: "CODE" | "PORTFOLIO",
+    _challengeStatus?: string | null,
+    derivedStage?: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" | null
+) {
     if (type === "CODE") return "제출물 보기";
     if (type === "PORTFOLIO") {
-        return challengeStatus === "ENDED" ? "제출물 확인하러 가기" : "투표하러 가기";
+        // 포트폴리오: 투표 가능한 시기에만 '투표하러 가기', 그 외엔 항상 '제출물 확인하러 가기'
+        return derivedStage === "VOTING" ? "투표하러 가기" : "제출물 확인하러 가기";
     }
-    return "투표하러 가기";
+    return "제출물 확인하러 가기";
 }
 
 /* ---------- Page ---------- */
@@ -303,11 +311,14 @@ export default function ChallengeDetailPage() {
     const [error, setError] = useState<string | null>(null);
     const [mustHave, setMustHave] = useState<string[]>([]);
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    const [timeline, setTimeline] = useState<{ startAt?: string; endAt?: string; voteStartAt?: string; voteEndAt?: string }>({});
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [showRewardModal, setShowRewardModal] = useState(false);
     const [userReward, setUserReward] = useState<RewardItem | null>(null);
+    const admin = isAdmin();
+    const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
 
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
@@ -376,6 +387,12 @@ export default function ChallengeDetailPage() {
                         
                         setData(backendBasedData);
                         setChallengeStatus(backendChallenge.status);
+                        setTimeline({
+                            startAt: backendChallenge.startAt,
+                            endAt: backendChallenge.endAt,
+                            voteStartAt: backendChallenge.voteStartAt,
+                            voteEndAt: backendChallenge.voteEndAt,
+                        });
                         
                         // AI 데이터는 보조적으로만 사용 (설명이 없을 때만)
                         if (!backendDescription) {
@@ -435,6 +452,12 @@ export default function ChallengeDetailPage() {
                         
                         setData(backendBasedData);
                         setChallengeStatus(backendChallenge.status);
+                        setTimeline({
+                            startAt: backendChallenge.startAt,
+                            endAt: backendChallenge.endAt,
+                            voteStartAt: backendChallenge.voteStartAt,
+                            voteEndAt: backendChallenge.voteEndAt,
+                        });
                         
                         setError(null);
                         setLoading(false);
@@ -492,6 +515,38 @@ export default function ChallengeDetailPage() {
     const onBack = () => {
         navigate("/challenge");
     };
+    // 관리자 전용 투표 요약 로드
+    useEffect(() => {
+        const loadSummary = async () => {
+            if (!admin || type !== "PORTFOLIO") return;
+            try {
+                const summary = await getVoteSummary(id);
+                setVoteSummary(summary);
+            } catch {
+                setVoteSummary([]);
+            }
+        };
+        loadSummary();
+    }, [admin, id, type]);
+
+    // ---- Derived stage helpers (portfolio) ----
+    const parseTs = (v?: string) => {
+        if (!v) return null;
+        const s = v.includes('T') ? v : v.replace(' ', 'T');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" | null = React.useMemo(() => {
+        if (type !== "PORTFOLIO") return null;
+        const now = new Date();
+        const endAt = parseTs(timeline.endAt);
+        const vStart = parseTs(timeline.voteStartAt);
+        const vEnd = parseTs(timeline.voteEndAt);
+        if (vEnd && now > vEnd) return "ENDED";
+        if (vStart && now >= vStart) return "VOTING";
+        if (endAt && now >= endAt) return "VOTE_WAITING";
+        return "SUBMISSION_OPEN";
+    }, [type, timeline.endAt, timeline.voteStartAt, timeline.voteEndAt]);
 
     return (
         <div className="mx-auto w-full max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
@@ -530,23 +585,43 @@ export default function ChallengeDetailPage() {
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </button>
-                    <h1 className="text-[22px] font-extrabold tracking-[-0.01em] text-neutral-900 md:text-[24px]">
-                        {data.title}
+                    <h1 className="text-[22px] font-extrabold tracking-[-0.01em] text-neutral-900 md:text-[24px] flex items-center gap-2">
+                        <span>{data.title}</span>
+                        {(() => {
+                            const labelAndClass = () => {
+                                if (type === "PORTFOLIO") {
+                                    if (derivedStage === "ENDED") return { t: "종료", c: "border-neutral-300 text-neutral-600" };
+                                    if (derivedStage === "VOTING") return { t: "투표중", c: "border-purple-300 text-purple-700 bg-purple-50" };
+                                    if (derivedStage === "VOTE_WAITING") return { t: "투표대기", c: "border-amber-300 text-amber-700 bg-amber-50" };
+                                    return { t: "진행중", c: "border-emerald-300 text-emerald-700 bg-emerald-50" };
+                                }
+                                if (challengeStatus === "ENDED") return { t: "종료", c: "border-neutral-300 text-neutral-600" };
+                                return { t: "진행중", c: "border-emerald-300 text-emerald-700 bg-emerald-50" };
+                            };
+                            const v = labelAndClass();
+                            return (
+                                <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium ${v.c}`}>
+                                    {v.t}
+                                </span>
+                            );
+                        })()}
                     </h1>
                 </div>
 
-                <button
-                    onClick={() => setOpen((v) => !v)}
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[12.5px] hover:bg-neutral-50"
-                >
-                    상세 {open ? "접기" : "펼치기"} <ChevronDown className={`h-4 w-4 ${open ? "rotate-180" : ""}`} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setOpen((v) => !v)}
+                        className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[12.5px] hover:bg-neutral-50"
+                    >
+                        상세 {open ? "접기" : "펼치기"} <ChevronDown className={`h-4 w-4 ${open ? "rotate-180" : ""}`} />
+                    </button>
+                </div>
             </div>
 
             {/* 상단 CTA */}
             <div className="mb-4 flex flex-wrap gap-2">
-                {/* 종료된 챌린지가 아닐 때만 제출하기 버튼 표시 */}
-                {challengeStatus !== "ENDED" && (
+                {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 */}
+                {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && (
                     <button
                         onClick={goPrimary}
                         className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
@@ -569,9 +644,18 @@ export default function ChallengeDetailPage() {
                     onClick={goSecondary}
                     className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
                 >
-                    <span>{type === "CODE" ? "🗂️" : "🗳️"}</span> {secondaryLabel(type, challengeStatus)} →
+                    <span>{type === "CODE" ? "🗂️" : (derivedStage === "VOTING" ? "🗳️" : "🗂️")}</span> {secondaryLabel(type, challengeStatus, derivedStage)} →
                 </button>
             </div>
+
+            {/* 관리자 전용 투표 현황은 투표 목록 페이지에서만 표시 */}
+
+            {/* 안내 배지: 포트폴리오 투표 대기 */}
+            {type === "PORTFOLIO" && derivedStage === "VOTE_WAITING" && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-800">
+                    제출 마감 · 투표 대기 중입니다. 제출물만 확인할 수 있어요.
+                </div>
+            )}
 
             {/* TOP Winners - 종료된 포트폴리오 챌린지만 */}
             {challengeStatus === "ENDED" && type === "PORTFOLIO" && data?.id && <TopWinners type={type} challengeId={data.id} />}
@@ -579,9 +663,36 @@ export default function ChallengeDetailPage() {
             {/* 본문 */}
             {open && (
                 <SectionCard className="!px-6 !py-5 md:!px-8 md:!py-6" outerClassName="mt-2">
-                    {/* 설명 */}
+                    {/* 설명 헤더 + 관리자 액션을 같은 선상에 배치 */}
                     <div className="mb-6">
-                        <SectionTitle>{type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
+                        <div className="mb-2 flex items-center justify-between">
+                            <SectionTitle>{type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
+                            {admin && (
+                                <div className="flex items-center gap-2">
+                                    <Link
+                                        to={`/admin/challenges/${id}`}
+                                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                                    >
+                                        챌린지 수정
+                                    </Link>
+                                    <button
+                                        onClick={async () => {
+                                            const ok = window.confirm("이 챌린지를 삭제하시겠습니까? 되돌릴 수 없습니다.");
+                                            if (!ok) return;
+                                            try {
+                                                await deleteChallenge(id, { force: true });
+                                                navigate("/challenge", { replace: true });
+                                            } catch (e) {
+                                                alert("삭제 중 오류가 발생했습니다.");
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-red-600 hover:bg-red-50"
+                                    >
+                                        챌린지 삭제
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
                     </div>
 
@@ -744,14 +855,14 @@ export default function ChallengeDetailPage() {
                     {/* 하단 고정 CTA */}
                     <div className="sticky bottom-4 mt-6 flex justify-end">
                         <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
-                            {/* 종료된 챌린지가 아닐 때만 제출하기 버튼 표시 */}
-                            {challengeStatus !== "ENDED" && (
+                            {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 */}
+                            {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && (
                                 <CTAButton as="button" onClick={goPrimary}>
                                     {primaryLabel(type)}
                                 </CTAButton>
                             )}
                             <CTAButton as="button" onClick={goSecondary}>
-                                {secondaryLabel(type, challengeStatus)}
+                                {secondaryLabel(type, challengeStatus, derivedStage)}
                             </CTAButton>
                         </div>
                     </div>

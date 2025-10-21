@@ -118,6 +118,26 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             monthlyData = monthlyAI;
         }
 
+        // 상태 배지 계산 함수
+        const badgeOf = (c: any): { text: string; klass: string } | null => {
+            if (!c) return null;
+            const now = new Date();
+            const type = String(c.type || '').toUpperCase();
+            const parse = (v?: string) => v ? new Date(v) : null;
+            const endAt = parse(c.endAt as any);
+            const voteStart = parse(c.voteStartAt as any);
+            const voteEnd = parse(c.voteEndAt as any);
+            if (type === 'PORTFOLIO') {
+                if (voteEnd && now > voteEnd) return { text: '종료', klass: 'border-neutral-300 text-neutral-600' };
+                if (voteStart && now >= voteStart) return { text: '투표중', klass: 'border-purple-300 text-purple-700 bg-purple-50' };
+                if (endAt && now >= endAt) return { text: '투표대기', klass: 'border-amber-300 text-amber-700 bg-amber-50' };
+                return { text: '진행중', klass: 'border-emerald-300 text-emerald-700 bg-emerald-50' };
+            }
+            // CODE
+            if (endAt && now > endAt) return { text: '종료', klass: 'border-neutral-300 text-neutral-600' };
+            return { text: '진행중', klass: 'border-emerald-300 text-emerald-700 bg-emerald-50' };
+        };
+
         return [
             {
                 id: codeChallenge?.id || 1, // 백엔드 ID 사용, 없으면 기본값
@@ -137,6 +157,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 must: Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData?.must,
                 startDate: codeChallenge?.startAt ? new Date(codeChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
                 expireAtMs: codeChallenge?.endAt ? new Date(codeChallenge.endAt as any).getTime() : undefined,
+                ...(badgeOf(codeChallenge) ? { statusBadge: badgeOf(codeChallenge)!.text, statusBadgeClass: badgeOf(codeChallenge)!.klass } : {}),
             },
             {
                 id: portfolioChallenge?.id || 2, // 백엔드 ID 사용, 없으면 기본값
@@ -159,6 +180,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                     const raw = (portfolioChallenge?.voteEndAt || portfolioChallenge?.endAt) as any;
                     return raw ? new Date(raw).getTime() : undefined;
                 })(),
+                ...(badgeOf(portfolioChallenge) ? { statusBadge: badgeOf(portfolioChallenge)!.text, statusBadgeClass: badgeOf(portfolioChallenge)!.klass } : {}),
             },
         ];
     } catch (error) {
@@ -201,6 +223,8 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
         return pastChallenges.map(challenge => {
             const endDate = new Date(challenge.endAt || challenge.startAt);
             const isCode = challenge.type === "CODE";
+            const statusBadge = '종료';
+            const statusBadgeClass = 'border-neutral-300 bg-neutral-50 text-neutral-600';
             
             return {
                 id: challenge.id,
@@ -214,6 +238,8 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                     </div>
                 ),
                 ctaLabel: "자세히 보기",
+                statusBadge,
+                statusBadgeClass,
             };
         });
     } catch (error) {
