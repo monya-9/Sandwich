@@ -269,9 +269,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     
     const loadExistingEnvVars = async () => {
       try {
-        console.log("기존 환경변수 조회 시작:", editProjectId);
         const existingEnvVars = await getEnvVars(editProjectId);
-        console.log("기존 환경변수 조회 완료:", existingEnvVars);
         
         if (existingEnvVars.length > 0) {
           const envVarsData = existingEnvVars.map((env: any) => ({
@@ -286,7 +284,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           setEnvVars([{key: '', value: ''}]);
         }
       } catch (e: any) {
-        console.warn("환경변수 조회 실패:", e?.message);
         // 조회 실패해도 기본 빈 행은 유지
         setEnvVars([{key: '', value: ''}]);
       }
@@ -426,7 +423,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       setPendingCoverFile(null);
     } catch (err) {
       // 업로드 실패 or 접근 실패 → 미리보기 유지 + 재시도 위해 pending 유지
-      console.warn("커버 업로드/검증 실패, 재시도 필요:", (err as any)?.message);
     } finally {
       setIsImageLoading(false);
     }
@@ -464,7 +460,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       setCoverUrl(res.url);
       return res.url;
     } catch (e: any) {
-      console.warn('커버 업로드 재시도 실패:', e?.message);
       // 업로드가 실패했더라도 기존 값이 서버 URL이면 통과
       return coverIsUploaded ? String(coverUrl) : undefined;
     }
@@ -584,12 +579,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             value: env.value.trim()
           }));
           
-          console.log("환경변수 요청 데이터:", envRequests);
-          console.log("GitHub 동기화:", githubSyncEnabled);
-          console.log("GitHub 토큰:", ghToken ? "있음" : "없음");
-          console.log("Owner:", ghOwner);
-          console.log("Repo:", ghRepo);
-          
           const envResponse = await addEnvVarsBulk(
             projectId,
             envRequests,
@@ -597,8 +586,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             ghOwner || "",  // 항상 전달 (빈 문자열이라도)
             ghRepo || ""    // 항상 전달 (빈 문자열이라도)
           );
-          
-          console.log("환경변수 등록 결과:", envResponse);
           
           // 실제 백엔드 응답 처리
           if (Array.isArray(envResponse)) {
@@ -641,11 +628,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             });
           }
         } catch (e: any) {
-          console.error("환경변수 등록 실패:", e);
-          console.error("에러 상세:", e);
-          console.error("에러 응답:", e?.response?.data);
-          console.error("에러 상태:", e?.response?.status);
-          
           // 백엔드 응답에서 더 자세한 에러 메시지 추출
           let errorMessage = e?.message || "알 수 없는 오류";
           if (e?.response?.data?.message) {
@@ -673,11 +655,9 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
             backendBuildCommand: backendBuildCommand || ""
           });
         } catch (e: any) {
-          console.warn("GH PR 트리거 실패:", e?.message);
-          
           // 브랜치가 이미 존재하는 경우는 경고만 표시
           if (e?.message?.includes("Reference already exists")) {
-            console.warn("브랜치가 이미 존재합니다. 기존 브랜치를 사용합니다.");
+            // 브랜치가 이미 존재합니다. 기존 브랜치를 사용합니다.
           } else {
             setErrorToast({ 
               visible: true, 
