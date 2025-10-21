@@ -1,0 +1,28 @@
+{
+  "summary": {
+    "submit": "test.py",
+    "cases": 1,
+    "passed": 1,
+    "accuracy": 1.0,
+    "time_med_sec": 0.112348,
+    "time_mean_sec": 0.112348,
+    "time_p95_sec": 0.112348,
+    "mem_med_mb": 6.53,
+    "mem_p95_mb": 6.53,
+    "passed_all": true,
+    "first_fail": null,
+    "score": 100.0
+  },
+  "results": [
+    {
+      "case": 1,
+      "ok": true,
+      "expected": "1",
+      "got": "1",
+      "time_sec": 0.112348,
+      "peak_mb": 6.53,
+      "err": null,
+      "diagnosis": null
+    }
+  ]
+}

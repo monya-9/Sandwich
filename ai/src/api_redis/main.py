@@ -1,4 +1,3 @@
-# src/api_redis/main.py
 import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, Header, Depends
