@@ -62,10 +62,8 @@ public class AdminChallengeController {
 
     @PatchMapping("/{id}/status")
     public Map<String,Object> updateStatus(@PathVariable Long id, @RequestBody Map<String,String> body) {
-        var req = AdminChallengeDtos.PatchReq.builder()
-                .status(com.sandwich.SandWich.challenge.domain.ChallengeStatus.valueOf(body.get("status")))
-                .build();
-        service.patch(id, req);
+        var next = ChallengeStatus.valueOf(body.get("status"));
+        service.updateStatusAndPublish(id, next);
         return Map.of("ok", true);
     }
 
