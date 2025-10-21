@@ -98,6 +98,13 @@ api.interceptors.response.use(
     async (error: AxiosError) => {
         const original: any = error.config;
 
+        // 특정 요청은 401이라도 리프레시를 시도하지 않고 즉시 실패시킨다
+        try {
+            const h: any = original?.headers;
+            const skip = h?.get ? (h.get('X-Skip-Auth-Refresh') === '1') : (h?.['X-Skip-Auth-Refresh'] === '1' || h?.['x-skip-auth-refresh'] === '1');
+            if (skip) return Promise.reject(error);
+        } catch {}
+
         if (error.response?.status !== 401) return Promise.reject(error);
         if (original?._retry) return Promise.reject(error);
 
