@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping({"/admin/challenges", "/api/admin/challenges"})
+@RequestMapping("/admin/challenges")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminChallengeController {
@@ -55,12 +55,22 @@ public class AdminChallengeController {
         return Map.of("ok", true);
     }
 
+    @GetMapping("/{id}")
+    public AdminChallengeDtos.Detail get(@PathVariable Long id) {
+        return service.get(id);
+    }
+
+    @PatchMapping("/{id}/status")
+    public Map<String,Object> updateStatus(@PathVariable Long id, @RequestBody Map<String,String> body) {
+        var next = ChallengeStatus.valueOf(body.get("status"));
+        service.updateStatusAndPublish(id, next);
+        return Map.of("ok", true);
+    }
+
     @DeleteMapping("/{id}")
-    public Map<String,Object> delete(
-            @PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "false") boolean force
-    ) {
-        service.delete(id, force);
+    public Map<String,Object> delete(@PathVariable Long id,
+                                     @RequestParam(defaultValue = "false") boolean force) {
+        service.delete(id, force);   // ← 실제 삭제
         return Map.of("ok", true);
     }
 

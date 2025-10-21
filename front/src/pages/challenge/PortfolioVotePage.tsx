@@ -18,6 +18,7 @@ import {
 import Toast from "../../components/common/Toast";
 import api from "../../api/axiosInstance";
 import AdminRebuildButton from "../../components/challenge/AdminRebuildButton";
+import { isAdmin } from "../../utils/authz";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -29,6 +30,7 @@ export default function PortfolioVotePage() {
     const [submissions, setSubmissions] = useState<SubmissionListItem[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    const [timeline, setTimeline] = useState<{ startAt?: string; endAt?: string; voteStartAt?: string; voteEndAt?: string }>({});
     const [submissionLikes, setSubmissionLikes] = useState<Record<number, { liked: boolean; count: number }>>({});
     
     // 투표 관련 상태
@@ -46,6 +48,7 @@ export default function PortfolioVotePage() {
     });
     
     const nav = useNavigate();
+    const admin = isAdmin();
 
     // 실제 API에서 제출물 데이터 가져오기
     useEffect(() => {
@@ -111,6 +114,19 @@ export default function PortfolioVotePage() {
         fetchSubmissions();
     }, [id, reloadKey]);
 
+    // 관리자 전용: 투표 요약 초기 로드
+    useEffect(() => {
+        const loadSummary = async () => {
+            try {
+                const summaryData = await getVoteSummary(id);
+                setVoteSummary(summaryData);
+            } catch {
+                setVoteSummary([]);
+            }
+        };
+        if (admin) loadSummary();
+    }, [admin, id, reloadKey]);
+
     // 좋아요 토글 함수
     const handleLike = async (e: React.MouseEvent, submissionId: number) => {
         e.preventDefault(); // Link 클릭 방지
@@ -173,6 +189,12 @@ export default function PortfolioVotePage() {
                     
                     setDetail(backendBasedData);
                     setChallengeStatus(backendChallenge.status);
+                    setTimeline({
+                        startAt: backendChallenge.startAt,
+                        endAt: backendChallenge.endAt,
+                        voteStartAt: backendChallenge.voteStartAt,
+                        voteEndAt: backendChallenge.voteEndAt,
+                    });
                 } else {
                     setDetail(null);
                     setChallengeStatus(null);
@@ -207,6 +229,24 @@ export default function PortfolioVotePage() {
             loadVoteData();
         }
     }, [id, challengeStatus]);
+
+    // 파생 스테이지 계산 (제출/투표 구간 구분)
+    const parseTs = (v?: string) => {
+        if (!v) return null;
+        const s = v.includes('T') ? v : v.replace(' ', 'T');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" = (() => {
+        const now = new Date();
+        const endAt = parseTs(timeline.endAt);
+        const vStart = parseTs(timeline.voteStartAt);
+        const vEnd = parseTs(timeline.voteEndAt);
+        if (vEnd && now > vEnd) return "ENDED";
+        if (vStart && now >= vStart) return "VOTING";
+        if (endAt && now >= endAt) return "VOTE_WAITING";
+        return "SUBMISSION_OPEN";
+    })();
 
     // 투표 제출 함수
     const handleVote = async (submissionId: number, scores: { uiUx: number; creativity: number; codeQuality: number; difficulty: number }) => {
@@ -294,13 +334,19 @@ export default function PortfolioVotePage() {
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
-                            challengeStatus === "ENDED" ? undefined : (
+                            derivedStage === "SUBMISSION_OPEN" ? (
                                 <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
                                     프로젝트 제출하기
                                 </CTAButton>
-                            )
+                            ) : undefined
                         }
                     />
+
+                    {derivedStage === "VOTE_WAITING" && (
+                        <div className="mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                            제출 마감 · 투표 대기 중입니다. 제출물만 확인할 수 있어요.
+                        </div>
+                    )}
 
                     {submissionsLoading ? (
                         <div className="flex items-center justify-center py-16">
@@ -313,18 +359,18 @@ export default function PortfolioVotePage() {
                         </div>
                     ) : submissions.length > 0 ? (
                         <>
-                            {/* 투표 요약 정보 */}
-                            {voteSummary.length > 0 && (
+                            {/* 투표 요약 정보 (관리자 전용, 한 번만 표시) */}
+                            {admin && voteSummary.length > 0 && (
                                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <h3 className="text-lg font-semibold text-blue-900 mb-3">📊 투표 현황</h3>
+                                    <h3 className="text-lg font-semibold text-blue-900 mb-3">📊 투표 현황(관리자)</h3>
                                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                                         {voteSummary.map((summary) => {
                                             const submission = submissions.find(s => s.id === summary.submissionId);
+                                            const title = submission?.title || '(제목 없음)';
                                             return (
                                                 <div key={summary.submissionId} className="p-3 bg-white rounded border">
-                                                    <div className="font-medium text-sm text-gray-900 mb-1">
-                                                        {submission?.title || `제출물 #${summary.submissionId}`}
-                                                    </div>
+                                                    <div className="font-medium text-sm text-gray-900 mb-1">{title}</div>
+                                                    <div className="text-xs text-gray-600 mb-1">제출물 ID: {summary.submissionId}</div>
                                                     <div className="text-xs text-gray-600 space-y-1">
                                                         <div>투표 수: {summary.voteCount}표</div>
                                                         <div>UI/UX: {summary.uiUxAvg.toFixed(1)}</div>
@@ -471,11 +517,20 @@ export default function PortfolioVotePage() {
                             </div>
                         </>
                     ) : (
-                        <EmptySubmissionState 
-                            type="PORTFOLIO" 
-                            onSubmit={() => nav(`/challenge/portfolio/${id}/submit`)} 
-                            challengeStatus={challengeStatus}
-                        />
+                        derivedStage === "SUBMISSION_OPEN" ? (
+                            <EmptySubmissionState 
+                                type="PORTFOLIO" 
+                                onSubmit={() => nav(`/challenge/portfolio/${id}/submit`)} 
+                                challengeStatus={challengeStatus}
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center py-16 text-center text-neutral-600">
+                                <div>
+                                    <div className="text-lg font-semibold mb-2">제출물이 없습니다</div>
+                                    <div className="text-sm">현재는 제출마감 또는 투표 기간입니다. 제출물만 확인할 수 있어요.</div>
+                                </div>
+                            </div>
+                        )
                     )}
                 </>
             )}

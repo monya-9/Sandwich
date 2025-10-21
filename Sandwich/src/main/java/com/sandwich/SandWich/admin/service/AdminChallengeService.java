@@ -9,6 +9,7 @@ import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.PatchReq;
 import com.sandwich.SandWich.challenge.domain.Challenge;
 import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
 import com.sandwich.SandWich.challenge.domain.ChallengeType;
+import com.sandwich.SandWich.challenge.event.ChallengeLifecycleEvent;
 import com.sandwich.SandWich.challenge.repository.ChallengeRepository;
 import com.sandwich.SandWich.challenge.repository.ChallengeSpecifications;
 import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
@@ -21,6 +22,7 @@ import com.sandwich.SandWich.reward.service.RewardRule;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +49,7 @@ public class AdminChallengeService {
     private final SubmissionRepository submissionRepo;
     private final PortfolioVoteRepository voteRepo;
     private final RedisUtil redisUtil;
+    private final ApplicationEventPublisher publisher;
 
 
     @Transactional
@@ -84,8 +87,6 @@ public class AdminChallengeService {
         validateWindow(c);
         audit("PATCH_CHALLENGE", "CHALLENGE", id, req); // no-op
     }
-
-    
 
     @Transactional
     public void rebuildLeaderboard(Long challengeId) {
@@ -206,6 +207,18 @@ public class AdminChallengeService {
         ));
     }
 
+    @Transactional
+    public void updateStatusAndPublish(Long id, ChallengeStatus next) {
+        var c = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+        var prev = c.getStatus();
+        c.setStatus(next);            // dirty checking으로 flush 예정
+
+        // 트랜잭션 *안에서* 이벤트 발행 → AFTER_COMMIT 리스너가 받는다
+        publisher.publishEvent(new ChallengeLifecycleEvent(c.getId(), c.getType(), prev, next));
+
+        audit("PATCH_CHALLENGE_STATUS", "CHALLENGE", id, Map.of("prev", prev, "next", next));
+    }
 
 
 }

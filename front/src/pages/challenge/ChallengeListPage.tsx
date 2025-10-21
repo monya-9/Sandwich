@@ -1,5 +1,5 @@
 // src/pages/challenge/ChallengeListPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
@@ -22,6 +22,7 @@ export default function ChallengeListPage() {
 	const [showRewardModal, setShowRewardModal] = useState(false);
 	const [pendingReward, setPendingReward] = useState<RewardItem | null>(null);
 	const admin = isAdmin();
+	const rolloverRef = useRef(false);
 
 	// 현재 챌린지 데이터 가져오기
 	useEffect(() => {
@@ -48,8 +49,9 @@ export default function ChallengeListPage() {
 			const delay = c.expireAtMs - now;
 			if (delay <= 0) return;
 			const t = window.setTimeout(async () => {
+				if (rolloverRef.current) return; // 중복 롤오버 방지
+				rolloverRef.current = true;
 				try {
-					setLoading(true);
 					const [freshCurrent, freshPast] = await Promise.all([
 						getDynamicChallenges(),
 						getPastChallenges(),
@@ -60,7 +62,7 @@ export default function ChallengeListPage() {
 					// eslint-disable-next-line no-console
 					console.error('auto rollover refresh failed', e);
 				} finally {
-					setLoading(false);
+					rolloverRef.current = false;
 				}
 			}, delay);
 			timers.push(t);
@@ -219,14 +221,18 @@ export default function ChallengeListPage() {
 									>
 										<div className="flex flex-col justify-between h-full">
 											<div>
-												<div className="flex items-center gap-2 mb-2">
-													<span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
 														challenge.type === 'CODE' 
 															? 'bg-blue-100 text-blue-700' 
 															: 'bg-purple-100 text-purple-700'
 													}`}>
 														{challenge.type === 'CODE' ? '코드' : '포트폴리오'}
 													</span>
+                                                {/* 상태 배지: 지난 챌린지는 모두 종료 처리 */}
+                                                <span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600">
+                                                    종료
+                                                </span>
 												</div>
 												<h4 className="font-semibold text-sm text-neutral-800 mb-1 line-clamp-2">
 													{challenge.subtitle}
