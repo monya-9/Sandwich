@@ -16,15 +16,32 @@ module.exports = function (app) {
         return next();
     });
 
-    // REST & OAuth (원래대로 통합)
+    // REST & OAuth (원래대로 통합) - 단, /admin 은 HTML GET 은 프록시 제외해야 하므로 별도 처리
     app.use(
-        ["/api", "/admin", "/oauth2/authorization", "/login/oauth2"],
+        ["/api", "/oauth2/authorization", "/login/oauth2"],
         createProxyMiddleware({
             target,
             changeOrigin: true,
             ws: false,          // ← REST 쪽은 WS 업그레이드 비활성화
             logLevel: "warn",
         })
+    );
+
+    // /admin: 브라우저가 주소창으로 진입한 HTML 요청(GET + Accept: text/html)은 SPA 라우터로 넘기고,
+    // 그 외(XHR/JSON 등)은 백엔드로 프록시
+    app.use(
+        "/admin",
+        (req, res, next) => {
+            const accept = String(req.headers.accept || "");
+            const isHtmlGet = req.method === "GET" && accept.includes("text/html");
+            if (isHtmlGet) return next();
+            return createProxyMiddleware({
+                target,
+                changeOrigin: true,
+                ws: false,
+                logLevel: "warn",
+            })(req, res, next);
+        }
     );
 
     // 외부 공개 추천 API 프록시 (개발 환경 CORS 우회): /ext → https://api.dnutzs.org/api
