@@ -85,8 +85,6 @@ public class AdminChallengeService {
         audit("PATCH_CHALLENGE", "CHALLENGE", id, req); // no-op
     }
 
-    
-
     @Transactional
     public void rebuildLeaderboard(Long challengeId) {
         if (leaderboard != null) {
