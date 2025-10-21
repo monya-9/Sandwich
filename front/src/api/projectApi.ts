@@ -25,16 +25,8 @@ export type ProjectDetailResponse = {
 export async function fetchProjectDetail(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectDetailResponse> {
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
-    const res = await fetch(url, {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`프로젝트 상세 조회 실패: ${res.status}`);
-    }
-    return res.json();
+    const res = await api.get(url);
+    return res.data;
   }
   const res = await api.get(`/projects/${userId}/${projectId}`);
   return res.data;
@@ -88,28 +80,12 @@ export type EnvBulkResponse = {
   items: EnvVarResponse[];
 };
 
-function getToken() {
-  return typeof window !== "undefined" ? (localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken")) : null;
-}
 
 export async function createProject(payload: ProjectRequest, baseUrl: string = ""): Promise<ProjectCreateResponse> {
   if (baseUrl) {
     const url = `${baseUrl}/api/projects`.replace(/\/+/, "/");
-    const token = getToken();
-    const res = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`프로젝트 생성 실패: ${res.status}${text ? ` - ${text}` : ""}`);
-    }
-    return res.json();
+    const res = await api.post(url, payload);
+    return res.data as ProjectCreateResponse;
   }
   const r = await api.post(`/projects`, payload);
   return r.data as ProjectCreateResponse;
@@ -118,20 +94,7 @@ export async function createProject(payload: ProjectRequest, baseUrl: string = "
 export async function updateProject(userId: number, projectId: number, payload: ProjectRequest, baseUrl: string = ""): Promise<void> {
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
-    const token = getToken();
-    const res = await fetch(url, {
-      method: "PUT",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`프로젝트 수정 실패: ${res.status}${text ? ` - ${text}` : ""}`);
-    }
+    await api.put(url, payload);
     return;
   }
   await api.put(`/projects/${userId}/${projectId}`, payload);
@@ -140,18 +103,7 @@ export async function updateProject(userId: number, projectId: number, payload: 
 export async function deleteProject(userId: number, projectId: number, baseUrl: string = ""): Promise<void> {
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
-    const token = getToken();
-    const res = await fetch(url, {
-      method: "DELETE",
-      credentials: "include",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`프로젝트 삭제 실패: ${res.status}${text ? ` - ${text}` : ""}`);
-    }
+    await api.delete(url);
     return;
   }
   await api.delete(`/projects/${userId}/${projectId}`);
@@ -160,15 +112,12 @@ export async function deleteProject(userId: number, projectId: number, baseUrl: 
 export type ProjectContentResponseItem = { id: number; type: "IMAGE" | "TEXT" | "VIDEO"; data: string; order: number };
 
 export async function fetchProjectContents(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectContentResponseItem[]> {
-  // baseUrl이 있으면 직접 fetch 사용 (외부 API 호출)
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents`.replace(/\/+/, "/");
-    const res = await fetch(url, { credentials: "include" });
-    if (!res.ok) throw new Error(`콘텐츠 조회 실패: ${res.status}`);
-    return res.json();
+    const res = await api.get(url);
+    return res.data;
   }
   
-  // baseUrl이 없으면 api 인스턴스 사용 (리프레시 토큰 적용)
   const res = await api.get(`/projects/${userId}/${projectId}/contents`);
   return res.data;
 }
@@ -176,18 +125,10 @@ export async function fetchProjectContents(userId: number, projectId: number, ba
 export async function deleteAllProjectContents(userId: number, projectId: number, baseUrl: string = ""): Promise<void> {
   const items = await fetchProjectContents(userId, projectId, baseUrl).catch(() => [] as ProjectContentResponseItem[]);
   if (baseUrl) {
-    const token = getToken();
     await Promise.all(
       items.map(async (it) => {
         const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents/${it.id}`.replace(/\/+/, "/");
-        const res = await fetch(url, {
-          method: "DELETE",
-          credentials: "include",
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        });
-        if (!res.ok) {
-          // 개별 실패는 무시
-        }
+        await api.delete(url).catch(() => {}); // 개별 실패는 무시
       })
     );
     return;
@@ -224,28 +165,22 @@ export async function createGithubBranchAndPR(
 ): Promise<string> {
   if (baseUrl) {
     const url = `${baseUrl}/api/github/${projectId}/branches-with-file-and-pr`.replace(/\/+/, "/");
-    const token = getToken();
-    const res = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        "X-GitHub-Token": params.token,
-      },
-      body: new URLSearchParams({
+    const res = await api.post(url, 
+      new URLSearchParams({
         owner: params.owner,
         repo: params.repo,
         baseBranch: params.baseBranch,
         frontendBuildCommand: params.frontendBuildCommand,
         backendBuildCommand: params.backendBuildCommand,
       }).toString(),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`GitHub 브랜치/PR 생성 실패: ${res.status}${text ? ` - ${text}` : ""}`);
-    }
-    return res.text();
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "X-GitHub-Token": params.token,
+        }
+      }
+    );
+    return res.data;
   }
   
   const res = await api.post(`/github/${projectId}/branches-with-file-and-pr`, 
@@ -271,20 +206,7 @@ export type ProjectContentUpsertItem = { type: "IMAGE" | "TEXT" | "VIDEO"; data:
 export async function saveProjectContents(userId: number, projectId: number, items: ProjectContentUpsertItem[], baseUrl: string = ""): Promise<void> {
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents`.replace(/\/+/, "/");
-    const token = getToken();
-    const res = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(items),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`콘텐츠 저장 실패: ${res.status}${text ? ` - ${text}` : ""}`);
-    }
+    await api.post(url, items);
     return;
   }
   await api.post(`/projects/${userId}/${projectId}/contents`, items);
