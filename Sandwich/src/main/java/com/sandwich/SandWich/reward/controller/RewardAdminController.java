@@ -4,11 +4,15 @@ import com.sandwich.SandWich.reward.service.RewardPayoutService;
 import com.sandwich.SandWich.reward.service.RewardRule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
 @RequestMapping(value = "/admin/rewards", produces = "application/json")
@@ -17,21 +21,28 @@ import java.util.Map;
 public class RewardAdminController {
 
     private final RewardPayoutService service;
-
+    private final JdbcTemplate jdbc;
     public record PublishReq(List<Long> top, Long participant) {}
 
-    @PostMapping(value = "/{id}/publish-results", consumes = "application/json")
+    @PostMapping("/{id}/publish-results")
     @PreAuthorize("hasRole('ADMIN')")
     public Map<String,Object> publish(@PathVariable long id, @RequestBody PublishReq req) {
-        var rule = new RewardRule(req.top() == null ? List.of() : req.top(), req.participant());
-        int inserted = service.publishPortfolioResults(id, rule);
-        return Map.of(
-                "inserted", inserted,
-                "top", rule.top(),
-                "participant", rule.participant()
+        var rule = new RewardRule(
+                req.top() == null ? List.of() : req.top(),
+                req.participant()
         );
-    }
+        var chType = jdbc.queryForObject("select type from challenge where id=?", String.class, id);
 
+        int inserted;
+        if ("CODE".equals(chType)) {
+            var aiWeek = jdbc.queryForObject("select ai_week from challenge where id=?", String.class, id);
+            if (aiWeek == null || aiWeek.isBlank()) throw new ResponseStatusException(BAD_REQUEST, "ai_week required");
+            inserted = service.publishCodeResults(id, rule, aiWeek);
+        } else {
+            inserted = service.publishPortfolioResults(id, rule);
+        }
+        return Map.of("inserted", inserted, "type", chType, "top", rule.top(), "participant", rule.participant());
+    }
     // 기본 보상표: Top [10000,5000,3000], 참가 500
     @PostMapping("/{id}/publish-results/default")
     @PreAuthorize("hasRole('ADMIN')")

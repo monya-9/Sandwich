@@ -28,49 +28,56 @@ public class RewardPayoutService {
 
     @Transactional
     public int publishPortfolioResults(long challengeId, RewardRule rule) {
-        // 투표 종료 검증: challenge.vote_end_at 기준 (필드명이 다르면 맞춰서 수정)
+        // 투표 종료 검증
         Boolean finished = jdbc.queryForObject("""
-           SELECT (vote_end_at IS NOT NULL AND NOW() >= vote_end_at) AS finished
-           FROM challenge WHERE id = ?
-        """, Boolean.class, challengeId);
+       SELECT (vote_end_at IS NOT NULL AND NOW() >= vote_end_at) AS finished
+       FROM challenge WHERE id = ?
+    """, Boolean.class, challengeId);
         if (finished == null || !finished) throw new IllegalStateException("voting_not_finished");
 
-        // 1) 랭킹 조회 (총점 DESC → 표 수 DESC → submission_id ASC)
+        // 1) 랭킹 조회
         List<Map<String,Object>> rows = jdbc.queryForList("""
-          SELECT s.owner_id AS user_id
-          FROM portfolio_vote v
-          JOIN submission s ON s.id = v.submission_id
-          WHERE v.challenge_id = ?
-          GROUP BY s.owner_id, v.submission_id
-          ORDER BY
-            (AVG(v.ui_ux)+AVG(v.creativity)+AVG(v.code_quality)+AVG(v.difficulty))/4.0 DESC,
-            COUNT(*) DESC,
-            v.submission_id ASC
-        """, challengeId);
+      SELECT s.owner_id AS user_id
+      FROM portfolio_vote v
+      JOIN submission s ON s.id = v.submission_id
+      WHERE v.challenge_id = ?
+      GROUP BY s.owner_id, v.submission_id
+      ORDER BY
+        (AVG(v.ui_ux)+AVG(v.creativity)+AVG(v.code_quality)+AVG(v.difficulty))/4.0 DESC,
+        COUNT(*) DESC,
+        v.submission_id ASC
+    """, challengeId);
 
         int affected = 0;
 
         // 2) 상위 N 지급
-        int winners = Math.min(rule.top().size(), rows.size());
+        int winners = Math.min(rule.safeTop().size(), rows.size());
+        java.util.Set<Long> winnerIds = new java.util.HashSet<>();
+
         for (int i = 0; i < winners; i++) {
             long userId = ((Number) rows.get(i).get("user_id")).longValue();
             long amount = rule.top().get(i);
             affected += payoutOne(challengeId, userId, amount, i + 1);
+            winnerIds.add(userId);
         }
 
-        // 3) 참가자 공통 지급(옵션)
-        if (rule.participant() != null && rule.participant() > 0) {
+        // 3) 참가자 공통 지급 (상위 N 제외)
+        long participantAmt = rule.safeParticipant();
+        if (participantAmt > 0) {
             List<Long> participants = jdbc.queryForList("""
-              SELECT DISTINCT owner_id
-              FROM submission
-              WHERE challenge_id = ?
-            """, Long.class, challengeId);
+          SELECT DISTINCT owner_id
+          FROM submission
+          WHERE challenge_id = ?
+        """, Long.class, challengeId);
 
             for (Long uid : participants) {
-                affected += payoutOne(challengeId, uid, rule.participant(), null);
+                if (!winnerIds.contains(uid)) {
+                    affected += payoutOne(challengeId, uid, participantAmt, null);
+                }
             }
         }
-        return affected; // 이번 호출에서 실제 insert된 reward_payout 행 수
+
+        return affected;
     }
 
     @Transactional
@@ -80,44 +87,74 @@ public class RewardPayoutService {
             throw new IllegalStateException("AI 리더보드가 비었습니다: " + aiWeek);
 
         int affected = 0;
-        List<AiJudgeClient.LeaderboardResp.Entry> entries = resp.leaderboard();
+        var entries = resp.leaderboard();
 
-        // 상위 N
+        // 1) 상위 N 지급
         int winners = Math.min(rule.top().size(), entries.size());
+        java.util.Set<Long> winnerIds = new java.util.HashSet<>();
+
         for (int i = 0; i < winners; i++) {
-            String username = entries.get(i).user();
-            Long userId = jdbc.queryForObject(
-                    "SELECT id FROM users WHERE username = ? AND is_deleted = false",
-                    Long.class, username
-            );
+            String aiUser = entries.get(i).user();
+            Long userId = resolveUserIdFromAiUser(aiUser);
             if (userId != null) {
                 long amount = rule.top().get(i);
                 affected += payoutOne(challengeId, userId, amount, i + 1);
+                winnerIds.add(userId);
             }
         }
 
-        // 참가자 공통 보상
-        if (rule.participant() != null && rule.participant() > 0) {
+        // 2) 참가자 공통 지급 (상위 N 제외)
+        long participantAmt = rule.safeParticipant();
+        if (participantAmt > 0) {
             for (var entry : entries) {
-                String username = entry.user();
-                Long userId = jdbc.queryForObject(
-                        "SELECT id FROM users WHERE username = ? AND is_deleted = false",
-                        Long.class, username
-                );
-                if (userId != null) {
-                    affected += payoutOne(challengeId, userId, rule.participant(), null);
+                Long userId = resolveUserIdFromAiUser(entry.user());
+                if (userId != null && !winnerIds.contains(userId)) {
+                    affected += payoutOne(challengeId, userId, participantAmt, null);
                 }
             }
         }
+
         return affected;
     }
 
+    private Long resolveUserIdFromAiUser(String aiUser) {
+        if (aiUser == null || aiUser.isBlank()) return null;
+
+        // 1) 숫자 문자열이면 '그 자체가 users.id'
+        try {
+            long id = Long.parseLong(aiUser.trim());
+            // 존재 확인
+            List<Long> ok = jdbc.query("SELECT id FROM users WHERE id = ? AND is_deleted = false LIMIT 1",
+                    (rs, i) -> rs.getLong(1), id);
+            return ok.isEmpty() ? null : id;
+        } catch (NumberFormatException ignore) {
+            // 2) (옵션) 숫자가 아니라면 username으로 fallback (원치 않으면 이 블럭 삭제)
+            List<Long> list = jdbc.query("""
+            SELECT id FROM users
+            WHERE username = ? AND is_deleted = false
+            LIMIT 1
+        """, (rs, i) -> rs.getLong(1), aiUser);
+            return list.isEmpty() ? null : list.get(0);
+        }
+    }
+
+    private Long parseId(String s) {
+        try {
+            return (s == null || s.isBlank()) ? null : Long.parseLong(s.trim());
+        } catch (NumberFormatException ignore) {
+            return null;
+        }
+    }
+
+
     private int payoutOne(long challengeId, long userId, long amount, Integer rank) {
-        // 멱등 upsert + 타임스탬프 명시
-        int inserted = jdbc.update("""
-      INSERT INTO reward_payout (challenge_id, user_id, amount, rank, created_at, updated_at)
-      VALUES (?, ?, ?, ?, now(), now())
-      ON CONFLICT (challenge_id, user_id) DO NOTHING
+        int upserted = jdbc.update("""
+        INSERT INTO reward_payout (challenge_id, user_id, amount, rank, created_at, updated_at)
+        VALUES (?, ?, ?, ?, now(), now())
+        ON CONFLICT (challenge_id, user_id) DO UPDATE
+        SET amount    = reward_payout.amount + EXCLUDED.amount,
+            rank      = COALESCE(LEAST(reward_payout.rank, EXCLUDED.rank), EXCLUDED.rank),
+            updated_at= now()
     """, ps -> {
             ps.setLong(1, challengeId);
             ps.setLong(2, userId);
@@ -126,22 +163,30 @@ public class RewardPayoutService {
             else ps.setInt(4, rank);
         });
 
-        if (inserted == 1 && props.isApplyCredits()) {
-            // 거래 기록: created_at / updated_at 명시
+        if (upserted > 0 && props.isApplyCredits()) {
+            // 크레딧 트랜잭션은 '누적 지급'마다 기록 남기는 것이 맞음
             jdbc.update("""
-              INSERT INTO credit_txn(user_id, amount, reason, ref_id, created_at, updated_at)
-              VALUES (?, ?, 'REWARD', ?, now(), now())
-            """, userId, amount, challengeId);
+          INSERT INTO credit_txn(user_id, amount, reason, ref_id, created_at, updated_at)
+          VALUES (?, ?, 'REWARD', ?, now(), now())
+        """, userId, amount, challengeId);
 
-            // 지갑 upsert: created_at / updated_at 명시 + UPDATE 시 updated_at 갱신
             jdbc.update("""
-              INSERT INTO credit_wallet(user_id, balance, created_at, updated_at)
-              VALUES (?, ?, now(), now())
-              ON CONFLICT (user_id) DO UPDATE SET
-                balance    = credit_wallet.balance + EXCLUDED.balance,
-                updated_at = now()
-            """, userId, amount);
+          INSERT INTO credit_wallet(user_id, balance, created_at, updated_at)
+          VALUES (?, ?, now(), now())
+          ON CONFLICT (user_id) DO UPDATE SET
+            balance    = credit_wallet.balance + EXCLUDED.balance,
+            updated_at = now()
+        """, userId, amount);
         }
-        return inserted;
+        return upserted;
+    }
+
+    private Long findUserIdByUsername(String username) {
+        List<Long> list = jdbc.query("""
+        SELECT id FROM users
+        WHERE username = ? AND is_deleted = false
+        LIMIT 1
+    """, (rs, i) -> rs.getLong(1), username);
+        return list.isEmpty() ? null : list.get(0);
     }
 }

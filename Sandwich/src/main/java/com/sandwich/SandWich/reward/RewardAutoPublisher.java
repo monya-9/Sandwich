@@ -13,14 +13,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.time.Instant;
+import java.time.*;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class RewardAutoPublisher {
+
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
     private final RewardAutoPublishProperties props;
     private final RewardPayoutService service;
@@ -32,7 +35,7 @@ public class RewardAutoPublisher {
         if (!props.isEnabled()) return;
         if (e.next() != ChallengeStatus.ENDED) return; // ENDED일 때만
 
-        // 공통: 보상 규칙 구성
+        // 보상 규칙
         List<Long> top = props.topList();
         Long participant = props.getParticipant() == null ? 0L : props.getParticipant();
         var rule = new RewardRule(top, participant > 0 ? participant : null);
@@ -45,28 +48,24 @@ public class RewardAutoPublisher {
                     return;
                 }
 
-                int inserted = 0;
+                int inserted;
 
-                // 타입 분기
                 if (e.type() == ChallengeType.PORTFOLIO) {
-                    // 기존: 투표 집계 기반
+                    // 포트폴리오: 투표 집계 기반
                     inserted = service.publishPortfolioResults(e.challengeId(), rule);
 
                 } else if (e.type() == ChallengeType.CODE) {
-                    // 신규: AI 리더보드 기반 (ai_week 필요)
+                    // 코드: AI 리더보드 기반
                     String aiWeek = jdbc.queryForObject(
                             "SELECT ai_week FROM challenge WHERE id = ?",
                             String.class, e.challengeId());
-
                     if (aiWeek == null || aiWeek.isBlank()) {
                         log.warn("[REWARD][AUTO][SKIP] ch={} type=CODE ai_week is null/blank", e.challengeId());
-                        return; // 안전 스킵
+                        return;
                     }
-
                     inserted = service.publishCodeResults(e.challengeId(), rule, aiWeek);
 
                 } else {
-                    // 그 외 타입은 스킵
                     log.info("[REWARD][AUTO][SKIP] ch={} unsupported type={}", e.challengeId(), e.type());
                     return;
                 }
@@ -75,17 +74,40 @@ public class RewardAutoPublisher {
                         e.challengeId(), e.type(), inserted, top, participant);
 
             } catch (Exception ex) {
-                // 예외는 nuh-uh! 잡고 로깅
                 log.warn("[REWARD][AUTO][ERR] ch={} type={} err={}",
                         e.challengeId(), e.type(), ex.toString());
             }
         };
 
-        int delay = Math.max(0, props.getDelaySec());
-        if (delay > 0) {
-            taskScheduler.schedule(job, Date.from(Instant.now().plusSeconds(delay)));
-        } else {
-            job.run();
+        // === 스케줄 계산 ===
+        // 포트폴리오 → vote_end_at, 코드 → end_at 기준으로 '다음날 17:00(KST)'
+        OffsetDateTime baseOdt = jdbc.queryForObject("""
+            SELECT CASE
+                     WHEN type = 'PORTFOLIO' THEN vote_end_at
+                     ELSE end_at
+                   END
+            FROM challenge
+            WHERE id = ?
+        """, OffsetDateTime.class, e.challengeId());
+
+        ZonedDateTime eventTimeKst = (baseOdt == null)
+                ? ZonedDateTime.now(ZONE)
+                : baseOdt.atZoneSameInstant(ZONE);
+
+        ZonedDateTime runAtKst = eventTimeKst.toLocalDate()
+                .plusDays(1)
+                .atTime(17, 0)
+                .atZone(ZONE);
+
+        // 과거면 하루씩 밀어서 항상 미래 시점 보장
+        ZonedDateTime nowKst = ZonedDateTime.now(ZONE);
+        if (runAtKst.isBefore(nowKst)) {
+            runAtKst = nowKst.toLocalDate().plusDays(1).atTime(17, 0).atZone(ZONE);
         }
+
+        log.info("[REWARD][AUTO] ch={} schedule at {} (KST) [base={}, type={}]",
+                e.challengeId(), runAtKst, Objects.toString(eventTimeKst), e.type());
+
+        taskScheduler.schedule(job, Date.from(runAtKst.toInstant()));
     }
 }
