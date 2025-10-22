@@ -92,10 +92,10 @@ export default function SecurityOtpHistoryPage() {
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-semibold mb-2 text-center">보안 ▸ OTP 이력</h1>
-            <p className="text-gray-600 mb-6 text-center">Prometheus/Grafana 수집 지표 기반 실시간 모니터링</p>
+            <h1 className="text-2xl font-semibold mb-4 text-center">보안 ▸ OTP 이력</h1>
+            <p className="text-gray-600 mb-8 text-center">Prometheus/Grafana 수집 지표 기반 실시간 모니터링</p>
 
-            <div className="flex items-center gap-2 mb-4 justify-center">
+            <div className="flex items-center gap-4 mb-8 justify-center">
                 <label className="text-sm text-gray-600">조회 범위</label>
                 <select
                     value={hours}

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminFetchChallenges, fetchChallengeDetail, fetchPortfolioLeaderboard, type ChallengeListResponse, type ChallengeListItem, type ChallengeType, type ChallengeStatus } from "../../api/challengeApi";
+import { adminCustomPayout } from "../../api/challenge_creditApi";
 
 export default function ChallengeManagePage() {
     const navigate = useNavigate();
@@ -24,6 +25,36 @@ export default function ChallengeManagePage() {
     const [rewardsError, setRewardsError] = useState<string | null>(null);
     const [rewardsRows, setRewardsRows] = useState<Array<Record<string, any>>>([]);
     const [payoutRows, setPayoutRows] = useState<Array<{ rank: number | string; amount: number; userName?: string; teamName?: string }>>([]);
+
+    // 커스텀 지급 폼 상태
+    const [customUserId, setCustomUserId] = useState<string>("");
+    const [customAmount, setCustomAmount] = useState<string>("");
+    const [customRank, setCustomRank] = useState<string>("");
+    const [customMemo, setCustomMemo] = useState<string>("");
+    const [customReason, setCustomReason] = useState<string>("REWARD_CUSTOM");
+    const [customLoading, setCustomLoading] = useState(false);
+    const [customMsg, setCustomMsg] = useState<string>("");
+    const [customHistory, setCustomHistory] = useState<Array<{ challengeId: number; at: string; userId: number; amount: number; rank?: number; memo?: string; reason?: string }>>([]);
+    const [showCustomBox, setShowCustomBox] = useState(false);
+    const customRowsForSelected = useMemo(() => {
+        if (!selectedChallengeId) return [] as typeof customHistory;
+        return customHistory.filter(h => h.challengeId === selectedChallengeId);
+    }, [customHistory, selectedChallengeId]);
+
+    // 커스텀 지급 로컬 보관 키 (새로고침 후에도 유지)
+    const STORAGE_KEY = 'adminCustomPayoutHistory:v1';
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) setCustomHistory(parsed);
+        } catch {}
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    useEffect(() => {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(customHistory)); } catch {}
+    }, [customHistory]);
 
     useEffect(() => {
         setAdminLoading(true);
@@ -431,16 +462,17 @@ export default function ChallengeManagePage() {
             <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
                 <div className="mb-2 flex items-center justify-between">
                     <div className="text-[15px] font-medium text-neutral-900">
-                        보상 테이블 {selectedChallengeId ? (
+                        기본 보상 {selectedChallengeId ? (
                             <span className="text-neutral-600 text-sm"> - ID {selectedChallengeId} ({selectedChallengeTitle})</span>
                         ) : null}
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2">
                         <button
                             onClick={handleExportRewardsCsv}
                             disabled={!selectedChallengeId || (rewardsRows.length === 0 && payoutRows.length === 0)}
                             className="h-9 rounded-md border border-neutral-300 px-3 text-sm disabled:opacity-50 hover:enabled:bg-neutral-50"
                         >CSV 익스포트</button>
+                        {/* 상단에선 커스텀 지급 UI를 표시하지 않음 (커스텀 보상 섹션으로 이동) */}
                     </div>
                 </div>
                 {selectedChallengeId == null ? (
@@ -497,6 +529,115 @@ export default function ChallengeManagePage() {
                     </div>
                 )}
             </div>
+            {/* 커스텀 보상 섹션: 보상보기 선택 시 동일한 영역에 하단 테이블로 표시 */}
+            {selectedChallengeId != null && (
+                <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
+                        <div className="text-[15px] font-medium text-neutral-900">커스텀 보상</div>
+                        {/* 커스텀 지급 네모박스 트리거 */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="h-9 rounded-md border border-neutral-300 px-3 text-sm"
+                                onClick={() => setShowCustomBox(true)}
+                            >커스텀 지급</button>
+                        </div>
+                    </div>
+
+                    {/* 커스텀 지급 네모박스 */}
+                    {showCustomBox && (
+                        <div className="mb-4 grid gap-3 md:grid-cols-2">
+                            <div className="flex flex-col gap-2 p-3 border border-neutral-300 rounded-md bg-neutral-50 min-w-[320px]">
+                                <div className="text-sm font-medium text-neutral-900">커스텀 지급</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <label className="text-xs text-neutral-500">userId</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm" value={customUserId} onChange={e=>setCustomUserId(e.target.value)} placeholder="예) 30" />
+                                    <label className="text-xs text-neutral-500">amount</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm" value={customAmount} onChange={e=>setCustomAmount(e.target.value)} placeholder="예) 2500" />
+                                    <label className="text-xs text-neutral-500">rank(선택)</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm" value={customRank} onChange={e=>setCustomRank(e.target.value)} placeholder="숫자 또는 공란" />
+                                    <label className="text-xs text-neutral-500">memo(선택)</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm" value={customMemo} onChange={e=>setCustomMemo(e.target.value)} placeholder="사유/메모" />
+                                    <label className="text-xs text-neutral-500">reason(선택)</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm" value={customReason} onChange={e=>setCustomReason(e.target.value)} placeholder="REWARD_CUSTOM" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="h-8 rounded-md bg-black px-3 text-sm text-white disabled:opacity-50"
+                                        disabled={customLoading || !customUserId.trim() || !customAmount.trim()}
+                                        onClick={async ()=>{
+                                            if (!selectedChallengeId) return;
+                                            setCustomLoading(true);
+                                            setCustomMsg("");
+                                            try {
+                                                const payload:any = {
+                                                    userId: Number(customUserId),
+                                                    amount: Number(customAmount),
+                                                };
+                                                if (customRank.trim()) payload.rank = Number(customRank);
+                                                if (customMemo.trim()) payload.memo = customMemo.trim();
+                                                if (customReason.trim()) payload.reason = customReason.trim();
+                                                const key = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.random()}`;
+                                                await adminCustomPayout(selectedChallengeId, payload, key);
+                                                setCustomMsg("지급 완료");
+                                                setCustomHistory(h => [
+                                                    { challengeId: selectedChallengeId, at: new Date().toISOString(), userId: payload.userId, amount: payload.amount, rank: payload.rank, memo: payload.memo, reason: payload.reason },
+                                                    ...h
+                                                ].slice(0, 50));
+                                                // 지급 성공 시 폼 닫기
+                                                setShowCustomBox(false);
+                                            } catch (e:any) {
+                                                setCustomMsg("지급 실패: " + (e?.response?.data?.message || e?.message || '오류'));
+                                            } finally {
+                                                setCustomLoading(false);
+                                            }
+                                        }}
+                                    >{customLoading ? '지급 중...' : '지급하기'}</button>
+                                    <button
+                                        className="h-8 rounded-md border border-neutral-300 px-3 text-sm"
+                                        onClick={()=>{ setShowCustomBox(false); }}
+                                    >닫기</button>
+                                    {customMsg && (
+                                        <span className="text-xs text-neutral-600">{customMsg}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 커스텀 지급 내역 테이블 */}
+                    <div className="overflow-auto">
+                        {customRowsForSelected.length === 0 ? (
+                            <div className="text-sm text-neutral-600">커스텀 지급 내역이 없습니다.</div>
+                        ) : (
+                            <>
+                                <table className="min-w-[520px] text-sm">
+                                    <thead>
+                                        <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-700">
+                                            <th className="px-3 py-2 text-left">시간</th>
+                                            <th className="px-3 py-2 text-left">userId</th>
+                                            <th className="px-3 py-2 text-left">크레딧</th>
+                                            <th className="px-3 py-2 text-left">rank</th>
+                                            <th className="px-3 py-2 text-left">memo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {customRowsForSelected.map((r, idx) => (
+                                            <tr key={idx} className="border-b border-neutral-100">
+                                                <td className="px-3 py-2 whitespace-nowrap">{new Date(r.at).toLocaleString()}</td>
+                                                <td className="px-3 py-2">{r.userId}</td>
+                                                <td className="px-3 py-2">{Number(r.amount || 0).toLocaleString()}</td>
+                                                <td className="px-3 py-2">{r.rank ?? '-'}</td>
+                                                <td className="px-3 py-2 max-w-[520px] truncate" title={String(r.memo ?? '')}>{r.memo ?? '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="mt-2 text-xs text-neutral-500">지급 결과: 운영자가 특별 이벤트/보너스에 따라 지급된 크레딧 내역입니다.</div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
