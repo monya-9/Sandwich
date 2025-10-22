@@ -94,4 +94,27 @@ public class AuthController {
                 "message", exists ? "이미 사용 중인 닉네임입니다." : "사용 가능한 닉네임입니다."
         ));
     }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam("value") String email) {
+        email = (email == null) ? "" : email.trim();
+
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of(
+                            "duplicate", false,
+                            "message", "유효한 이메일 형식이 아닙니다."
+                    ));
+        }
+
+        boolean duplicate = userRepository.existsByEmail(email);
+
+        return ResponseEntity.ok(Map.of(
+                "duplicate", duplicate,
+                "message", duplicate
+                        ? "이미 가입된 이메일입니다."
+                        : "사용 가능한 이메일입니다."
+        ));
+    }
 }
