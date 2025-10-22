@@ -14,11 +14,11 @@ const SNSLogin: React.FC = () => {
         <div className="mt-4">
             <p className="text-sm text-gray-600 dark:text-white">SNS로 간편하게 로그인하기</p>
             <div className="flex justify-center gap-4 mt-5">
-                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <div className="w-8 h-8 bg-transparent dark:bg-white rounded-full flex items-center justify-center cursor-pointer transition-colors">
                     <img
                         src={githubIcon}
                         alt="GitHub"
-                        className="w-6 h-6"
+                        className="w-8 h-8 dark:w-6 dark:h-6"
                         onClick={() => handleSocialLogin("github")}
                     />
                 </div>
