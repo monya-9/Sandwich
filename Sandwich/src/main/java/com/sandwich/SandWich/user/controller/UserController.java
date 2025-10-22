@@ -61,11 +61,10 @@ public class UserController {
         userService.upsertUserProfile(user, req);
         return ResponseEntity.ok("프로필 설정 완료");
     }
-
     @PatchMapping("/nickname")
     public ResponseEntity<?> updateNickname(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                            @RequestBody UserProfileRequest request) {
-        userService.updateNickname(userDetails.getId(), request.getNickname());
+                                            @RequestBody @Valid NicknameUpdateRequest request) {
+        userService.updateNickname(userDetails.getId(), request.nickname());
         return ResponseEntity.ok("닉네임 수정 완료");
     }
 
