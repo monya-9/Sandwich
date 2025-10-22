@@ -18,7 +18,7 @@ const SNSLogin: React.FC = () => {
                     <img
                         src={githubIcon}
                         alt="GitHub"
-                        className="w-8 h-8"
+                        className="w-8 h-8 dark:w-6 dark:h-6"
                         onClick={() => handleSocialLogin("github")}
                     />
                 </div>
