@@ -11,7 +11,9 @@ public record EducationResponse(
         Integer endYear,
         Integer endMonth,
         String description,
-        boolean isRepresentative
+        boolean isRepresentative,
+        String level,
+        String status
 ) {
     public static EducationResponse from(Education e) {
         return new EducationResponse(
@@ -23,7 +25,9 @@ public record EducationResponse(
                 e.getEndYear(),
                 e.getEndMonth(),
                 e.getDescription(),
-                e.isRepresentative()
+                e.isRepresentative(),
+                e.getLevel()  != null ? e.getLevel().name()  : null,
+                e.getStatus() != null ? e.getStatus().name() : null
         );
     }
 }

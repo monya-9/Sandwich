@@ -16,7 +16,13 @@ public class Education {
     private Long id;
 
     private String schoolName;
-    private String degree; // 학사, 석사 등
+    private String degree;
+
+    @Enumerated(EnumType.STRING)
+    private EducationLevel level;
+
+    @Enumerated(EnumType.STRING)
+    private EducationStatus status;
     private Integer startYear;
     private Integer startMonth;
     private Integer endYear;
@@ -29,7 +35,8 @@ public class Education {
 
     public Education(String schoolName, String degree, Integer startYear, Integer startMonth,
                      Integer endYear, Integer endMonth, String description,
-                     boolean isRepresentative, User user) {
+                     boolean isRepresentative, User user,
+                     EducationLevel level, EducationStatus status) {
         this.schoolName = schoolName;
         this.degree = degree;
         this.startYear = startYear;
@@ -39,11 +46,13 @@ public class Education {
         this.description = description;
         this.isRepresentative = isRepresentative;
         this.user = user;
+        this.level = level;
+        this.status = status;
     }
 
     public void update(String schoolName, String degree, Integer startYear, Integer startMonth,
                        Integer endYear, Integer endMonth, String description,
-                       boolean isRepresentative) {
+                       boolean isRepresentative, EducationLevel level, EducationStatus status) {
         this.schoolName = schoolName;
         this.degree = degree;
         this.startYear = startYear;
@@ -52,9 +61,15 @@ public class Education {
         this.endMonth = endMonth;
         this.description = description;
         this.isRepresentative = isRepresentative;
+        this.level = level;
+        this.status = status;
     }
 
     public void toggleRepresentative() {
         this.isRepresentative = !this.isRepresentative;
+    }
+
+    public void setRepresentative(boolean value) {
+        this.isRepresentative = value;
     }
 }
