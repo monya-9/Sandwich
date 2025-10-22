@@ -15,11 +15,11 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
                 <img src={logo} alt="Sandwich Logo" className="w-36 mb-10" />
             </Link>
 
-            <h1 className="text-xl font-semibold mb-2">반가워요 👋</h1>
-            <p className="text-gray-600 mb-8">아직 샌드위치 회원이 아니시군요</p>
+            <h1 className="text-xl font-semibold mb-2 dark:text-white">반가워요 👋</h1>
+            <p className="text-gray-600 dark:text-white mb-8">아직 샌드위치 회원이 아니시군요</p>
 
             <div className="w-full max-w-xs">
-                <p className="text-sm text-gray-500 mb-6">SNS로 간편하게 시작하기</p>
+                <p className="text-sm text-gray-500 dark:text-white mb-6">SNS로 간편하게 시작하기</p>
 
                 <div className="flex flex-col items-center mb-4">
                     <SNSButtonGroup />
@@ -31,9 +31,9 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
 
                 {/* 👉 이메일로 가입 */}
                 <div className="flex items-center justify-center mb-6">
-                    <hr className="flex-grow border-t border-gray-300" />
-                    <span className="mx-2 text-sm text-gray-400">또는</span>
-                    <hr className="flex-grow border-t border-gray-300" />
+                    <hr className="flex-grow border-t border-gray-300 dark:border-gray-600" />
+                    <span className="mx-2 text-sm text-gray-400 dark:text-white">또는</span>
+                    <hr className="flex-grow border-t border-gray-300 dark:border-gray-600" />
                 </div>
 
                 <button
@@ -44,9 +44,9 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
                 </button>
             </div>
 
-            <p className="text-sm text-gray-500 mt-4">
+            <p className="text-sm text-gray-500 dark:text-white mt-4">
                 이미 샌드위치 계정이 있으신가요?{" "}
-                <Link to="/login" className="text-green-700 hover:underline font-medium">
+                <Link to="/login" className="text-green-700 dark:text-green-400 hover:underline font-medium">
                     로그인하기
                 </Link>
             </p>
