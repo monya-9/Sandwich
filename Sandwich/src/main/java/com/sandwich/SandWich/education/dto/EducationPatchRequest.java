@@ -1,6 +1,6 @@
 package com.sandwich.SandWich.education.dto;
 
-public record EducationRequest(
+public record EducationPatchRequest(
         String schoolName,
         String degree,
         Integer startYear,
@@ -8,7 +8,7 @@ public record EducationRequest(
         Integer endYear,
         Integer endMonth,
         String description,
-        boolean isRepresentative,
+        Boolean isRepresentative,
         String level,
         String status
 ) {}

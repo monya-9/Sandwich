@@ -1,6 +1,7 @@
 package com.sandwich.SandWich.education.controller;
 
 import com.sandwich.SandWich.auth.security.UserDetailsImpl;
+import com.sandwich.SandWich.education.dto.EducationPatchRequest;
 import com.sandwich.SandWich.education.dto.EducationRequest;
 import com.sandwich.SandWich.education.dto.EducationResponse;
 import com.sandwich.SandWich.education.service.EducationService;
@@ -32,6 +33,14 @@ public class EducationController {
                                        @AuthenticationPrincipal UserDetailsImpl userDetails) {
         educationService.update(id, request, userDetails.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<EducationResponse> patch(@PathVariable Long id,
+                                                   @AuthenticationPrincipal UserDetailsImpl userDetails,
+                                                   @RequestBody EducationPatchRequest request) {
+        var resp = educationService.patch(id, userDetails.getId(), request);
+        return ResponseEntity.ok(resp);
     }
 
     @DeleteMapping("/{id}")
