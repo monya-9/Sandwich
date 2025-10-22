@@ -4,6 +4,7 @@ import com.sandwich.SandWich.auth.security.UserDetailsImpl;
 import com.sandwich.SandWich.education.dto.EducationPatchRequest;
 import com.sandwich.SandWich.education.dto.EducationRequest;
 import com.sandwich.SandWich.education.dto.EducationResponse;
+import com.sandwich.SandWich.education.dto.MajorResponse;
 import com.sandwich.SandWich.education.service.EducationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,29 @@ import java.util.Map;
 public class EducationController {
 
     private final EducationService educationService;
+
+    @PostMapping("/{educationId}/majors")
+    public ResponseEntity<MajorResponse> addMajor(@PathVariable Long educationId,
+                                                  @RequestBody Map<String, String> body,
+                                                  @AuthenticationPrincipal UserDetailsImpl ud) {
+        var name = body.get("name");
+        var resp = educationService.addMajor(educationId, ud.getId(), name);
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/{educationId}/majors")
+    public ResponseEntity<List<MajorResponse>> listMajors(@PathVariable Long educationId,
+                                                          @AuthenticationPrincipal UserDetailsImpl ud) {
+        return ResponseEntity.ok(educationService.listMajors(educationId, ud.getId()));
+    }
+
+    @DeleteMapping("/majors/{majorId}")
+    public ResponseEntity<Void> deleteMajor(@PathVariable Long majorId,
+                                            @AuthenticationPrincipal UserDetailsImpl ud) {
+        educationService.deleteMajor(majorId, ud.getId());
+        return ResponseEntity.noContent().build();
+    }
+
 
     @PostMapping
     public ResponseEntity<Void> create(@RequestBody EducationRequest request,
