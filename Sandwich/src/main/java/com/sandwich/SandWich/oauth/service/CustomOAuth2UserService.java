@@ -24,61 +24,81 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
 
+    private String ensureUniqueUsername(String base) {
+        String candidate = base;
+        int seq = 1;
+        while (userRepository.existsByUsername(candidate)) {
+            candidate = base + "_" + seq++;
+        }
+        return candidate;
+    }
+
     @Override
     public OAuth2User loadUser(OAuth2UserRequest request) throws OAuth2AuthenticationException {
-        OAuth2User user = super.loadUser(request);
+        OAuth2User oauthUser = super.loadUser(request);
 
         String provider = request.getClientRegistration().getRegistrationId();
-        String email = user.getAttribute("email");
+        String email = oauthUser.getAttribute("email");
         String username;
 
-        // 1. username 추출
+        // 1) provider별 username 원천
         if ("google".equals(provider)) {
-            username = user.getAttribute("name");
+            username = oauthUser.getAttribute("name");
             if (username == null || username.isBlank()) {
-                username = user.getAttribute("given_name");
+                username = oauthUser.getAttribute("given_name");
             }
             if (username == null || username.isBlank()) {
-                username = email != null ? email.split("@")[0] : "googleUser";
+                username = (email != null && !email.isBlank())
+                        ? email.split("@")[0]
+                        : "googleUser";
             }
-        } else {
-            username = user.getAttribute("login");
+        } else { // github 등
+            username = oauthUser.getAttribute("login");
         }
 
-        // 2. fallback 이메일 처리
-        if (email == null || email.isEmpty()) {
-            email = username + "@" + provider + ".local";
+        // 2) 이메일 폴백
+        if (email == null || email.isBlank()) {
+            String base = (username != null && !username.isBlank()) ? username : provider + "User";
+            email = base + "@" + provider + ".local";
         }
 
-        // 3. 이메일 중복 + provider 불일치 확인
+        // 3) 이메일 중복 + provider 불일치 차단
         Optional<User> byEmail = userRepository.findByEmailAndIsDeletedFalse(email);
         if (byEmail.isPresent() && !byEmail.get().getProvider().equals(provider)) {
-            log.warn("중복된 이메일 사용 시도: email={}, 기존 provider={}, 시도된 provider={}", email, byEmail.get().getProvider(), provider);
+            log.warn("중복 이메일 시도: email={}, 기존 provider={}, 시도 provider={}", email, byEmail.get().getProvider(), provider);
             throw new EmailAlreadyExistsException();
         }
 
-        // 4. provider + email 기준으로 조회
+        // 4) provider+email로 기존 계정 조회
         Optional<User> existingUser = userRepository.findByEmailAndProviderAndIsDeletedFalse(email, provider);
         if (existingUser.isEmpty()) {
             log.info("소셜 회원가입됨: {} ({})", email, provider);
+
+            // username 유니크 보장
+            String baseUsername = (username != null && !username.isBlank())
+                    ? username
+                    : email.split("@")[0];
+            String uniqueUsername = ensureUniqueUsername(baseUsername);
+
             User newUser = User.builder()
                     .email(email)
-                    .username(username)
+                    .username(uniqueUsername)
                     .provider(provider)
                     .password(null)
                     .isVerified(true)
                     .build();
+
             userRepository.save(newUser);
         }
 
-        // 5. nameAttributeKey 처리
-        String nameAttributeKey = user.getAttribute("email") != null ? "email" : "login";
+        // 5) nameAttributeKey 결정 (email 선호, 없으면 login)
+        String nameAttributeKey = (oauthUser.getAttribute("email") != null) ? "email" : "login";
 
         return new CustomOAuth2User(
                 provider,
                 new DefaultOAuth2User(
                         Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
-                        user.getAttributes(),
+                        oauthUser.getAttributes(),
                         nameAttributeKey
                 )
         );

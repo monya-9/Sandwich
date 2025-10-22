@@ -45,30 +45,35 @@ public class UserService {
 
     @Transactional
     public void upsertUserProfile(User user, UserProfileRequest req) {
-        // 포지션
+        // 1) 포지션
         Position position = positionRepository.findById(req.getPositionId())
                 .orElseThrow(PositionNotFoundException::new);
-        Optional<UserPosition> existing = userPositionRepository.findByUser(user);
-        if (existing.isPresent()) {
-            UserPosition userPosition = existing.get();
-            userPosition.setPosition(position);
-            userPositionRepository.save(userPosition);
-        } else {
-            userPositionRepository.save(new UserPosition(user, position));
-        }
 
-        // 관심사
-        if (req.getInterestIds().size() > 3) {
+        userPositionRepository.findByUser(user).ifPresentOrElse(
+                up -> {
+                    up.setPosition(position);
+                    userPositionRepository.save(up);
+                },
+                () -> userPositionRepository.save(new UserPosition(user, position))
+        );
+
+        // 2) 관심사 (null-safe)
+        List<Long> interestIds = (req.getInterestIds() != null)
+                ? req.getInterestIds()
+                : java.util.Collections.emptyList();
+
+        if (interestIds.size() > 3) {
             throw new IllegalArgumentException("관심사는 최대 3개까지 가능합니다.");
         }
-        userInterestRepository.deleteByUser(user); // 기존 삭제 후
-        for (Long id : req.getInterestIds()) {
+
+        userInterestRepository.deleteByUser(user);
+        for (Long id : interestIds) {
             Interest interest = interestRepository.findById(id)
                     .orElseThrow(InterestNotFoundException::new);
             userInterestRepository.save(new UserInterest(user, interest));
         }
 
-        //  프로필 설정 or 수정 (닉네임 등 포함)
+        // 3) 프로필(닉네임 등)
         Profile profile = user.getProfile();
         if (profile == null) {
             profile = new Profile();
@@ -76,19 +81,22 @@ public class UserService {
             user.setProfile(profile);
         }
 
-        //  닉네임 중복 검사 (기존 닉네임과 다를 때만)
+        // 닉네임 중복 검사 (변경 시에만)
         if (profileRepository.existsByNickname(req.getNickname()) &&
                 (profile.getNickname() == null || !profile.getNickname().equals(req.getNickname()))) {
             throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
         }
 
-        // 닉네임, skills, bio, github 등 전부 여기에 포함
         profile.updateFrom(req);
 
-        // 저장
+        // (선택) 온보딩 완료 플래그
+        user.setIsProfileSet(true);
+
+        // 4) 저장
         userRepository.save(user);
         ensureWallet(user.getId());
     }
+
 
     @Transactional
     public UserProfileResponse getMe(User user) {
@@ -226,15 +234,40 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // UserService.java
+    @Transactional
     public void updateNickname(Long userId, String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            throw new IllegalArgumentException("닉네임을 입력해주세요.");
+        }
+        String trimmed = nickname.trim();
+        if (trimmed.length() < 2 || trimmed.length() > 20) {
+            throw new IllegalArgumentException("닉네임은 2~20자 사이여야 합니다.");
+        }
+        if (!trimmed.matches("^[0-9A-Za-z가-힣._-]+$")) {
+            throw new IllegalArgumentException("닉네임은 한글/영문/숫자/._-만 사용할 수 있습니다.");
+        }
+        if (profileRepository.existsByNickname(trimmed)) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
+
         Profile profile = user.getProfile();
         if (profile == null) {
-            throw new IllegalStateException("프로필이 존재하지 않습니다.");
+            profile = new Profile();
+            profile.setUser(user);
+            user.setProfile(profile);
         }
-        profile.setNickname(nickname);
+
+        profile.setNickname(trimmed);
+        user.setIsProfileSet(true); // 온보딩 완료 플래그 활용 시
+
+        userRepository.save(user);
+        ensureWallet(user.getId()); // 기존 지갑 보장 로직 유지
     }
+
 
     @Transactional(readOnly = true)
     public PositionResponse getUserPosition(User user) {
