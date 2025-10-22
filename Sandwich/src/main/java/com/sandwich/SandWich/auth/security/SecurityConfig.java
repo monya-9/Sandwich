@@ -177,6 +177,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/*/following").permitAll()
                         .requestMatchers("/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/representative-careers").permitAll()
 
                         // 사용자 보안 세분화 =====
                         // 1) 내 프로필은 반드시 인증
