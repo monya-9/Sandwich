@@ -186,19 +186,19 @@ export type ChallengeRuleJson = {
   week?: string;     // YYYYWww for code
   must?: string[];   // requirements list (can be empty)
   md?: string;       // markdown body (0+)
+  summary?: string;  // 챌린지 요약 (ruleJson 안에 저장됨)
   [k: string]: any;
 };
 
 export type ChallengeUpsertRequest = {
   type: ChallengeType;
   title: string;
-  summary?: string;
   status?: ChallengeStatus; // optional – server may default
   startAt: string;     // ISO8601
   endAt: string;       // ISO8601
   voteStartAt?: string; // ISO8601
   voteEndAt?: string;   // ISO8601
-  ruleJson?: ChallengeRuleJson; // type-specific keys (ym/week) and content (must/md)
+  ruleJson?: ChallengeRuleJson; // type-specific keys (ym/week) and content (must/md), summary는 여기 안에
 };
 
 export async function createChallenge(payload: ChallengeUpsertRequest): Promise<{ id: number }> {

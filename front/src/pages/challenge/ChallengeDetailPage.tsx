@@ -15,7 +15,6 @@ import {
     fetchCodeTopSubmitters,
     type LeaderboardEntry 
 } from "../../api/challengeApi";
-import RewardClaimModal from "../../components/challenge/RewardClaimModal";
 import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { getVoteSummary, type VoteSummaryResponse } from "../../api/challengeApi";
 import { isAdmin } from "../../utils/authz";
@@ -48,7 +47,7 @@ function ScheduleList({ items }: { items: { label: string; date: string }[] }) {
                     {items?.map((s, i) => (
                         <li key={i} className="flex items-center justify-between">
                             <span className="font-medium">{s.label}</span>
-                            <span className="text-neutral-700">{s.date}</span>
+                            <span className="text-neutral-700 dark:text-neutral-200 font-medium">{s.date}</span>
                         </li>
                     ))}
                 </ul>
@@ -94,13 +93,15 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
     return (
         <div className="mb-6">
             <SectionTitle>🤖 AI 자동 채점 기준</SectionTitle>
-            <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                {items?.map((i, idx) => (
-                    <li key={idx}>
-                        {i.label}: <span className="font-medium">{i.weight}점</span>
-                    </li>
-                ))}
-            </ul>
+            <GreenBox>
+                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                    {items?.map((i, idx) => (
+                        <li key={idx}>
+                            {i.label}: <span className="font-medium">{i.weight}점</span>
+                        </li>
+                    ))}
+                </ul>
+            </GreenBox>
         </div>
     );
 }
@@ -315,8 +316,7 @@ export default function ChallengeDetailPage() {
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
-    const [showRewardModal, setShowRewardModal] = useState(false);
-    const [userReward, setUserReward] = useState<RewardItem | null>(null);
+    // 보상 수령 기능 제거됨
     const admin = isAdmin();
     const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
 
@@ -471,32 +471,7 @@ export default function ChallengeDetailPage() {
         });
     }, [id, navigate, type]); // data 의존성 제거로 무한 루프 방지
 
-    // 보상 수령 가능 여부 확인
-    useEffect(() => {
-        const checkReward = async () => {
-            if (!data || challengeStatus !== "ENDED" || !isLoggedIn) return;
-            
-            try {
-                const rewards = await fetchMyRewards();
-                const challengeReward = rewards.find((r: any) => r.challenge_id === id);
-                setUserReward(challengeReward || null);
-            } catch (error) {
-                console.error('보상 정보 조회 실패:', error);
-            }
-        };
-
-        checkReward();
-    }, [data, challengeStatus, isLoggedIn, id]);
-
-    const handleRewardClaim = () => {
-        setShowRewardModal(true);
-    };
-
-    const onRewardClaimed = () => {
-        // 보상 수령 후 데이터 새로고침
-        setShowRewardModal(false);
-        // 필요시 크레딧 데이터 새로고침
-    };
+    // 보상 수령 기능 제거됨
 
     const goPrimary = () => {
         if (!data) return;
@@ -620,8 +595,8 @@ export default function ChallengeDetailPage() {
 
             {/* 상단 CTA */}
             <div className="mb-4 flex flex-wrap gap-2">
-                {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 */}
-                {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && (
+                {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 (관리자 제외) */}
+                {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && !admin && (
                     <button
                         onClick={goPrimary}
                         className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
@@ -630,15 +605,7 @@ export default function ChallengeDetailPage() {
                     </button>
                 )}
 
-                {/* 보상 수령 버튼 (종료된 챌린지 + 보상이 있을 때) */}
-                {challengeStatus === "ENDED" && userReward && (
-                    <button
-                        onClick={handleRewardClaim}
-                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1.5 text-[13px] font-semibold hover:from-orange-600 hover:to-yellow-600"
-                    >
-                        보상 수령하기 →
-                    </button>
-                )}
+                {/* 보상 수령 기능 제거됨 */}
 
                 <button
                     onClick={goSecondary}
@@ -693,7 +660,7 @@ export default function ChallengeDetailPage() {
                                 </div>
                             )}
                         </div>
-                        <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
+                        <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-100">{data.description}</p>
                     </div>
 
                     {/* 필수 조건 (모든 챌린지 타입) */}
@@ -704,7 +671,7 @@ export default function ChallengeDetailPage() {
                     {mustHave?.map((requirement, index) => (
                         <div key={index} className="flex items-start gap-2">
                             <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
-                            <span className="text-[13.5px] leading-6 text-neutral-800">{requirement}</span>
+                                        <span className="text-[13.5px] leading-6 text-neutral-800 dark:text-neutral-100">{requirement}</span>
                         </div>
                     ))}
                             </div>
@@ -715,6 +682,7 @@ export default function ChallengeDetailPage() {
                     {type === "CODE" ? (
                         <>
                             <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
+                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards || []} />
                             
                             {/* 코드 챌린지 제출 예시 */}
@@ -743,19 +711,28 @@ export default function ChallengeDetailPage() {
                                     </div>
                                 </GreenBox>
                             </div>
-                            
-                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                         </>
                     ) : (
                         <>
-                            <ScheduleList items={(data as PortfolioChallengeDetail).schedule || []} />
+                            {/* 진행 일정: 고정 문구로 노출 */}
+                            <ScheduleList
+                                items={[
+                                    { label: '챌린지 기간', date: '매월 1일 ~ 말일' },
+                                    { label: '투표 기간', date: '다음달 1일 ~ 3일' },
+                                    { label: '결과 발표', date: '다음달 4일, 보상은 크레딧으로 자동 지급' },
+                                ]}
+                            />
+                            {/* 투표 기준: 고정 문구로 노출 */}
                             <div className="mb-6">
                                 <SectionTitle>🗳️ 투표 기준</SectionTitle>
-                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    {(data as PortfolioChallengeDetail).votingCriteria?.map((t, i) => (
-                                        <li key={i}>{t} (1~5점)</li>
-                                    ))}
-                                </ul>
+                                <GreenBox>
+                                    <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                                        <li>UI/UX (1~5점)</li>
+                                        <li>기술력 (1~5점)</li>
+                                        <li>창의성(1~5점)</li>
+                                        <li>기획력(1~5점)</li>
+                                    </ul>
+                                </GreenBox>
                             </div>
                             <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards || []} />
                             
@@ -822,7 +799,7 @@ export default function ChallengeDetailPage() {
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     <li>챌린지 시작: 월요일 00:00 (KST) ~ 문제 제출 마감: 일요일 23:59</li>
                                     <li>AI 자동 채점 → 점수/코멘트 반영(수 분 소요)</li>
-                                    <li>커뮤니티 투표 점수와 합산되어 최종 순위 결정, 보상은 크레딧으로 자동 지급</li>
+                                    {/* 포트폴리오 전용 문구 제거: 코드 챌린지에는 투표 점수 합산/자동 지급 안내 미표시 */}
                                 </ul>
                             </div>
                         </>
@@ -854,9 +831,9 @@ export default function ChallengeDetailPage() {
 
                     {/* 하단 고정 CTA */}
                     <div className="sticky bottom-4 mt-6 flex justify-end">
-                        <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
-                            {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 */}
-                            {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && (
+                        <div className="flex items-center gap-2 rounded-full border px-2 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/70 supports-[backdrop-filter]:dark:bg-neutral-900/40 border-neutral-200 bg-white dark:bg-neutral-800">
+                            {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 (관리자 제외) */}
+                            {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && !admin && (
                                 <CTAButton as="button" onClick={goPrimary}>
                                     {primaryLabel(type)}
                                 </CTAButton>
@@ -880,14 +857,7 @@ export default function ChallengeDetailPage() {
                 </div>
             )}
 
-            {/* 보상 수령 모달 */}
-            <RewardClaimModal
-                isOpen={showRewardModal}
-                onClose={() => setShowRewardModal(false)}
-                challengeTitle={data?.title || ''}
-                userReward={userReward}
-                onRewardClaimed={onRewardClaimed}
-            />
+            {/* 보상 수령 기능 제거됨 */}
         </div>
     );
 }

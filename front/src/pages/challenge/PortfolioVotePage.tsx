@@ -404,7 +404,7 @@ export default function PortfolioVotePage() {
                                 const likeInfo = submissionLikes[submission.id] || { liked: false, count: submission.likeCount || 0 };
                                 
                                 return (
-                                <div key={submission.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
                                     {/* 1. 프로필 정보 */}
                                     <div className="p-4 pb-3">
                                         <div className="flex items-center gap-3">
@@ -436,17 +436,17 @@ export default function PortfolioVotePage() {
                                             
                                             {/* 사용자명 & 직책 */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-semibold text-gray-900 truncate">
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-neutral-100 truncate">
                                                     {submission.owner?.username || '익명'}
                                                 </div>
-                                                <div className="text-xs text-gray-500">개발자</div>
+                                                <div className="text-xs text-gray-500 dark:text-neutral-400">개발자</div>
                                             </div>
                                         </div>
                                     </div>
                                     
                                     {/* 2. 썸네일 이미지 */}
                                     {submission.coverUrl && (
-                                        <div className="relative h-48 bg-gray-100">
+                                        <div className="relative h-48 bg-gray-100 dark:bg-neutral-800">
                                             <img 
                                                 src={submission.coverUrl} 
                                                 alt={submission.title}
@@ -461,24 +461,24 @@ export default function PortfolioVotePage() {
                                     
                                     <div className="p-4">
                                         {/* 3. 제목 */}
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2 line-clamp-2">
                                             {submission.title || `제출물 #${submission.id}`}
                                         </h3>
                                         
                                         {/* 4. 소개/설명 */}
                                         {submission.desc && (
-                                            <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                                            <p className="text-sm text-gray-600 dark:text-neutral-300 mb-4 line-clamp-3">
                                                 {submission.desc}
                                             </p>
                                         )}
                                         
                                         {/* 5. 하단: 좋아요, 조회수, 댓글, 전체보기 */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-neutral-800">
+                                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-neutral-400">
                                                 {/* 좋아요 */}
                                                 <button 
                                                     onClick={(e) => handleLike(e, submission.id)}
-                                                    className={`flex items-center gap-1 hover:text-gray-700 transition-colors ${likeInfo.liked ? 'text-red-500' : ''}`}
+                                                    className={`flex items-center gap-1 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors ${likeInfo.liked ? 'text-red-500' : ''}`}
                                                 >
                                                     <svg className="w-4 h-4" fill={likeInfo.liked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -505,7 +505,7 @@ export default function PortfolioVotePage() {
                                             {/* 전체보기 버튼 */}
                                             <Link 
                                                 to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
+                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                                             >
                                                 전체보기
                                             </Link>
