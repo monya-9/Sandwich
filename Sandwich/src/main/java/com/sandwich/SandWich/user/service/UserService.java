@@ -319,25 +319,25 @@ public class UserService {
 
     @Transactional
     public void updateGeneralInterests(User user, List<Long> interestIds) {
-        // 관심사는 최대 3개
-        if (interestIds.size() > 3) {
+        List<Long> ids = (interestIds == null) ? java.util.Collections.emptyList() : interestIds;
+        if (ids.size() > 3) {
             throw new IllegalArgumentException("관심사는 최대 3개까지 선택 가능합니다.");
         }
 
-        // 기존 GENERAL 관심사만 삭제
         List<UserInterest> current = userInterestRepository.findByUser(user);
         current.stream()
                 .filter(ui -> ui.getInterest().getType() == InterestType.GENERAL)
                 .forEach(userInterestRepository::delete);
 
-        // 새 관심사 추가
-        for (Long id : interestIds) {
+        if (ids.isEmpty()) return; // 전부 해제 끝
+
+        for (Long id : ids) {
             Interest interest = interestRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("해당 관심사가 존재하지 않습니다: " + id));
-
-            if (interest.getType() == InterestType.GENERAL) {
-                userInterestRepository.save(new UserInterest(user, interest));
+            if (interest.getType() != InterestType.GENERAL) {
+                throw new IllegalArgumentException("GENERAL 엔드포인트에는 GENERAL 타입만 저장할 수 있습니다. id=" + id);
             }
+            userInterestRepository.save(new UserInterest(user, interest));
         }
     }
 
@@ -361,7 +361,8 @@ public class UserService {
 
     @Transactional
     public void updateTechInterests(User user, List<Long> interestIds) {
-        if (interestIds.size() > 10) {
+        List<Long> ids = (interestIds == null) ? java.util.Collections.emptyList() : interestIds;
+        if (ids.size() > 10) {
             throw new IllegalArgumentException("기술 스택은 최대 10개까지 선택 가능합니다.");
         }
 
@@ -370,13 +371,15 @@ public class UserService {
                 .filter(ui -> ui.getInterest().getType() == InterestType.TECH)
                 .forEach(userInterestRepository::delete);
 
-        for (Long id : interestIds) {
+        if (ids.isEmpty()) return; // 전부 해제 끝
+
+        for (Long id : ids) {
             Interest interest = interestRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("해당 관심사가 존재하지 않습니다: " + id));
-
-            if (interest.getType() == InterestType.TECH) {
-                userInterestRepository.save(new UserInterest(user, interest));
+            if (interest.getType() != InterestType.TECH) {
+                throw new IllegalArgumentException("TECH 엔드포인트에는 TECH 타입만 저장할 수 있습니다. id=" + id);
             }
+            userInterestRepository.save(new UserInterest(user, interest));
         }
     }
 
