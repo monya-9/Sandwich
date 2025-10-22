@@ -478,7 +478,7 @@ export default function ChallengeDetailPage() {
             
             try {
                 const rewards = await fetchMyRewards();
-                const challengeReward = rewards.rewards.find(r => r.challengeId === id);
+                const challengeReward = rewards.find((r: any) => r.challenge_id === id);
                 setUserReward(challengeReward || null);
             } catch (error) {
                 console.error('보상 정보 조회 실패:', error);
@@ -631,7 +631,7 @@ export default function ChallengeDetailPage() {
                 )}
 
                 {/* 보상 수령 버튼 (종료된 챌린지 + 보상이 있을 때) */}
-                {challengeStatus === "ENDED" && userReward && userReward.status === "PENDING" && (
+                {challengeStatus === "ENDED" && userReward && (
                     <button
                         onClick={handleRewardClaim}
                         className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1.5 text-[13px] font-semibold hover:from-orange-600 hover:to-yellow-600"
