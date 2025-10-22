@@ -1,12 +1,13 @@
 import React from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { createChallenge, updateChallenge, type ChallengeUpsertRequest, fetchChallengeDetail, changeChallengeStatus, type ChallengeStatus, deleteChallenge, adminFetchChallenges } from "../../api/challengeApi";
+import { createChallenge, updateChallenge, type ChallengeUpsertRequest, fetchChallengeDetail, changeChallengeStatus, type ChallengeStatus, deleteChallenge, adminFetchChallenges, fetchAiGeneratedChallenges, type AiGeneratedChallenge } from "../../api/challengeApi";
 import { fetchMonthlyByYm, fetchMonthlyChallenge } from "../../api/monthlyChallenge";
 import { fetchWeeklyByKey, fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import SectionCard from "../../components/challenge/common/SectionCard";
 import DateTimeField from "../../components/common/DateTimeField";
 import Dropdown from "../../components/common/Dropdown";
 import WeekField from "../../components/common/WeekField";
+import { AuthContext } from "../../context/AuthContext";
 
 type Mode = "create" | "edit";
 
@@ -61,6 +62,7 @@ export default function ChallengeFormPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams<{ id?: string }>();
+    const { isLoggedIn } = React.useContext(AuthContext);
     const urlEditMode: Mode = id ? "edit" : "create";
     const isTypeEditRoute = React.useMemo(() => {
         const p = location?.pathname || "";
@@ -99,6 +101,11 @@ export default function ChallengeFormPage() {
     });
     const [selectedTitle, setSelectedTitle] = React.useState<string>("");
     const manageInitRef = React.useRef<boolean>(false);
+    // AI 생성 문제 목록 관련
+    const [aiChallenges, setAiChallenges] = React.useState<AiGeneratedChallenge[]>([]);
+    const [aiLoading, setAiLoading] = React.useState(false);
+    const [showAiList, setShowAiList] = React.useState<boolean>(true);
+    const [aiWeek, setAiWeek] = React.useState<string>("");
 
     const clearForm = React.useCallback(() => {
         setEditingId(null);
@@ -236,12 +243,13 @@ export default function ChallengeFormPage() {
                             if (!ym || ym.trim().length === 0) setYm(d?.ym || ymKey || "");
                         }
                         if (t.includes("CODE")) {
-                            // 편집 화면에서는 백엔드 값 우선. 주차 키만 비어있을 때 보조로 채움
-                            let weekly: any | null = null;
-                            if (weekCandidate) weekly = await fetchWeeklyByKey(weekCandidate);
-                            else weekly = await fetchWeeklyLatest();
-                            const d = weekly as any; // parsed WeeklyChallengeData
-                            if (!weekCandidate && d?.week) setWeek(d.week);
+                            // 편집 화면에서만 백엔드 값이 있을 때만 로드. 자동으로 최신 주차를 채우지 않음
+                            if (weekCandidate) {
+                                let weekly: any | null = null;
+                                weekly = await fetchWeeklyByKey(weekCandidate);
+                                // weekCandidate가 있으면 그 값을 그대로 사용 (이미 setWeek(weekCandidate)로 설정됨)
+                            }
+                            // else 부분 제거: 주차가 없으면 자동으로 채우지 않음
                         }
                     } catch (e) {
                         // AI 호출 실패 시 무시하고 백엔드 데이터만 사용
@@ -263,6 +271,26 @@ export default function ChallengeFormPage() {
         }
     }, [urlEditMode, id, isTypeEditRoute]);
 
+    // AI 생성 문제 목록 로드
+    React.useEffect(() => {
+        if (viewMode === "CREATE" && isLoggedIn && urlEditMode !== "edit") {
+            (async () => {
+                setAiLoading(true);
+                try {
+                    const resp = await fetchAiGeneratedChallenges();
+                    setAiChallenges(resp.data || []);
+                    setAiWeek(resp.week || "");
+                } catch (e) {
+                    console.error("Failed to load AI challenges", e);
+                    setAiChallenges([]);
+                } finally {
+                    setAiLoading(false);
+                }
+            })();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewMode, isLoggedIn, urlEditMode]);
+
     // 드롭다운 전환 시 동작
     React.useEffect(() => {
         // 단일 수정 경로에서는 뷰모드 전환에 의해 값이 초기화되면 안 된다
@@ -276,6 +304,7 @@ export default function ChallengeFormPage() {
             setCurrentStatus("DRAFT");
             setSelectedTitle("");
             setShowFullList(true);
+            setShowAiList(true);
         } else {
             // MANAGE 모드: 목록 로드
             (async () => {
@@ -475,19 +504,94 @@ export default function ChallengeFormPage() {
                     </div>
                 </div>
             )}
+            {/* AI 생성 문제 목록 (생성 모드 + 로그인 시에만 표시) */}
+            {viewMode === "CREATE" && isLoggedIn && urlEditMode !== "edit" && (
+                <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/40 dark:bg-emerald-900/30">
+                    {showAiList ? (
+                        <>
+                            <div className="mb-2 flex items-center justify-between">
+                                <div className="text-[14px] font-semibold text-emerald-900 dark:text-emerald-100">
+                                    AI 생성 문제 목록 {aiWeek && `(${aiWeek})`}
+                                </div>
+                                <button 
+                                    className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[12px] hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
+                                    onClick={()=> setShowAiList(false)}
+                                >
+                                    접기
+                                </button>
+                            </div>
+                            {aiLoading ? (
+                                <div className="text-[13px] text-emerald-700 dark:text-emerald-200">불러오는 중...</div>
+                            ) : (
+                                <ul className="max-h-56 overflow-auto divide-y divide-emerald-200 dark:divide-emerald-700">
+                                    {aiChallenges.map(ai => (
+                                        <li key={ai.idx} className="py-2">
+                                            <div className="mb-1.5 flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="text-[13.5px] font-semibold text-emerald-900 dark:text-emerald-100">
+                                                        #{ai.idx} {ai.title}
+                                                    </div>
+                                                    <div className="mt-1 text-[12px] text-emerald-700 dark:text-emerald-200 line-clamp-2">
+                                                        {ai.summary}
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    className="ml-2 rounded-full border border-emerald-500 bg-white px-3 py-1 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
+                                                    onClick={() => {
+                                                        // AI 문제를 폼에 로드
+                                                        setType("CODE");
+                                                        setTitle(ai.title);
+                                                        setSummary(ai.summary);
+                                                        setWeek(aiWeek);
+                                                        setMust(ai.must_have.join("\n"));
+                                                        setMd("");
+                                                        setSelectedTitle(ai.title);
+                                                        setShowAiList(false);
+                                                        (window as any).scrollTo?.(0, 0);
+                                                    }}
+                                                >
+                                                    선택
+                                                </button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                    {aiChallenges.length === 0 && (
+                                        <li className="py-3 text-[13px] text-emerald-600 dark:text-emerald-200">
+                                            AI 생성 문제가 없습니다.
+                                        </li>
+                                    )}
+                                </ul>
+                            )}
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[13px] text-emerald-900 dark:text-emerald-100">
+                                <span className="font-semibold">선택한 AI 문제</span>:
+                                <span>{selectedTitle || "없음"}</span>
+                            </div>
+                            <button 
+                                className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[12px] hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
+                                onClick={()=> setShowAiList(true)}
+                            >
+                                목록 펼치기
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
             {/* 관리 목록 (생성 페이지의 수정/삭제 모드에서만 표시) */}
             {(urlEditMode !== "edit" || isTypeEditRoute) && viewMode === "MANAGE" && (
-                <div className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                <div className="mb-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800">
                     {showFullList ? (
                         <>
                             <div className="mb-2 flex items-center justify-between">
-                                <div className="text-[14px] font-semibold">챌린지 전체 목록 보기</div>
-                                <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={()=> setShowFullList(false)}>접기</button>
+                                <div className="text-[14px] font-semibold dark:text-neutral-100">챌린지 전체 목록 보기</div>
+                                <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100" onClick={()=> setShowFullList(false)}>접기</button>
                             </div>
                             {listLoading ? (
-                                <div className="text-[13px] text-neutral-600">불러오는 중...</div>
+                                <div className="text-[13px] text-neutral-600 dark:text-neutral-300">불러오는 중...</div>
                             ) : (
-                                <ul className="max-h-56 overflow-auto divide-y">
+                                <ul className="max-h-56 overflow-auto divide-y dark:divide-neutral-700">
                             {list.map(it => (
                                 <li key={it.id} className="flex items-center justify-between py-2">
                                             <div className="flex items-center gap-2">
@@ -500,25 +604,25 @@ export default function ChallengeFormPage() {
                                                 )}
                                             </div>
                                             <div className="flex gap-2">
-                                                <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={() => {
+                                                <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100" onClick={() => {
                                                     // 모든 경우 동일 화면 로딩으로 통일하여 깜빡임 제거
                                                     loadForManageSelection(it.id, { titleHint: it.title, typeHint: String(it.type || 'CODE') });
                                                 }}>선택</button>
-                                                <button className="rounded-full border border-red-300 bg-white px-3 py-1 text-[12px] text-red-600 hover:bg-red-50" onClick={()=> setListDeleteConfirm({ open: true, id: it.id, title: it.title })}>삭제</button>
+                                                <button className="rounded-full border border-red-300 bg-white px-3 py-1 text-[12px] text-red-600 hover:bg-red-50 dark:border-red-600 dark:bg-red-900/30 dark:text-red-300" onClick={()=> setListDeleteConfirm({ open: true, id: it.id, title: it.title })}>삭제</button>
                                             </div>
                                         </li>
                                     ))}
-                                    {list.length===0 && <li className="py-3 text-[13px] text-neutral-500">데이터가 없습니다.</li>}
+                                    {list.length===0 && <li className="py-3 text-[13px] text-neutral-500 dark:text-neutral-400">데이터가 없습니다.</li>}
                                 </ul>
                             )}
                         </>
                     ) : (
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-[13px]">
+                            <div className="flex items-center gap-2 text-[13px] dark:text-neutral-100">
                                 <span className="font-semibold">선택한 챌린지</span>:
                                 <span>{selectedTitle}</span>
                             </div>
-                            <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50" onClick={()=> setShowFullList(true)}>목록 펼치기</button>
+                            <button className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-[12px] hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100" onClick={()=> setShowFullList(true)}>목록 펼치기</button>
                         </div>
                     )}
                 </div>
@@ -560,7 +664,23 @@ export default function ChallengeFormPage() {
                     <Dropdown
                         options={[{ value: "CODE", label: "코드" }, { value: "PORTFOLIO", label: "포트폴리오" }]}
                         value={type}
-                        onChange={(v) => setType(v as any)}
+                        onChange={(v) => {
+                            setType(v as any);
+                            // CREATE 모드에서 타입 변경 시 폼 초기화
+                            if (viewMode === "CREATE" && editingId === null) {
+                                setTitle("");
+                                setSummary("");
+                                setYm("");
+                                setWeek("");
+                                setMust("");
+                                setMd("");
+                                setStartAt("");
+                                setEndAt("");
+                                setVoteStartAt("");
+                                setVoteEndAt("");
+                                setSelectedTitle("");
+                            }
+                        }}
                         className="w-full"
                         size="sm"
                     />
@@ -705,9 +825,11 @@ export default function ChallengeFormPage() {
                                     await deleteChallenge(Number(id), { force: true });
                                     setDeleteConfirmOpen(false);
                                     navigate('/challenge');
-                                } catch (e) {
+                                } catch (e: any) {
                                     console.error('delete failed', e);
-                                    setError('삭제 중 오류가 발생했습니다.');
+                                    const msg = e?.response?.data?.message || e?.message || '삭제 중 오류가 발생했습니다.';
+                                    setError(`삭제 실패: ${msg}`);
+                                    setDeleteConfirmOpen(false);
                                 }
                             }}>삭제</button>
                         </div>
@@ -728,9 +850,10 @@ export default function ChallengeFormPage() {
                                     await deleteChallenge(listDeleteConfirm.id, { force: true });
                                     setList(list.filter(x=>x.id !== listDeleteConfirm.id));
                                     setListDeleteConfirm({ open:false });
-                                } catch (e) {
+                                } catch (e: any) {
                                     console.error('delete list item failed', e);
-                                    setError('삭제 중 오류가 발생했습니다.');
+                                    const msg = e?.response?.data?.message || e?.message || '삭제 중 오류가 발생했습니다.';
+                                    setError(`삭제 실패: ${msg}`);
                                     setListDeleteConfirm({ open:false });
                                 }
                             }}>삭제</button>

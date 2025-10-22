@@ -335,7 +335,7 @@ export default function PortfolioVotePage() {
                         titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
                             derivedStage === "SUBMISSION_OPEN" ? (
-                                <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
+                                <CTAButton as={Link} to={`/challenge/portfolio/${id}/submit`}>
                                     프로젝트 제출하기
                                 </CTAButton>
                             ) : undefined

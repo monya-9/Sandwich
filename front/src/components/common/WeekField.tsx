@@ -82,6 +82,8 @@ export default function WeekField({ label, value, onChange, placeholder, classNa
     }
 
     const display = React.useMemo(() => {
+        // value가 없으면 빈 문자열 반환 (placeholder 표시)
+        if (!value && !open) return "";
         // 팝업이 열려 있는 동안에는 현재 선택 주(미저장) 미리보기 노출
         const useDate = open ? selDay : (value ? (isoWeekToMonday(value) || selDay) : selDay);
         const { year, week } = dateToIsoWeek(useDate);

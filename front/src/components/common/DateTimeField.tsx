@@ -84,7 +84,7 @@ export default function DateTimeField({ label, value, onChange, placeholder, cla
     const [openH, setOpenH] = React.useState(false);
     const [openM, setOpenM] = React.useState(false);
     const hours = React.useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
-    const minutes = React.useMemo(() => Array.from({ length: 60 }, (_, i) => i).filter((i) => i % 5 === 0), []);
+    const minutes = React.useMemo(() => Array.from({ length: 60 }, (_, i) => i), []);
 
     function handleToggle() {
         if (open) { setOpen(false); return; }

@@ -599,7 +599,7 @@ export default function ChallengeDetailPage() {
                 {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && !admin && (
                     <button
                         onClick={goPrimary}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                     >
                         <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
                     </button>
@@ -609,7 +609,7 @@ export default function ChallengeDetailPage() {
 
                 <button
                     onClick={goSecondary}
-                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                 >
                     <span>{type === "CODE" ? "🗂️" : (derivedStage === "VOTING" ? "🗳️" : "🗂️")}</span> {secondaryLabel(type, challengeStatus, derivedStage)} →
                 </button>
