@@ -68,6 +68,14 @@ public class UserController {
         return ResponseEntity.ok("닉네임 수정 완료");
     }
 
+    @PatchMapping("/profile/bio")
+    public ResponseEntity<?> updateBio(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid ProfileBioUpdateRequest req
+    ) {
+        userService.updateBio(userDetails.getId(), req.getBio());
+        return ResponseEntity.ok("소개 수정 완료");
+    }
     // 이미 사용 중 : true
     // 사용 가능 : false
     @GetMapping("/check-nickname")

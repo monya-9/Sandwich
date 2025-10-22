@@ -147,6 +147,21 @@ public class UserService {
     }
 
     @Transactional
+    public void updateBio(Long userId, String bio) {
+        User managedUser = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        Profile profile = managedUser.getProfile();
+        if (profile == null) {
+            profile = new Profile();
+            profile.setUser(managedUser);
+            managedUser.setProfile(profile);
+            // 새 엔티티이므로 명시 저장을 원하면 profileRepository.save(profile) 호출 가능
+        }
+
+        profile.setBio(bio);
+    }
+    @Transactional
     public void saveBasicProfile(User user, SignupRequest req) {
         // nickname 중복 검사
         if (profileRepository.existsByNickname(req.getNickname())) {
