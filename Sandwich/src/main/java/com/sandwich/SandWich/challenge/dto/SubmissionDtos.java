@@ -9,6 +9,46 @@ import org.springframework.lang.Nullable;
 
 public class SubmissionDtos {
 
+
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class UpdateReq {
+        @Nullable @Size(max = 200)
+        private String title;
+
+        @Nullable @Size(max = 5000)
+        private String desc;
+
+        @Pattern(regexp="^https?://.*", message="repoUrl must be http/https")
+        @Nullable @Size(max = 2048)
+        private String repoUrl;
+
+        @Pattern(regexp="^https?://.*", message="demoUrl must be http/https")
+        @Nullable @Size(max = 2048)
+        private String demoUrl;
+
+        @Pattern(regexp="^https?://.*", message="coverUrl must be http/https")
+        @Nullable @Size(max = 2048)
+        private String coverUrl;
+
+        @Nullable
+        private com.sandwich.SandWich.challenge.domain.Submission.ParticipationType participationType;
+
+        @Nullable @Size(max=200)
+        private String teamName;
+
+        @Nullable @Size(max=5000)
+        private String membersText;
+
+        @Valid
+        @Size(max = 10, message = "assets can contain up to 10 items")
+        @Nullable
+        private List<CreateReq.Asset> assets;
+
+        @Valid
+        @Nullable
+        private CreateReq.Code code;
+    }
+
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class CreateReq {
         @NotBlank @Size(max = 200)

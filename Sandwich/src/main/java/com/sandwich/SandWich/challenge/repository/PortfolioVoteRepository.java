@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,11 @@ public interface PortfolioVoteRepository extends JpaRepository<PortfolioVote, Lo
         Long getCnt();
     }
     void deleteByChallenge_Id(Long challengeId);
+
+    @Modifying
+    @Transactional
+    @Query("delete from PortfolioVote v where v.submission.id in :ids")
+    void deleteBySubmission_IdIn(@Param("ids") java.util.Collection<Long> ids);
 
     @Modifying
     @Query("DELETE FROM PortfolioVote v WHERE v.challenge.id = :challengeId")
@@ -37,6 +43,7 @@ public interface PortfolioVoteRepository extends JpaRepository<PortfolioVote, Lo
       group by v.submission.id
     """)
     List<Agg> aggregateBySubmission(@Param("challengeId") Long challengeId);
+
 
 
     @Query(value = """

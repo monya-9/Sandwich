@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import com.sandwich.SandWich.auth.security.UserDetailsImpl;
+
 
 @RestController
 @RequestMapping("/api/challenges/{challengeId}/submissions")
@@ -31,6 +34,25 @@ public class SubmissionController {
         var dir = (s.length > 1 && "asc".equalsIgnoreCase(s[1])) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(dir, s[0]));
         return service.list(challengeId, pageable);
+    }
+
+    @PutMapping("/{submissionId}")
+    public ResponseEntity<Void> update(
+            @PathVariable Long challengeId,
+            @PathVariable Long submissionId,
+            @RequestBody @Valid SubmissionDtos.UpdateReq req,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        service.updateMySubmission(challengeId, submissionId, req, user.getUser().getId());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{submissionId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long challengeId,
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        service.deleteMySubmission(challengeId, submissionId, user.getUser().getId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{submissionId}")

@@ -5,7 +5,8 @@ import com.sandwich.SandWich.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,4 +18,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     long countByCommentableTypeAndCommentableId(String commentableType, Long commentableId);
     @Query("select c.user.id from Comment c where c.id = :id")
     Optional<Long> findAuthorIdById(@Param("id") Long id);
+
+    @Modifying
+    @Transactional
+    @Query("delete from Comment c where c.commentableType = :type and c.commentableId in :ids")
+    void deleteByCommentableTypeAndCommentableIdIn(@Param("type") String commentableType,
+                                                   @Param("ids") java.util.Collection<Long> ids);
 }
