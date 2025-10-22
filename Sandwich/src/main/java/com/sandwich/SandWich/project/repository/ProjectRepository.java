@@ -4,11 +4,14 @@ import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -17,7 +20,14 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
     @Query("SELECT pr FROM Project pr WHERE pr.user.isDeleted = false")
     List<Project> findAllByUserIsNotDeleted();
     List<Project> findByUser(User user);
+    List<Project> findByUserAndIsRepresentativeTrue(User user);
     Page<Project> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+
+    @Modifying
+    @Transactional
+    @org.springframework.data.jpa.repository.Query("update Project p set p.isRepresentative=false where p.user.id = :userId")
+    void clearRepresentativeByUserId(@Param("userId") Long userId);
 
     @Query("SELECT p FROM Project p WHERE p.id = :projectId AND p.user.id = :userId AND p.user.isDeleted = false")
     Optional<Project> findByIdAndUserId(Long projectId, Long userId);

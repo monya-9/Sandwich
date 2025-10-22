@@ -20,6 +20,33 @@ public class CareerService {
     private final CareerRepository careerRepository;
     private final UserRepository userRepository;
 
+    public void setRepresentativeCareers(Long userId, List<Long> ids) {
+        User user = getUser(userId);
+
+        // 1) 내 커리어 전부 대표 해제
+        List<Career> myCareers = careerRepository.findByUser(user);
+        for (Career c : myCareers) {
+            // 단일 세터가 없어서 기존 update(...) 사용
+            c.update(
+                    c.getRole(), c.getCompanyName(), c.getStartYear(), c.getStartMonth(),
+                    c.getEndYear(), c.getEndMonth(), c.isWorking(), c.getDescription(), false
+            );
+        }
+
+        // 2) 선택한 id만 대표 지정 (null/빈 배열이면 전체 해제로 끝)
+        if (ids == null || ids.isEmpty()) return;
+
+        for (Long id : ids) {
+            Career c = careerRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("해당 커리어 없음"));
+            if (!c.getUser().getId().equals(userId)) continue; // 소유자만 허용
+            c.update(
+                    c.getRole(), c.getCompanyName(), c.getStartYear(), c.getStartMonth(),
+                    c.getEndYear(), c.getEndMonth(), c.isWorking(), c.getDescription(), true
+            );
+        }
+    }
+
     public void createCareer(CareerRequest request, Long userId) {
         User user = getUser(userId);
         Career career = new Career(
