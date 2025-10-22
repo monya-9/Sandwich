@@ -31,6 +31,30 @@ public class CareerProjectService {
         repository.save(project);
     }
 
+    public void setRepresentativeProjects(Long userId, List<Long> ids) {
+        User user = getUser(userId);
+
+        // 1) 내 이력-프로젝트 전부 대표 해제
+        List<CareerProject> my = repository.findByUser(user);
+        for (CareerProject p : my) {
+            p.update(p.getTitle(), p.getTechStack(), p.getRole(),
+                    p.getStartYear(), p.getStartMonth(), p.getEndYear(), p.getEndMonth(),
+                    p.getDescription(), false);
+        }
+
+        // 2) 선택한 id만 대표 지정
+        if (ids == null || ids.isEmpty()) return;
+
+        for (Long id : ids) {
+            CareerProject p = repository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트 없음"));
+            if (!p.getUser().getId().equals(userId)) continue;
+            p.update(p.getTitle(), p.getTechStack(), p.getRole(),
+                    p.getStartYear(), p.getStartMonth(), p.getEndYear(), p.getEndMonth(),
+                    p.getDescription(), true);
+        }
+    }
+
     public void update(Long id, CareerProjectRequest request, Long userId) {
         CareerProject p = getByIdAndUser(id, userId);
         p.update(
