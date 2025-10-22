@@ -123,6 +123,7 @@ public class UserService {
                 user.getUsername(),
                 user.getEmail(),
                 profile != null ? profile.getNickname()   : null,
+                profile != null ? profile.getProfileSlug() : null,
                 profile != null ? profile.getBio() : null,
                 profile != null ? profile.getSkills() : null,
                 profile != null ? profile.getGithub() : null,
@@ -264,6 +265,14 @@ public class UserService {
         profile.setNickname(trimmed);
         user.setIsProfileSet(true); // 온보딩 완료 플래그 활용 시
 
+        // ✅ slug 자동 생성 (중복 방지)
+        String baseSlug = nickname.trim().replaceAll("[^0-9A-Za-z가-힣]", "_");
+        String slug = baseSlug;
+        int counter = 1;
+        while (profileRepository.existsByProfileSlug(slug)) {
+            slug = baseSlug + "_" + counter++;
+        }
+        profile.setProfileSlug(slug);
         userRepository.save(user);
         ensureWallet(user.getId()); // 기존 지갑 보장 로직 유지
     }
@@ -373,6 +382,7 @@ public class UserService {
                 user.getId(),
                 user.getProfile() != null ? user.getProfile().getNickname() : null,
                 user.getUsername(),
+                user.getProfile() != null ? user.getProfile().getProfileSlug() : null, // ✅ 추가
                 user.getEmail(),
                 posName,
                 interestNames
