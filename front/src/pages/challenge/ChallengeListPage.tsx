@@ -5,6 +5,7 @@ import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
+import CodeWinnersSection from "../../components/challenge/CodeWinnersSection";
 import RewardClaimModal from "../../components/challenge/RewardClaimModal";
 import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { isAdmin } from "../../utils/authz";
@@ -138,8 +139,18 @@ export default function ChallengeListPage() {
 					<h2 className="sr-only">Winners</h2>
 				</div>
 			</div>
-			<div className="relative">
-				<WinnersSection />
+            <div className="relative">
+                {/* TOP Winners 2단 그리드: 포트폴리오 | 코드 */}
+                <div className="mx-auto max-w-screen-xl px-4 md:px-6 mt-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+                        <div className="w-full">
+                            <WinnersSection />
+                        </div>
+                        <div className="w-full">
+                            <CodeWinnersSection />
+                        </div>
+                    </div>
+                </div>
 				{admin && (
 					<div className="mx-auto max-w-7xl px-4 md:px-6">
 						<div className="mt-2 flex justify-end gap-2">

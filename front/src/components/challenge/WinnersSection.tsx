@@ -62,7 +62,7 @@ function WinnersBox({ items, loading, error }: {
 }) {
     if (loading) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full">
                 <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 mx-auto mb-2"></div>
@@ -75,7 +75,7 @@ function WinnersBox({ items, loading, error }: {
 
     if (error) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full">
                 <div className="flex items-center justify-center h-full">
                     <div className="text-sm text-neutral-500 text-center">
                         {error}
@@ -94,7 +94,7 @@ function WinnersBox({ items, loading, error }: {
         ];
 
         return (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full">
                 <div className="flex justify-between items-start w-full">
                     {dummyWinners.map((winner, index) => (
                         <div key={winner.rank} className="flex-1 flex justify-center">
@@ -140,13 +140,16 @@ function WinnersBox({ items, loading, error }: {
     ].filter(Boolean) as (WinnerEntry | LeaderboardEntry)[];
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8">
-            <div className="flex justify-between items-start w-full">
-                {byOrder.map((w) => (
-                    <div key={w.rank} className="flex-1 flex justify-center">
-                        <WinnerCard data={w} />
-                    </div>
-                ))}
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
+            <div className="grid grid-cols-3 items-center w-full">
+                {[2, 1, 3].map((rank) => {
+                    const w = items.find((x) => x.rank === rank);
+                    return (
+                        <div key={rank} className="flex-1 flex justify-center">
+                            {w ? <WinnerCard data={w} /> : <div className="invisible"><div className="w-12 h-12" /></div>}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -195,11 +198,14 @@ export default function WinnersSection() {
         fetchWinnersData();
     }, []);
 
+    // 데이터가 전혀 없고 에러도 아닌 경우에는 섹션 자체를 숨겨 미관 유지
+    if (!loading && !error && winners.length === 0) return null;
+
     return (
         <div className="mx-auto mt-5 max-w-screen-xl px-4 md:px-6">
-            <div className="flex justify-center">
+            <div className="flex justify-center w-full">
                 {/* 포트폴리오만 - 더 넓게 표시 */}
-                <div className="flex flex-col w-full max-w-4xl">
+                <div className="flex flex-col w-full items-stretch">
                     <h3 className="mb-3 text-[16px] font-extrabold tracking-[-0.01em] text-center">
                         지난 포트폴리오 챌린지 TOP Winners
                     </h3>

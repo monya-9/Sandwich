@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminFetchChallenges, fetchChallengeDetail, fetchPortfolioLeaderboard, type ChallengeListResponse, type ChallengeListItem, type ChallengeType, type ChallengeStatus } from "../../api/challengeApi";
+import { fetchAiLeaderboard } from "../../api/aiJudgeApi";
+import { fetchUserNameById } from "../../api/userMini";
 import { adminCustomPayout } from "../../api/challenge_creditApi";
 
 export default function ChallengeManagePage() {
@@ -222,17 +224,57 @@ export default function ChallengeManagePage() {
                         }
                         setPayoutRows(payouts);
                     } else {
-                        // 2) 코드형: 구성표(ruleJson.top/participant)가 있으면 참가 보상만 표기
-                        const participant = (() => {
-                            try {
-                                const rule = typeof (detail?.ruleJson) === 'string' ? JSON.parse(detail.ruleJson) : detail?.ruleJson;
-                                return rule?.participant;
-                            } catch { return undefined; }
-                        })();
-                        if (participant) {
-                            setPayoutRows([{ rank: '🎖 참가자 전원', amount: Number(participant) }]);
+                        // 2) 코드형: AI 리더보드 기반 지급 미리보기
+                        // - ruleJson.top/participant를 우선 사용, 없으면 기본값
+                        const defaultTop = [10000, 5000, 3000];
+                        const topArr = (ruleTop && ruleTop.length ? ruleTop : defaultTop).map(n => Number(n) || 0);
+                        const participantAmt = (ruleParticipant != null ? Number(ruleParticipant) : 500) || 0;
+
+                        // aiWeek 탐색: aiWeek | ai_week | ruleJson.week
+                        let aiWeek: string | undefined;
+                        try {
+                            aiWeek = (detail?.aiWeek || detail?.ai_week);
+                            if (!aiWeek && detail?.ruleJson) {
+                                const r = typeof detail.ruleJson === 'string' ? JSON.parse(detail.ruleJson) : detail.ruleJson;
+                                aiWeek = r?.week || r?.aiWeek;
+                            }
+                        } catch {}
+
+                        if (!aiWeek) {
+                            // 주차 정보가 없으면 규칙만 표시(참가상 안내)
+                            setPayoutRows([{ rank: '🎖 참가자 전원', amount: participantAmt }]);
                         } else {
-                            setPayoutRows([]);
+                            try {
+                                const ai = await fetchAiLeaderboard(aiWeek);
+                                const lb = Array.isArray(ai?.leaderboard) ? ai.leaderboard : [];
+
+                                // 숫자 id인 항목은 이름을 병렬 조회하여 표시 개선
+                                const idEntries = lb.map(e => ({ ...e, numId: Number.isFinite(Number(String(e.user))) ? Number(String(e.user)) : null }));
+                                const uniqueIds = Array.from(new Set(idEntries.map(e => e.numId).filter(Boolean))) as number[];
+                                const idToName = new Map<number, string | null>();
+                                await Promise.all(uniqueIds.map(async (uid) => {
+                                    const name = await fetchUserNameById(uid);
+                                    idToName.set(uid, name);
+                                }));
+
+                                const payouts = idEntries.map((e) => {
+                                    const idx = (e.rank ?? 0) - 1;
+                                    const isWinner = idx >= 0 && idx < topArr.length && topArr[idx] > 0;
+                                    const amount = isWinner ? (topArr[idx] || 0) : participantAmt;
+                                    const fallback = `user ${e.user}`;
+                                    const pretty = e.numId && idToName.has(e.numId) ? (idToName.get(e.numId) || fallback) : fallback;
+                                    return {
+                                        rank: e.rank,
+                                        amount,
+                                        userName: pretty,
+                                        teamName: '',
+                                    };
+                                });
+                                setPayoutRows(payouts);
+                            } catch {
+                                // 조회 실패 시 최소 안내만
+                                setPayoutRows([{ rank: '🎖 참가자 전원', amount: participantAmt }]);
+                            }
                         }
                     }
                 }

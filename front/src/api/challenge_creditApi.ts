@@ -88,3 +88,25 @@ export async function adminCustomPayout(
   });
   return res.data;
 }
+
+/**
+ * 커스텀 보상 지급 (관리자용)
+ * POST /admin/rewards/{challengeId}/custom-payout
+ */
+export async function adminCustomPayout(
+  challengeId: number,
+  payload: { userId: number; amount: number; rank?: number; memo?: string; reason?: string },
+  idempotencyKey?: string
+): Promise<{ ok: boolean; updated: number }> {
+  const headers: any = {};
+  if (idempotencyKey && idempotencyKey.trim()) {
+    headers["Idempotency-Key"] = idempotencyKey.trim();
+  }
+  const res = await api.post(`/admin/rewards/${challengeId}/custom-payout`, payload, {
+    withCredentials: true,
+    // 관리자 엔드포인트는 서버 루트에 매핑되어 있으므로 기본 '/api' prefix를 비활성화
+    baseURL: '',
+    headers,
+  });
+  return res.data;
+}
