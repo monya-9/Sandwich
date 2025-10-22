@@ -2,38 +2,28 @@
   "summary": {
     "submit": "_weekly_answer.py",
     "cases": 1,
-    "passed": 0,
-    "accuracy": 0.0,
-    "time_med_sec": 0.112639,
-    "time_mean_sec": 0.112639,
-    "time_p95_sec": 0.112639,
-    "mem_med_mb": 6.54,
-    "mem_p95_mb": 6.54,
-    "passed_all": false,
-    "first_fail": {
-      "case": 1,
-      "reason": "wrong_value",
-      "hint": "로직 또는 자료구조 갱신 검토",
-      "cmp_mode": "exact",
-      "diff": "--- expected\n+++ got\n@@ -1 +1 @@\n-1\n+10"
-    },
+    "passed": 1,
+    "accuracy": 1.0,
+    "time_med_sec": 0.118885,
+    "time_mean_sec": 0.118885,
+    "time_p95_sec": 0.118885,
+    "mem_med_mb": 6.62,
+    "mem_p95_mb": 6.62,
+    "passed_all": true,
+    "hardcode_penalty": 0.0,
+    "hardcode_flags": [],
     "score": 0.0
   },
   "results": [
     {
       "case": 1,
       "ok": true,
-      "expected": "1",
-      "got": "10",
-      "time_sec": 0.112639,
-      "peak_mb": 6.54,
+      "expected": "5",
+      "got": "5",
+      "time_sec": 0.118885,
+      "peak_mb": 6.62,
       "err": null,
-      "diagnosis": {
-        "reason": "wrong_value",
-        "hint": "로직 또는 자료구조 갱신 검토",
-        "cmp_mode": "exact",
-        "diff": "--- expected\n+++ got\n@@ -1 +1 @@\n-1\n+10"
-      }
+      "diagnosis": null
     }
   ]
 }

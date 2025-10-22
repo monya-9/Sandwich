@@ -1,4 +1,4 @@
-rank,user,score,accuracy,time_med_sec,time_mean_sec,time_p95_sec,mem_med_mb,mem_p95_mb
-1,TEST2,100.0,1.0,0.106898,0.106898,0.106898,6.53,6.53
-2,test,100.0,1.0,0.112348,0.112348,0.112348,6.53,6.53
-3,_weekly_answer,0.0,0.0,0.112639,0.112639,0.112639,6.54,6.54
+rank,user,score,time_med_sec,mem_med_mb,hardcode_penalty
+1,_weekly_answer,100.0,0.118885,6.62,0.0
+2,test,0.0,0.119119,6.52,0.0
+3,TEST2,0.0,0.129685,6.58,0.0
