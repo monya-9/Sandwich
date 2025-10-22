@@ -146,7 +146,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 subtitle: (codeUse?.title || weeklyData?.title) as string,
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
-                        <p className="text-[13px]">조건: 자동 채점 지원 · 중복 제출 가능</p>
+                        <p className="text-[13px]">조건: 자동 채점 지원 · 제출은 챌린지당 1회</p>
                     </div>
                 ),
                 ctaLabel: "참여하러 가기",
@@ -166,7 +166,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 subtitle: `${monthlyData?.emoji || ''} ${portfolioUse?.title || monthlyData?.title}`.trim(),
                 description: (
                     <div className="space-y-3 text-[13.5px] leading-6 text-neutral-800">
-                        <p className="text-[13px]">조건: 팀/개인 참여 가능 · 투표로 순위 결정</p>
+                        <p className="text-[13px]">조건: 팀/개인 참여 가능 · 투표로 순위 결정 · 제출은 챌린지당 1회</p>
                     </div>
                 ),
                 ctaLabel: "참여하러 가기",

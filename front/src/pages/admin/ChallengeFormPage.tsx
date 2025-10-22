@@ -5,6 +5,8 @@ import { fetchMonthlyByYm, fetchMonthlyChallenge } from "../../api/monthlyChalle
 import { fetchWeeklyByKey, fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import SectionCard from "../../components/challenge/common/SectionCard";
 import DateTimeField from "../../components/common/DateTimeField";
+import Dropdown from "../../components/common/Dropdown";
+import WeekField from "../../components/common/WeekField";
 
 type Mode = "create" | "edit";
 
@@ -30,6 +32,18 @@ function toLocalIsoNoZ(local: string): string | null {
     const d = new Date(src);
         if (isNaN(d.getTime())) return null;
     return d.toISOString(); // 예: 2025-10-17T12:34:00.000Z
+}
+
+// week picker <-> backend format helpers
+function toHtmlWeekValue(week: string): string {
+    const m = week.match(/^(\d{4})W(\d{2})$/);
+    if (!m) return "";
+    return `${m[1]}-W${m[2]}`;
+}
+function fromHtmlWeekValue(htmlWeek: string): string {
+    const m = htmlWeek.match(/^(\d{4})-W(\d{2})$/);
+    if (!m) return "";
+    return `${m[1]}W${m[2]}`;
 }
 
 function validateDates(params: { start?: string; end?: string; voteStart?: string; voteEnd?: string }): string | null {
@@ -172,7 +186,7 @@ export default function ChallengeFormPage() {
 
                     const loadedTitle = data?.title || data?.name || "";
                     setTitle(loadedTitle);
-                    setSummary(data?.summary || data?.desc || data?.description || "");
+                    // summary는 ruleJson에서 가져오므로 여기서 설정하지 않음
                     if (data?.status) setCurrentStatus(data.status as ChallengeStatus);
 
                     const startRaw = data?.startAt || data?.start_at || data?.startDate || data?.openAt || data?.open_at;
@@ -317,7 +331,6 @@ export default function ChallengeFormPage() {
         const payloadBase: ChallengeUpsertRequest = {
             type,
             title: titleTrim,
-            summary: summaryKeep,
             startAt: isoStart!,
             endAt: isoEnd!,
             voteStartAt: isoVoteStart || undefined,
@@ -352,32 +365,80 @@ export default function ChallengeFormPage() {
         setError(err);
     };
 
+    // 에러 자동 숨김 (5초 후) – 사용자가 닫기 버튼으로도 즉시 닫을 수 있음
+    React.useEffect(() => {
+        if (!error) return;
+        const t = window.setTimeout(() => setError(null), 5000);
+        return () => window.clearTimeout(t);
+    }, [error]);
+
+    // 에러가 발생하면 자동으로 화면에 보이도록 스크롤
+    const errorRef = React.useRef<HTMLDivElement>(null);
+    React.useEffect(() => {
+        if (!error) return;
+        // 다음 프레임에서 스크롤(레이아웃 반영 후)
+        const id = window.requestAnimationFrame(() => {
+            const el = errorRef.current;
+            if (!el) return;
+            try {
+                const headerOffset = 120; // 고정 헤더/여백 고려
+                const y = Math.max(0, el.getBoundingClientRect().top + window.scrollY - headerOffset);
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            } catch {}
+        });
+        return () => window.cancelAnimationFrame(id);
+    }, [error]);
+
+    // 에러가 떠 있는 동안, 사용자가 다른 영역을 클릭해도 항상 에러 위치로 재정렬
+    React.useEffect(() => {
+        if (!error) return;
+        const recenter = () => {
+            const el = errorRef.current;
+            if (!el) return;
+            try {
+                const headerOffset = 120;
+                const y = Math.max(0, el.getBoundingClientRect().top + window.scrollY - headerOffset);
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            } catch {}
+        };
+        document.addEventListener('click', recenter, true);
+        return () => document.removeEventListener('click', recenter, true);
+    }, [error]);
+
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
             <SectionCard title={viewMode === "MANAGE" ? "챌린지 수정/삭제" : "챌린지 생성"} className="!px-5 !py-5">
             {error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-[13.5px]" role="alert">{error}</div>
+                <div
+                    ref={errorRef}
+                    className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-[13.5px] text-red-700 dark:border-red-500/40 dark:bg-red-900/30 dark:text-red-200"
+                    role="alert"
+                >
+                    {error}
+                </div>
             )}
             {/* 드롭다운: 생성 / 수정·삭제 (생성 페이지에서만 노출) */}
             {(urlEditMode !== "edit" || isTypeEditRoute) && (
                 <div className="mb-3">
-                    <label className="mr-2 text-[13px] text-neutral-700">작업</label>
-                    <select value={viewMode} onChange={(e)=> {
-                        const nm = e.target.value as "CREATE" | "MANAGE";
-                        // 먼저 폼을 깨끗이 초기화하여 전환 중 기존 값이 잠깐 보이지 않도록 함
-                        clearForm();
-                        if (nm === "MANAGE") {
-                            // 관리 모드 시작 시 선택 타이틀 유지 여부는 경로에 따라 달라짐 (아래 useEffect에서 처리)
-                            setViewMode("MANAGE");
-                        } else {
-                            setSelectedTitle("");
-                            setShowFullList(true);
-                            setViewMode("CREATE");
-                        }
-                    }} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-[12.5px]">
-                        <option value="CREATE">챌린지 생성</option>
-                        <option value="MANAGE">챌린지 수정/삭제</option>
-                    </select>
+                    <label className="block mb-1 text-[14px] font-bold text-neutral-900">작업</label>
+                    <div className="w-[220px]">
+                        <Dropdown
+                            options={[{ value: "CREATE", label: "챌린지 생성" }, { value: "MANAGE", label: "챌린지 수정/삭제" }]}
+                            value={viewMode}
+                            onChange={(nm) => {
+                                const next = nm as "CREATE" | "MANAGE";
+                                clearForm();
+                                if (next === "MANAGE") {
+                                    setViewMode("MANAGE");
+                                } else {
+                                    setSelectedTitle("");
+                                    setShowFullList(true);
+                                    setViewMode("CREATE");
+                                }
+                            }}
+                            size="sm"
+                        />
+                    </div>
                 </div>
             )}
             {/* 상태 전환 버튼 (편집 대상 선택 시 표시) – 목록 패널 아래로 이동 */}
@@ -430,12 +491,12 @@ export default function ChallengeFormPage() {
                             {list.map(it => (
                                 <li key={it.id} className="flex items-center justify-between py-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="text-[13px]">#{it.id} {it.title}</div>
+                                                <div className="text-[13px] dark:text-neutral-100">#{it.id} {it.title}</div>
                                                 {it.type && (
-                                                    <span className="rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[11px] text-neutral-700">{String(it.type).toUpperCase().includes('PORT') ? 'PORTFOLIO' : 'CODE'}</span>
+                                                    <span className="rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[11px] text-neutral-700 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100">{String(it.type).toUpperCase().includes('PORT') ? 'PORTFOLIO' : 'CODE'}</span>
                                                 )}
                                                 {it.status && (
-                                                    <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">{it.status}</span>
+                                                    <span className="rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100">{it.status}</span>
                                                 )}
                                             </div>
                                             <div className="flex gap-2">
@@ -496,10 +557,13 @@ export default function ChallengeFormPage() {
             <form onSubmit={onSubmit} className="space-y-6 text-[13.5px]">
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">타입</label>
-                    <select value={type} onChange={(e) => setType(e.target.value as any)} disabled={urlEditMode === "edit" || editingId !== null} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500 disabled:bg-neutral-100 disabled:text-neutral-500">
-                        <option value="CODE">코드</option>
-                        <option value="PORTFOLIO">포트폴리오</option>
-                    </select>
+                    <Dropdown
+                        options={[{ value: "CODE", label: "코드" }, { value: "PORTFOLIO", label: "포트폴리오" }]}
+                        value={type}
+                        onChange={(v) => setType(v as any)}
+                        className="w-full"
+                        size="sm"
+                    />
                 </div>
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">제목</label>
@@ -515,10 +579,7 @@ export default function ChallengeFormPage() {
                         <input value={ym} onChange={(e) => setYm(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" placeholder="예: 2025-10" />
                     </div>
                 ) : (
-                    <div>
-                        <label className="block mb-1 text-[14px] font-bold text-neutral-900">주차(YYYYWww, 예: 2025W42)</label>
-                        <input value={week} onChange={(e) => setWeek(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" placeholder="예: 2025W42" />
-                    </div>
+                    <WeekField label="주차(주 선택)" value={week} onChange={setWeek} className="w-full" />
                 )}
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">필수 요구사항(must) - 줄바꿈 또는 콤마로 구분</label>

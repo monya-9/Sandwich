@@ -355,7 +355,7 @@ export default function ChallengeManagePage() {
                             value={searchTitle}
                             onChange={e => { setSearchTitle(e.target.value); setPage(0); }}
                             placeholder="제목 입력"
-                            className="h-9 w-64 rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-neutral-500"
+                            className="h-9 w-64 rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-neutral-500 bg-white text-black placeholder-gray-500"
                         />
                     </div>
                     <div className="flex flex-col md:ml-3">
@@ -363,7 +363,7 @@ export default function ChallengeManagePage() {
                         <select
                             value={filterType}
                             onChange={e => { setPage(0); setFilterType((e.target.value || '') as any); }}
-                            className="h-9 w-36 rounded-md border border-neutral-300 px-2 text-sm"
+                            className="h-9 w-36 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                         >
                             <option value="">전체</option>
                             <option value="CODE">CODE</option>
@@ -375,7 +375,7 @@ export default function ChallengeManagePage() {
                         <select
                             value={filterStatus}
                             onChange={e => { setPage(0); setFilterStatus((e.target.value || '') as any); }}
-                            className="h-9 w-40 rounded-md border border-neutral-300 px-2 text-sm"
+                            className="h-9 w-40 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                         >
                             <option value="">전체</option>
                             <option value="DRAFT">DRAFT</option>
@@ -390,7 +390,7 @@ export default function ChallengeManagePage() {
                         <select
                             value={sort}
                             onChange={e => { setPage(0); setSort(e.target.value); }}
-                            className="h-9 w-44 rounded-md border border-neutral-300 px-2 text-sm"
+                            className="h-9 w-44 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                         >
                             <option value="-createdAt">생성 기준 최근</option>
                             <option value="createdAt">생성 기준 오래된</option>
@@ -426,8 +426,8 @@ export default function ChallengeManagePage() {
                             <th className="px-3 py-2 text-left">상태</th>
                             <th className="px-3 py-2 text-left">시작</th>
                             <th className="px-3 py-2 text-left">마감</th>
-                            <th className="px-3 py-2 text-left">제출수</th>
-                            <th className="px-3 py-2 text-left">투표수</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap items-center">제출수</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap items-center">투표수</th>
                             <th className="px-3 py-2 text-left">관리</th>
                         </tr>
                     </thead>
@@ -454,11 +454,11 @@ export default function ChallengeManagePage() {
                                     <td className="px-3 py-2">
                                         <div className="flex items-center gap-2 min-w-[130px]">
                                             <button
-                                                className="inline-flex items-center rounded-md border border-neutral-300 px-2 py-[2px] text-[12px] whitespace-nowrap hover:bg-neutral-50"
+                                                className="inline-flex items-center justify-center rounded-md border border-neutral-300 px-2 py-[2px] text-[12px] whitespace-nowrap hover:bg-neutral-50"
                                                 onClick={() => navigate(`/admin/challenges/${item.id}`)}
                                             >수정</button>
                                             <button
-                                                className="inline-flex items-center rounded-md border border-neutral-300 px-2 py-[2px] text-[12px] whitespace-nowrap min-w-[70px] hover:bg-neutral-50"
+                                                className="inline-flex items-center justify-center rounded-md border border-neutral-300 px-2 py-[2px] text-[12px] whitespace-nowrap min-w-[70px] hover:bg-neutral-50"
                                                 onClick={() => handleSelectChallengeForRewards(item)}
                                             >보상보기</button>
                                         </div>
@@ -488,7 +488,7 @@ export default function ChallengeManagePage() {
                     <select
                         value={size}
                         onChange={e => { setPage(0); setSize(parseInt(e.target.value, 10)); }}
-                        className="ml-2 h-8 rounded-md border border-neutral-300 px-2 text-sm"
+                        className="ml-2 h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                     >
                         <option value={5}>5</option>
                         <option value={10}>10</option>

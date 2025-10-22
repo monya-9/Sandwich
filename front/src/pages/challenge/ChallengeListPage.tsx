@@ -6,13 +6,11 @@ import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
 import CodeWinnersSection from "../../components/challenge/CodeWinnersSection";
-import RewardClaimModal from "../../components/challenge/RewardClaimModal";
-import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { isAdmin } from "../../utils/authz";
 import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 // 관리자 테이블/보상 로직은 전용 페이지로 이동됨
 
-import { ChevronLeft, ChevronRight, Gift } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ChallengeListPage() {
 	const navigate = useNavigate();
@@ -20,8 +18,6 @@ export default function ChallengeListPage() {
 	const [pastChallenges, setPastChallenges] = useState<ChallengeCardData[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [pastLoading, setPastLoading] = useState(false);
-	const [showRewardModal, setShowRewardModal] = useState(false);
-	const [pendingReward, setPendingReward] = useState<RewardItem | null>(null);
 	const admin = isAdmin();
 	const rolloverRef = useRef(false);
 
@@ -86,23 +82,10 @@ export default function ChallengeListPage() {
 			});
 	}, []);
 
-	// 수령 대기 중인 보상 확인
-	useEffect(() => {
-		const checkPendingRewards = async () => {
-			try {
-				const rewards = await fetchMyRewards();
-                                const pending = rewards.find((reward: any) => !reward.rank);
-				setPendingReward(pending || null);
-			} catch (error) {
-				console.error('보상 상태 확인 실패:', error);
-				setPendingReward(null);
-			}
-		};
-		checkPendingRewards();
-	}, []);
+    // 보상 수령 기능 제거됨
 
 	return (
-		<div className="w-full bg-white">
+		<div className="w-full bg-white dark:bg-neutral-950">
 			{/* 오렌지 공지 배너 */}
 			<div>
 				<div className="mx-auto max-w-screen-xl px-4 py-4 md:px-6">
@@ -118,20 +101,7 @@ export default function ChallengeListPage() {
 				</div>
 			</div>
 
-			{/* 수령 대기 중인 보상이 있을 때만 표시 */}
-			{pendingReward && (
-				<div className="mx-auto max-w-7xl px-4 md:px-6 mt-4">
-					<div className="flex justify-center">
-						<button
-							onClick={() => setShowRewardModal(true)}
-							className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-3 text-[14px] font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all duration-200"
-						>
-							<Gift className="w-4 h-4" />
-							보상 수령하기
-						</button>
-					</div>
-				</div>
-			)}
+            {/* 보상 수령 기능 제거됨 */}
 
 			{/* WinnersSection + Admin Actions */}
 			<div className="mx-auto max-w-7xl px-4 md:px-6">
@@ -191,7 +161,7 @@ export default function ChallengeListPage() {
 				)}
 
 				{/* 지난 챌린지 - 제목만 */}
-				<h2 className="text-2xl font-bold mb-4 text-left ml-[15px]">지난 챌린지</h2>
+				<h2 className="text-2xl font-bold mb-4 text-left ml-[15px] text-black dark:text-white">지난 챌린지</h2>
 
 				{/* 캐러셀 카드 틀만 감싸기 (타이틀 X, 보더 O) */}
 				<SectionCard bordered className="mt-2 overflow-visible">
@@ -202,8 +172,8 @@ export default function ChallengeListPage() {
 								absolute left-[-10px] md:left-[-14px] top-1/2 -translate-y-1/2
 								rounded-full border p-2 shadow-sm transition-colors
 								${pastChallenges.length <= 4 
-									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed' 
-									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
+									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-700' 
+									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700/60 dark:text-neutral-200'
 								}
 							`}
 							aria-label="이전"
@@ -219,7 +189,7 @@ export default function ChallengeListPage() {
 								[0, 1, 2, 3].map((i) => (
 									<div
 										key={i}
-										className="h-[160px] rounded-2xl border border-neutral-200 bg-neutral-50/60 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
+								className="h-[160px] rounded-2xl border border-neutral-200 bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-800/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
 									/>
 								))
 							) : pastChallenges.length > 0 ? (
@@ -227,7 +197,7 @@ export default function ChallengeListPage() {
 								pastChallenges.slice(0, 4).map((challenge) => (
 									<div
 										key={challenge.id}
-										className="group h-[160px] rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+								className="group h-[160px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
 										onClick={() => window.location.href = `/challenge/${challenge.type.toLowerCase()}/${challenge.id}`}
 									>
 										<div className="flex flex-col justify-between h-full">
@@ -235,24 +205,24 @@ export default function ChallengeListPage() {
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
 														challenge.type === 'CODE' 
-															? 'bg-blue-100 text-blue-700' 
-															: 'bg-purple-100 text-purple-700'
+													? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+													: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
 													}`}>
 														{challenge.type === 'CODE' ? '코드' : '포트폴리오'}
 													</span>
                                                 {/* 상태 배지: 지난 챌린지는 모두 종료 처리 */}
-                                                <span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600">
+											<span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
                                                     종료
                                                 </span>
 												</div>
-												<h4 className="font-semibold text-sm text-neutral-800 mb-1 line-clamp-2">
+											<h4 className="font-semibold text-sm text-neutral-800 dark:text-neutral-200 mb-1 line-clamp-2">
 													{challenge.subtitle}
 												</h4>
-												<div className="text-xs text-neutral-600">
+											<div className="text-xs text-neutral-600 dark:text-neutral-400">
 													{challenge.description}
 												</div>
 										</div>
-										<div className="text-xs text-neutral-500 text-right">
+										<div className="text-xs text-neutral-500 dark:text-neutral-400 text-right">
 											{challenge.ctaLabel}
 										</div>
 									</div>
@@ -271,8 +241,8 @@ export default function ChallengeListPage() {
 								absolute right-[-10px] md:right-[-14px] top-1/2 -translate-y-1/2
 								rounded-full border p-2 shadow-sm transition-colors
 								${pastChallenges.length <= 4 
-									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed' 
-									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
+									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-700' 
+									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700/60 dark:text-neutral-200'
 								}
 							`}
 							aria-label="다음"
@@ -286,20 +256,7 @@ export default function ChallengeListPage() {
 
 			{/* ----- Admin tables removed; moved to dedicated page ----- */}
 
-			{/* 보상 수령 모달 */}
-			{pendingReward && (
-				<RewardClaimModal
-					isOpen={showRewardModal}
-					onClose={() => setShowRewardModal(false)}
-                                       challengeTitle={pendingReward.challenge_title}
-					userReward={pendingReward}
-					onRewardClaimed={() => {
-						setShowRewardModal(false);
-						setPendingReward(null); // 수령 완료 후 상태 업데이트
-						console.log("보상 수령 완료!");
-					}}
-				/>
-			)}
+            {/* 보상 수령 기능 제거됨 */}
 		</div>
 	);
 }

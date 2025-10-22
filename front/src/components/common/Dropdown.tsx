@@ -13,6 +13,7 @@ interface DropdownProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  size?: 'sm' | 'md';
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -20,7 +21,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
   value,
   onChange,
   placeholder = "선택하세요",
-  className = ""
+  className = "",
+  size = 'md'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,13 +50,16 @@ export const Dropdown: React.FC<DropdownProps> = ({
     setIsOpen(false);
   };
 
+  const sizeBtn = size === 'sm' ? 'px-3 py-2 text-[13px]' : 'px-4 py-3 text-[14px]';
+  const sizeItem = size === 'sm' ? 'px-3 py-2 text-[13px]' : 'px-4 py-3 text-[14px]';
+
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* 드롭다운 버튼 */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-4 py-3 bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+        className={`flex items-center justify-between w-full ${sizeBtn} bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors`}
       >
         <span className="text-gray-700 dark:text-white">{displayText}</span>
         <ChevronDown 
@@ -70,7 +75,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
               key={option.value}
               type="button"
               onClick={() => handleOptionClick(option.value)}
-              className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-white/10 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+              className={`w-full ${sizeItem} text-left hover:bg-gray-50 dark:hover:bg-white/10 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                 option.value === value ? 'bg-green-50 dark:bg-green-600/20 text-green-700 dark:text-green-300' : 'text-gray-700 dark:text-white'
               }`}
             >
