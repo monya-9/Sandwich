@@ -67,6 +67,19 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         boolean rememberFlag = "1".equalsIgnoreCase(remember) || "true".equalsIgnoreCase(remember);
         System.out.println("### [OAUTH2] userId=" + user.getId() + " rememberFlag=" + rememberFlag + " deviceName=" + deviceName);
 
+        boolean trustedNow = deviceTrustService.isTrusted(request);
+        System.out.println("### [OAUTH2] isTrusted=" + trustedNow);
+
+        if (rememberFlag && !trustedNow) {
+            deviceTrustService.remember(request, response, user.getId(), deviceName);
+            System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
+        } else if (rememberFlag) {
+            System.out.println("### [OAUTH2] remember skipped (already trusted)");
+        } else {
+            System.out.println("### [OAUTH2] remember skipped (flag=false)");
+        }
+
+
         // ===== 임시 강제 호출(문제 분리용): 아래 한 줄이 DB insert를 만든다면 파이프라인은 정상 ====
         deviceTrustService.remember(request, response, user.getId(), "Temp-Force"); // <-- 테스트 후 제거
         System.out.println("### [OAUTH2] forced remember() called");
