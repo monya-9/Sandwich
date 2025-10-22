@@ -22,6 +22,9 @@ public class Profile extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String nickname; // 화면 노출용 이름 (수정 가능)
 
+    @Column(nullable = false, unique = true)
+    private String profileSlug; // URL용 slug
+
     private String bio;
     private String skills;
     private String github;
