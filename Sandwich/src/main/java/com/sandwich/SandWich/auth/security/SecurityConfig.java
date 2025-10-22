@@ -145,7 +145,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/otp/**").permitAll()
                         // 필요시 정적 폴더 패턴도 추가
                         .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/auth/check-email").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
