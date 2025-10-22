@@ -2,10 +2,13 @@ package com.sandwich.SandWich.education.service;
 
 import com.sandwich.SandWich.education.domain.Education;
 import com.sandwich.SandWich.education.domain.EducationLevel;
+import com.sandwich.SandWich.education.domain.EducationMajor;
 import com.sandwich.SandWich.education.domain.EducationStatus;
 import com.sandwich.SandWich.education.dto.EducationPatchRequest;
 import com.sandwich.SandWich.education.dto.EducationRequest;
 import com.sandwich.SandWich.education.dto.EducationResponse;
+import com.sandwich.SandWich.education.dto.MajorResponse;
+import com.sandwich.SandWich.education.repository.EducationMajorRepository;
 import com.sandwich.SandWich.education.repository.EducationRepository;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -22,6 +25,38 @@ public class EducationService {
 
     private final EducationRepository educationRepository;
     private final UserRepository userRepository;
+    private final EducationMajorRepository educationMajorRepository;
+
+    @Transactional
+    public MajorResponse addMajor(Long educationId, Long userId, String name) {
+        Education edu = getByIdAndUser(educationId, userId); // 소유권 체크 재사용
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("전공명을 입력하세요.");
+        }
+        var major = educationMajorRepository.save(new EducationMajor(edu, name.trim()));
+        return new MajorResponse(major.getId(), major.getName());
+    }
+
+    // 전공 목록
+    @Transactional(readOnly = true)
+    public List<MajorResponse> listMajors(Long educationId, Long userId) {
+        Education edu = getByIdAndUser(educationId, userId); // 접근권한 보장
+        return educationMajorRepository.findByEducation_Id(edu.getId())
+                .stream().map(m -> new MajorResponse(m.getId(), m.getName()))
+                .toList();
+    }
+
+    // 전공 삭제
+    @Transactional
+    public void deleteMajor(Long majorId, Long userId) {
+        var major = educationMajorRepository.findById(majorId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 전공 없음"));
+        // 소유권 검증
+        if (!major.getEducation().getUser().getId().equals(userId)) {
+            throw new SecurityException("권한 없음");
+        }
+        educationMajorRepository.delete(major);
+    }
 
     public void create(EducationRequest request, Long userId) {
         User user = getUser(userId);
