@@ -37,10 +37,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 dark:bg-white/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30 dark:bg-white/10">
       <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
         <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">{message}</p>
+        <p className="text-gray-600 dark:text-gray-300 mb-6 whitespace-pre-line leading-relaxed">{message}</p>
         <div className="flex gap-3 justify-end">
           {cancelText && (
             <button

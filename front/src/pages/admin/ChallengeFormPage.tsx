@@ -7,6 +7,7 @@ import SectionCard from "../../components/challenge/common/SectionCard";
 import DateTimeField from "../../components/common/DateTimeField";
 import Dropdown from "../../components/common/Dropdown";
 import WeekField from "../../components/common/WeekField";
+import ConfirmModal from "../../components/common/ConfirmModal";
 import { AuthContext } from "../../context/AuthContext";
 
 type Mode = "create" | "edit";
@@ -86,6 +87,8 @@ export default function ChallengeFormPage() {
     const [currentStatus, setCurrentStatus] = React.useState<ChallengeStatus>("DRAFT");
     const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
     const [listDeleteConfirm, setListDeleteConfirm] = React.useState<{ open: boolean; id?: number; title?: string }>({ open: false });
+    const [forceDeleteModalOpen, setForceDeleteModalOpen] = React.useState(false);
+    const [forceDeleteTarget, setForceDeleteTarget] = React.useState<{ id: number; isFromList: boolean } | null>(null);
     const [saveConfirm, setSaveConfirm] = React.useState<{ open: boolean; payload?: ChallengeUpsertRequest }>({ open: false });
     const aiOverlayTriedRef = React.useRef(false);
     // 관리 드롭다운: CREATE | MANAGE (수정/삭제)
@@ -808,59 +811,105 @@ export default function ChallengeFormPage() {
             )}
 
             {/* 삭제 확인 모달 */}
-            {deleteConfirmOpen && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-                    <div className="w-full max-w-sm rounded-lg bg-white p-5">
-                        <div className="mb-3 text-[15px] font-bold text-red-600">챌린지 삭제</div>
-                        <ul className="mb-4 list-disc pl-5 text-[13.5px] leading-6 text-neutral-800">
-                            <li>삭제 후 되돌릴 수 없습니다.</li>
-                            <li>관련 제출/투표 데이터에 영향이 있을 수 있습니다.</li>
-                        </ul>
-                        <div className="mb-5 text-[13.5px]">정말로 이 챌린지를 삭제하시겠습니까?</div>
-                        <div className="flex justify-end gap-2">
-                            <button className="rounded-md border px-3 py-1.5 text-[13px]" onClick={() => setDeleteConfirmOpen(false)}>취소</button>
-                            <button className="rounded-md bg-red-600 px-3 py-1.5 text-[13px] font-semibold text-white" onClick={async () => {
-                                if (!id) return;
-                                try {
-                                    await deleteChallenge(Number(id), { force: true });
-                                    setDeleteConfirmOpen(false);
-                                    navigate('/challenge');
-                                } catch (e: any) {
-                                    console.error('delete failed', e);
-                                    const msg = e?.response?.data?.message || e?.message || '삭제 중 오류가 발생했습니다.';
-                                    setError(`삭제 실패: ${msg}`);
-                                    setDeleteConfirmOpen(false);
-                                }
-                            }}>삭제</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                visible={deleteConfirmOpen}
+                title="챌린지 삭제"
+                message={`삭제 후 되돌릴 수 없습니다.\n관련 제출/투표 데이터에 영향이 있을 수 있습니다.\n\n정말로 이 챌린지를 삭제하시겠습니까?`}
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (!id) return;
+                    try {
+                        // 1. 먼저 일반 삭제 시도 (force 없이)
+                        await deleteChallenge(Number(id));
+                        setDeleteConfirmOpen(false);
+                        navigate('/challenge');
+                    } catch (e: any) {
+                        console.error('delete failed', e);
+                        // 2. HAS_DEPENDENCIES 에러인 경우, 강제 삭제 확인 모달 표시
+                        if (e.response?.data?.code === 'HAS_DEPENDENCIES') {
+                            setDeleteConfirmOpen(false);
+                            setForceDeleteTarget({ id: Number(id), isFromList: false });
+                            setForceDeleteModalOpen(true);
+                        } else {
+                            const msg = e?.response?.data?.message || e?.message || '삭제 중 오류가 발생했습니다.';
+                            setError(`삭제 실패: ${msg}`);
+                            setDeleteConfirmOpen(false);
+                        }
+                    }
+                }}
+                onCancel={() => setDeleteConfirmOpen(false)}
+            />
             {/* 목록 삭제 확인 모달 */}
-            {listDeleteConfirm.open && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-                    <div className="w-full max-w-sm rounded-lg bg-white p-5">
-                        <div className="mb-3 text-[15px] font-bold text-red-600">챌린지 삭제</div>
-                        <div className="mb-4 text-[13.5px]">#{listDeleteConfirm.id} {listDeleteConfirm.title} 항목을 삭제하시겠습니까?</div>
-                        <div className="flex justify-end gap-2">
-                            <button className="rounded-md border px-3 py-1.5 text-[13px]" onClick={()=> setListDeleteConfirm({ open:false })}>취소</button>
-                            <button className="rounded-md bg-red-600 px-3 py-1.5 text-[13px] font-semibold text-white" onClick={async()=>{
-                                if (!listDeleteConfirm.id) { setListDeleteConfirm({ open:false }); return; }
-                                try {
-                                    await deleteChallenge(listDeleteConfirm.id, { force: true });
-                                    setList(list.filter(x=>x.id !== listDeleteConfirm.id));
-                                    setListDeleteConfirm({ open:false });
-                                } catch (e: any) {
-                                    console.error('delete list item failed', e);
-                                    const msg = e?.response?.data?.message || e?.message || '삭제 중 오류가 발생했습니다.';
-                                    setError(`삭제 실패: ${msg}`);
-                                    setListDeleteConfirm({ open:false });
-                                }
-                            }}>삭제</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                visible={listDeleteConfirm.open}
+                title="챌린지 삭제"
+                message={`#${listDeleteConfirm.id} ${listDeleteConfirm.title} 항목을 삭제하시겠습니까?`}
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (!listDeleteConfirm.id) {
+                        setListDeleteConfirm({ open: false });
+                        return;
+                    }
+                    try {
+                        // 1. 먼저 일반 삭제 시도 (force 없이)
+                        await deleteChallenge(listDeleteConfirm.id);
+                        setList(list.filter(x => x.id !== listDeleteConfirm.id));
+                        setListDeleteConfirm({ open: false });
+                    } catch (e: any) {
+                        console.error('delete list item failed', e);
+                        // 2. HAS_DEPENDENCIES 에러인 경우, 강제 삭제 확인 모달 표시
+                        if (e.response?.data?.code === 'HAS_DEPENDENCIES') {
+                            setListDeleteConfirm({ open: false });
+                            setForceDeleteTarget({ id: listDeleteConfirm.id, isFromList: true });
+                            setForceDeleteModalOpen(true);
+                        } else {
+                            const msg = e?.response?.data?.message || e?.message || '삭제 중 오류가 발생했습니다.';
+                            setError(`삭제 실패: ${msg}`);
+                            setListDeleteConfirm({ open: false });
+                        }
+                    }
+                }}
+                onCancel={() => setListDeleteConfirm({ open: false })}
+            />
+            
+            {/* 강제 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={forceDeleteModalOpen}
+                title="⚠️ 챌린지 강제 삭제"
+                message={`이 챌린지에는 제출물이 존재합니다.\n강제 삭제 시 모든 제출물이 함께 삭제됩니다.\n\n정말 강제 삭제하시겠습니까?`}
+                confirmText="강제 삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (!forceDeleteTarget) return;
+                    try {
+                        await deleteChallenge(forceDeleteTarget.id, { force: true });
+                        setForceDeleteModalOpen(false);
+                        
+                        if (forceDeleteTarget.isFromList) {
+                            // 목록에서 삭제
+                            setList(list.filter(x => x.id !== forceDeleteTarget.id));
+                        } else {
+                            // 편집 중인 챌린지 삭제
+                            navigate('/challenge');
+                        }
+                        setForceDeleteTarget(null);
+                    } catch (e2: any) {
+                        setForceDeleteModalOpen(false);
+                        const msg = e2?.response?.data?.message || e2?.message || '삭제 중 오류가 발생했습니다.';
+                        setError(`삭제 실패: ${msg}`);
+                        setForceDeleteTarget(null);
+                    }
+                }}
+                onCancel={() => {
+                    setForceDeleteModalOpen(false);
+                    setForceDeleteTarget(null);
+                }}
+            />
         </div>
     );
 }

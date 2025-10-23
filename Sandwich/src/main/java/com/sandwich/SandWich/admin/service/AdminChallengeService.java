@@ -214,10 +214,17 @@ public class AdminChallengeService {
             }
         }
 
-        // 3) 캐시만 정리 (데이터는 DB FK CASCADE가 다 지움)
+        // 3) 캐시 정리 + TestResult 명시적 삭제 (CASCADE 미설정)
         var subIds = submissionRepo.findIdsByChallengeId(challengeId);
         for (Long sid : subIds) {
             redisUtil.deleteValue("viewcount:submission:" + sid);
+        }
+        
+        // TestResult는 FK CASCADE가 없어서 명시적으로 삭제 필요
+        if (!subIds.isEmpty()) {
+            try {
+                testResultRepo.deleteBySubmissionIdIn(subIds);
+            } catch (Exception ignore) {}
         }
 
         // 4) 부모 한 줄 삭제 → DB FK ON DELETE CASCADE 가 자식 전체 정리
