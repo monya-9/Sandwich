@@ -33,23 +33,29 @@ public class UserDeviceController {
             HttpServletRequest req,
             @AuthenticationPrincipal(expression = "id") Long userId
     ) {
-        boolean trustedForUser   = trust.isTrusted(req, userId); // 쿠키+사용자 매칭까지 검사
-        boolean trustedDeviceOnly = trust.isTrusted(req);        // 사용자 없이 쿠키/기기만 검사
+        boolean trustedForUser    = trust.isTrusted(req, userId);
+        boolean trustedDeviceOnly = trust.isTrusted(req);
 
-        boolean hasTdid = false, hasTdt = false;
+        String tdid = null, tdt = null;
         if (req.getCookies() != null) {
             for (var c : req.getCookies()) {
-                if ("tdid".equals(c.getName())) hasTdid = true;
-                if ("tdt".equals(c.getName()))  hasTdt  = true;
+                if ("tdid".equals(c.getName())) tdid = c.getValue();
+                if ("tdt".equals(c.getName()))  tdt  = c.getValue();
             }
         }
 
+        Long deviceOwnerId = (tdid == null) ? null :
+                repo.findByDeviceIdAndRevokedAtIsNull(tdid)
+                        .map(UserDevice::getUserId)
+                        .orElse(null);
+
         return Map.of(
                 "userId", userId,
-                "hasTdidCookie", hasTdid,
-                "hasTdtCookie", hasTdt,
-                "trustedForUser", trustedForUser,
-                "trustedDeviceOnly", trustedDeviceOnly
+                "hasTdidCookie", tdid != null,
+                "hasTdtCookie",  tdt  != null,
+                "deviceOwnerId", deviceOwnerId,
+                "trustedDeviceOnly", trustedDeviceOnly,
+                "trustedForUser",   trustedForUser
         );
     }
 
