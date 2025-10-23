@@ -27,6 +27,7 @@ const OAuthSuccessHandler: React.FC = () => {
             const provider = q.get("provider");
             const emailFromUrl = q.get("email") || undefined;
             const isProfileSetFlag = q.get("isProfileSet") === "true";
+            const needNickname = q.get("needNickname") === "true";
 
             if (!token) {
                 window.location.replace("/login");
@@ -71,8 +72,12 @@ const OAuthSuccessHandler: React.FC = () => {
                 // ✅ 6. 컨텍스트 갱신
                 login(me.email || emailFromUrl);
 
-                // ✅ 7. 닉네임 존재 여부에 따라 이동 (없으면 프로필 스텝)
-                window.location.replace(display ? "/" : "/oauth/profile-step");
+                // ✅ 7. 닉네임 존재 여부에 따라 이동 (needNickname 파라미터 우선)
+                if (needNickname) {
+                    window.location.replace("/oauth/profile-step");
+                } else {
+                    window.location.replace(display ? "/" : "/oauth/profile-step");
+                }
             } catch {
                 // 실패 시에도 최소한 로그인 컨텍스트는 갱신
                 login(emailFromUrl);

@@ -101,7 +101,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 || user.getProfile().getNickname().isBlank();
 
         String redirectUriBase = "http://localhost:3000";
-        String redirectPath = needNickname ? "/onboarding/nickname" : "/oauth2/success";
+        String redirectPath = needNickname ? "/oauth/profile-step" : "/oauth2/success";
 
         String redirectUri = redirectUriBase + redirectPath
                 + "?token=" + accessToken
