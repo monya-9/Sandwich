@@ -4,6 +4,8 @@ import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Check;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(callSuper = true)
@@ -28,10 +30,13 @@ public class PortfolioVote extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "challenge_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Challenge challenge;
+
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "submission_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Submission submission;
 
     @Column(name = "voter_id", nullable = false)

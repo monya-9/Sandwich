@@ -27,6 +27,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Query("DELETE FROM Submission s WHERE s.challenge.id = :challengeId")
     void deleteByChallengeId(@Param("challengeId") Long challengeId);
 
+
     @Query("SELECT s.id FROM Submission s WHERE s.challenge.id = :challengeId")
     java.util.List<Long> findIdsByChallengeId(@Param("challengeId") Long challengeId);
 }
