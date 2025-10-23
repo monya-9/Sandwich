@@ -59,6 +59,7 @@ import ChallengeManagePage from "./pages/admin/ChallengeManagePage";
 import SecurityOtpHistoryPage from "./pages/admin/SecurityOtpHistoryPage";
 import SecurityDeviceManagePage from "./pages/admin/SecurityDeviceManagePage";
 import DeviceManagePage from "./pages/mypage/DeviceManagePage";
+import AccountDeletionPage from "./pages/mypage/AccountDeletionPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -120,6 +121,7 @@ function App() {
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
                                 <Route path="/mypage/devices" element={<DeviceManagePage />} />
+                                <Route path="/mypage/account-deletion" element={<AccountDeletionPage />} />
 
                                 {/* 프로필 페이지 */}
                                 <Route path="/profile" element={<ProfilePage />} />

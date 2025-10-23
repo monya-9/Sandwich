@@ -679,15 +679,15 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
   return (
     <>
-        <Toast
-          visible={errorToast.visible}
-          message={errorToast.message}
-          type="error"
-          size="medium"
-          autoClose={3000}
-          closable={true}
-          onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
-        />
+      <Toast
+        visible={errorToast.visible}
+        message={errorToast.message}
+        type="error"
+        size="medium"
+        autoClose={3000}
+        closable={true}
+        onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+      />
         <Toast
           visible={successToast.visible}
           message={successToast.message}
