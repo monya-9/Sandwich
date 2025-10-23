@@ -182,6 +182,18 @@ export async function updateChallengeSubmission(
 }
 
 /**
+ * 챌린지 제출물 삭제
+ */
+export async function deleteChallengeSubmission(
+  challengeId: number,
+  submissionId: number
+): Promise<void> {
+  await api.delete(`/challenges/${challengeId}/submissions/${submissionId}`, {
+    withCredentials: true,
+  });
+}
+
+/**
  * 코드 챌린지 제출물 목록 조회 (별칭)
  */
 export async function fetchCodeSubmissions(

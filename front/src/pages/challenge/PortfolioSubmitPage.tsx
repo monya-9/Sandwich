@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
@@ -9,7 +9,7 @@ import { ChevronLeft } from "lucide-react";
 import Toast from "../../components/common/Toast";
 import { uploadImage } from "../../api/projectApi";
 import { UserApi } from "../../api/userApi";
-import { createChallengeSubmission, type SubmissionCreateRequest } from "../../api/submissionApi";
+import { createChallengeSubmission, updateChallengeSubmission, fetchChallengeSubmissionDetail, type SubmissionCreateRequest } from "../../api/submissionApi";
 import { fetchChallengeDetail } from "../../api/challengeApi";
 import ImageUploadSection, { processImageFile } from "../../components/ProjectMangeSample/ImageUploadSection";
 import CoverCropper from "../../components/ProjectMangeSample/CoverCropper";
@@ -57,6 +57,9 @@ const languageOptions = [
 export default function PortfolioSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 2);
+    const [searchParams] = useSearchParams();
+    const editSubmissionId = searchParams.get('edit') ? Number(searchParams.get('edit')) : null;
+    const isEditMode = !!editSubmissionId;
     
     // 데이터 초기화 (더미 데이터 사용하지 않음)
     const [data, setData] = useState<PortfolioChallengeDetail | null>(null);
@@ -194,6 +197,36 @@ export default function PortfolioSubmitPage() {
         images: [],
     });
 
+    // 수정 모드일 때 기존 제출물 로드
+    useEffect(() => {
+        if (isEditMode && editSubmissionId) {
+            const loadSubmission = async () => {
+                try {
+                    const submission = await fetchChallengeSubmissionDetail(id, editSubmissionId);
+                    setForm({
+                        title: submission.title || "",
+                        repoUrl: submission.repoUrl || "",
+                        demoUrl: submission.demoUrl || "",
+                        desc: submission.desc || "",
+                        teamType: submission.participationType === "TEAM" ? "TEAM" : "SOLO",
+                        teamName: submission.teamName || "",
+                        membersText: submission.membersText || "",
+                        language: submission.language || "",
+                        coverUrl: submission.coverUrl || "",
+                        images: submission.assets?.map(asset => asset.url) || [],
+                    });
+                } catch (error) {
+                    console.error('제출물 로드 실패:', error);
+                    setSuccessToast({
+                        visible: true,
+                        message: '제출물을 불러올 수 없습니다.'
+                    });
+                }
+            };
+            loadSubmission();
+        }
+    }, [isEditMode, editSubmissionId, id]);
+
     // ✅ 제목 또는 설명만 있어도 제출 가능 (제출 기간일 때만)
     const parseTs = (v?: string) => {
         if (!v) return null;
@@ -320,16 +353,26 @@ export default function PortfolioSubmitPage() {
                 // 포트폴리오 제출에는 code 필드 제외
             };
 
-            await createChallengeSubmission(id, submissionData);
-            
-            setSuccessToast({
-                visible: true,
-                message: "제출이 접수되었습니다."
-            });
-            nav(`/challenge/portfolio/${id}/vote`, { replace: true });
+            if (isEditMode && editSubmissionId) {
+                // 수정 모드
+                await updateChallengeSubmission(id, editSubmissionId, submissionData);
+                setSuccessToast({
+                    visible: true,
+                    message: "제출물이 수정되었습니다."
+                });
+                nav(`/challenge/portfolio/${id}/projects/${editSubmissionId}`, { replace: true });
+            } else {
+                // 생성 모드
+                await createChallengeSubmission(id, submissionData);
+                setSuccessToast({
+                    visible: true,
+                    message: "제출이 접수되었습니다."
+                });
+                nav(`/challenge/portfolio/${id}/vote`, { replace: true });
+            }
         } catch (error: any) {
             
-            let errorMessage = "제출에 실패했습니다. 다시 시도해주세요.";
+            let errorMessage = isEditMode ? "수정에 실패했습니다. 다시 시도해주세요." : "제출에 실패했습니다. 다시 시도해주세요.";
             
             if (error?.response?.status === 404) {
                 errorMessage = "존재하지 않는 챌린지입니다. 챌린지 목록에서 확인해주세요.";
@@ -398,7 +441,7 @@ export default function PortfolioSubmitPage() {
                                 <ChevronLeft className="h-5 w-5 dark:text-white" />
                             </button>
                             <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px] dark:text-white">
-                                {data?.title || '포트폴리오 챌린지'} — 프로젝트 제출
+                                {data?.title || '포트폴리오 챌린지'} — {isEditMode ? '프로젝트 수정' : '프로젝트 제출'}
                             </h1>
                         </div>
 
@@ -713,7 +756,7 @@ export default function PortfolioSubmitPage() {
                                     onClick={handleSubmit} 
                                     disabled={!canSubmit}
                                 >
-                                    {derivedStage !== "SUBMISSION_OPEN" ? "제출 불가" : "제출하기"}
+                                    {derivedStage !== "SUBMISSION_OPEN" ? (isEditMode ? "수정 불가" : "제출 불가") : (isEditMode ? "수정하기" : "제출하기")}
                                 </CTAButton>
                             </div>
                         </div>
@@ -811,7 +854,7 @@ export default function PortfolioSubmitPage() {
                                 onClick={handleSubmit} 
                                 disabled={!canSubmit}
                             >
-                            {derivedStage !== "SUBMISSION_OPEN" ? "제출 불가" : "제출하기"}
+                            {derivedStage !== "SUBMISSION_OPEN" ? (isEditMode ? "수정 불가" : "제출 불가") : (isEditMode ? "수정하기" : "제출하기")}
                             </CTAButton>
                         </div>
                     </SectionCard>
