@@ -33,6 +33,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
+import com.sandwich.SandWich.social.domain.LikeTargetType;
+import com.sandwich.SandWich.challenge.repository.*;
+import com.sandwich.SandWich.social.repository.LikeRepository;
+import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.grader.repository.TestResultRepository;
 
 
 @Service
@@ -48,6 +53,11 @@ public class AdminChallengeService {
     private final ChallengeSyncLogRepository logs;
     private final SubmissionRepository submissionRepo;
     private final PortfolioVoteRepository voteRepo;
+    private final SubmissionAssetRepository assetRepo;
+    private final CodeSubmissionRepository codeRepo;
+    private final LikeRepository likeRepo;
+    private final CommentRepository commentRepo;
+    private final TestResultRepository testResultRepo;
     private final RedisUtil redisUtil;
     private final ApplicationEventPublisher publisher;
 
@@ -69,6 +79,8 @@ public class AdminChallengeService {
         audit("CREATE_CHALLENGE", "CHALLENGE", c.getId(), req); // no-op
         return c.getId();
     }
+
+
 
     @Transactional
     public void patch(Long id, PatchReq req) {
@@ -191,15 +203,31 @@ public class AdminChallengeService {
                     "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
         }
 
+        // 1) 뷰카운트 캐시 삭제
         var subIds = submissionRepo.findIdsByChallengeId(challengeId);
         for (Long sid : subIds) {
             redisUtil.deleteValue("viewcount:submission:" + sid);
         }
 
+        // 2) 선삭제: 투표/좋아요/댓글/테스트/코드/에셋
         try { voteRepo.deleteByChallengeId(challengeId); } catch (Exception ignore) {}
 
+        if (!subIds.isEmpty()) {
+            var likeType = (c.getType() == ChallengeType.CODE)
+                    ? com.sandwich.SandWich.social.domain.LikeTargetType.CODE_SUBMISSION
+                    : com.sandwich.SandWich.social.domain.LikeTargetType.PORTFOLIO_SUBMISSION;
+            var commentType = (c.getType() == ChallengeType.CODE) ? "CODE_SUBMISSION" : "PORTFOLIO_SUBMISSION";
+
+            try { likeRepo.deleteByTargetTypeAndTargetIdIn(likeType, subIds); } catch (Exception ignore) {}
+            try { commentRepo.deleteByCommentableTypeAndCommentableIdIn(commentType, subIds); } catch (Exception ignore) {}
+            try { testResultRepo.deleteBySubmissionIdIn(subIds); } catch (Exception ignore) {}
+            try { codeRepo.deleteBySubmission_IdIn(subIds); } catch (Exception ignore) {}
+            try { assetRepo.deleteBySubmission_IdIn(subIds); } catch (Exception ignore) {}
+        }
+        // 3) 제출물 일괄 삭제 (JPQL bulk)
         submissionRepo.deleteByChallengeId(challengeId);
 
+        // 4) 마지막에 챌린지 삭제
         repo.delete(c);
 
         audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of(

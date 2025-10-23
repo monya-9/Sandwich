@@ -8,6 +8,7 @@ import com.sandwich.SandWich.challenge.event.SubmissionCreatedEvent;
 import com.sandwich.SandWich.challenge.repository.*;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
 import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.social.domain.LikeTargetType;
 import com.sandwich.SandWich.social.repository.LikeRepository;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
@@ -45,6 +46,10 @@ public class SubmissionService {
 
     private final SubmissionViewQueryService subViewQuery;
     private final SubmissionViewService subViewService;
+
+    private final PortfolioVoteRepository voteRepo;
+    private final com.sandwich.SandWich.grader.repository.TestResultRepository testResultRepo;
+
 
     private static final Set<String> ALLOWED_LANG =
             Set.of("java","kotlin","python","node","js","ts","go","rust","cpp","c","ruby","php");
@@ -290,5 +295,109 @@ public class SubmissionService {
             } catch (Exception ignore) { /* try next */ }
         }
         return null;
+    }
+
+
+    @Transactional
+    public void updateMySubmission(Long challengeId, Long submissionId,
+                                   SubmissionDtos.UpdateReq req, Long currentUserId) {
+        var s = submissionRepo.findById(submissionId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Submission not found"));
+
+        if (!s.getChallenge().getId().equals(challengeId))
+            throw new ResponseStatusException(BAD_REQUEST, "MISMATCH_CHALLENGE");
+        if (!s.getOwnerId().equals(currentUserId))
+            throw new ResponseStatusException(FORBIDDEN, "NOT_OWNER");
+
+        var ch = s.getChallenge();
+        var now = java.time.OffsetDateTime.now();
+
+        // 기간/상태 제약
+        if (ch.getType() == ChallengeType.PORTFOLIO) {
+            if (!now.isBefore(ch.getEndAt())) {
+                throw new ResponseStatusException(BAD_REQUEST, "Portfolio submission period closed");
+            }
+        } else { // CODE
+            // 채점 시작(PENDING 이후)되면 제한 — 제목/설명/커버 정도만 허용(정책)
+            boolean strict = (s.getStatus() != SubmissionStatus.PENDING);
+            if (strict && req.getCode() != null) {
+                throw new ResponseStatusException(BAD_REQUEST, "Code block cannot be modified after grading started");
+            }
+        }
+
+        // 필드 업데이트 (null이면 보존)
+        if (req.getTitle() != null) s.setTitle(req.getTitle());
+        if (req.getDesc() != null) s.setDesc(req.getDesc());
+        if (req.getRepoUrl() != null) s.setRepoUrl(req.getRepoUrl());
+        if (req.getDemoUrl() != null) s.setDemoUrl(req.getDemoUrl());
+        if (req.getCoverUrl() != null) s.setCoverUrl(req.getCoverUrl());
+        if (req.getParticipationType() != null) s.setParticipationType(req.getParticipationType());
+        if (req.getTeamName() != null) s.setTeamName(req.getTeamName());
+        if (req.getMembersText() != null) s.setMembersText(req.getMembersText());
+
+        // 에셋 전체 교체(옵션)
+        if (req.getAssets() != null) {
+            assetRepo.deleteBySubmission_IdIn(java.util.List.of(submissionId));
+            for (var a : req.getAssets()) {
+                assetRepo.save(SubmissionAsset.builder()
+                        .submission(s)
+                        .url(a.getUrl())
+                        .mime(a.getMime())
+                        .build());
+            }
+            // 커버가 없으면 첫 에셋으로 보강
+            if ((s.getCoverUrl() == null || s.getCoverUrl().isBlank()) && !req.getAssets().isEmpty()) {
+                s.setCoverUrl(req.getAssets().get(0).getUrl());
+            }
+        }
+
+        // 코드 챌린지 코드블록
+        if (ch.getType() == ChallengeType.CODE && req.getCode() != null) {
+            var existing = codeRepo.findBySubmission_Id(submissionId).orElse(null);
+            if (existing == null) {
+                existing = CodeSubmission.builder()
+                        .submission(s)
+                        .language(req.getCode().getLanguage().toLowerCase())
+                        .entrypoint(req.getCode().getEntrypoint())
+                        .commitSha(req.getCode().getCommitSha())
+                        .build();
+            } else {
+                existing.setLanguage(req.getCode().getLanguage().toLowerCase());
+                existing.setEntrypoint(req.getCode().getEntrypoint());
+                existing.setCommitSha(req.getCode().getCommitSha());
+            }
+            codeRepo.save(existing);
+        }
+
+        submissionRepo.save(s);
+    }
+
+    @Transactional
+    public void deleteMySubmission(Long challengeId, Long submissionId, Long currentUserId) {
+        var s = submissionRepo.findById(submissionId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Submission not found"));
+        if (!s.getChallenge().getId().equals(challengeId))
+            throw new ResponseStatusException(BAD_REQUEST, "MISMATCH_CHALLENGE");
+        if (!s.getOwnerId().equals(currentUserId))
+            throw new ResponseStatusException(FORBIDDEN, "NOT_OWNER");
+
+        var ids = java.util.List.of(submissionId);
+
+        // 타입별 타깃/코멘트 타입
+        boolean isCode = (s.getChallenge().getType() == ChallengeType.CODE);
+        LikeTargetType lt = isCode
+                ? com.sandwich.SandWich.social.domain.LikeTargetType.CODE_SUBMISSION
+                : com.sandwich.SandWich.social.domain.LikeTargetType.PORTFOLIO_SUBMISSION;
+        String ctype = isCode ? "CODE_SUBMISSION" : "PORTFOLIO_SUBMISSION";
+
+        // 연쇄 정리: 투표 → 좋아요 → 댓글 → 테스트 → 코드 → 에셋 → 제출
+        try { voteRepo.deleteBySubmission_IdIn(ids); } catch (Exception ignore) {}
+        try { likeRepo.deleteByTargetTypeAndTargetIdIn(lt, ids); } catch (Exception ignore) {}
+        try { commentRepo.deleteByCommentableTypeAndCommentableIdIn(ctype, ids); } catch (Exception ignore) {}
+        try { testResultRepo.deleteBySubmissionIdIn(ids); } catch (Exception ignore) {}
+        try { codeRepo.deleteBySubmission_IdIn(ids); } catch (Exception ignore) {}
+        try { assetRepo.deleteBySubmission_IdIn(ids); } catch (Exception ignore) {}
+
+        submissionRepo.delete(s);
     }
 }
