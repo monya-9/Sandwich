@@ -198,8 +198,7 @@ export default function WinnersSection() {
         fetchWinnersData();
     }, []);
 
-    // 데이터가 전혀 없고 에러도 아닌 경우에는 섹션 자체를 숨겨 미관 유지
-    if (!loading && !error && winners.length === 0) return null;
+    // 데이터가 없어도 폼은 유지하되, 더미 데이터로 표시
 
     return (
         <div className="mx-auto mt-5 max-w-screen-xl px-4 md:px-6">

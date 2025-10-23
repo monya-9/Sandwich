@@ -92,8 +92,7 @@ export default function CodeWinnersSection() {
     run();
   }, []);
 
-  // 데이터가 전혀 없고 에러도 아닌 경우에는 섹션 자체를 숨겨 미관 유지
-  if (!loading && !error && winners.length === 0) return null;
+  // 데이터가 없어도 폼은 유지하되, 더미 데이터로 표시
 
   return (
     <div className="mx-auto mt-5 max-w-screen-xl px-4 md:px-6">
@@ -112,6 +111,28 @@ export default function CodeWinnersSection() {
           ) : error ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto">
               <div className="flex items-center justify-center h-full text-sm text-neutral-500">{error}</div>
+            </div>
+          ) : winners.length === 0 ? (
+            // 데이터가 없을 때 더미 우승자 표시
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
+              <div className="grid grid-cols-3 items-center w-full">
+                {[2, 1, 3].map((rank) => (
+                  <div key={rank} className="flex-1 flex justify-center">
+                    <div className="text-center">
+                      <div className="mb-2 text-3xl">{getMedalIcon(rank)}</div>
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-2 mx-auto">
+                        <span className="text-lg font-semibold text-gray-500">?</span>
+                      </div>
+                      <div className="font-semibold text-gray-500 mb-1 break-words text-sm">
+                        {rank}등
+                      </div>
+                      <div className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-sm">
+                        {rank}위
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">

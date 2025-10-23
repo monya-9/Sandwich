@@ -238,6 +238,8 @@ export default function PortfolioVotePage() {
         return isNaN(d.getTime()) ? null : d;
     };
     const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" = (() => {
+        // 강제 ENDED 상태가 설정된 경우 날짜와 무관하게 종료로 간주
+        if (challengeStatus === "ENDED") return "ENDED";
         const now = new Date();
         const endAt = parseTs(timeline.endAt);
         const vStart = parseTs(timeline.voteStartAt);

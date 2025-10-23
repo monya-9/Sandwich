@@ -45,7 +45,7 @@ export default function SecurityDeviceManagePage() {
                         value={adminUserId}
                         onChange={(e) => setAdminUserId(e.target.value.replace(/[^0-9]/g, ""))}
                         placeholder="예: 30"
-                        className="w-[320px] border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
+                        className="w-[320px] border rounded-lg px-3 py-2 text-sm bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20"
                         inputMode="numeric"
                     />
                     <button

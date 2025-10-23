@@ -234,8 +234,8 @@ export default function CodeSubmissionDetailPage() {
                         </div>
                     </div>
                     
-                    {/* 수정/삭제 버튼 (소유자만 표시) */}
-                    {isOwner && (
+                    {/* 수정/삭제 버튼 (소유자만 표시, 챌린지가 종료되지 않았을 때만) */}
+                    {isOwner && challengeStatus !== "ENDED" && (
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleEdit}

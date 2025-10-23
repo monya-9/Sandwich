@@ -610,8 +610,8 @@ export default function PortfolioProjectDetailPage() {
                         </div>
                     </div>
                     
-                    {/* 수정/삭제 버튼 (소유자이고 제출 기간 내일 때만 표시) */}
-                    {isOwner && canEditOrDelete() && (
+                    {/* 수정/삭제 버튼 (소유자이고 제출 기간 내이며 챌린지가 종료되지 않았을 때만 표시) */}
+                    {isOwner && canEditOrDelete() && challengeStatus !== "ENDED" && !isChallengeEnded && (
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleEdit}

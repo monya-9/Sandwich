@@ -114,8 +114,8 @@ export default function CodeSubmitPage() {
     const [form, setForm] = useState<CodeSubmitPayload>({
         title: "",
         repoUrl: "",
-        language: "node",
-        entrypoint: "npm start",
+        language: "python",
+        entrypoint: "",
         commitSha: "",
         note: "",
     });
@@ -124,10 +124,11 @@ export default function CodeSubmitPage() {
     // data가 로드된 후 form 초기값 설정 (수정 모드가 아닐 때만)
     useEffect(() => {
         if (data && !isEditMode) {
+            // 생성 모드: 언어는 파이썬 고정, 엔트리포인트는 사용자 입력 유도(빈 값)
             setForm(prev => ({
                 ...prev,
-                language: (data.submitExample?.language as any) || "node",
-                entrypoint: data.submitExample?.entrypoint || "npm start",
+                language: "python",
+                entrypoint: "",
             }));
         }
     }, [data, isEditMode]);
@@ -141,8 +142,8 @@ export default function CodeSubmitPage() {
                     const submission = await fetchChallengeSubmissionDetail(id, editSubmissionId);
                     
                     // 백엔드 응답에서 언어와 엔트리포인트 추출
-                    const language = submission.language || submission.code?.language || "node";
-                    const rawEntrypoint = submission.entrypoint || submission.code?.entrypoint || "npm start";
+                    const language = submission.language || submission.code?.language || "python";
+                    const rawEntrypoint = submission.entrypoint || submission.code?.entrypoint || "python main.py";
                     const entrypoint = rawEntrypoint.replace(/_/g, " ");
                     
                     setForm({
@@ -216,8 +217,8 @@ export default function CodeSubmitPage() {
                 participationType: "SOLO" as const,
                 // 코드 챌린지 필수 필드
                 code: {
-                    language: form.language || "node",
-                    entrypoint: (form.entrypoint || "npm_start")
+                    language: form.language || "python",
+                    entrypoint: (form.entrypoint || "main.py")
                         .replace(/\s+/g, "_") // 공백을 언더스코어로 변경
                         .replace(/[^a-zA-Z0-9_\-.]/g, "_") // 특수문자를 언더스코어로 변경
                         .replace(/_+/g, "_") // 연속된 언더스코어를 하나로
@@ -372,7 +373,6 @@ export default function CodeSubmitPage() {
                                         onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
                                         placeholder='node, python, java, ts 등 (소문자)'
                                     />
-                                    <Help>허용: node, js, ts, python, java, kotlin, go, rust, cpp, c, ruby, php</Help>
                                 </Row>
                                 <Row>
                                     <Label>엔트리포인트</Label>
@@ -380,9 +380,8 @@ export default function CodeSubmitPage() {
                                         className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.entrypoint}
                                         onChange={(e) => setForm((f) => ({ ...f, entrypoint: e.target.value }))}
-                                        placeholder='npm start, python main.py, java Main 등'
+                                        placeholder='예시) main.py'
                                     />
-                                    <Help>예: npm start / python main.py / java Main / go run main.go</Help>
                                 </Row>
                             </div>
 
