@@ -28,6 +28,31 @@ public class UserDeviceController {
                 .stream().map(UserDeviceDto::from).toList();
     }
 
+    @GetMapping("/trust-check")
+    public Map<String, Object> trustCheck(
+            HttpServletRequest req,
+            @AuthenticationPrincipal(expression = "id") Long userId
+    ) {
+        boolean trustedForUser   = trust.isTrusted(req, userId); // 쿠키+사용자 매칭까지 검사
+        boolean trustedDeviceOnly = trust.isTrusted(req);        // 사용자 없이 쿠키/기기만 검사
+
+        boolean hasTdid = false, hasTdt = false;
+        if (req.getCookies() != null) {
+            for (var c : req.getCookies()) {
+                if ("tdid".equals(c.getName())) hasTdid = true;
+                if ("tdt".equals(c.getName()))  hasTdt  = true;
+            }
+        }
+
+        return Map.of(
+                "userId", userId,
+                "hasTdidCookie", hasTdid,
+                "hasTdtCookie", hasTdt,
+                "trustedForUser", trustedForUser,
+                "trustedDeviceOnly", trustedDeviceOnly
+        );
+    }
+
     /** 특정 디바이스 무효화(내 계정 소유) */
     @DeleteMapping("/{deviceRowId}")
     public ResponseEntity<?> revokeOne(@PathVariable Long deviceRowId,
