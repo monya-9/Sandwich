@@ -87,3 +87,31 @@ export async function adminCustomPayout(
  });
  return res.data;
 }
+
+/** 커스텀 보상 지급 내역 조회 (관리자용)
+* GET /admin/rewards/{challengeId}/custom-payouts
+*/
+export async function fetchCustomPayouts(
+  challengeId: number,
+  params?: { userId?: number; page?: number; size?: number }
+): Promise<{
+  challengeId: number;
+  page: number;
+  size: number;
+  total: number;
+  sumAmount: number;
+  items: Array<{
+    userId: number;
+    username: string;
+    amount: number;
+    reason: string;
+    createdAt: string;
+  }>;
+}> {
+  const res = await api.get(`/admin/rewards/${challengeId}/custom-payouts`, {
+    params: params || {},
+    withCredentials: true,
+    baseURL: '',
+  });
+  return res.data;
+}

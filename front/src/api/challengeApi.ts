@@ -2,6 +2,7 @@
 // 챌린지 관련 API
 
 import api from './axiosInstance';
+import axios from 'axios';
 
 // ===== 챌린지 관련 타입 정의 =====
 
@@ -186,19 +187,19 @@ export type ChallengeRuleJson = {
   week?: string;     // YYYYWww for code
   must?: string[];   // requirements list (can be empty)
   md?: string;       // markdown body (0+)
+  summary?: string;  // 챌린지 요약 (ruleJson 안에 저장됨)
   [k: string]: any;
 };
 
 export type ChallengeUpsertRequest = {
   type: ChallengeType;
   title: string;
-  summary?: string;
   status?: ChallengeStatus; // optional – server may default
   startAt: string;     // ISO8601
   endAt: string;       // ISO8601
   voteStartAt?: string; // ISO8601
   voteEndAt?: string;   // ISO8601
-  ruleJson?: ChallengeRuleJson; // type-specific keys (ym/week) and content (must/md)
+  ruleJson?: ChallengeRuleJson; // type-specific keys (ym/week) and content (must/md), summary는 여기 안에
 };
 
 export async function createChallenge(payload: ChallengeUpsertRequest): Promise<{ id: number }> {
@@ -287,7 +288,7 @@ export async function changeChallengeStatus(
   challengeId: number,
   status: ChallengeStatus
 ): Promise<void> {
-  await api.patch(`/admin/challenges/${challengeId}`, { status }, { withCredentials: true, baseURL: '' });
+  await api.patch(`/admin/challenges/${challengeId}/status`, { status }, { withCredentials: true, baseURL: '' });
 }
 
 // 관리자: 챌린지 삭제
@@ -498,6 +499,34 @@ export async function getMyVote(challengeId: number): Promise<MyVoteResponse | n
 export async function getVoteSummary(challengeId: number): Promise<VoteSummaryResponse> {
   const response = await api.get(`/challenges/${challengeId}/votes/summary`, {
     withCredentials: true,
+  });
+  return response.data;
+}
+
+// ===== AI 생성 문제 목록 관련 =====
+
+export type AiGeneratedChallenge = {
+  idx: number;
+  title: string;
+  summary: string;
+  must_have: string[];
+  updated_at: number;
+};
+
+export type AiChallengeListResponse = {
+  week: string;
+  total: number;
+  data: AiGeneratedChallenge[];
+};
+
+/**
+ * AI가 생성한 주간 코드 챌린지 목록 조회
+ * /ext 프록시를 통해 https://api.dnutzs.org/api 에 접근
+ * baseURL이 없는 일반 axios를 사용하여 프록시 경로 직접 호출
+ */
+export async function fetchAiGeneratedChallenges(): Promise<AiChallengeListResponse> {
+  const response = await axios.get('/ext/reco/topics/weekly/list', {
+    timeout: 10000,
   });
   return response.data;
 }

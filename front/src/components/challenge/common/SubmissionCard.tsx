@@ -32,18 +32,18 @@ interface SubmissionCardProps {
 export function SubmissionCard({ submission, onLike, href, actionText = "평가하러 가기 →" }: SubmissionCardProps) {
     return (
         <Link to={href} className="block">
-            <SectionCard bordered className="!p-0 hover:shadow-md transition-shadow">
+            <SectionCard bordered className="!p-0 hover:shadow-md transition-shadow bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700">
                 {/* 작성자 정보 - 썸네일 위에 */}
                 <div className="p-4 pb-2">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-[12px] font-bold">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-[12px] font-bold text-neutral-900 dark:text-neutral-100">
                             {submission.authorInitial}
                         </div>
                         <div className="leading-tight">
-                            <div className="text-[12px] font-semibold text-neutral-900">
+                            <div className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-100">
                                 {submission.authorName}{submission.teamName ? ` · ${submission.teamName}` : ""}
                             </div>
-                            <div className="text-[11px] text-neutral-600">{submission.authorRole}</div>
+                            <div className="text-[11px] text-neutral-600 dark:text-neutral-400">{submission.authorRole}</div>
                         </div>
                     </div>
                 </div>
@@ -60,7 +60,7 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
                 )}
                 
                 <div className="px-4 pb-4">
-                    <div className="mb-1 text-[13px] font-semibold">{submission.title}</div>
+                    <div className="mb-1 text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{submission.title}</div>
                     
                     {/* 기술 스택 표시 */}
                     {submission.language && (
@@ -71,15 +71,15 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
                         </div>
                     )}
                     
-                    <p className="mb-3 text-[12px] leading-5 text-neutral-800 line-clamp-3">
+                    <p className="mb-3 text-[12px] leading-5 text-neutral-800 dark:text-neutral-200 line-clamp-3">
                         {submission.summary || submission.desc}
                     </p>
 
-                    <div className="flex items-center justify-between text-[11px] text-neutral-700">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-700 dark:text-neutral-300">
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={(e) => onLike(e, submission.id)}
-                                className={`inline-flex items-center gap-1 ${submission.liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                                className={`inline-flex items-center gap-1 ${submission.liked ? "text-rose-500" : "hover:text-neutral-900 dark:hover:text-neutral-50"}`}
                             >
                                 <Heart className="h-3 w-3" fill={submission.liked ? "currentColor" : "none"} />
                                 {submission.likes}
@@ -93,7 +93,7 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
                                 {submission.comments}
                             </span>
                         </div>
-                        <span className="text-[11px] font-semibold">{actionText}</span>
+                        <span className="text-[11px] font-semibold text-neutral-900 dark:text-neutral-100">{actionText}</span>
                     </div>
                 </div>
             </SectionCard>
