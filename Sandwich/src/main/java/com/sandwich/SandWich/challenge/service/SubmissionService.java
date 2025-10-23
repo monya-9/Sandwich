@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.challenge.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sandwich.SandWich.challenge.controller.SubmissionController;
 import com.sandwich.SandWich.challenge.domain.*;
 import com.sandwich.SandWich.challenge.dto.SubmissionDtos;
@@ -8,6 +9,7 @@ import com.sandwich.SandWich.challenge.event.SubmissionCreatedEvent;
 import com.sandwich.SandWich.challenge.repository.*;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
 import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.grader.repository.TestResultRepository;
 import com.sandwich.SandWich.social.domain.LikeTargetType;
 import com.sandwich.SandWich.social.repository.LikeRepository;
 import com.sandwich.SandWich.user.domain.User;
@@ -48,8 +50,9 @@ public class SubmissionService {
     private final SubmissionViewService subViewService;
 
     private final PortfolioVoteRepository voteRepo;
-    private final com.sandwich.SandWich.grader.repository.TestResultRepository testResultRepo;
+    private final TestResultRepository testResultRepo;
 
+    private final ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
 
     private static final Set<String> ALLOWED_LANG =
             Set.of("java","kotlin","python","node","js","ts","go","rust","cpp","c","ruby","php");
@@ -127,6 +130,16 @@ public class SubmissionService {
                 sub.getId(), ch.getId(), userId, sub.getTitle(), sub.getRepoUrl(), sub.getDemoUrl()
         ));
 
+        var meta = req.getPortfolio();
+        if (meta != null) {
+            var node = om.createObjectNode();
+            if (meta.getLanguage() != null) node.put("language", meta.getLanguage());
+            if (meta.getTech() != null) node.putPOJO("tech", meta.getTech());
+            sub.setExtraJson(node.toString());
+        }
+
+        sub = submissionRepo.save(sub);
+
         return sub.getId();
     }
 
@@ -183,35 +196,34 @@ public class SubmissionService {
     // ===== 목록 =====
     @Transactional(readOnly = true)
     public Page<SubmissionDtos.Item> list(Long challengeId, Pageable pageable) {
-        var page = submissionRepo.findByChallenge_Id(challengeId, pageable);
+        final var page = submissionRepo.findByChallenge_Id(challengeId, pageable);
 
-        var ids = page.getContent().stream().map(Submission::getId).toList();
+        final var ids = page.getContent().stream().map(Submission::getId).toList();
         if (ids.isEmpty()) return page.map(SubmissionDtos.Item::from);
 
         // 에셋 그룹핑
-        var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(ids);
-        Map<Long, List<SubmissionAsset>> grouped = assets.stream()
+        final var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(ids);
+        final Map<Long, List<SubmissionAsset>> grouped = assets.stream()
                 .collect(java.util.stream.Collectors.groupingBy(a -> a.getSubmission().getId()));
 
         // 오너 맵
-        var ownerIds = page.getContent().stream().map(Submission::getOwnerId).toList();
-        List<User> owners = userRepo.findAllById(ownerIds);
-        Map<Long, User> ownerById = owners.stream()
+        final var ownerIds = page.getContent().stream().map(Submission::getOwnerId).toList();
+        final List<User> owners = userRepo.findAllById(ownerIds);
+        final Map<Long, User> ownerById = owners.stream()
                 .collect(java.util.stream.Collectors.toMap(User::getId, Function.identity(), (a,b)->a));
 
-        // 코드 언어 맵
-        Map<Long, String> langBySubId = codeRepo.findAllById(ids).stream()
+
+        final Map<Long, CodeSubmission> codeBySubId = codeRepo.findBySubmission_IdIn(ids).stream()
                 .collect(java.util.stream.Collectors.toMap(
-                        CodeSubmission::getSubmissionId,
-                        CodeSubmission::getLanguage,
+                        cs -> cs.getSubmission().getId(),
+                        cs -> cs,
                         (a,b)->a
                 ));
-
         return page.map(s -> mapItem(
                 s,
                 grouped.getOrDefault(s.getId(), List.of()),
                 ownerById.get(s.getOwnerId()),
-                langBySubId.get(s.getId())
+                toCodeInfo(codeBySubId.get(s.getId()))
         ));
     }
 
@@ -231,16 +243,15 @@ public class SubmissionService {
         var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(List.of(submissionId));
         var owner = userRepo.findById(s.getOwnerId()).orElse(null);
         var code = codeRepo.findBySubmission_Id(submissionId).orElse(null);
-        return mapItem(s, assets, owner, code == null ? null : code.getLanguage());
+        return mapItem(s, assets, owner, toCodeInfo(code));
     }
 
-    // ===== 헬퍼: Submission -> Item 매핑 =====
+    // mapItem 시그니처 변경: language(String) 대신 codeInfo를 넣고, 하위호환 위해 Item.language도 채워줌
     private SubmissionDtos.Item mapItem(Submission s,
                                         List<SubmissionAsset> assets,
                                         User owner,
-                                        String language) {
+                                        SubmissionDtos.Item.CodeInfo codeInfo) {
 
-        // coverUrl 우선 → 없으면 첫 에셋
         String cover = (s.getCoverUrl() != null && !s.getCoverUrl().isBlank())
                 ? s.getCoverUrl()
                 : (assets.isEmpty() ? null : assets.get(0).getUrl());
@@ -248,9 +259,7 @@ public class SubmissionService {
 
         boolean isCode = (s.getChallenge().getType() == ChallengeType.CODE);
         String commentType = isCode ? "CODE_SUBMISSION" : "PORTFOLIO_SUBMISSION";
-        var lt = isCode
-                ? com.sandwich.SandWich.social.domain.LikeTargetType.CODE_SUBMISSION
-                : com.sandwich.SandWich.social.domain.LikeTargetType.PORTFOLIO_SUBMISSION;
+        var lt = isCode ? LikeTargetType.CODE_SUBMISSION : LikeTargetType.PORTFOLIO_SUBMISSION;
 
         long likeCnt = likeRepo.countByTargetTypeAndTargetId(lt, s.getId());
         long cmtCnt  = commentRepo.countByCommentableTypeAndCommentableId(commentType, s.getId());
@@ -264,6 +273,23 @@ public class SubmissionService {
                         .position(safePosition(owner))
                         .build();
 
+        // 포트폴리오 메타 파싱(extraJson)
+        SubmissionDtos.Item.PortfolioInfo pinfo = null;
+        if (!isCode) {
+            try {
+                var n = om.readTree(s.getExtraJson() == null ? "{}" : s.getExtraJson());
+                String lang = n.hasNonNull("language") ? n.get("language").asText() : null;
+                java.util.List<String> tech;
+                if (n.has("tech") && n.get("tech").isArray()) {
+                    tech = new java.util.ArrayList<>();
+                    n.get("tech").forEach(x -> tech.add(x.asText()));
+                } else {
+                    tech = null;
+                }
+                pinfo = SubmissionDtos.Item.PortfolioInfo.builder().language(lang).tech(tech).build();
+            } catch (Exception ignore) {}
+        }
+
         return SubmissionDtos.Item.from(s).toBuilder()
                 .coverUrl(cover)
                 .assetCount(count)
@@ -271,8 +297,10 @@ public class SubmissionService {
                 .likeCount(likeCnt)
                 .commentCount(cmtCnt)
                 .owner(ownerDto)
-                .language(language)
-                .totalScore(0.0) // TODO: 코드 챌린지 점수 연동 시 교체
+                .language(codeInfo == null ? null : codeInfo.getLanguage()) // 하위호환
+                .code(codeInfo)            // ← 코드 챌린지 세부정보(엔트리포인트 포함)
+                .portfolio(pinfo)          // ← 포트폴리오 메타(언어/스택)
+                .totalScore(0.0)
                 .build();
     }
 
@@ -295,6 +323,15 @@ public class SubmissionService {
             } catch (Exception ignore) { /* try next */ }
         }
         return null;
+    }
+
+    private SubmissionDtos.Item.CodeInfo toCodeInfo(CodeSubmission cs) {
+        if (cs == null) return null;
+        return SubmissionDtos.Item.CodeInfo.builder()
+                .language(cs.getLanguage())
+                .entrypoint(cs.getEntrypoint())
+                .commitSha(cs.getCommitSha())
+                .build();
     }
 
 
@@ -367,6 +404,20 @@ public class SubmissionService {
                 existing.setCommitSha(req.getCode().getCommitSha());
             }
             codeRepo.save(existing);
+        }
+
+        if (ch.getType() == ChallengeType.PORTFOLIO && req.getPortfolio() != null) {
+            var meta = req.getPortfolio();
+            com.fasterxml.jackson.databind.node.ObjectNode node;
+            try {
+                node = (com.fasterxml.jackson.databind.node.ObjectNode)
+                        om.readTree(s.getExtraJson() == null ? "{}" : s.getExtraJson());
+            } catch (Exception e) {
+                node = om.createObjectNode();
+            }
+            if (meta.getLanguage() != null) node.put("language", meta.getLanguage());
+            if (meta.getTech() != null) node.putPOJO("tech", meta.getTech());
+            s.setExtraJson(node.toString());
         }
 
         submissionRepo.save(s);
