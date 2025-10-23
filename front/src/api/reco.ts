@@ -18,11 +18,17 @@ function parseReco(json: any): RecoItem[] {
 	return [];
 }
 
+function parseRecoResponse(json: any): RecoResponse {
+	const data = parseReco(json);
+	const total = typeof json?.total === 'number' ? json.total : data.length;
+	return { total, data };
+}
+
 /**
  * 사용자별 추천 프로젝트 목록(ID+score)
  * 기본 base는 제공받은 도메인으로 설정. 필요시 override 가능.
  */
-export async function fetchUserRecommendations(userId: number, baseUrl?: string): Promise<RecoItem[]> {
+export async function fetchUserRecommendations(userId: number, baseUrl?: string): Promise<RecoResponse> {
     const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
 
     if (isLocalDev) {
@@ -30,7 +36,7 @@ export async function fetchUserRecommendations(userId: number, baseUrl?: string)
         const res = await fetch(`/ext/reco/user/${userId}`, { credentials: "omit" });
         if (!res.ok) throw new Error(`사용자 추천 프록시 조회 실패: ${res.status}`);
         const json = await res.json();
-        return parseReco(json);
+        return parseRecoResponse(json);
     }
 
     // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용; 기본값 없음)
@@ -42,7 +48,7 @@ export async function fetchUserRecommendations(userId: number, baseUrl?: string)
         throw new Error(`추천 조회 실패: ${res.status}`);
     }
     const json = await res.json();
-    return parseReco(json);
+    return parseRecoResponse(json);
 }
 
 /**

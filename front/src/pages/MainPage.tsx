@@ -24,6 +24,7 @@ const MainPage = () => {
   const [recoProjects, setRecoProjects] = useState<Project[] | null>(null);
   const [loadingReco, setLoadingReco] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false); // 신규 유저 여부 (total === 0)
 
   // 로그인 상태
   const { isLoggedIn } = useContext(AuthContext);
@@ -54,9 +55,20 @@ const MainPage = () => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
     setLoadingReco(true);
     setRecoError(null);
+    setIsNewUser(false);
     fetchUserRecommendations(userId)
-      .then(async (items) => {
-        const sortedByScore = [...items].sort((a, b) => b.score - a.score);
+      .then(async (response) => {
+        // total이 0이면 신규 유저로 판단하여 기본 최신순 프로젝트 사용
+        if (response.total === 0) {
+          setIsNewUser(true); // 신규 유저 플래그 설정
+          setRecoProjects(null);
+          if (cacheKey) {
+            try { sessionStorage.removeItem(cacheKey); } catch {}
+          }
+          return;
+        }
+
+        const sortedByScore = [...response.data].sort((a, b) => b.score - a.score);
         const feed = await fetchProjectFeed({ page: 0, size: 500, sort: 'latest' });
         const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
         const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
@@ -115,14 +127,17 @@ const MainPage = () => {
   });
 
   // 정렬 로직 적용 (더미 전용)
+  // 신규 유저가 샌드위치 픽을 선택하면 최신순으로 오버라이드
+  const effectiveSort = (isNewUser && selectedSort === '샌드위치 픽') ? '최신순' : selectedSort;
+  
   const sortedProjects = [...filteredProjects].sort((a, b) => {
-    if (selectedSort === '최신순') {
+    if (effectiveSort === '최신순') {
       return new Date(b.uploadDate || '2025-01-01').getTime() - new Date(a.uploadDate || '2025-01-01').getTime();
     }
-    if (selectedSort === '추천순') {
+    if (effectiveSort === '추천순') {
       return (b.likes || 0) - (a.likes || 0);
     }
-    if (selectedSort === '샌드위치 픽') {
+    if (effectiveSort === '샌드위치 픽') {
       const scoreA = (a.likes || 0) * 2 + (a.comments || 0) * 1.5 + (a.views || 0) * 0.5;
       const scoreB = (b.likes || 0) * 2 + (b.comments || 0) * 1.5 + (b.views || 0) * 0.5;
       return scoreB - scoreA;
@@ -130,8 +145,8 @@ const MainPage = () => {
     return 0;
   });
 
-  // 정렬 옵션에 따라 AI 추천 적용 여부 결정
-  const useReco = isLoggedIn && selectedSort === '샌드위치 픽';
+  // 정렬 옵션에 따라 AI 추천 적용 여부 결정 (신규 유저는 제외)
+  const useReco = isLoggedIn && selectedSort === '샌드위치 픽' && !isNewUser;
   const hasReco = useReco && !!(recoProjects && recoProjects.length > 0);
 
   // 렌더 소스 선택
