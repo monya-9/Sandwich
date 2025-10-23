@@ -209,8 +209,8 @@ export default function CodeSubmitPage() {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                    <div className="flex items-center justify-center gap-3 text-neutral-600 dark:text-neutral-300 mb-4">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 dark:border-neutral-600"></div>
                         <span className="text-lg font-medium">챌린지 정보를 불러오는 중...</span>
                     </div>
                 </div>
@@ -237,11 +237,11 @@ export default function CodeSubmitPage() {
                 <button
                     onClick={() => nav(`/challenge/code/${id}`)}
                     aria-label="뒤로가기"
-                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
+                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-5 w-5 dark:text-white" />
                 </button>
-                <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">
+                <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px] dark:text-white">
                     {weeklyData?.title || data.title} — 코드 제출
                 </h1>
             </div>
@@ -249,14 +249,14 @@ export default function CodeSubmitPage() {
             {/* 문제 설명 */}
             <SectionCard className="!px-5 !py-5 mb-4">
                 {loadingWeekly ? (
-                    <div className="flex items-center gap-2 text-neutral-600">
+                    <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-300">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-[13.5px]">AI 챌린지 정보를 불러오는 중...</span>
                     </div>
                 ) : weeklyError ? (
-                    <div className="text-red-600 text-[13.5px]">{weeklyError}</div>
+                    <div className="text-red-600 dark:text-red-400 text-[13.5px]">{weeklyError}</div>
                 ) : (
-                    <div className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">
+                    <div className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-200">
                         {weeklyData?.summary || data.description}
                     </div>
                 )}
@@ -269,7 +269,7 @@ export default function CodeSubmitPage() {
                     className={`rounded-full px-3 py-1.5 text-[13px] ${
                         tab === "edit"
                             ? "bg-emerald-600 text-white"
-                            : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
+                            : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                     }`}
                 >
                     작성
@@ -279,7 +279,7 @@ export default function CodeSubmitPage() {
                     className={`rounded-full px-3 py-1.5 text-[13px] ${
                         tab === "preview"
                             ? "bg-emerald-600 text-white"
-                            : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
+                            : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                     }`}
                 >
                     미리보기
@@ -293,7 +293,7 @@ export default function CodeSubmitPage() {
                             <Row>
                                 <Label>제목</Label>
                                 <input
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.title}
                                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                                     placeholder="이 코드를 나타내는 제목을 작성해주세요"
@@ -303,7 +303,7 @@ export default function CodeSubmitPage() {
                             <Row>
                                 <Label>GitHub 리포지토리 URL</Label>
                                 <input
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.repoUrl}
                                     onChange={(e) => setForm((f) => ({ ...f, repoUrl: e.target.value }))}
                                     placeholder="https://github.com/user/repo"
@@ -315,7 +315,7 @@ export default function CodeSubmitPage() {
                                 <Row>
                                     <Label>언어</Label>
                                     <input
-                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
+                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.language}
                                         onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
                                         placeholder='예) node, python'
@@ -324,7 +324,7 @@ export default function CodeSubmitPage() {
                                 <Row>
                                     <Label>엔트리포인트</Label>
                                     <input
-                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
+                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.entrypoint}
                                         onChange={(e) => setForm((f) => ({ ...f, entrypoint: e.target.value }))}
                                         placeholder='예) "npm start" 또는 "python main.py"'
@@ -336,7 +336,7 @@ export default function CodeSubmitPage() {
                                 <Label>비고(선택)</Label>
                                 <textarea
                                     rows={4}
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.note}
                                     onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                                     placeholder="실행 방법이나 특이사항이 있다면 간단히 적어주세요."
@@ -346,12 +346,12 @@ export default function CodeSubmitPage() {
 
                             {/* 종료된 챌린지 안내 */}
                             {isChallengeEnded && (
-                                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                                    <div className="flex items-center gap-2 text-gray-700">
+                                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700">
+                                    <div className="flex items-center gap-2 text-gray-700 dark:text-neutral-300">
                                         <span className="text-lg">🔒</span>
                                         <div>
-                                            <div className="font-semibold">종료된 챌린지</div>
-                                            <div className="text-sm text-gray-600">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
+                                            <div className="font-semibold dark:text-white">종료된 챌린지</div>
+                                            <div className="text-sm text-gray-600 dark:text-neutral-400">이 챌린지는 이미 종료되어 더 이상 제출할 수 없습니다.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -379,17 +379,17 @@ export default function CodeSubmitPage() {
 
                     {/* ✅ 작성 탭 아래 AI 채점 안내 */}
                     <SectionCard className="!px-5 !py-5 mt-4">
-                        <h3 className="mb-2 text-[15px] font-bold">🤖 AI 채점</h3>
+                        <h3 className="mb-2 text-[15px] font-bold dark:text-white">🤖 AI 채점</h3>
                         <GreenBox>
                             {!submissionId ? (
-                                <div className="space-y-1 text-[13px] text-neutral-700">
+                                <div className="space-y-1 text-[13px] text-neutral-700 dark:text-neutral-200">
                                     <div>제출 후 자동으로 채점이 시작됩니다.</div>
                                     <div>
                                         ℹ️ <span className="font-semibold">AI 채점 결과</span>는 <b>마감 다음 날 오전</b>에 공개돼요.
                                     </div>
                                 </div>
                             ) : aiStatus.status ? (
-                                <div className="space-y-1 text-[13.5px] leading-7">
+                                <div className="space-y-1 text-[13.5px] leading-7 dark:text-neutral-200">
                                     <div>
                                         상태: <span className="font-semibold">{aiStatus.status}</span>
                                     </div>
@@ -412,13 +412,13 @@ export default function CodeSubmitPage() {
                                         <div className="whitespace-pre-wrap">AI 코멘트: {aiStatus.aiComment}</div>
                                     )}
                                     {["PASSED", "SCORED"].includes(aiStatus.status!) && (
-                                        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
+                                        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
                                             <CheckCircle2 className="h-4 w-4" /> 채점 완료
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                <div className="inline-flex items-center text-[13px] text-neutral-700">
+                                <div className="inline-flex items-center text-[13px] text-neutral-700 dark:text-neutral-200">
                                     <Loader2 className="mr-1 h-4 w-4 animate-spin" /> 채점 대기/진행 중… (결과는 마감 다음 날 공개)
                                 </div>
                             )}
@@ -427,9 +427,9 @@ export default function CodeSubmitPage() {
                 </>
             ) : (
                 <SectionCard className="!px-5 !py-5">
-                    <h3 className="mb-3 text-[15px] font-bold">🖼️ 미리보기</h3>
+                    <h3 className="mb-3 text-[15px] font-bold dark:text-white">🖼️ 미리보기</h3>
                     <GreenBox>
-                        <div className="space-y-1 text-[13.5px] leading-7">
+                        <div className="space-y-1 text-[13.5px] leading-7 dark:text-neutral-200">
                             <div><span className="font-semibold">제목: </span>{form.title || "-"}</div>
                             <div><span className="font-semibold">리포지토리: </span>{form.repoUrl || "-"}</div>
                             <div><span className="font-semibold">언어: </span>{form.language || "-"}</div>
@@ -441,15 +441,15 @@ export default function CodeSubmitPage() {
                     </GreenBox>
 
                     {/* 프리뷰 탭의 AI 채점 블록(기존 유지) */}
-                    <h3 className="mb-2 mt-6 text-[15px] font-bold">🤖 AI 채점</h3>
+                    <h3 className="mb-2 mt-6 text-[15px] font-bold dark:text-white">🤖 AI 채점</h3>
                     <GreenBox>
                         {!submissionId ? (
-                            <div className="space-y-1 text-[13px] text-neutral-700">
+                            <div className="space-y-1 text-[13px] text-neutral-700 dark:text-neutral-200">
                                 <div>제출 후 자동으로 채점이 시작됩니다.</div>
                                 <div>ℹ️ <span className="font-semibold">AI 채점 결과</span>는 <b>마감 다음 날 오전</b>에 공개돼요.</div>
                             </div>
                         ) : aiStatus.status ? (
-                            <div className="space-y-1 text-[13.5px] leading-7">
+                            <div className="space-y-1 text-[13.5px] leading-7 dark:text-neutral-200">
                                 <div>상태: <span className="font-semibold">{aiStatus.status}</span></div>
                                 {aiStatus.score != null && <div>점수: <span className="font-semibold">{aiStatus.score}</span></div>}
                                 {aiStatus.passed != null && (
@@ -458,13 +458,13 @@ export default function CodeSubmitPage() {
                                 {aiStatus.coverage != null && <div>커버리지: <span className="font-semibold">{aiStatus.coverage}%</span></div>}
                                 {aiStatus.aiComment && <div className="whitespace-pre-wrap">AI 코멘트: {aiStatus.aiComment}</div>}
                                 {["PASSED", "SCORED"].includes(aiStatus.status!) && (
-                                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
+                                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
                                         <CheckCircle2 className="h-4 w-4" /> 채점 완료
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="inline-flex items-center text-[13px] text-neutral-700">
+                            <div className="inline-flex items-center text-[13px] text-neutral-700 dark:text-neutral-200">
                                 <Loader2 className="mr-1 h-4 w-4 animate-spin" /> 채점 대기/진행 중… (결과는 마감 다음 날 공개)
                             </div>
                         )}

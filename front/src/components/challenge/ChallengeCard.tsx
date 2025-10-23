@@ -55,14 +55,14 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
             </h3>
 
             {/* 카드 본문 */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] p-5 md:p-7">
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/60 p-5 md:p-7">
                 <div className="mb-1 flex items-center justify-between">
-                    <p className="text-[15px] font-semibold text-black dark:text-white">{item.subtitle}</p>
+                    <p className="text-[15px] font-semibold text-black dark:text-neutral-100">{item.subtitle}</p>
                     {admin && item.adminEditHref && (
                         <div className="flex gap-2">
                             <Link
                                 to={item.adminEditHref}
-                                className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-white/10"
+                                className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
                             >
                                 챌린지 수정
                             </Link>
@@ -75,26 +75,23 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                         </div>
                     )}
                 </div>
-                <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-[var(--text-secondary)]">
+                <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-neutral-200">
                     {item.description}
                 </div>
 
                 {/* Summary 표시 */}
                 {item.summary && (
-                    <div className="mt-4 p-3 bg-neutral-50 rounded-lg">
-                        <div className="font-medium text-neutral-700 mb-2 text-sm">📋 문제 설명</div>
-                        <div className="text-xs leading-relaxed text-neutral-600">
-                            {item.summary.length > 200 
-                                ? `${item.summary.substring(0, 200)}...`
-                                : item.summary
-                            }
+                    <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-lg">
+                        <div className="font-medium text-neutral-700 dark:text-neutral-200 mb-2 text-sm">📋 문제 설명</div>
+                        <div className="text-[13px] leading-6 text-neutral-700 dark:text-neutral-300 whitespace-pre-line">
+                            {item.summary}
                         </div>
                     </div>
                 )}
 
                 {/* 시작일 정보 - 문제 설명 박스 아래 */}
                 {item.startDate && (
-                    <div className="mt-3 text-xs text-neutral-500">
+                    <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
                         📅 시작일: {item.startDate}
                     </div>
                 )}
@@ -103,7 +100,7 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                 <div className="mt-3 flex justify-end gap-2">
                     <Link
                         to={href}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-white/10"
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
                     >
                         {item.ctaLabel} →
                     </Link>
