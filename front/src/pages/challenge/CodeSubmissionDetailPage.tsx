@@ -7,6 +7,7 @@ import { fetchChallengeSubmissionDetail, deleteChallengeSubmission, type Submiss
 import { fetchChallengeDetail } from "../../api/challengeApi";
 import { getMe } from "../../api/users";
 import api from "../../api/axiosInstance";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 export default function CodeSubmissionDetailPage() {
     const { id: idStr, submissionId: sidStr } = useParams();
@@ -27,6 +28,7 @@ export default function CodeSubmissionDetailPage() {
     const [likeCount, setLikeCount] = useState(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isOwner, setIsOwner] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
     // 현재 사용자 정보 로드
     useEffect(() => {
@@ -186,16 +188,14 @@ export default function CodeSubmissionDetailPage() {
 
     // 제출물 삭제
     const handleDelete = async () => {
-        if (!window.confirm('정말로 이 제출물을 삭제하시겠습니까?')) {
-            return;
-        }
-
         try {
             await deleteChallengeSubmission(id, sid);
+            setDeleteModalOpen(false);
             alert('제출물이 삭제되었습니다.');
             nav(`/challenge/code/${id}/submissions`);
         } catch (error) {
             console.error('제출물 삭제 실패:', error);
+            setDeleteModalOpen(false);
             alert('제출물 삭제에 실패했습니다.');
         }
     };
@@ -246,7 +246,7 @@ export default function CodeSubmissionDetailPage() {
                                 수정
                             </button>
                             <button
-                                onClick={handleDelete}
+                                onClick={() => setDeleteModalOpen(true)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                                 title="삭제"
                             >
@@ -329,6 +329,18 @@ export default function CodeSubmissionDetailPage() {
                     목록으로
                 </Link>
             </div>
+
+            {/* 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={deleteModalOpen}
+                title="제출물 삭제"
+                message="정말로 이 제출물을 삭제하시겠습니까?"
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteModalOpen(false)}
+            />
         </div>
     );
 }

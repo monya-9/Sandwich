@@ -203,6 +203,8 @@ export default function PortfolioSubmitPage() {
             const loadSubmission = async () => {
                 try {
                     const submission = await fetchChallengeSubmissionDetail(id, editSubmissionId);
+                    
+                    // 백엔드 응답에서 포트폴리오 메타 추출 (portfolio 객체가 없을 수 있음)
                     setForm({
                         title: submission.title || "",
                         repoUrl: submission.repoUrl || "",
@@ -211,7 +213,7 @@ export default function PortfolioSubmitPage() {
                         teamType: submission.participationType === "TEAM" ? "TEAM" : "SOLO",
                         teamName: submission.teamName || "",
                         membersText: submission.membersText || "",
-                        language: submission.language || "",
+                        language: submission.portfolio?.language || "",
                         coverUrl: submission.coverUrl || "",
                         images: submission.assets?.map(asset => asset.url) || [],
                     });
@@ -349,8 +351,10 @@ export default function PortfolioSubmitPage() {
                 participationType: form.teamType === "TEAM" ? "TEAM" : "SOLO",
                 teamName: form.teamName?.trim(),
                 membersText: form.membersText?.trim(),
-                assets: form.images?.map(url => ({ url, mime: "image/jpeg" })) || []
-                // 포트폴리오 제출에는 code 필드 제외
+                assets: form.images?.map(url => ({ url, mime: "image/jpeg" })) || [],
+                portfolio: form.language ? {
+                    language: form.language.trim()
+                } : undefined
             };
 
             if (isEditMode && editSubmissionId) {
