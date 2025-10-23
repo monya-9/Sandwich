@@ -3,6 +3,8 @@ package com.sandwich.SandWich.challenge.domain;
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(callSuper = true)
@@ -14,7 +16,8 @@ public class SubmissionAsset extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name="submission_id", nullable=false)
+    @JoinColumn(name = "submission_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Submission submission;
 
     @Column(nullable=false)

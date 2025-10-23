@@ -9,9 +9,13 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import com.sandwich.SandWich.challenge.domain.ChallengeType;
-import java.time.OffsetDateTime;
+
 
 public interface ChallengeRepository extends JpaRepository<Challenge, Long>,JpaSpecificationExecutor<Challenge> {
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from Challenge c where c.id = :id")
+    int deleteByIdHard(@Param("id") Long id);
 
     // DRAFT → OPEN (시작 시각 도달)
     @Query("""
