@@ -238,12 +238,14 @@ public class SecurityConfig {
         var failureHandler = oAuth2FailureHandlerProvider.getIfAvailable();
 
         if (repo != null && userService != null && successHandler != null && failureHandler != null) {
-            http
-                    .oauth2Login(oauth -> oauth
-                            .userInfoEndpoint(u -> u.userService(userService))
-                            .successHandler(successHandler)
-                            .failureHandler(failureHandler)
-                    );
+            http.oauth2Login(oauth -> oauth
+                    .authorizationEndpoint(a -> a.authorizationRequestResolver(
+                            new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
+                    ))
+                    .userInfoEndpoint(u -> u.userService(userService))
+                    .successHandler(successHandler)
+                    .failureHandler(failureHandler)
+            );
         }
 
         return http.build();
