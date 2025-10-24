@@ -156,6 +156,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
                         .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
                         .requestMatchers("/api/emojis/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/discovery/hot-developers").permitAll()
 
                         // ===== 댓글 공개 GET =====
                         .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()

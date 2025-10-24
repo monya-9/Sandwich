@@ -105,4 +105,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
           )
         """)
     Page<UserAccountRow> searchAccounts(@Param("q") String q, Pageable pageable);
+
+    /** HOT Dev 렌더링용 경량 뷰 */
+    public interface HotUserCard {
+        Long getId();
+        String getNickname();
+        String getAvatarUrl();
+        String getPosition();
+    }
+
+    @Query("""
+      select u.id as id,
+             COALESCE(p.nickname, u.username) as nickname,
+             p.profileImage as avatarUrl,
+             pos.name as position
+      from User u
+      left join u.profile p
+      left join u.userPosition up
+      left join up.position pos
+      where u.id in :ids and u.isDeleted = false
+    """)
+    java.util.List<HotUserCard> findHotUserCardsByIds(@Param("ids") java.util.Set<Long> ids);
+
 }
