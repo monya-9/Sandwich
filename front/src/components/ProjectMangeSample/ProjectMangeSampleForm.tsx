@@ -1256,9 +1256,15 @@ export default function ProjectMangeSampleForm() {
             <div className="min-h-screen font-gmarket relative pt-[76px] md:pt-[92px] dark:bg-[var(--bg)]">
 			<style>{`
 				.pm-sample-editor { width: 100%; }
-				.pm-sample-editor .ql-toolbar { border-radius: 10px 10px 0 0; }
+				.pm-sample-editor .ql-toolbar { border: none !important; border-radius: 10px 10px 0 0; }
 				/* Remove fixed height; let page scroll */
-                .pm-sample-editor .ql-container { height: auto; min-height: 1600px; border-radius: 0 0 10px 10px; margin-top: 0; border: none; background: transparent; width: 100%; box-sizing: border-box; }
+                .pm-sample-editor .ql-container { height: auto; min-height: 1600px; border-radius: 0 0 10px 10px; margin-top: 0; border: none !important; background: transparent; width: 100%; box-sizing: border-box; }
+                /* ReactQuill 기본 테두리 완전 제거 */
+                .pm-sample-editor .ql-snow .ql-toolbar { border: none !important; border-bottom: none !important; }
+                .pm-sample-editor .ql-snow .ql-container { border: none !important; border-top: none !important; }
+                .pm-sample-editor .ql-snow { border: none !important; }
+                /* 모든 가능한 구분선 제거 */
+                .pm-sample-editor * { border-bottom: none !important; }
                 .pm-sample-editor .ql-editor { min-height: 1600px; height: auto; font-size: 18px; padding: 0; overflow-x: hidden; scrollbar-gutter: stable both-edges; }
 				/* Hide scrollbars visually while keeping scroll ability */
 				.pm-sample-editor .ql-editor { scrollbar-width: none; }
@@ -1273,9 +1279,9 @@ export default function ProjectMangeSampleForm() {
 				body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 				body { scrollbar-width: none; }
 				/* editor background color is applied here dynamically via inline style */
-                .pm-toolbar-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; margin-bottom: 0; box-sizing: border-box; background: #FFFFFF; border-radius: 10px 10px 0 0; }
+                .pm-toolbar-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; margin-bottom: 0; box-sizing: border-box; background: #FFFFFF; border-radius: 10px 10px 0 0; border-bottom: none !important; }
                 .dark .pm-toolbar-row { background: var(--surface); }
-                .pm-toolbar-left.ql-toolbar { border: none; border-bottom: none; border-radius: 10px 10px 0 0; padding: 6px 10px; min-height: 60px; margin-bottom: 0; display: flex; flex-wrap: nowrap; align-items: center; background: #FFFFFF; color: #111; }
+                .pm-toolbar-left.ql-toolbar { border: none !important; border-bottom: none !important; border-radius: 10px 10px 0 0; padding: 6px 10px; min-height: 60px; margin-bottom: 0; display: flex; flex-wrap: nowrap; align-items: center; background: #FFFFFF; color: #111; }
                 .dark .pm-toolbar-left.ql-toolbar { background: var(--surface); color: #fff; }
                 .dark .pm-toolbar-left .ql-picker, .dark .pm-toolbar-left .ql-formats button { color: #fff; }
                 .dark .pm-toolbar-left .ql-stroke { stroke: #fff; }
@@ -1313,8 +1319,8 @@ export default function ProjectMangeSampleForm() {
 				/* When overall gap is 0, force vertical padding to 0 so contents stick */
 						/* Use :root variable to avoid touching element inline styles when gap changes */
 				/* Editor frame */
-                .pm-editor-frame { width: 1200px; border: 1px solid #ADADAD; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
-                .dark .pm-editor-frame { border-color: var(--border-color); }
+                .pm-editor-frame { width: 1200px; border: none !important; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
+                .dark .pm-editor-frame { border: none !important; }
 				/* Overlay toolbar */
 				.pm-embed-toolbar { width: 220px; background: rgba(0,0,0,0.72); color: white; padding: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
 				.pm-embed-toolbar button { display: inline-flex; gap: 6px; align-items: center; background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 8px; border-radius: 6px; font-size: 12px; }
@@ -1349,7 +1355,7 @@ export default function ProjectMangeSampleForm() {
 			)}
 			<main className="w-full max-w-[1800px] mx-auto">
 				<div className="grid grid-cols-[1fr_1200px_1fr] items-start gap-[28px] px-[30px] pt-[40px]">
-                    <section className="w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 pb-40 col-start-2" style={{ backgroundColor }}>
+                    <section className="w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 col-start-2" style={{ backgroundColor: 'transparent' }}>
                         <div className="pointer-events-none absolute inset-0 rounded-[10px] z-20" style={{ boxShadow: 'inset 0 0 0 1px var(--editor-border, #ADADAD)' }} />
 						<div className="w-full flex flex-col items-center" style={{ gap: `${contentGapPx}px` }}>
 							<div className="pm-editor-frame">
@@ -1401,7 +1407,7 @@ export default function ProjectMangeSampleForm() {
 									{/* Apply editor inner content spacing; toolbar fixed white; editor follows backgroundColor */}
                                     <style>{`
                                         .pm-sample-editor .ql-container { background: transparent; }
-                        .pm-sample-editor .ql-editor { background: ${backgroundColor}; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; color: var(--editor-fg, #111); }
+                        .pm-sample-editor .ql-editor { background: ${backgroundColor} !important; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; color: var(--editor-fg, #111); }
                         .dark .pm-sample-editor .ql-editor { color: #fff; }
 																	/* removed pm-vpad-factor to preserve user padding at gap 0 */
 																								/* universal block gap: allow per-block override via --pm-top-gap */
