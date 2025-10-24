@@ -82,6 +82,8 @@ const MyPageSettingPage: React.FC = () => {
 		} catch { return ""; }
 	});
 	const [bio, setBio] = useState("");
+	const [isEditingBio, setIsEditingBio] = useState<boolean>(false);
+	const [tempBio, setTempBio] = useState<string>("");
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -266,6 +268,26 @@ const MyPageSettingPage: React.FC = () => {
 		}
 	};
 
+	// bio 편집 관련 함수들
+	const handleEditBio = () => {
+		setTempBio(bio);
+		setIsEditingBio(true);
+	};
+
+	const handleCancelBioEdit = () => {
+		setTempBio("");
+		setIsEditingBio(false);
+	};
+
+	const handleSaveBio = async () => {
+		const success = await checkAndSaveBio(tempBio);
+		if (success) {
+			setBio(tempBio);
+			setIsEditingBio(false);
+			setTempBio("");
+		}
+	};
+
 	// 사용자 이름(닉네임) 검사 + 저장: 전용 PATCH API 사용
 	const checkAndSaveUserName = useCallback(async (value: string) => {
 		const trimmed = value.trim();
@@ -434,7 +456,6 @@ const MyPageSettingPage: React.FC = () => {
 
 	// 입력 변경 핸들러들
 	const onOneLineChange = (e: React.ChangeEvent<HTMLInputElement>) => setOneLineProfile(e.target.value.slice(0, MAX20));
-	const onBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => setBio(e.target.value);
 
 	const onConfirmWorkFields = async (values: string[]) => {
 		setWorkFields(values);
@@ -688,31 +709,59 @@ const MyPageSettingPage: React.FC = () => {
 														</div>
 
 
-							<div className="mt-8 mb-3"><FieldLabel>소개</FieldLabel></div>
-                            <textarea
-								value={bio}
-								onChange={onBioChange}
-								onBlur={() => checkAndSaveBio(bio)}
-								rows={5}
-								placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
-								aria-label="소개"
-                                className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
-							/>
-							{/* ✅ 소개 저장 버튼 */}
-							<div className="mt-3 flex justify-end">
-								<button
-									type="button"
-									onClick={() => checkAndSaveBio(bio)}
-									disabled={!bio.trim() || bio.trim() === (profile?.bio || "")}
-									className={`px-4 h-[36px] rounded-[10px] text-[14px] transition-colors ${
-										bio.trim() && bio.trim() !== (profile?.bio || "") 
-											? "bg-[#21B284] text-white hover:bg-[#1a9a73]" 
-											: "bg-[#E5E7EB] text-[#111827] cursor-not-allowed"
-									}`}
-								>
-									{bio.trim() === (profile?.bio || "") ? "저장됨" : "저장"}
-								</button>
+							{/* 소개 (편집 모드) */}
+							<div className="mt-8 mb-3">
+								<FieldLabel>소개</FieldLabel>
 							</div>
+							
+							{!isEditingBio ? (
+								// 읽기 모드
+								<div className="flex items-start justify-between">
+									<div className="flex-1 min-h-[120px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 text-[14px] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#111827] dark:text-white whitespace-pre-wrap">
+										{bio || "소개를 입력해주세요"}
+									</div>
+									<button
+										type="button"
+										onClick={handleEditBio}
+										className="ml-3 px-4 h-[48px] md:h-[55px] rounded-[10px] text-[14px] bg-[#21B284] text-white hover:bg-[#1a9a73] transition-colors"
+									>
+										수정
+									</button>
+								</div>
+							) : (
+								// 편집 모드
+								<div>
+									<textarea
+										value={tempBio}
+										onChange={(e) => setTempBio(e.target.value)}
+										rows={5}
+										placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
+										aria-label="소개"
+										className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+									/>
+									<div className="mt-3 flex justify-end gap-2">
+										<button
+											type="button"
+											onClick={handleCancelBioEdit}
+											className="px-4 h-[36px] rounded-[10px] text-[14px] border border-[#E5E7EB] dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-[#111827] dark:text-white hover:bg-[#F9FAFB] dark:hover:bg-[#111111] transition-colors"
+										>
+											취소
+										</button>
+										<button
+											type="button"
+											onClick={handleSaveBio}
+											disabled={!tempBio.trim() || tempBio.trim() === bio}
+											className={`px-4 h-[36px] rounded-[10px] text-[14px] transition-colors ${
+												tempBio.trim() && tempBio.trim() !== bio
+													? "bg-[#21B284] text-white hover:bg-[#1a9a73]" 
+													: "bg-[#E5E7EB] text-[#111827] cursor-not-allowed"
+											}`}
+										>
+											저장
+										</button>
+									</div>
+								</div>
+							)}
 						</section>
 
 					</main>
