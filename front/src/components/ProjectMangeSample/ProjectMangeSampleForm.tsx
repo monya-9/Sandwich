@@ -1319,7 +1319,7 @@ export default function ProjectMangeSampleForm() {
 				/* When overall gap is 0, force vertical padding to 0 so contents stick */
 						/* Use :root variable to avoid touching element inline styles when gap changes */
 				/* Editor frame */
-                .pm-editor-frame { width: 1200px; border: none !important; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
+                .pm-editor-frame { width: 100%; max-width: 1200px; border: none !important; border-radius: 10px; overflow-x: hidden; overflow-y: visible; background: transparent; box-sizing: border-box; }
                 .dark .pm-editor-frame { border: none !important; }
 				/* Overlay toolbar */
 				.pm-embed-toolbar { width: 220px; background: rgba(0,0,0,0.72); color: white; padding: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
@@ -1354,8 +1354,8 @@ export default function ProjectMangeSampleForm() {
 				</div>
 			)}
 			<main className="w-full max-w-[1800px] mx-auto">
-				<div className="grid grid-cols-[1fr_1200px_1fr] items-start gap-[28px] px-[30px] pt-[40px]">
-                    <section className="w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 col-start-2" style={{ backgroundColor: 'transparent' }}>
+				<div className="grid grid-cols-1 xl:grid-cols-[1fr_1200px_1fr] lg:grid-cols-[1fr_1000px_1fr] md:grid-cols-[1fr_800px_1fr] sm:grid-cols-[1fr_600px_1fr] items-start gap-[28px] px-[15px] sm:px-[20px] md:px-[25px] lg:px-[30px] xl:px-[30px]">
+                    <section className="w-full sm:w-[600px] md:w-[800px] lg:w-[1000px] xl:w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 sm:col-start-2 md:col-start-2 lg:col-start-2 xl:col-start-2" style={{ backgroundColor: 'transparent' }}>
                         <div className="pointer-events-none absolute inset-0 rounded-[10px] z-20" style={{ boxShadow: 'inset 0 0 0 1px var(--editor-border, #ADADAD)' }} />
 						<div className="w-full flex flex-col items-center" style={{ gap: `${contentGapPx}px` }}>
 							<div className="pm-editor-frame">
@@ -1419,7 +1419,7 @@ export default function ProjectMangeSampleForm() {
 																												.pm-sample-editor .ql-editor > img,
 																		.pm-sample-editor .ql-editor > iframe { display: block; }
                                                      /* if a paragraph wraps only a narrow image, give same side margins as text */
-                                                     .pm-sample-editor .ql-editor > p:has(> img.pm-narrow:only-child) { margin-left: 80px !important; margin-right: 80px !important; }
+                                                     .pm-sample-editor .ql-editor > p:has(> img.pm-narrow:only-child) { margin-left: clamp(20px, 5vw, 80px) !important; margin-right: clamp(20px, 5vw, 80px) !important; }
 																		/* text start offset w/o affecting media size */
 																		.pm-sample-editor .ql-editor > p,
 																		.pm-sample-editor .ql-editor > h1,
@@ -1430,8 +1430,8 @@ export default function ProjectMangeSampleForm() {
 																		.pm-sample-editor .ql-editor > h6,
 																		.pm-sample-editor .ql-editor > blockquote,
                                                       .pm-sample-editor .ql-editor > pre {
-                                                         margin-left: 80px;
-                                                         margin-right: 80px;
+                                                         margin-left: clamp(20px, 5vw, 80px);
+                                                         margin-right: clamp(20px, 5vw, 80px);
                                                          text-indent: 0;
                                                       }
                                                       /* do not add side margins to paragraphs that only wrap embeds */
@@ -1557,12 +1557,12 @@ export default function ProjectMangeSampleForm() {
 							</div>
 						</section>
 
-                    <aside className="w-[357px] flex flex-col gap-[16px] mt-[0px] sticky top-[24px] self-start col-start-3">
+                    <aside className="w-full sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[357px] flex flex-col gap-[16px] mt-[0px] sm:sticky md:sticky lg:sticky xl:sticky top-[24px] self-start sm:col-start-3 md:col-start-3 lg:col-start-3 xl:col-start-3">
 						<RightPanelActions onImageAdd={triggerImageAdd} onVideoAdd={triggerVideoAdd} onReorder={openReorder} />
                         <SettingsPanel backgroundColor={backgroundColor} onBackgroundColorChange={(hex) => { userBgRef.current = true; setBackgroundColor((hex || '').toUpperCase()); }} contentGapPx={contentGapPx} onContentGapChange={setContentGapPx} />
 												<div className="flex flex-col gap-[12px]">
 							<button
-                                className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] dark:bg-white/10 cursor-not-allowed'} rounded-[30px] w-[357px] h-[82px] text-black dark:text-white text-[24px] transition-colors duration-200`}
+                                className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] dark:bg-white/10 cursor-not-allowed'} rounded-[30px] w-full sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[357px] h-[82px] text-black dark:text-white text-[24px] transition-colors duration-200`}
 								type="button"
 								onClick={handleSubmit}
 								disabled={!hasContent}
@@ -1570,7 +1570,7 @@ export default function ProjectMangeSampleForm() {
 								다음
 							</button>
 							<button
-                                className="w-[357px] h-[45px] text-[#6B7280] dark:text-white/70 text-[20px] inline-flex items-center justify-center gap-2 hover:text-black dark:hover:text-white"
+                                className="w-full sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[357px] h-[45px] text-[#6B7280] dark:text-white/70 text-[20px] inline-flex items-center justify-center gap-2 hover:text-black dark:hover:text-white"
 								type="button"
 								onClick={openPreview}
 							>
