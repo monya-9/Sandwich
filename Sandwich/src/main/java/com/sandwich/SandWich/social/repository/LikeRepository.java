@@ -6,6 +6,9 @@ import com.sandwich.SandWich.user.domain.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
+
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Modifying;
@@ -33,4 +36,14 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
     void deleteByTargetTypeAndTargetIdIn(@Param("type") LikeTargetType type,
                                          @Param("ids") java.util.Collection<Long> ids);
 
+    @Query("""
+      select l.targetId as id, count(l) as cnt
+      from Like l
+      where l.targetType = :type and l.targetId in :ids
+      group by l.targetId
+    """)
+    List<IdCountRow> countByTargetTypeAndTargetIdIn(@Param("type") LikeTargetType type,
+                                                    @Param("ids") Collection<Long> ids);
+
+    interface IdCountRow { Long getId(); long getCnt(); }
 }
