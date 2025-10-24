@@ -4,6 +4,8 @@ import com.sandwich.SandWich.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 
@@ -23,7 +25,8 @@ public class Submission extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name="challenge_id", nullable=false)
+    @JoinColumn(name = "challenge_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Challenge challenge;
 
     @Column(name="owner_id", nullable=false)

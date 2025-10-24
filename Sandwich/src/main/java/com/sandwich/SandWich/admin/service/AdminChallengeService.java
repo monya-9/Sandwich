@@ -16,11 +16,15 @@ import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
 import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLogRepository;
 import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.common.exception.exceptiontype.ConflictException;
+import com.sandwich.SandWich.common.exception.exceptiontype.NotFoundException;
 import com.sandwich.SandWich.common.util.RedisUtil;
+import com.sandwich.SandWich.reward.repository.RewardPayoutRepository;
 import com.sandwich.SandWich.reward.service.RewardPayoutService;
 import com.sandwich.SandWich.reward.service.RewardRule;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -52,6 +56,10 @@ public class AdminChallengeService {
     private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository auditRepo;
     private final ChallengeSyncLogRepository logs;
     private final SubmissionRepository submissionRepo;
+
+    private final ChallengeRepository challengeRepo;
+    private final RewardPayoutRepository rewardPayoutRepo;
+    private final EntityManager em;
     private final PortfolioVoteRepository voteRepo;
     private final SubmissionAssetRepository assetRepo;
     private final CodeSubmissionRepository codeRepo;
@@ -183,56 +191,41 @@ public class AdminChallengeService {
 
     @Transactional
     public void delete(Long challengeId, boolean force) {
-        Challenge c = repo.findById(challengeId)
+        // 0) 존재 확인
+        var c = repo.findById(challengeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
 
-        if (reward.isPublished(challengeId) && !force) {
-            throw new BadRequestException("CANNOT_DELETE_PUBLISHED",
-                    "보상 지급된 챌린지는 삭제할 수 없습니다. force=true로 강제 삭제하세요.");
+        // 1) 보상 지급 챌린지 삭제 금지 (포트폴리오와 동일 정책)
+        if (rewardPayoutRepo.existsByChallengeId(challengeId)) {
+            throw new ConflictException("HAS_PAYOUTS", "보상 지급된 챌린지는 삭제할 수 없습니다.");
         }
 
-        long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
-        long voteCount = 0L;
-        try {
-            voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
-                    .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
-        } catch (Exception ignore) {}
-
-        if (!force && (submissionCount > 0 || voteCount > 0)) {
-            throw new BadRequestException("HAS_DEPENDENCIES",
-                    "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+        // 2) force=false면 “의존성 있으면 막기”를 유지하고 싶다면 ↓ (원래 UX 유지)
+        if (!force) {
+            long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
+            long voteCount = 0L;
+            try {
+                voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
+                        .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
+            } catch (Exception ignore) {}
+            if (submissionCount > 0 || voteCount > 0) {
+                throw new BadRequestException("HAS_DEPENDENCIES",
+                        "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+            }
         }
 
-        // 1) 뷰카운트 캐시 삭제
+        // 3) 캐시만 정리 (데이터는 DB FK CASCADE가 다 지움)
         var subIds = submissionRepo.findIdsByChallengeId(challengeId);
         for (Long sid : subIds) {
             redisUtil.deleteValue("viewcount:submission:" + sid);
         }
 
-        // 2) 선삭제: 투표/좋아요/댓글/테스트/코드/에셋
-        try { voteRepo.deleteByChallengeId(challengeId); } catch (Exception ignore) {}
+        // 4) 부모 한 줄 삭제 → DB FK ON DELETE CASCADE 가 자식 전체 정리
+        int affected = challengeRepo.deleteByIdHard(challengeId);
+        if (affected == 0) throw new NotFoundException("Challenge not found: " + challengeId);
+        em.clear();
 
-        if (!subIds.isEmpty()) {
-            var likeType = (c.getType() == ChallengeType.CODE)
-                    ? com.sandwich.SandWich.social.domain.LikeTargetType.CODE_SUBMISSION
-                    : com.sandwich.SandWich.social.domain.LikeTargetType.PORTFOLIO_SUBMISSION;
-            var commentType = (c.getType() == ChallengeType.CODE) ? "CODE_SUBMISSION" : "PORTFOLIO_SUBMISSION";
-
-            try { likeRepo.deleteByTargetTypeAndTargetIdIn(likeType, subIds); } catch (Exception ignore) {}
-            try { commentRepo.deleteByCommentableTypeAndCommentableIdIn(commentType, subIds); } catch (Exception ignore) {}
-            try { testResultRepo.deleteBySubmissionIdIn(subIds); } catch (Exception ignore) {}
-            try { codeRepo.deleteBySubmission_IdIn(subIds); } catch (Exception ignore) {}
-            try { assetRepo.deleteBySubmission_IdIn(subIds); } catch (Exception ignore) {}
-        }
-        // 3) 제출물 일괄 삭제 (JPQL bulk)
-        submissionRepo.deleteByChallengeId(challengeId);
-
-        // 4) 마지막에 챌린지 삭제
-        repo.delete(c);
-
-        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of(
-                "force", force, "submissionCount", submissionCount, "voteCount", voteCount
-        ));
+        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of("force", force));
     }
 
     @Transactional

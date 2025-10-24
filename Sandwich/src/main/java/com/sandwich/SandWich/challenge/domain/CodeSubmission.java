@@ -2,6 +2,8 @@ package com.sandwich.SandWich.challenge.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -9,12 +11,16 @@ import lombok.*;
 public class CodeSubmission {
 
     @Id
-    @Column(name = "submission_id")
-    private Long submissionId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId // PK = FK(submission.id)
-    @JoinColumn(name = "submission_id")
+    public Long getSubmissionId() {
+        return submission != null ? submission.getId() : null;
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "submission_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Submission submission;
 
     @Column(nullable = false, length = 30)
