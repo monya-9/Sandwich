@@ -10,6 +10,7 @@ type Me = {
     nickname?: string | null;
     username?: string | null;
     profileName?: string | null;
+    profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 const OAuthSuccessHandler: React.FC = () => {
@@ -81,6 +82,12 @@ const OAuthSuccessHandler: React.FC = () => {
                     if (scopedKey) localStorage.setItem(scopedKey, me.username);
                 }
                 if (me.profileName) localStorage.setItem("userProfileName", me.profileName);
+                // ✅ profileSlug 저장
+                if (me.profileSlug) {
+                    localStorage.setItem("profileUrlSlug", me.profileSlug);
+                    const scopedSlugKey = me.email ? `profileUrlSlug:${me.email}` : undefined;
+                    if (scopedSlugKey) localStorage.setItem(scopedSlugKey, me.profileSlug);
+                }
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
 
                 // ✅ 6. 컨텍스트 갱신

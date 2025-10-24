@@ -256,6 +256,8 @@ public class UserService {
             profile.setLinkedin(null);
             profile.setProfileImage(null);
 
+            String placeholder = "deleted_user_" + user.getId();
+            profile.setNickname(placeholder);
         }
 
         // 4) 익명 사용자 준비 (username 고유 보장)

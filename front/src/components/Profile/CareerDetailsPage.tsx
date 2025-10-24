@@ -22,7 +22,9 @@ type CareerItem = {
 type EducationItem = {
 	id: number;
 	schoolName: string;
-	degree: string;
+	degree?: string;
+	level?: string;
+	status?: string;
 	startYear: number;
 	startMonth?: number | null;
 	endYear?: number | null;
@@ -121,7 +123,8 @@ function CareerDetailsPage() {
 	const scopedUsernameLocal = (typeof window !== "undefined" && (localStorage.getItem(usernameScopedKey) || sessionStorage.getItem(usernameScopedKey))) || "";
 	const profileUrlScopedKey = userEmailScoped ? `profileUrlSlug:${userEmailScoped}` : "profileUrlSlug";
 	const scopedProfileUrl = (typeof window !== "undefined" && (localStorage.getItem(profileUrlScopedKey) || sessionStorage.getItem(profileUrlScopedKey))) || "";
-	const profileUrlSlug = scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
+	// ✅ profileSlug 우선 사용, 없으면 기존 로직 유지
+	const profileUrlSlug = me?.profileSlug || scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
 	const displayName = (me?.nickname && me.nickname.trim()) || (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim() || me?.username || "사용자";
 	const profileImageUrl = me?.profileImage || "";
 	// 한줄 프로필: 현재 로그인 스코프 키에서만 읽고, 없으면 표시하지 않음
@@ -273,7 +276,9 @@ function CareerDetailsPage() {
 									{parsedEducations.map((e: any) => {
 										const start = formatYearMonth(e.startYear, e.startMonth || undefined);
 										const end = formatYearMonth(e.endYear || undefined, e.endMonth || undefined);
-										const top = e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
+										const top = e.level === "HIGH_SCHOOL" 
+											? "고등학교"
+											: e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
 										return (
 											<div key={e.id}>
 												<div className="text-[12px] text-black/55">{start} ~ {end}</div>

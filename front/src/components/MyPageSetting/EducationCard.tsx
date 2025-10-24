@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, MoreHorizontal, Pencil, X } from "lucide-react";
-import { EducationApi } from "../../api/educationApi";
+import { EducationApi, EducationLevel, EducationStatus, MajorItem } from "../../api/educationApi";
 import Toast from "../common/Toast";
 import ConfirmModal from "../common/ConfirmModal";
 
 export interface EducationItem {
 	id: number;
 	schoolName: string;
-	degree: string;
+	degree?: string;
+	level?: EducationLevel;
+	status?: EducationStatus;
 	startYear: number;
 	startMonth: number;
 	endYear?: number | null;
@@ -38,6 +40,7 @@ const STATUS_PREFIX = "__STATUS__:";
 const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [isPrivate, setIsPrivate] = useState(false);
+	const [majors, setMajors] = useState<MajorItem[]>([]);
 	const [errorToast, setErrorToast] = useState<{ visible: boolean; message: string }>({
 		visible: false,
 		message: ''
@@ -61,19 +64,30 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [item.id]);
 
-	// description 메타 파싱
-	const parseMeta = (d?: string): { major?: string; status?: string; rest?: string } => {
+	// 전공 데이터 로드
+	useEffect(() => {
+		const loadMajors = async () => {
+			try {
+				const response = await EducationApi.getMajors(item.id);
+				setMajors(response.data);
+			} catch (error) {
+				console.error("전공 목록 로드 실패:", error);
+			}
+		};
+		loadMajors();
+	}, [item.id]);
+
+	// description 메타 파싱 (전공 제외)
+	const parseMeta = (d?: string): { status?: string; rest?: string } => {
 		if (!d) return {} as any;
 		const lines = d.split("\n");
-		let major: string | undefined;
 		let status: string | undefined;
 		const body: string[] = [];
 		for (const line of lines) {
-			if (line.startsWith(MAJOR_PREFIX)) major = line.slice(MAJOR_PREFIX.length);
-			else if (line.startsWith(STATUS_PREFIX)) status = line.slice(STATUS_PREFIX.length);
-			else body.push(line);
+			if (line.startsWith(STATUS_PREFIX)) status = line.slice(STATUS_PREFIX.length);
+			else if (!line.startsWith(MAJOR_PREFIX)) body.push(line);
 		}
-		return { major, status, rest: body.join("\n").trim() } as any;
+		return { status, rest: body.join("\n").trim() } as any;
 	};
 	const meta = parseMeta(item.description);
 
@@ -162,7 +176,14 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 			<div className="w-full py-6">
 			<div className="min-w-0">
 				<div className="flex items-center justify-between">
-					<div className={roleCls}>{meta.major ? `${meta.major} 전공` : `${item.degree} 전공`}</div>
+					<div className={roleCls}>
+						{item.level === "HIGH_SCHOOL" 
+							? "고등학교" 
+							: majors.length > 0 
+								? `${majors.map(m => m.name).join(", ")} 전공`
+								: `${item.degree} 전공`
+						}
+					</div>
 					<div className="relative shrink-0 flex items-center gap-4 ml-4">
 						<Tooltip label="대표 설정">
 							<button type="button" onClick={toggleRepresentative} className={`p-1 ${isPrivate ? "cursor-not-allowed" : "hover:opacity-80"}`} disabled={isPrivate}>
@@ -191,7 +212,12 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 						</div>
 					</div>
 				</div>
-				<div className={titleCls}>{item.schoolName}({item.degree})</div>
+				<div className={titleCls}>
+					{item.level === "HIGH_SCHOOL" 
+						? item.schoolName
+						: item.degree ? `${item.schoolName}(${item.degree})` : item.schoolName
+					}
+				</div>
 				<div className={periodCls}>{periodText}</div>
 				{meta.rest ? (
 					<div className={descCls}>{meta.rest}</div>

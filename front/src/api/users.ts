@@ -6,6 +6,7 @@ export type Me = {
     email: string;
     username: string;
     nickname?: string | null;
+    profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 export async function getMe(): Promise<Me> {
