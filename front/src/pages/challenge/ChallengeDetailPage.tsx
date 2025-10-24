@@ -10,6 +10,7 @@ import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { ChevronDown, ChevronLeft, AlertCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
+import ConfirmModal from "../../components/common/ConfirmModal";
 import { 
     fetchPortfolioLeaderboard, 
     fetchCodeTopSubmitters,
@@ -316,6 +317,9 @@ export default function ChallengeDetailPage() {
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     // 보상 수령 기능 제거됨
     const admin = isAdmin();
     const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
@@ -529,6 +533,64 @@ export default function ChallengeDetailPage() {
         <div className="mx-auto w-full max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
             <LoginRequiredModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
             
+            {/* 첫 번째 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={deleteModalOpen}
+                title="챌린지 삭제"
+                message="이 챌린지를 삭제하시겠습니까? 되돌릴 수 없습니다."
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (pendingDeleteId === null) return;
+                    try {
+                        // 1. 먼저 일반 삭제 시도 (force 없이)
+                        await deleteChallenge(pendingDeleteId);
+                        setDeleteModalOpen(false);
+                        navigate("/challenge", { replace: true });
+                    } catch (e: any) {
+                        setDeleteModalOpen(false);
+                        // 2. HAS_DEPENDENCIES 에러인 경우, 강제 삭제 확인 모달 표시
+                        if (e.response?.data?.code === 'HAS_DEPENDENCIES') {
+                            setForceDeleteModalOpen(true);
+                        } else {
+                            alert(e.response?.data?.message || "삭제 중 오류가 발생했습니다.");
+                            setPendingDeleteId(null);
+                        }
+                    }
+                }}
+                onCancel={() => {
+                    setDeleteModalOpen(false);
+                    setPendingDeleteId(null);
+                }}
+            />
+            
+            {/* 두 번째 강제 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={forceDeleteModalOpen}
+                title="⚠️ 챌린지 강제 삭제"
+                message={`이 챌린지에는 제출물이 존재합니다.\n강제 삭제 시 모든 제출물이 함께 삭제됩니다.\n\n정말 강제 삭제하시겠습니까?`}
+                confirmText="강제 삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (pendingDeleteId === null) return;
+                    try {
+                        await deleteChallenge(pendingDeleteId, { force: true });
+                        setForceDeleteModalOpen(false);
+                        navigate("/challenge", { replace: true });
+                    } catch (e2: any) {
+                        setForceDeleteModalOpen(false);
+                        alert(e2.response?.data?.message || "삭제 중 오류가 발생했습니다.");
+                    }
+                    setPendingDeleteId(null);
+                }}
+                onCancel={() => {
+                    setForceDeleteModalOpen(false);
+                    setPendingDeleteId(null);
+                }}
+            />
+            
             {loading ? (
                 /* 로딩 상태 - 전체 화면 */
                 <div className="flex items-center justify-center py-16">
@@ -646,15 +708,9 @@ export default function ChallengeDetailPage() {
                                         챌린지 수정
                                     </Link>
                                     <button
-                                        onClick={async () => {
-                                            const ok = window.confirm("이 챌린지를 삭제하시겠습니까? 되돌릴 수 없습니다.");
-                                            if (!ok) return;
-                                            try {
-                                                await deleteChallenge(id, { force: true });
-                                                navigate("/challenge", { replace: true });
-                                            } catch (e) {
-                                                alert("삭제 중 오류가 발생했습니다.");
-                                            }
+                                        onClick={() => {
+                                            setPendingDeleteId(id);
+                                            setDeleteModalOpen(true);
                                         }}
                                         className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-red-600 hover:bg-red-50"
                                     >

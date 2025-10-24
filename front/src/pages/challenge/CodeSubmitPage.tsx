@@ -141,10 +141,9 @@ export default function CodeSubmitPage() {
                 try {
                     const submission = await fetchChallengeSubmissionDetail(id, editSubmissionId);
                     
-                    // 백엔드 응답에서 언어와 엔트리포인트 추출
-                    const language = submission.language || submission.code?.language || "python";
-                    const rawEntrypoint = submission.entrypoint || submission.code?.entrypoint || "python main.py";
-                    const entrypoint = rawEntrypoint.replace(/_/g, " ");
+                    // 백엔드 응답에서 언어와 엔트리포인트 추출 (code 객체가 없을 수 있음)
+                    const language = submission.code?.language || submission.language || "python";
+                    const entrypoint = submission.code?.entrypoint || submission.entrypoint || "";
                     
                     setForm({
                         title: submission.title || "",
@@ -154,6 +153,14 @@ export default function CodeSubmitPage() {
                         commitSha: submission.code?.commitSha || "",
                         note: submission.desc || "",
                     });
+                    
+                    // 레거시 데이터(code 없음)면 사용자에게 알림
+                    if (!submission.code) {
+                        setSuccessToast({
+                            visible: true,
+                            message: '⚠️ 엔트리포인트 정보가 없습니다. 다시 입력 후 저장해주세요.'
+                        });
+                    }
                 } catch (error) {
                     console.error('제출물 로드 실패:', error);
                     setSuccessToast({
@@ -218,11 +225,7 @@ export default function CodeSubmitPage() {
                 // 코드 챌린지 필수 필드
                 code: {
                     language: form.language || "python",
-                    entrypoint: (form.entrypoint || "main.py")
-                        .replace(/\s+/g, "_") // 공백을 언더스코어로 변경
-                        .replace(/[^a-zA-Z0-9_\-.]/g, "_") // 특수문자를 언더스코어로 변경
-                        .replace(/_+/g, "_") // 연속된 언더스코어를 하나로
-                        .replace(/^_|_$/g, ""), // 앞뒤 언더스코어 제거
+                    entrypoint: form.entrypoint?.trim() || "main.py",
                     commitSha: commitSha // GitHub API에서 가져온 실제 커밋 SHA
                 }
             };
