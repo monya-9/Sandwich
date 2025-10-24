@@ -3,9 +3,9 @@ import React from "react";
 import githubIcon from "../../../../assets/icons/github.png";
 import googleIcon from "../../../../assets/icons/Google.png";
 import SNSButton from "./SNSButton";
+import { API_BASE } from "../../../../config/apiBase";
 
 const SNSButtonGroup = () => {
-    const API_BASE = process.env.REACT_APP_API_BASE;
     const handleSocialLogin = (provider: "google" | "github") => {
         // ✅ React 내부 경로로 먼저 이동 → 흰 화면 유지
         window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
