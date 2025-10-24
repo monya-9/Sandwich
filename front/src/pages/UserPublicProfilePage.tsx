@@ -8,7 +8,7 @@ import SuggestAction from "../components/OtherProject/ActionBar/SuggestAction";
 import Toast from "../components/common/Toast";
 
 // 공개 프로필 응답 타입(백엔드에 email 추가됨)
- type PublicProfile = {
+type PublicProfile = {
   id: number;
   nickname: string | null;
   username?: string | null;
@@ -17,6 +17,7 @@ import Toast from "../components/common/Toast";
   interests?: string[] | null;
   profileImage?: string | null;
   followerCount?: number;
+  profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 export default function UserPublicProfilePage() {
@@ -110,7 +111,7 @@ export default function UserPublicProfilePage() {
   }
 
   const displayName = (data?.nickname || data?.username || "사용자").trim();
-  const profileUrl = data?.username ? `sandwich.com/${data.username}` : `sandwich.com/user/${userId}`;
+  const profileUrl = data?.profileSlug ? `sandwich.com/${data.profileSlug}` : (data?.username ? `sandwich.com/${data.username}` : `sandwich.com/user/${userId}`);
 
   return (
     <div className="w-full flex justify-center">

@@ -283,7 +283,15 @@ const MyPageSettingPage: React.FC = () => {
 			const refreshed = await UserApi.getMe();
 			setProfile(refreshed);
 			setUserNameError(null);
-			try { localStorage.setItem("userNickname", trimmed); sessionStorage.setItem("userNickname", trimmed); } catch {}
+			try { 
+				localStorage.setItem("userNickname", trimmed); 
+				sessionStorage.setItem("userNickname", trimmed);
+				// ✅ profileSlug도 함께 저장
+				if (refreshed.profileSlug) {
+					localStorage.setItem(scopedKey("profileUrlSlug"), refreshed.profileSlug);
+					sessionStorage.setItem(scopedKey("profileUrlSlug"), refreshed.profileSlug);
+				}
+			} catch {}
 			window.dispatchEvent(new Event("user-nickname-updated"));
 			setSuccessToast({
 				visible: true,
@@ -594,7 +602,12 @@ const MyPageSettingPage: React.FC = () => {
 												<input
 							type="text"
 							value={userName}
-							onChange={(e)=>{ setUserName(e.target.value.slice(0, MAX20)); setUserNameError(null); }}
+							onChange={(e)=>{ 
+								const newValue = e.target.value.slice(0, MAX20);
+								setUserName(newValue); 
+								setUserNameError(null);
+								// ✅ 닉네임 변경 시 샌드위치 URL은 백엔드에서 자동 생성되므로 로컬 상태 업데이트 불필요
+							}}
 							onBlur={() => { const v = userNameRef.current.trim(); if (v) checkAndSaveUserName(v); }}
 							aria-label="닉네임"
 							maxLength={MAX20}
@@ -612,49 +625,19 @@ const MyPageSettingPage: React.FC = () => {
 										) : null}
 							</div>
 
-							{/* 사용자 이름 (읽기 전용) */}
-							<div className="mb-7">
-								<FieldLabel>사용자 이름</FieldLabel>
-								<div className="relative">
-                                    <input
-										type="text"
-										value={usernameDisplay}
-										readOnly
-										disabled
-											aria-label="사용자 이름"
-                                            className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60"
-									/>
-								</div>
-							</div>
 
-							{/* 샌드위치 URL (뒷부분 슬러그 편집) */}
+							{/* 샌드위치 URL (닉네임 기반 자동 생성) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-                                    <div className={`flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border min-w-0 ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB] dark:border-[var(--border-color)]"}`}>
-                                        <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
-									<input
-										type="text"
-										value={urlSlug}
-										onChange={onSlugChange}
-										// 저장은 마우스 클릭 시 전역 핸들러에서만 수행
-										onBlur={undefined as any}
-										onKeyDown={undefined as any}
-										placeholder="URL 입력란"
-										pattern="^[a-z0-9_]{3,20}$"
-										title="소문자/숫자/언더스코어만 입력 가능합니다 (3~20자)"
-											aria-label="샌드위치 URL 슬러그"
-											spellCheck={false}
-											autoComplete="off"
-											inputMode="text"
-											maxLength={20}
-											aria-invalid={!!(slugInitialized && slugError)}
-											aria-describedby={(slugInitialized && slugError) ? 'slug-error' : undefined}
-                                            className={`flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white dark:bg-[var(--surface)] dark:text-white min-w-0`}
-									/>
+								<div className="flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
+									<div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
+									<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
+										{profile?.profileSlug || (userName.trim() ? userName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')}
+									</div>
 								</div>
-									{slugInitialized && slugError && (
-										<p id="slug-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">{slugError}</p>
-									)}
+								<div className="mt-2 text-[12px] text-[#6B7280] dark:text-white/60">
+									닉네임을 입력하면 자동으로 생성됩니다
+								</div>
 							</div>
 
 							{/* 한 줄 프로필 */}

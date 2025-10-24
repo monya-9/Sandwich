@@ -16,6 +16,7 @@ export type UserProfileResponse = {
 	followerCount: number;
 	followingCount: number;
 	profileName?: string | null; // one-line profile
+	profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 export type UserProfileRequest = {
