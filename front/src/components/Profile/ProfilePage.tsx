@@ -92,9 +92,9 @@ export default function ProfilePage() {
           rep.push({ type: "AWARD", title: a.title, subtitle: a.issuer, description: a.description });
         });
 
-        // PROJECT: 상단 "프로젝트", 하단 역할
+        // PROJECT: 상단 프로젝트 제목, 하단 역할
         (projectsRes || []).filter((p: any) => (p as any).isRepresentative && !isPrivate("project", p.id)).forEach((p: any) => {
-          rep.push({ type: "PROJECT", title: "프로젝트", subtitle: p.role, description: p.description });
+          rep.push({ type: "PROJECT", title: p.title, subtitle: p.role, description: p.description });
         });
 
         if (mounted) setRepCareers(rep);

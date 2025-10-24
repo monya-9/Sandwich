@@ -26,6 +26,6 @@ export const CareerProjectApi = {
 		return api.get("/career-projects");
 	},
 	setRepresentative(id: number) {
-햣		return api.patch(`/career-projects/${id}/representative`);
+				return api.patch(`/career-projects/${id}/representative`);
 	},
 }; 
