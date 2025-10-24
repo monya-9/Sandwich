@@ -306,9 +306,8 @@ input[type="text"], input[type="color"], input[type="number"] {
   color: var(--text-primary) !important;
 }
 
-/* Quill 에디터 관련 스타일 오버라이드 */
+/* Quill 에디터 관련 스타일 오버라이드 - 배경색 제거 */
 .ql-editor, .ql-blank {
-  background-color: var(--surface-light) !important;
   color: var(--text-primary) !important;
 }
 
