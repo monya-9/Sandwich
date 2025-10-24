@@ -6,6 +6,7 @@ import PublicLikesGrid from "../components/Profile/PublicLikesGrid";
 import PublicCollectionsGrid from "../components/Profile/PublicCollectionsGrid";
 import SuggestAction from "../components/OtherProject/ActionBar/SuggestAction";
 import Toast from "../components/common/Toast";
+import { RepresentativeCareer } from "../api/userApi";
 
 // 공개 프로필 응답 타입(백엔드에 email 추가됨)
 type PublicProfile = {
@@ -32,6 +33,7 @@ export default function UserPublicProfilePage() {
   const [activeTab, setActiveTab] = useState<"work" | "like" | "collection">("work");
   const [toast, setToast] = useState<{ type: "success" | "info" | "error"; message: string } | null>(null);
   const [followBtnHover, setFollowBtnHover] = useState(false);
+  const [repCareers, setRepCareers] = useState<RepresentativeCareer[]>([]);
 
   const myId = Number((typeof window !== 'undefined' && (localStorage.getItem('userId') || sessionStorage.getItem('userId'))) || '0');
   const isSelf = myId > 0 && myId === userId;
@@ -75,6 +77,27 @@ export default function UserPublicProfilePage() {
     })();
   }, [userId, isSelf]);
 
+  // 대표 커리어 로드
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`);
+        if (mounted) {
+          setRepCareers(response.data);
+        }
+      } catch (error) {
+        console.error("대표 커리어 로드 실패:", error);
+        if (mounted) {
+          setRepCareers([]);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
   const toggleFollow = async () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) return navigate("/login");
@@ -112,6 +135,14 @@ export default function UserPublicProfilePage() {
 
   const displayName = (data?.nickname || data?.username || "사용자").trim();
   const profileUrl = data?.profileSlug ? `sandwich.com/${data.profileSlug}` : (data?.username ? `sandwich.com/${data.username}` : `sandwich.com/user/${userId}`);
+
+  const iconForType = (t: RepresentativeCareer["type"]) => {
+    if (t === "CAREER") return "💼";
+    if (t === "PROJECT_RESUME") return "🧩";
+    if (t === "PROJECT_PORTFOLIO") return "🎨";
+    if (t === "AWARD") return "🏅";
+    return "🎓";
+  };
 
   return (
     <div className="w-full flex justify-center">
@@ -191,8 +222,27 @@ export default function UserPublicProfilePage() {
             <div className="mt-20" />
             <div className="mt-2 text-[14px] md:text-[16px]">
               <div className="text-black/90">커리어</div>
-              {/* 공개 API가 없으므로 우선 메시지 표시. 추후 공개 API 연결 시 목록으로 교체 */}
-              <div className="mt-4 text-center text-black/60">설정된 대표 커리어가 없습니다.</div>
+              
+              <div className="mt-4 space-y-4">
+                {repCareers.length > 0 ? (
+                  repCareers.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <span className="text-[18px]" aria-hidden>{iconForType(item.type)}</span>
+                      <div className="flex-1">
+                        <div className="text-[14px] text-black font-medium">{item.title}</div>
+                        {!!item.subtitle && <div className="text-[13px] text-black/60">{item.subtitle}</div>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="mt-4 w-full flex justify-center">
+                    <div className="inline-flex items-center gap-1 text-black/60">
+                      <span>설정된 대표 커리어가 없습니다.</span>
+                      <span className="text-black/40" aria-hidden>ⓘ</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 활동 정보 */}
