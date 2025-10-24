@@ -172,14 +172,39 @@ input[type="radio"] {
 
 /* 체크박스 체크 상태 */
 input[type="checkbox"]:checked {
-  background: #22c55e !important;
+  background: #ffffff !important;
   border-color: #22c55e !important;
+  position: relative !important;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✓" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  color: #22c55e !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
 }
 
 /* 라디오박스 체크 상태 */
 input[type="radio"]:checked {
-  background: #22c55e !important;
+  background: #ffffff !important;
   border-color: #22c55e !important;
+  position: relative !important;
+}
+
+input[type="radio"]:checked::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: #22c55e !important;
+  border-radius: 50% !important;
 }
 
 /* 다크모드 */
@@ -191,8 +216,16 @@ input[type="radio"]:checked {
 
 .dark input[type="checkbox"]:checked,
 .dark input[type="radio"]:checked {
-  background: #ffffff !important;
-  border-color: #ffffff !important;
+  background: #2a2a2a !important;
+  border-color: #22c55e !important;
+}
+
+.dark input[type="checkbox"]:checked::after {
+  color: #22c55e !important;
+}
+
+.dark input[type="radio"]:checked::after {
+  background: #22c55e !important;
 }
 
 /* 특별히 배경색상 입력 필드 스타일 강제 적용 */

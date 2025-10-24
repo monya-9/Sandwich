@@ -41,10 +41,24 @@ const OAuthSuccessHandler: React.FC = () => {
             clearState(); // React 상태만 즉시 초기화
 
             // ✅ 3. 새 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
+            console.log("🔍 OAuthSuccessHandler 토큰 저장:", {
+                token: token ? "있음" : "없음",
+                tokenLength: token?.length,
+                refreshToken: refreshToken ? "있음" : "없음",
+                provider,
+                needNickname
+            });
+            
             setToken(token, true); // => accessToken을 localStorage에
             if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
             if (provider) localStorage.setItem("lastLoginMethod", provider);
             if (emailFromUrl) localStorage.setItem("userEmail", emailFromUrl);
+            
+            // 토큰 저장 확인
+            console.log("🔍 토큰 저장 후 확인:", {
+                storedToken: localStorage.getItem("accessToken") ? "있음" : "없음",
+                storedRefreshToken: localStorage.getItem("refreshToken") ? "있음" : "없음"
+            });
 
             // URL 정리 (히스토리만 치환)
             window.history.replaceState(null, "", "/oauth2/success");

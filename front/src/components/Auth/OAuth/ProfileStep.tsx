@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axiosInstance";
 import PositionSelect from "../Join/Profile/PositionSelect";
@@ -8,6 +8,7 @@ import NameInput from "../Join/Profile/NameInput";
 import logo from "../../../assets/logo.png";
 import { positionMap, interestMap } from "../../../constants/position";
 import Toast from "../../common/Toast";
+import { setToken } from "../../../utils/tokenStorage";
 
 const ProfileStep = () => {
     const [nickname, setNickname] = useState("");
@@ -21,6 +22,35 @@ const ProfileStep = () => {
     });
     const navigate = useNavigate();
 
+    // ✅ URL 파라미터에서 토큰 처리
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        const refreshToken = urlParams.get("refreshToken");
+        
+        console.log("🔍 ProfileStep useEffect 토큰 처리:", {
+            token: token ? "있음" : "없음",
+            refreshToken: refreshToken ? "있음" : "없음",
+            urlParams: urlParams.toString()
+        });
+        
+        if (token) {
+            // 토큰 저장
+            setToken(token, true);
+            if (refreshToken) {
+                localStorage.setItem("refreshToken", refreshToken);
+            }
+            
+            // URL 정리 (토큰 정보 제거)
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState(null, "", cleanUrl);
+            
+            console.log("🔍 토큰 저장 완료:", {
+                storedToken: localStorage.getItem("accessToken") ? "있음" : "없음"
+            });
+        }
+    }, []);
+
     const handleSubmit = async () => {
         if (!nickname || !position || interests.length === 0) {
             setToast({
@@ -31,8 +61,15 @@ const ProfileStep = () => {
             return;
         }
 
-        // ✅ 토큰 체크
+        // ✅ 토큰 체크 및 디버깅
         const token = localStorage.getItem("accessToken");
+        console.log("🔍 ProfileStep 토큰 체크:", {
+            token: token ? "있음" : "없음",
+            tokenLength: token?.length,
+            localStorage: Object.keys(localStorage).filter(k => k.includes('Token') || k.includes('token')),
+            urlParams: new URLSearchParams(window.location.search).toString()
+        });
+        
         if (!token) {
             setToast({
                 visible: true,
