@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import SearchBar from "./SearchBar";
 import MessageIcon from "../Header/icons/MessageIcon";
 import NotificationIcon from "../Header/icons/NotificationIcon";
@@ -31,7 +31,7 @@ const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
                     </svg>
                 </button>
                 <Link to="/" className="flex-shrink-0">
-                    <img src={logo} alt="Sandwich" className="w-[100px] h-auto" />
+                    <img src={getStaticUrl("assets/logo.png")} alt="Sandwich" className="w-[100px] h-auto" />
                 </Link>
             </div>
 

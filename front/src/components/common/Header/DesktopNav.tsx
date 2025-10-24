@@ -2,7 +2,7 @@
 import React, { useContext, useState, useMemo, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import { AuthContext } from "../../../context/AuthContext";
 
 import SearchBar from "./SearchBar";
@@ -141,7 +141,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <div className="flex items-center justify-between w-full relative">
             <div className="flex items-center gap-3 min-w-0">
                 <Link to="/" className="shrink-0">
-                    <img src={logo} alt="Sandwich" className="w-[120px] h-auto" />
+                    <img src={getStaticUrl("assets/logo.png")} alt="Sandwich" className="w-[120px] h-auto" />
                 </Link>
                 <nav className="flex gap-6 text-[18px] ml-6">
                     <NavLink to="/" className={navCls} end>둘러보기</NavLink>

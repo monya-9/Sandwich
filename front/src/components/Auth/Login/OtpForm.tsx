@@ -1,7 +1,7 @@
 // src/components/Auth/Login/OtpForm.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import api from "../../../api/axiosInstance";
 import Toast from "../../common/Toast";
 
@@ -166,7 +166,7 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
             <Link to="/">
-                <img src={logo} alt="logo" className="w-36 mb-10 mx-auto" />
+                <img src={getStaticUrl("assets/logo.png")} alt="logo" className="w-36 mb-10 mx-auto" />
             </Link>
 
             <div className="w-full max-w-sm">
