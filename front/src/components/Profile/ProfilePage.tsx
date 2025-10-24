@@ -83,7 +83,9 @@ export default function ProfilePage() {
               if (line.startsWith(MAJOR_PREFIX)) major = line.slice(MAJOR_PREFIX.length).trim();
             }
           }
-          const top = e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
+          const top = e.level === "HIGH_SCHOOL" 
+            ? "고등학교"
+            : e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
           rep.push({ type: "EDUCATION", title: top, subtitle: major, description: e.description });
         });
 

@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, MoreHorizontal, Pencil, X } from "lucide-react";
-import { EducationApi } from "../../api/educationApi";
+import { EducationApi, EducationLevel, EducationStatus } from "../../api/educationApi";
 import Toast from "../common/Toast";
 import ConfirmModal from "../common/ConfirmModal";
 
 export interface EducationItem {
 	id: number;
 	schoolName: string;
-	degree: string;
+	degree?: string;
+	level?: EducationLevel;
+	status?: EducationStatus;
 	startYear: number;
 	startMonth: number;
 	endYear?: number | null;
@@ -162,7 +164,12 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 			<div className="w-full py-6">
 			<div className="min-w-0">
 				<div className="flex items-center justify-between">
-					<div className={roleCls}>{meta.major ? `${meta.major} 전공` : `${item.degree} 전공`}</div>
+					<div className={roleCls}>
+						{item.level === "HIGH_SCHOOL" 
+							? "고등학교" 
+							: meta.major ? `${meta.major} 전공` : `${item.degree} 전공`
+						}
+					</div>
 					<div className="relative shrink-0 flex items-center gap-4 ml-4">
 						<Tooltip label="대표 설정">
 							<button type="button" onClick={toggleRepresentative} className={`p-1 ${isPrivate ? "cursor-not-allowed" : "hover:opacity-80"}`} disabled={isPrivate}>
@@ -191,7 +198,12 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 						</div>
 					</div>
 				</div>
-				<div className={titleCls}>{item.schoolName}({item.degree})</div>
+				<div className={titleCls}>
+					{item.level === "HIGH_SCHOOL" 
+						? item.schoolName
+						: item.degree ? `${item.schoolName}(${item.degree})` : item.schoolName
+					}
+				</div>
 				<div className={periodCls}>{periodText}</div>
 				{meta.rest ? (
 					<div className={descCls}>{meta.rest}</div>

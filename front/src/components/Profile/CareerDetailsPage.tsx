@@ -22,7 +22,9 @@ type CareerItem = {
 type EducationItem = {
 	id: number;
 	schoolName: string;
-	degree: string;
+	degree?: string;
+	level?: string;
+	status?: string;
 	startYear: number;
 	startMonth?: number | null;
 	endYear?: number | null;
@@ -274,7 +276,9 @@ function CareerDetailsPage() {
 									{parsedEducations.map((e: any) => {
 										const start = formatYearMonth(e.startYear, e.startMonth || undefined);
 										const end = formatYearMonth(e.endYear || undefined, e.endMonth || undefined);
-										const top = e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
+										const top = e.level === "HIGH_SCHOOL" 
+											? "고등학교"
+											: e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
 										return (
 											<div key={e.id}>
 												<div className="text-[12px] text-black/55">{start} ~ {end}</div>
