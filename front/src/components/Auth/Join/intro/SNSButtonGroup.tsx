@@ -3,12 +3,12 @@ import React from "react";
 import githubIcon from "../../../../assets/icons/github.png";
 import googleIcon from "../../../../assets/icons/Google.png";
 import SNSButton from "./SNSButton";
-import { API_BASE } from "../../../../config/apiBase";
+import { SOCIAL_LOGIN_BASE } from "../../../../config/apiBase";
 
 const SNSButtonGroup = () => {
     const handleSocialLogin = (provider: "google" | "github") => {
-        // ✅ React 내부 경로로 먼저 이동 → 흰 화면 유지
-        window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
+        // ✅ 소셜 로그인은 직접 백엔드로 이동 (프록시 거치지 않음)
+        window.location.href = `${SOCIAL_LOGIN_BASE}/oauth2/authorization/${provider}`;
     };
 
     return (
