@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import SelectDropdown from "./SelectDropdown";
-import { EducationApi, EducationLevel, EducationStatus } from "../../api/educationApi";
+import { EducationApi, EducationLevel, EducationStatus, MajorItem } from "../../api/educationApi";
 import { EducationItem } from "./EducationCard";
 import Toast from "../common/Toast";
 
@@ -21,7 +21,8 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	const [status, setStatus] = useState<EducationStatus>("GRADUATED");
 	const [enterYear, setEnterYear] = useState("");
 	const [graduateYear, setGraduateYear] = useState("");
-	const [majors, setMajors] = useState<string[]>([""]);
+	const [majors, setMajors] = useState<MajorItem[]>([]);
+	const [newMajorName, setNewMajorName] = useState("");
 	const [desc, setDesc] = useState("");
 	const [isMain, setIsMain] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -39,12 +40,12 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	];
 
 	const degrees = ["학사","석사","박사","전문학사"]; 
-	const statuses: { value: EducationStatus; label: string }[] = [
-		{ value: "ENROLLED", label: "재학" },
-		{ value: "GRADUATED", label: "졸업" },
-		{ value: "LEAVE", label: "휴학" },
-		{ value: "DROPPED", label: "중퇴" }
-	]; 
+	const statuses = useMemo(() => [
+		{ value: "ENROLLED" as EducationStatus, label: "재학" },
+		{ value: "GRADUATED" as EducationStatus, label: "졸업" },
+		{ value: "LEAVE" as EducationStatus, label: "휴학" },
+		{ value: "DROPPED" as EducationStatus, label: "중퇴" }
+	], []); 
 
 	useEffect(() => {
 		if (!initial) return;
@@ -55,23 +56,26 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 		setEnterYear(initial.startYear ? String(initial.startYear) : "");
 		setGraduateYear(initial.endYear ? String(initial.endYear) : "");
 		setIsMain(!!initial.isRepresentative);
-		// description에서 전공/상태 추출
+		
+		// 전공 데이터 로드 (수정 모드일 때만)
+		if (editingId) {
+			loadMajors(editingId);
+		}
+		
+		// description에서 상태 추출 (전공은 API에서 관리하므로 제거)
 		const rawDesc = initial.description || "";
 		if (rawDesc) {
 			const lines = rawDesc.split("\n");
-			let metaMajor = "";
 			let metaStatus = "";
 			const body: string[] = [];
 			for (const line of lines) {
-				if (line.startsWith(MAJOR_PREFIX)) metaMajor = line.slice(MAJOR_PREFIX.length);
-				else if (line.startsWith(STATUS_PREFIX)) metaStatus = line.slice(STATUS_PREFIX.length);
-				else body.push(line);
+				if (line.startsWith(STATUS_PREFIX)) metaStatus = line.slice(STATUS_PREFIX.length);
+				else if (!line.startsWith(MAJOR_PREFIX)) body.push(line);
 			}
-			if (metaMajor) setMajors(metaMajor.split(",").map(s=>s.trim()).filter(Boolean).length ? metaMajor.split(",").map(s=>s.trim()) : [metaMajor.trim()]);
 			if (metaStatus && statuses.some(s => s.value === metaStatus)) setStatus(metaStatus as EducationStatus);
 			setDesc(body.join("\n").trim());
 		}
-	}, [initial]);
+	}, [initial, editingId, statuses]);
 
 	const toNumber = (s: string): number | null => {
 		const n = parseInt((s || "").trim(), 10);
@@ -90,11 +94,10 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	const graduateYearError = getYearError(graduateYear);
 
 	// 폼 유효성
-	const firstMajor = (majors[0] || "").trim();
 	// 고등학교는 degree와 전공이 선택사항이므로 조건 수정
 	const requiredFilled = school.trim().length > 0 && 
 		(level !== "HIGH_SCHOOL" && level !== "BOOTCAMP" ? degree.trim().length > 0 : true) && 
-		(level !== "HIGH_SCHOOL" ? firstMajor.length > 0 : true);
+		(level !== "HIGH_SCHOOL" ? majors.length > 0 : true);
 	const enterValid = !!enterYear && !enterYearError && enterYear.length === 4;
 	const graduateValid = !!graduateYear && !graduateYearError && graduateYear.length === 4;
 	const isValid = requiredFilled && enterValid && graduateValid;
@@ -102,8 +105,6 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 
 	const buildDescription = (): string | undefined => {
 		const parts: string[] = [];
-		const joinedMajors = majors.map(m=>m.trim()).filter(Boolean).join(", ");
-		if (joinedMajors) parts.push(`${MAJOR_PREFIX}${joinedMajors}`);
 		if (status.trim()) parts.push(`${STATUS_PREFIX}${status.trim()}`);
 		if (desc.trim()) parts.push(desc.trim());
 		return parts.length ? parts.join("\n") : undefined;
@@ -141,11 +142,41 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 		}
 	};
 
-	const updateMajorAt = (idx: number, value: string) => {
-		setMajors(prev => prev.map((m, i) => i === idx ? value : m));
+	const addMajor = async () => {
+		if (!newMajorName.trim() || !editingId) return;
+		
+		try {
+			const response = await EducationApi.addMajor(editingId, newMajorName.trim());
+			setMajors(prev => [...prev, response.data]);
+			setNewMajorName("");
+		} catch (error) {
+			setErrorToast({
+				visible: true,
+				message: "전공 추가에 실패했습니다."
+			});
+		}
 	};
-	const addMajor = () => setMajors(prev => (prev[0] && prev[0].trim().length > 0 ? [...prev, ""] : prev));
-	const removeLastMajor = () => setMajors(prev => (prev.length > 1 ? prev.slice(0, prev.length - 1) : prev));
+
+	const removeMajor = async (majorId: number) => {
+		try {
+			await EducationApi.removeMajor(majorId);
+			setMajors(prev => prev.filter(m => m.id !== majorId));
+		} catch (error) {
+			setErrorToast({
+				visible: true,
+				message: "전공 삭제에 실패했습니다."
+			});
+		}
+	};
+
+	const loadMajors = async (educationId: number) => {
+		try {
+			const response = await EducationApi.getMajors(educationId);
+			setMajors(response.data);
+		} catch (error) {
+			console.error("전공 목록 로드 실패:", error);
+		}
+	};
 
 	return (
 		<>
@@ -245,33 +276,55 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 					<label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">
 						{level === "BOOTCAMP" ? "과정명" : "전공"} <span className="text-green-500">*</span>
 					</label>
-					<div className="flex items-start gap-3">
-						<div className="flex-1 space-y-3">
-							<input 
-								type="text" 
-								value={majors[0]} 
-								onChange={(e)=>updateMajorAt(0, e.target.value)} 
-								className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" 
-								placeholder={level === "BOOTCAMP" ? "예) 프론트엔드 과정" : "예) 시각디자인과"} 
-							/>
-							{majors.slice(1).map((m, idx) => (
-								<input 
-									key={idx} 
-									type="text" 
-									value={m} 
-									onChange={(e)=>updateMajorAt(idx+1, e.target.value)} 
-									className="w-full h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" 
-									placeholder={level === "BOOTCAMP" ? "추가 과정을 입력해주세요." : "추가 전공 과목을 입력해주세요."} 
-								/>
+					
+					{/* 기존 전공 칩들 */}
+					{majors.length > 0 && (
+						<div className="flex flex-wrap gap-2 mb-3">
+							{majors.map((major) => (
+								<div key={major.id} className="inline-flex items-center gap-2 px-3 py-2 bg-[#F3F4F6] dark:bg-[#374151] rounded-lg text-[14px]">
+									<span>{major.name}</span>
+									<button
+										type="button"
+										onClick={() => removeMajor(major.id)}
+										className="text-[#6B7280] hover:text-[#EF4444] transition-colors"
+									>
+										×
+									</button>
+								</div>
 							))}
 						</div>
-						<div className="shrink-0 flex flex-col gap-3">
-							<button type="button" onClick={addMajor} disabled={!firstMajor} className={`h-[55px] px-4 rounded-[10px] border ${firstMajor ? "border-[#21B284] text-[#21B284]" : "border-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"}`}>+ 추가</button>
-							{majors.length > 1 && (
-								<button type="button" onClick={removeLastMajor} className="h-[55px] px-4 rounded-[10px] border border-[#EF4444] text-[#EF4444]">- 삭제</button>
-							)}
+					)}
+					
+					{/* 새 전공 추가 (수정 모드일 때만) */}
+					{editingId && (
+						<div className="flex gap-2">
+							<input
+								type="text"
+								value={newMajorName}
+								onChange={(e) => setNewMajorName(e.target.value)}
+								className="flex-1 h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"
+								placeholder={level === "BOOTCAMP" ? "새 과정명을 입력하세요" : "새 전공을 입력하세요"}
+								onKeyPress={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										addMajor();
+									}
+								}}
+							/>
+							<button
+								type="button"
+								onClick={addMajor}
+								disabled={!newMajorName.trim()}
+								className={`h-[55px] px-4 rounded-[10px] border ${
+									newMajorName.trim() 
+										? "border-[#21B284] text-[#21B284] hover:bg-[#21B284] hover:text-white" 
+										: "border-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
+								} transition-colors`}
+							>
+								+ 추가
+							</button>
 						</div>
-					</div>
+					)}
 				</div>
 			)}
 

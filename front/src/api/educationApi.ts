@@ -16,6 +16,11 @@ export interface EducationPayload {
 	isRepresentative: boolean;
 }
 
+export interface MajorItem {
+	id: number;
+	name: string;
+}
+
 export const EducationApi = {
 	create(payload: EducationPayload) {
 		return api.post("/educations", payload);
@@ -31,5 +36,15 @@ export const EducationApi = {
 	},
 	setRepresentative(id: number) {
 		return api.patch(`/educations/${id}/representative`);
+	},
+	// 전공 관련 API
+	getMajors(educationId: number) {
+		return api.get<MajorItem[]>(`/educations/${educationId}/majors`);
+	},
+	addMajor(educationId: number, name: string) {
+		return api.post<MajorItem>(`/educations/${educationId}/majors`, { name });
+	},
+	removeMajor(majorId: number) {
+		return api.delete(`/educations/majors/${majorId}`);
 	},
 }; 
