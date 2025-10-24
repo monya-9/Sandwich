@@ -196,7 +196,7 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
 // 🆕 지난 챌린지 데이터 가져오기 (지난 대결 보기용)
 export async function getPastChallenges(): Promise<ChallengeCardData[]> {
     try {
-        const backendChallenges = await fetchChallenges(0, 50); // 많이 가져와서 과거 챌린지 찾기
+        const backendChallenges = await fetchChallenges(0, 100); // 최대 100개까지 가져오기
         
         if (!backendChallenges.content || backendChallenges.content.length === 0) {
             return [];
@@ -220,20 +220,35 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                 return c.status === 'ENDED' || (endAt && now > endAt);
             })
             .sort((a, b) => {
-                // 종료일 기준으로 최신순 정렬 (endAt이 없으면 startAt 사용)
+                // 종료일 기준으로 최신순 정렬
+                // 포트폴리오: 투표 종료일(voteEndAt) 우선, 없으면 제출 종료일(endAt), 없으면 시작일(startAt)
+                // 코드: 제출 종료일(endAt) 우선, 없으면 시작일(startAt)
                 const aType = String(a.type || '').toUpperCase();
                 const bType = String(b.type || '').toUpperCase();
-                const aEndKey = aType === 'PORTFOLIO' ? (a.voteEndAt || a.endAt || a.startAt) : (a.endAt || a.startAt);
-                const bEndKey = bType === 'PORTFOLIO' ? (b.voteEndAt || b.endAt || b.startAt) : (b.endAt || b.startAt);
+                
+                const getEndDate = (challenge: any) => {
+                    if (challenge.type === 'PORTFOLIO') {
+                        // 포트폴리오는 투표 종료일을 우선으로 사용
+                        return challenge.voteEndAt || challenge.endAt || challenge.startAt;
+                    } else {
+                        // 코드는 제출 종료일을 사용
+                        return challenge.endAt || challenge.startAt;
+                    }
+                };
+                
+                const aEndKey = getEndDate(a);
+                const bEndKey = getEndDate(b);
                 const aEndDate = new Date(aEndKey).getTime();
                 const bEndDate = new Date(bEndKey).getTime();
                 return bEndDate - aEndDate;
-            })
-            .slice(0, 8); // 최대 8개만
+            }); // 제한 없이 모든 종료된 챌린지 표시
 
         return pastChallenges.map(challenge => {
-            const endDate = new Date(challenge.endAt || challenge.startAt);
+            // 포트폴리오는 투표 종료일, 코드는 제출 종료일을 표시
             const isCode = challenge.type === "CODE";
+            const endDate = isCode 
+                ? new Date(challenge.endAt || challenge.startAt)
+                : new Date(challenge.voteEndAt || challenge.endAt || challenge.startAt);
             const statusBadge = '종료';
             const statusBadgeClass = 'border-neutral-300 bg-neutral-50 text-neutral-600';
             
@@ -245,7 +260,6 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-600">
                         <p>📅 {endDate.toLocaleDateString('ko-KR')} 종료</p>
-                        <p className="text-[12px] text-gray-500">✅ 종료된 챌린지</p>
                     </div>
                 ),
                 ctaLabel: "자세히 보기",

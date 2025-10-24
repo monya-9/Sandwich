@@ -20,6 +20,10 @@ export default function ChallengeListPage() {
 	const [pastLoading, setPastLoading] = useState(false);
 	const admin = isAdmin();
 	const rolloverRef = useRef(false);
+	
+	// 지난 챌린지 캐러셀 상태
+	const [pastChallengeIndex, setPastChallengeIndex] = useState(0);
+	const itemsPerPage = 4;
 
 	// 현재 챌린지 데이터 가져오기
 	useEffect(() => {
@@ -73,6 +77,7 @@ export default function ChallengeListPage() {
 		getPastChallenges()
 			.then((pastData) => {
 				setPastChallenges(pastData);
+				setPastChallengeIndex(0); // 데이터 로드 시 인덱스 초기화
 			})
 			.catch((error) => {
 				console.error('지난 챌린지 데이터 로딩 실패:', error);
@@ -81,6 +86,22 @@ export default function ChallengeListPage() {
 				setPastLoading(false);
 			});
 	}, []);
+	
+	// 지난 챌린지 캐러셀 핸들러
+	const handlePrevPastChallenges = () => {
+		setPastChallengeIndex(prev => Math.max(0, prev - itemsPerPage));
+	};
+	
+	const handleNextPastChallenges = () => {
+		setPastChallengeIndex(prev => Math.min(pastChallenges.length - itemsPerPage, prev + itemsPerPage));
+	};
+	
+	// 현재 표시할 지난 챌린지
+	const displayedPastChallenges = pastChallenges.slice(pastChallengeIndex, pastChallengeIndex + itemsPerPage);
+	
+	// 이전/다음 버튼 활성화 상태
+	const canGoPrev = pastChallengeIndex > 0;
+	const canGoNext = pastChallengeIndex + itemsPerPage < pastChallenges.length;
 
     // 보상 수령 기능 제거됨
 
@@ -168,16 +189,17 @@ export default function ChallengeListPage() {
 					<div className="relative">
 						{/* ⬅️ 왼쪽 버튼: 카드 밖으로 살짝 */}
 						<button
+							onClick={handlePrevPastChallenges}
 							className={`
 								absolute left-[-10px] md:left-[-14px] top-1/2 -translate-y-1/2
-								rounded-full border p-2 shadow-sm transition-colors
-								${pastChallenges.length <= 4 
+								rounded-full border p-2 shadow-sm transition-colors z-10
+								${!canGoPrev
 									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-700' 
 									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700/60 dark:text-neutral-200'
 								}
 							`}
 							aria-label="이전"
-							disabled={pastChallenges.length <= 4}
+							disabled={!canGoPrev}
 						>
 							<ChevronLeft className="h-5 w-5" />
 						</button>
@@ -189,21 +211,21 @@ export default function ChallengeListPage() {
 								[0, 1, 2, 3].map((i) => (
 									<div
 										key={i}
-								className="h-[160px] rounded-2xl border border-neutral-200 bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-800/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
+								className="h-[180px] rounded-2xl border border-neutral-200 bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-800/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
 									/>
 								))
-							) : pastChallenges.length > 0 ? (
+							) : displayedPastChallenges.length > 0 ? (
 								// 실제 지난 챌린지 데이터
-								pastChallenges.slice(0, 4).map((challenge) => (
+								displayedPastChallenges.map((challenge) => (
 									<div
 										key={challenge.id}
-								className="group h-[160px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+								className="group h-[180px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
 										onClick={() => window.location.href = `/challenge/${challenge.type.toLowerCase()}/${challenge.id}`}
 									>
 										<div className="flex flex-col justify-between h-full">
-											<div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+											<div className="flex-1 overflow-hidden min-h-0">
+                                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
 														challenge.type === 'CODE' 
 													? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
 													: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
@@ -211,19 +233,24 @@ export default function ChallengeListPage() {
 														{challenge.type === 'CODE' ? '코드' : '포트폴리오'}
 													</span>
                                                 {/* 상태 배지: 지난 챌린지는 모두 종료 처리 */}
-											<span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
+											<span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300 flex-shrink-0">
                                                     종료
                                                 </span>
 												</div>
-											<h4 className="font-semibold text-sm text-neutral-800 dark:text-neutral-200 mb-1 line-clamp-2">
+											<h4 className="font-semibold text-sm text-neutral-800 dark:text-neutral-200 mb-2 line-clamp-2">
 													{challenge.subtitle}
 												</h4>
-											<div className="text-xs text-neutral-600 dark:text-neutral-400">
+											<div className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3">
 													{challenge.description}
 												</div>
 										</div>
-										<div className="text-xs text-neutral-500 dark:text-neutral-400 text-right">
-											{challenge.ctaLabel}
+										<div className="flex items-center justify-between mt-2 flex-shrink-0 text-xs">
+											<span className="text-neutral-500 dark:text-neutral-400">
+												✅ 종료된 챌린지
+											</span>
+											<span className="text-neutral-500 dark:text-neutral-400">
+												{challenge.ctaLabel}
+											</span>
 										</div>
 									</div>
 								</div>
@@ -237,16 +264,17 @@ export default function ChallengeListPage() {
 
 						{/* ➡️ 오른쪽 버튼: 카드 밖으로 살짝 */}
 						<button
+							onClick={handleNextPastChallenges}
 							className={`
 								absolute right-[-10px] md:right-[-14px] top-1/2 -translate-y-1/2
-								rounded-full border p-2 shadow-sm transition-colors
-								${pastChallenges.length <= 4 
+								rounded-full border p-2 shadow-sm transition-colors z-10
+								${!canGoNext
 									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-700' 
 									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700/60 dark:text-neutral-200'
 								}
 							`}
 							aria-label="다음"
-							disabled={pastChallenges.length <= 4}
+							disabled={!canGoNext}
 						>
 							<ChevronRight className="h-5 w-5" />
 						</button>

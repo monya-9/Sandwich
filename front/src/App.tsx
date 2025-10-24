@@ -144,6 +144,7 @@ function App() {
                                 <Route path="/challenge/code/:id/submissions" element={<CodeSubmissionListPage />} />
                                 <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />
                                 <Route path="/challenge/portfolio/:id/vote/:projectId" element={<PortfolioProjectDetailPage />} />
+                                <Route path="/challenge/portfolio/:id/projects/:projectId" element={<PortfolioProjectDetailPage />} />
                                 <Route path="/challenge/code/:id/submissions/:submissionId" element={<CodeSubmissionDetailPage />} />
 
                                 {/* (예시) 코드 제출 수정 */}

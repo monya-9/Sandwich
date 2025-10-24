@@ -513,6 +513,8 @@ export default function ChallengeDetailPage() {
     };
     const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" | null = React.useMemo(() => {
         if (type !== "PORTFOLIO") return null;
+        // 강제 ENDED 상태가 백엔드에 설정된 경우, 날짜와 무관하게 종료로 간주
+        if (challengeStatus === "ENDED") return "ENDED";
         const now = new Date();
         const endAt = parseTs(timeline.endAt);
         const vStart = parseTs(timeline.voteStartAt);
@@ -521,7 +523,7 @@ export default function ChallengeDetailPage() {
         if (vStart && now >= vStart) return "VOTING";
         if (endAt && now >= endAt) return "VOTE_WAITING";
         return "SUBMISSION_OPEN";
-    }, [type, timeline.endAt, timeline.voteStartAt, timeline.voteEndAt]);
+    }, [type, challengeStatus, timeline.endAt, timeline.voteStartAt, timeline.voteEndAt]);
 
     return (
         <div className="mx-auto w-full max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
@@ -565,7 +567,8 @@ export default function ChallengeDetailPage() {
                         {(() => {
                             const labelAndClass = () => {
                                 if (type === "PORTFOLIO") {
-                                    if (derivedStage === "ENDED") return { t: "종료", c: "border-neutral-300 text-neutral-600" };
+                                    // 강제 ENDED 우선 적용
+                                    if (challengeStatus === "ENDED" || derivedStage === "ENDED") return { t: "종료", c: "border-neutral-300 text-neutral-600" };
                                     if (derivedStage === "VOTING") return { t: "투표중", c: "border-purple-300 text-purple-700 bg-purple-50" };
                                     if (derivedStage === "VOTE_WAITING") return { t: "투표대기", c: "border-amber-300 text-amber-700 bg-amber-50" };
                                     return { t: "진행중", c: "border-emerald-300 text-emerald-700 bg-emerald-50" };

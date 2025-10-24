@@ -1,6 +1,6 @@
 // src/pages/challenge/CodeSubmitPage.tsx
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
 import { SectionCard, CTAButton, Row, Label, Help, GreenBox } from "../../components/challenge/common";
@@ -8,7 +8,7 @@ import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import { ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { createChallengeSubmission } from "../../api/submissionApi";
+import { createChallengeSubmission, updateChallengeSubmission, fetchChallengeSubmissionDetail } from "../../api/submissionApi";
 import Toast from "../../components/common/Toast";
 // import { useUserInfo } from "../../hooks/useUserInfo"; // 백엔드에서 자동으로 사용자 정보 처리
 
@@ -33,6 +33,9 @@ type AiStatus = {
 export default function CodeSubmitPage() {
     const { id: idStr } = useParams();
     const id = Number(idStr || 1);
+    const [searchParams] = useSearchParams();
+    const editSubmissionId = searchParams.get('edit') ? Number(searchParams.get('edit')) : null;
+    const isEditMode = !!editSubmissionId;
     
     // 백엔드 챌린지 데이터 상태
     const [data, setData] = useState<CodeChallengeDetail | null>(null);
@@ -111,22 +114,59 @@ export default function CodeSubmitPage() {
     const [form, setForm] = useState<CodeSubmitPayload>({
         title: "",
         repoUrl: "",
-        language: "node",
-        entrypoint: "npm start",
+        language: "python",
+        entrypoint: "",
         commitSha: "",
         note: "",
     });
+    const [submissionLoading, setSubmissionLoading] = useState(false);
 
-    // data가 로드된 후 form 초기값 설정
+    // data가 로드된 후 form 초기값 설정 (수정 모드가 아닐 때만)
     useEffect(() => {
-        if (data) {
+        if (data && !isEditMode) {
+            // 생성 모드: 언어는 파이썬 고정, 엔트리포인트는 사용자 입력 유도(빈 값)
             setForm(prev => ({
                 ...prev,
-                language: (data.submitExample?.language as any) || "node",
-                entrypoint: data.submitExample?.entrypoint || "npm start",
+                language: "python",
+                entrypoint: "",
             }));
         }
-    }, [data]);
+    }, [data, isEditMode]);
+
+    // 수정 모드일 때 기존 제출물 로드
+    useEffect(() => {
+        if (isEditMode && editSubmissionId) {
+            setSubmissionLoading(true);
+            const loadSubmission = async () => {
+                try {
+                    const submission = await fetchChallengeSubmissionDetail(id, editSubmissionId);
+                    
+                    // 백엔드 응답에서 언어와 엔트리포인트 추출
+                    const language = submission.language || submission.code?.language || "python";
+                    const rawEntrypoint = submission.entrypoint || submission.code?.entrypoint || "python main.py";
+                    const entrypoint = rawEntrypoint.replace(/_/g, " ");
+                    
+                    setForm({
+                        title: submission.title || "",
+                        repoUrl: submission.repoUrl || "",
+                        language: language,
+                        entrypoint: entrypoint,
+                        commitSha: submission.code?.commitSha || "",
+                        note: submission.desc || "",
+                    });
+                } catch (error) {
+                    console.error('제출물 로드 실패:', error);
+                    setSuccessToast({
+                        visible: true,
+                        message: '제출물을 불러올 수 없습니다.'
+                    });
+                } finally {
+                    setSubmissionLoading(false);
+                }
+            };
+            loadSubmission();
+        }
+    }, [isEditMode, editSubmissionId, id]);
     const [submitting, setSubmitting] = useState(false);
     const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
         visible: false,
@@ -177,8 +217,8 @@ export default function CodeSubmitPage() {
                 participationType: "SOLO" as const,
                 // 코드 챌린지 필수 필드
                 code: {
-                    language: form.language || "node",
-                    entrypoint: (form.entrypoint || "npm_start")
+                    language: form.language || "python",
+                    entrypoint: (form.entrypoint || "main.py")
                         .replace(/\s+/g, "_") // 공백을 언더스코어로 변경
                         .replace(/[^a-zA-Z0-9_\-.]/g, "_") // 특수문자를 언더스코어로 변경
                         .replace(/_+/g, "_") // 연속된 언더스코어를 하나로
@@ -187,17 +227,28 @@ export default function CodeSubmitPage() {
                 }
             };
             
-            await createChallengeSubmission(id, submissionData);
-            setSuccessToast({
-                visible: true,
-                message: "제출이 접수되었습니다."
-            });
-            nav(`/challenge/code/${id}/submissions`, { replace: true });
+            if (isEditMode && editSubmissionId) {
+                // 수정 모드
+                await updateChallengeSubmission(id, editSubmissionId, submissionData);
+                setSuccessToast({
+                    visible: true,
+                    message: "제출물이 수정되었습니다."
+                });
+                nav(`/challenge/code/${id}/submissions/${editSubmissionId}`, { replace: true });
+            } else {
+                // 생성 모드
+                await createChallengeSubmission(id, submissionData);
+                setSuccessToast({
+                    visible: true,
+                    message: "제출이 접수되었습니다."
+                });
+                nav(`/challenge/code/${id}/submissions`, { replace: true });
+            }
         } catch (error) {
-            console.error('제출 실패:', error);
+            console.error(isEditMode ? '수정 실패:' : '제출 실패:', error);
             setSuccessToast({
                 visible: true,
-                message: "제출 중 오류가 발생했습니다. 다시 시도해주세요."
+                message: isEditMode ? "수정 중 오류가 발생했습니다. 다시 시도해주세요." : "제출 중 오류가 발생했습니다. 다시 시도해주세요."
             });
         } finally {
             setSubmitting(false);
@@ -205,13 +256,15 @@ export default function CodeSubmitPage() {
     };
 
     // 로딩 중일 때 로딩 화면 표시
-    if (loading || !data) {
+    if (loading || !data || (isEditMode && submissionLoading)) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-3 text-neutral-600 dark:text-neutral-300 mb-4">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 dark:border-neutral-600"></div>
-                        <span className="text-lg font-medium">챌린지 정보를 불러오는 중...</span>
+                        <span className="text-lg font-medium">
+                            {isEditMode ? '제출물을 불러오는 중...' : '챌린지 정보를 불러오는 중...'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -242,7 +295,7 @@ export default function CodeSubmitPage() {
                     <ChevronLeft className="h-5 w-5 dark:text-white" />
                 </button>
                 <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px] dark:text-white">
-                    {weeklyData?.title || data.title} — 코드 제출
+                    {weeklyData?.title || data.title} — {isEditMode ? '코드 수정' : '코드 제출'}
                 </h1>
             </div>
 
@@ -318,7 +371,7 @@ export default function CodeSubmitPage() {
                                         className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.language}
                                         onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
-                                        placeholder='예) node, python'
+                                        placeholder='node, python, java, ts 등 (소문자)'
                                     />
                                 </Row>
                                 <Row>
@@ -327,7 +380,7 @@ export default function CodeSubmitPage() {
                                         className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.entrypoint}
                                         onChange={(e) => setForm((f) => ({ ...f, entrypoint: e.target.value }))}
-                                        placeholder='예) "npm start" 또는 "python main.py"'
+                                        placeholder='예시) main.py'
                                     />
                                 </Row>
                             </div>
@@ -365,12 +418,12 @@ export default function CodeSubmitPage() {
                                 >
                                     {submitting ? (
                                         <>
-                                            <Loader2 className="mr-1 h-4 w-4 animate-spin" /> 제출 중…
+                                            <Loader2 className="mr-1 h-4 w-4 animate-spin" /> {isEditMode ? '수정 중…' : '제출 중…'}
                                         </>
                                     ) : isChallengeEnded ? (
-                                        "제출 불가"
+                                        isEditMode ? "수정 불가" : "제출 불가"
                                     ) : (
-                                        "제출하기"
+                                        isEditMode ? "수정하기" : "제출하기"
                                     )}
                                 </CTAButton>
                             </div>

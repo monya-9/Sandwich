@@ -100,7 +100,7 @@ export default function SecurityOtpHistoryPage() {
                 <select
                     value={hours}
                     onChange={(e) => setHours(parseInt(e.target.value, 10))}
-                    className="border rounded px-2 py-1 text-sm"
+                    className="border rounded px-2 py-1 text-sm bg-white"
                 >
                     <option value={1}>지난 1시간</option>
                     <option value={6}>지난 6시간</option>
