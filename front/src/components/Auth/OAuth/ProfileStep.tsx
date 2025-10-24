@@ -28,12 +28,6 @@ const ProfileStep = () => {
         const token = urlParams.get("token");
         const refreshToken = urlParams.get("refreshToken");
         
-        console.log("🔍 ProfileStep useEffect 토큰 처리:", {
-            token: token ? "있음" : "없음",
-            refreshToken: refreshToken ? "있음" : "없음",
-            urlParams: urlParams.toString()
-        });
-        
         if (token) {
             // 토큰 저장
             setToken(token, true);
@@ -44,10 +38,6 @@ const ProfileStep = () => {
             // URL 정리 (토큰 정보 제거)
             const cleanUrl = window.location.pathname;
             window.history.replaceState(null, "", cleanUrl);
-            
-            console.log("🔍 토큰 저장 완료:", {
-                storedToken: localStorage.getItem("accessToken") ? "있음" : "없음"
-            });
         }
     }, []);
 
@@ -61,15 +51,8 @@ const ProfileStep = () => {
             return;
         }
 
-        // ✅ 토큰 체크 및 디버깅
+        // ✅ 토큰 체크
         const token = localStorage.getItem("accessToken");
-        console.log("🔍 ProfileStep 토큰 체크:", {
-            token: token ? "있음" : "없음",
-            tokenLength: token?.length,
-            localStorage: Object.keys(localStorage).filter(k => k.includes('Token') || k.includes('token')),
-            urlParams: new URLSearchParams(window.location.search).toString()
-        });
-        
         if (!token) {
             setToast({
                 visible: true,
@@ -93,10 +76,6 @@ const ProfileStep = () => {
 
             // ✅ 닉네임을 localStorage에 저장
             localStorage.setItem("userNickname", nickname);
-            console.log("🔍 닉네임 저장 완료:", {
-                nickname,
-                storedNickname: localStorage.getItem("userNickname")
-            });
 
             setToast({
                 visible: true,
