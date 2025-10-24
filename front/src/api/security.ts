@@ -94,7 +94,7 @@ export async function adminRevokeAllDevicesByUser(userId: number): Promise<{ rev
     const res = await api.post<{ revoked: number }>(
         `/admin/devices/revoke-all/${userId}`,
         undefined,
-        { baseURL: "" }
+        { baseURL: process.env.REACT_APP_API_BASE || "" }
     );
     return res.data;
 }

@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosHeaders, AxiosRequestConfig } from "axios";
 import { getV3Token } from "../lib/recaptchaV3";
 
 const api = axios.create({
-    baseURL: "/api",
+    baseURL: process.env.REACT_APP_API_BASE || "/api",
     withCredentials: true,
 });
 
