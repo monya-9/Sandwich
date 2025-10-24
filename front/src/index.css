@@ -147,7 +147,7 @@ input[type="radio"]:not(.dark) {
   accent-color: #ffffff !important;
 }
 
-/* 체크박스/라디오박스 완전 리셋 */
+/* 체크박스/라디오박스 기본 스타일 */
 input[type="checkbox"],
 input[type="radio"] {
   -webkit-appearance: none !important;
@@ -159,7 +159,9 @@ input[type="radio"] {
   background: #ffffff !important;
   border-radius: 4px !important;
   cursor: pointer !important;
-  margin: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: 0 !important;
   padding: 0 !important;
   position: relative !important;
   display: inline-block !important;
