@@ -27,6 +27,7 @@ const OAuthSuccessHandler: React.FC = () => {
             const provider = q.get("provider");
             const emailFromUrl = q.get("email") || undefined;
             const isProfileSetFlag = q.get("isProfileSet") === "true";
+            const needNickname = q.get("needNickname") === "true";
 
             if (!token) {
                 window.location.replace("/login");
@@ -40,10 +41,24 @@ const OAuthSuccessHandler: React.FC = () => {
             clearState(); // React 상태만 즉시 초기화
 
             // ✅ 3. 새 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
+            console.log("🔍 OAuthSuccessHandler 토큰 저장:", {
+                token: token ? "있음" : "없음",
+                tokenLength: token?.length,
+                refreshToken: refreshToken ? "있음" : "없음",
+                provider,
+                needNickname
+            });
+            
             setToken(token, true); // => accessToken을 localStorage에
             if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
             if (provider) localStorage.setItem("lastLoginMethod", provider);
             if (emailFromUrl) localStorage.setItem("userEmail", emailFromUrl);
+            
+            // 토큰 저장 확인
+            console.log("🔍 토큰 저장 후 확인:", {
+                storedToken: localStorage.getItem("accessToken") ? "있음" : "없음",
+                storedRefreshToken: localStorage.getItem("refreshToken") ? "있음" : "없음"
+            });
 
             // URL 정리 (히스토리만 치환)
             window.history.replaceState(null, "", "/oauth2/success");
@@ -71,8 +86,12 @@ const OAuthSuccessHandler: React.FC = () => {
                 // ✅ 6. 컨텍스트 갱신
                 login(me.email || emailFromUrl);
 
-                // ✅ 7. 닉네임 존재 여부에 따라 이동 (없으면 프로필 스텝)
-                window.location.replace(display ? "/" : "/oauth/profile-step");
+                // ✅ 7. 닉네임 존재 여부에 따라 이동 (needNickname 파라미터 우선)
+                if (needNickname) {
+                    window.location.replace("/oauth/profile-step");
+                } else {
+                    window.location.replace(display ? "/" : "/oauth/profile-step");
+                }
             } catch {
                 // 실패 시에도 최소한 로그인 컨텍스트는 갱신
                 login(emailFromUrl);

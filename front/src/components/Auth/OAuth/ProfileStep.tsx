@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axiosInstance";
 import PositionSelect from "../Join/Profile/PositionSelect";
@@ -8,6 +8,7 @@ import NameInput from "../Join/Profile/NameInput";
 import logo from "../../../assets/logo.png";
 import { positionMap, interestMap } from "../../../constants/position";
 import Toast from "../../common/Toast";
+import { setToken } from "../../../utils/tokenStorage";
 
 const ProfileStep = () => {
     const [nickname, setNickname] = useState("");
@@ -20,6 +21,25 @@ const ProfileStep = () => {
         type: 'success'
     });
     const navigate = useNavigate();
+
+    // ✅ URL 파라미터에서 토큰 처리
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        const refreshToken = urlParams.get("refreshToken");
+        
+        if (token) {
+            // 토큰 저장
+            setToken(token, true);
+            if (refreshToken) {
+                localStorage.setItem("refreshToken", refreshToken);
+            }
+            
+            // URL 정리 (토큰 정보 제거)
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState(null, "", cleanUrl);
+        }
+    }, []);
 
     const handleSubmit = async () => {
         if (!nickname || !position || interests.length === 0) {
@@ -53,6 +73,9 @@ const ProfileStep = () => {
                 positionId,
                 interestIds,
             });
+
+            // ✅ 닉네임을 localStorage에 저장
+            localStorage.setItem("userNickname", nickname);
 
             setToast({
                 visible: true,

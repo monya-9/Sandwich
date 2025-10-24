@@ -32,7 +32,9 @@ public class OAuth2FailureHandler implements AuthenticationFailureHandler {
         String provider = request.getParameter("state");
 
         // 기본 fallback redirect URI
-        String redirectUrl = "http://localhost:3000/oauth2/error"
+        String frontendUrl = System.getenv("FRONTEND_URL") != null ? 
+                System.getenv("FRONTEND_URL") : "http://localhost:3000";
+        String redirectUrl = frontendUrl + "/oauth2/error"
                 + "?provider=" + URLEncoder.encode(provider != null ? provider : "unknown", StandardCharsets.UTF_8)
                 + "&message=" + errorMessage;
 
