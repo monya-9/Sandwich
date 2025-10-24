@@ -1,13 +1,15 @@
 import React, { useState } from "react";
+import ReactDOM from "react-dom";
 import { FaQrcode } from "react-icons/fa";
 
 interface QrCodeActionProps {
   qrImageUrl: string;
   title?: string;
   thumbnailUrl?: string;
+  isMobile?: boolean;
 }
 
-export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl }: QrCodeActionProps) {
+export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile = false }: QrCodeActionProps) {
   const [open, setOpen] = useState(false);
 
   const finalTitle = title || "프로젝트 이름";
@@ -16,27 +18,27 @@ export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl }: QrCode
   return (
     <div className="relative">
       <button
-        className="flex flex-col items-center gap-1 group"
+        className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
         onClick={() => setOpen(true)}
       >
-        <div className="w-14 h-14 rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1">
-          <FaQrcode className="w-7 h-7" />
+        <div className={`rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
+          <FaQrcode className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />
         </div>
-        <span className="text-sm text-white font-semibold text-center" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>QR코드</span>
+        <span className={`font-semibold text-center ${isMobile ? 'text-xs text-gray-800' : 'text-sm text-white'}`} style={isMobile ? {} : { textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>QR코드</span>
       </button>
       
       {/* 공유 모달과 동일한 레이아웃/크기 */}
-      {open && (
+      {open && ReactDOM.createPortal(
         <>
           {/* 배경 */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[10000]"
             style={{ background: "rgba(0, 0, 0, 0.65)" }}
             onClick={() => setOpen(false)}
           />
 
           {/* 컨테이너 */}
-          <div className="fixed z-50 inset-0 flex items-center justify-center">
+          <div className="fixed z-[10001] inset-0 flex items-center justify-center">
             <div
               className="bg-white w-[520px] max-w-[95vw] rounded-2xl shadow-2xl px-9 py-8 relative flex flex-col"
               style={{ fontFamily: "GmarketSans, sans-serif" }}
@@ -73,7 +75,8 @@ export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl }: QrCode
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
