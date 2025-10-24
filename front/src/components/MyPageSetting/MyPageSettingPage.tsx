@@ -7,8 +7,9 @@ import { UserApi, UserProfileResponse } from "../../api/userApi";
 import WorkFieldModal from "./WorkFieldModal";
 import InterestFieldModal from "./InterestFieldModal";
 
-import { positionMap, interestMap } from "../../constants/position";
+import { positionMap, FALLBACK_INTERESTS_GENERAL } from "../../constants/position";
 import Toast from "../common/Toast";
+import api from "../../api/axiosInstance";
 
 const MAX20 = 20;
 const MAX_FILE_MB = 10;
@@ -214,13 +215,13 @@ const MyPageSettingPage: React.FC = () => {
 	};
 
 	// 프로필 부분 업데이트(필드 일부만 변경)
-	const persistProfilePartial = useCallback(async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>) => {
+	const persistProfilePartial = useCallback(async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>, showToast: boolean = true) => {
 		const base = profile;
 		if (!base) return false;
 		await UserApi.updateProfile({
 			nickname: partial.nickname ?? (base.nickname || ""),
 			positionId: partial.positionId ?? (base.position?.id || 0),
-			interestIds: partial.interestIds ?? (base.interests?.map((i) => i.id) || []),
+			interestIds: partial.interestIds !== undefined ? partial.interestIds : (base.interests?.map((i) => i.id) || []),
 			bio: partial.bio ?? (base.bio || ""),
 			skills: partial.skills ?? (base.skills || ""),
 			github: partial.github ?? (base.github || ""),
@@ -229,10 +230,13 @@ const MyPageSettingPage: React.FC = () => {
 		});
 		const refreshed = await UserApi.getMe();
 		setProfile(refreshed);
-		setSuccessToast({
-			visible: true,
-			message: "설정 내용이 저장되었습니다."
-		});
+		
+		if (showToast) {
+			setSuccessToast({
+				visible: true,
+				message: "설정 내용이 저장되었습니다."
+			});
+		}
 		return true;
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -377,10 +381,36 @@ const MyPageSettingPage: React.FC = () => {
 		if (!name) return profile?.position?.id || 0;
 		return positionMap[name] ?? profile?.position?.id ?? 0;
 	};
-	const mapInterestNamesToIds = (names: string[]): number[] => {
-		const dynamic: Record<string, number> = {};
-		(profile?.interests || []).forEach((i) => { dynamic[i.name] = i.id; });
-		return names.map((n) => dynamic[n] ?? interestMap[n]).filter((v): v is number => typeof v === "number");
+	const mapInterestNamesToIds = async (names: string[]): Promise<number[]> => {
+		try {
+			// API에서 최신 관심 분야 데이터 로드
+			const res = await api.get<Array<{ id: number; name: string }>>("/meta/interests?type=GENERAL");
+			const apiInterests = Array.isArray(res.data) ? res.data : [];
+			
+			// API 데이터와 폴백 데이터를 결합
+			const allInterests = apiInterests.length > 0 ? apiInterests : FALLBACK_INTERESTS_GENERAL;
+			const interestMap: Record<string, number> = {};
+			allInterests.forEach((item) => {
+				interestMap[item.name] = item.id;
+			});
+			
+			// 현재 프로필의 관심 분야도 추가 (혹시 API에 없는 경우 대비)
+			(profile?.interests || []).forEach((i) => { 
+				interestMap[i.name] = i.id; 
+			});
+			
+			return names.map((n) => interestMap[n]).filter((v): v is number => typeof v === "number");
+		} catch (error) {
+			// API 실패 시 폴백 사용
+			const fallbackMap: Record<string, number> = {};
+			FALLBACK_INTERESTS_GENERAL.forEach((item) => {
+				fallbackMap[item.name] = item.id;
+			});
+			(profile?.interests || []).forEach((i) => { 
+				fallbackMap[i.name] = i.id; 
+			});
+			return names.map((n) => fallbackMap[n]).filter((v): v is number => typeof v === "number");
+		}
 	};
 
 	// 닉네임 실시간(디바운스) 중복 검사
@@ -440,7 +470,7 @@ const MyPageSettingPage: React.FC = () => {
 					localStorage.setItem(scopedKey("profileOneLine"), one);
 					sessionStorage.setItem(scopedKey("profileOneLine"), one);
 					localChanged = true;
-				}
+					}
 				if (localChanged) {
 					setSuccessToast({
 						visible: true,
@@ -463,28 +493,63 @@ const MyPageSettingPage: React.FC = () => {
 			localStorage.setItem("workFields", JSON.stringify(values));
 			sessionStorage.setItem("workFields", JSON.stringify(values));
 		} catch {}
-		// 값이 없으면 서버 업데이트 생략
-		if (values.length > 0) {
-			const posId = mapWorkNameToId(values[0]);
-			await persistProfilePartial({ positionId: posId });
-		} else {
-			// 로컬만 변경된 경우에도 사용자 피드백 제공
-			setSuccessToast({
+		
+		try {
+			// 값이 없으면 서버 업데이트 생략
+			if (values.length > 0) {
+				const posId = mapWorkNameToId(values[0]);
+				await persistProfilePartial({ positionId: posId }, false); // 토스트 표시하지 않음
+				
+				// 작업 분야 저장 성공 토스트 표시
+				setSuccessToast({
+					visible: true,
+					message: "작업 분야가 저장되었습니다."
+				});
+			} else {
+				// 로컬만 변경된 경우에도 사용자 피드백 제공
+				setSuccessToast({
+					visible: true,
+					message: "작업 분야가 해제되었습니다."
+				});
+			}
+		} catch (error: any) {
+			const errorMessage = error?.response?.data?.message || error?.message || "작업 분야 저장에 실패했습니다. 다시 시도해주세요.";
+			setErrorToast({
 				visible: true,
-				message: "설정 내용이 저장되었습니다."
+				message: errorMessage
 			});
+			return; // 에러 시 모달 닫지 않음
 		}
+		
 		setShowWorkModal(false);
 	};
 	const onConfirmInterestFields = async (values: string[]) => {
+		// 모달을 먼저 닫기
+		setShowInterestModal(false);
+		
 		setInterestFields(values);
 		try {
 			localStorage.setItem("interestFields", JSON.stringify(values));
 			sessionStorage.setItem("interestFields", JSON.stringify(values));
 		} catch {}
-		const ids = mapInterestNamesToIds(values);
-		await persistProfilePartial({ interestIds: ids });
-		setShowInterestModal(false);
+		
+		try {
+			const ids = await mapInterestNamesToIds(values);
+			await persistProfilePartial({ interestIds: ids }, false); // 토스트 표시하지 않음
+			
+			// 성공 토스트 표시
+			setSuccessToast({
+				visible: true,
+				message: values.length > 0 ? "관심 분야가 저장되었습니다." : "관심 분야가 모두 해제되었습니다."
+			});
+			
+		} catch (error: any) {
+			const errorMessage = error?.response?.data?.message || error?.message || "관심 분야 저장에 실패했습니다. 다시 시도해주세요.";
+			setErrorToast({
+				visible: true,
+				message: errorMessage
+			});
+		}
 	};
 
 
@@ -587,9 +652,9 @@ const MyPageSettingPage: React.FC = () => {
 								) : (
 									// 편집 모드
 									<div>
-										<div className="relative">
-											<input
-												type="text"
+                                <div className="relative">
+												<input
+							type="text"
 												value={tempNickname}
 												onChange={(e) => {
 													const newValue = e.target.value.slice(0, MAX20);
@@ -598,14 +663,14 @@ const MyPageSettingPage: React.FC = () => {
 													setNicknameCheckResult(null);
 													setIsCheckingNickname(false);
 												}}
-												aria-label="닉네임"
-												maxLength={MAX20}
+							aria-label="닉네임"
+							maxLength={MAX20}
 												aria-invalid={!!userNameError}
 												aria-describedby={userNameError ? 'nickname-error' : undefined}
 												className={`w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white ${userNameError ? "border-[#DB2E2E]" : "border-[#E5E7EB] dark:border-[var(--border-color)]"}`}
 											/>
 											<Counter value={tempNickname.length} />
-										</div>
+								</div>
 										{userNameError && (
 											<p id="nickname-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">{userNameError}</p>
 										)}
@@ -627,8 +692,8 @@ const MyPageSettingPage: React.FC = () => {
 														<div className="w-3 h-3 bg-red-500 rounded-full"></div>
 														<span className="text-[12px] text-red-600 dark:text-red-400">이미 사용 중인 닉네임입니다</span>
 													</>
-												) : null}
-											</div>
+										) : null}
+							</div>
 										)}
 										<div className="mt-3 flex justify-end gap-2">
 											<button
@@ -651,7 +716,7 @@ const MyPageSettingPage: React.FC = () => {
 												저장
 											</button>
 										</div>
-									</div>
+								</div>
 								)}
 							</div>
 
@@ -660,7 +725,7 @@ const MyPageSettingPage: React.FC = () => {
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
 								<div className="flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
-									<div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
+                                        <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
 									<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
 										{isEditingNickname 
 											? (tempNickname.trim() ? tempNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')
@@ -731,14 +796,14 @@ const MyPageSettingPage: React.FC = () => {
 							) : (
 								// 편집 모드
 								<div>
-									<textarea
+                            <textarea
 										value={tempBio}
 										onChange={(e) => setTempBio(e.target.value)}
-										rows={5}
-										placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
-										aria-label="소개"
-										className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
-									/>
+								rows={5}
+								placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
+								aria-label="소개"
+                                className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+							/>
 									<div className="mt-3 flex justify-end gap-2">
 										<button
 											type="button"

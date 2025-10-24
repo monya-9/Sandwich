@@ -54,7 +54,7 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const onToggleRepresentative = async () => {
 		if (isPrivate) return; // 비공개 시 비활성화
 		try {
-			const response = await CareerApi.setRepresentative(item.id);
+			await CareerApi.setRepresentative(item.id);
 			
 			setSuccessToast({
 				visible: true,
