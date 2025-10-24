@@ -214,6 +214,7 @@ public class AdminChallengeService {
             }
         }
 
+
         // 3) 캐시 정리 + TestResult 명시적 삭제 (CASCADE 미설정)
         var subIds = submissionRepo.findIdsByChallengeId(challengeId);
         for (Long sid : subIds) {
