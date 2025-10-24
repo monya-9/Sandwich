@@ -31,6 +31,10 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		visible: false,
 		message: ''
 	});
+	const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 	const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; commentId: number | null }>({
 		visible: false,
 		commentId: null
@@ -50,12 +54,20 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 	const onToggleRepresentative = async () => {
 		if (isPrivate) return; // 비공개 시 비활성화
 		try {
-			await CareerApi.setRepresentative(item.id);
+			const response = await CareerApi.setRepresentative(item.id);
+			
+			setSuccessToast({
+				visible: true,
+				message: item.isRepresentative ? "대표 커리어가 해제되었습니다." : "대표 커리어로 설정되었습니다."
+			});
+			
+			// 데이터 다시 로드
 			onUpdated && onUpdated();
-		} catch (e) {
+		} catch (e: any) {
+			const errorMessage = e?.response?.data?.message || e?.message || "대표 설정에 실패했습니다. 다시 시도해주세요.";
 			setErrorToast({
 				visible: true,
-				message: "대표 설정에 실패했습니다."
+				message: errorMessage
 			});
 		}
 	};
@@ -120,6 +132,15 @@ const CareerCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 				autoClose={3000}
 				closable={true}
 				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<Toast
+				visible={successToast.visible}
+				message={successToast.message}
+				type="success"
+				size="medium"
+				autoClose={2000}
+				closable={true}
+				onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
 			/>
 			<ConfirmModal
 				visible={deleteConfirm.visible}
