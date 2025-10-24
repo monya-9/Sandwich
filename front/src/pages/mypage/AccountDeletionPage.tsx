@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
 import { clearAllUserData } from "../../utils/tokenStorage";
+import Toast from "../../components/common/Toast";
 
 const AccountDeletionPage: React.FC = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [showSuccessToast, setShowSuccessToast] = useState(false);
     const navigate = useNavigate();
 
     const handleDeleteAccount = async () => {
@@ -25,12 +27,14 @@ const AccountDeletionPage: React.FC = () => {
             // 모든 사용자 데이터 삭제
             clearAllUserData();
             
-            // 성공 메시지 표시 후 로그인 페이지로 이동
-            alert("회원탈퇴가 완료되었습니다.");
-            navigate("/login", { replace: true });
+            // 성공 토스트 표시
+            setShowSuccessToast(true);
             
-            // 페이지 새로고침으로 완전한 로그아웃 처리
-            window.location.reload();
+            // 토스트 표시 후 로그인 페이지로 이동
+            setTimeout(() => {
+                navigate("/login", { replace: true });
+                window.location.reload();
+            }, 2000);
         } catch (err: any) {
             console.error("회원탈퇴 오류:", err);
             setError(err?.response?.data?.message || "회원탈퇴 중 오류가 발생했습니다.");
@@ -112,6 +116,15 @@ const AccountDeletionPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+            
+            <Toast
+                message="회원탈퇴가 완료되었습니다."
+                type="success"
+                size="medium"
+                visible={showSuccessToast}
+                onClose={() => setShowSuccessToast(false)}
+                autoClose={2000}
+            />
         </div>
     );
 };
