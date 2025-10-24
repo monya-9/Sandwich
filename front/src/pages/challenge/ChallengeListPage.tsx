@@ -18,6 +18,7 @@ export default function ChallengeListPage() {
 	const [pastChallenges, setPastChallenges] = useState<ChallengeCardData[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [pastLoading, setPastLoading] = useState(false);
+	const [autoRefreshing, setAutoRefreshing] = useState(false); // 🔥 자동 새로고침 상태
 	const admin = isAdmin();
 	const rolloverRef = useRef(false);
 	
@@ -25,8 +26,8 @@ export default function ChallengeListPage() {
 	const [pastChallengeIndex, setPastChallengeIndex] = useState(0);
 	const itemsPerPage = 4;
 
-	// 현재 챌린지 데이터 가져오기
-	useEffect(() => {
+	// 챌린지 데이터를 가져오는 함수
+	const loadChallenges = React.useCallback(() => {
 		setLoading(true);
 		getDynamicChallenges()
 			.then((dynamicChallenges) => {
@@ -41,38 +42,145 @@ export default function ChallengeListPage() {
 			});
 	}, []);
 
-	// 새로고침 없이 마감 시점 정확히 전환: 각 카드의 expireAtMs를 기준으로 타이머를 1회 설정
+	// 현재 챌린지 데이터 가져오기 (초기 로드)
+	useEffect(() => {
+		loadChallenges();
+	}, [loadChallenges]);
+
+	// 페이지가 다시 활성화될 때 데이터 새로고침 (어드민에서 생성 후 돌아왔을 때)
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (!document.hidden) {
+				console.log('🔄 페이지가 활성화되어 챌린지 데이터를 새로고침합니다.');
+				loadChallenges();
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [loadChallenges]);
+
+	// 🔥 마감 시점에 정확히 자동 전환: 각 챌린지의 정확한 마감 시간에만 새로고침
 	useEffect(() => {
 		const timers: number[] = [];
 		const now = Date.now();
-		challenges.forEach((c) => {
-			if (!c.expireAtMs) return;
-			const delay = c.expireAtMs - now;
-			if (delay <= 0) return;
+		let hasExpiredChallenge = false;
+		
+		// 타이머를 설정하는 헬퍼 함수
+		const setupTimer = (timeMs: number | undefined, label: string, challengeId: number, challengeType: string) => {
+			if (!timeMs) return;
+			
+			const delay = timeMs - now;
+			const timeDate = new Date(timeMs);
+			
+			if (delay <= 0) {
+				console.log(`⏰ [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 시간이 이미 지났습니다! (${timeDate.toLocaleString('ko-KR')})`);
+				hasExpiredChallenge = true;
+				return;
+			}
+			
+			console.log(`⏱️ [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 타이머 설정`);
+			console.log(`   → ${label} 시간: ${timeDate.toLocaleString('ko-KR')}`);
+			console.log(`   → 남은 시간: ${Math.floor(delay / 1000)}초 (${Math.floor(delay / 60000)}분)`);
+			
 			const t = window.setTimeout(async () => {
-				if (rolloverRef.current) return; // 중복 롤오버 방지
+				console.log(`🔔 [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 도달! 자동으로 새로고침합니다.`);
+				
+				if (rolloverRef.current) {
+					console.log('⚠️ 이미 업데이트 중... 스킵');
+					return;
+				}
+				
 				rolloverRef.current = true;
+				setAutoRefreshing(true); // 🔥 로딩 상태 표시
+				
 				try {
+					// 사용자가 변화를 인지할 수 있도록 최소 1초 대기
+					await new Promise(resolve => setTimeout(resolve, 1000));
+					
 					const [freshCurrent, freshPast] = await Promise.all([
 						getDynamicChallenges(),
 						getPastChallenges(),
 					]);
+					console.log(`✅ ${label} 자동 전환 완료!`);
 					setChallenges(freshCurrent);
 					setPastChallenges(freshPast);
 				} catch (e) {
-					// eslint-disable-next-line no-console
-					console.error('auto rollover refresh failed', e);
+					console.error('❌ 자동 새로고침 실패:', e);
 				} finally {
-					rolloverRef.current = false;
+					// 부드러운 전환을 위해 약간의 딜레이 후 로딩 해제
+					setTimeout(() => {
+						setAutoRefreshing(false);
+						rolloverRef.current = false;
+					}, 500);
 				}
 			}, delay);
+			
 			timers.push(t);
+		};
+		
+		challenges.forEach((c) => {
+			if (c.type === 'CODE') {
+				// 코드 챌린지: 마감 시간만 체크
+				setupTimer(c.expireAtMs, '진행 종료 (마감)', c.id, 'CODE');
+			} else if (c.type === 'PORTFOLIO') {
+				// 포트폴리오 챌린지: 3단계 모두 체크
+				console.log(`\n📋 [PORTFOLIO] 챌린지 ID ${c.id} 단계별 타이머 설정 중...`);
+				
+				// 1단계: 제출 종료 → 투표대기
+				setupTimer(c.endAtMs, '제출 종료 (→ 투표대기)', c.id, 'PORTFOLIO');
+				
+				// 2단계: 투표 시작 → 투표중
+				setupTimer(c.voteStartAtMs, '투표 시작 (→ 투표중)', c.id, 'PORTFOLIO');
+				
+				// 3단계: 투표 종료 → 지난 챌린지
+				setupTimer(c.voteEndAtMs, '투표 종료 (→ 지난 챌린지)', c.id, 'PORTFOLIO');
+				
+				console.log(`✅ [PORTFOLIO] 챌린지 ID ${c.id} 모든 단계 타이머 설정 완료\n`);
+			}
 		});
-		return () => { timers.forEach((t) => window.clearTimeout(t)); };
+		
+		// 🔥 이미 마감된 챌린지가 있으면 즉시 새로고침
+		if (hasExpiredChallenge && !rolloverRef.current) {
+			console.log('🔄 이미 마감된 챌린지 발견! 즉시 새로고침합니다.');
+			rolloverRef.current = true;
+			setAutoRefreshing(true); // 🔥 로딩 상태 표시
+			
+			// 사용자 인지를 위한 최소 대기 시간
+			Promise.all([
+				new Promise(resolve => setTimeout(resolve, 1000)),
+				getDynamicChallenges(),
+				getPastChallenges()
+			])
+				.then(([_, freshCurrent, freshPast]) => {
+					setChallenges(freshCurrent as any);
+					setPastChallenges(freshPast as any);
+					console.log('✅ 마감된 챌린지 제거 완료!');
+				})
+				.catch((e) => {
+					console.error('❌ 즉시 새로고침 실패:', e);
+				})
+				.finally(() => {
+					setTimeout(() => {
+						setAutoRefreshing(false);
+						rolloverRef.current = false;
+					}, 500);
+				});
+		}
+		
+		return () => { 
+			timers.forEach((t) => window.clearTimeout(t));
+			if (timers.length > 0) {
+				console.log(`🧹 타이머 ${timers.length}개 정리 완료`);
+			}
+		};
 	}, [challenges]);
 
-	// 지난 챌린지 데이터 가져오기
-	useEffect(() => {
+	// 지난 챌린지 데이터를 가져오는 함수
+	const loadPastChallenges = React.useCallback(() => {
 		setPastLoading(true);
 		getPastChallenges()
 			.then((pastData) => {
@@ -86,6 +194,26 @@ export default function ChallengeListPage() {
 				setPastLoading(false);
 			});
 	}, []);
+
+	// 지난 챌린지 데이터 가져오기 (초기 로드)
+	useEffect(() => {
+		loadPastChallenges();
+	}, [loadPastChallenges]);
+
+	// 페이지가 다시 활성화될 때 지난 챌린지도 함께 새로고침
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (!document.hidden) {
+				loadPastChallenges();
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [loadPastChallenges]);
 	
 	// 지난 챌린지 캐러셀 핸들러
 	const handlePrevPastChallenges = () => {
@@ -163,7 +291,7 @@ export default function ChallengeListPage() {
 			</div>
 
 			<main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-				{loading ? (
+				{(loading || autoRefreshing) ? (
 					/* 로딩 상태 - 전체 화면 */
 					<div className="flex items-center justify-center py-16">
 						<div className="text-center">
@@ -220,7 +348,7 @@ export default function ChallengeListPage() {
 									<div
 										key={challenge.id}
 								className="group h-[180px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-										onClick={() => window.location.href = `/challenge/${challenge.type.toLowerCase()}/${challenge.id}`}
+										onClick={() => navigate(`/challenge/${challenge.type.toLowerCase()}/${challenge.id}`)}
 									>
 										<div className="flex flex-col justify-between h-full">
 											<div className="flex-1 overflow-hidden min-h-0">

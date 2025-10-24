@@ -14,6 +14,7 @@ interface DropdownProps {
   placeholder?: string;
   className?: string;
   size?: 'sm' | 'md';
+  disabled?: boolean;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -22,7 +23,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
   onChange,
   placeholder = "선택하세요",
   className = "",
-  size = 'md'
+  size = 'md',
+  disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -58,8 +60,13 @@ export const Dropdown: React.FC<DropdownProps> = ({
       {/* 드롭다운 버튼 */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full ${sizeBtn} bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`flex items-center justify-between w-full ${sizeBtn} bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg transition-colors ${
+          disabled 
+            ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-neutral-800' 
+            : 'hover:bg-gray-50 dark:hover:bg-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+        }`}
       >
         <span className="text-gray-700 dark:text-white">{displayText}</span>
         <ChevronDown 
@@ -68,7 +75,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
       </button>
 
       {/* 드롭다운 메뉴 */}
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-black border border-gray-200 dark:border-white/20 rounded-lg shadow-lg z-50 animate-in slide-in-from-top-2 duration-200">
           {options.map((option) => (
             <button

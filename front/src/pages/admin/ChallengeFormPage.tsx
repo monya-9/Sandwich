@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { createChallenge, updateChallenge, type ChallengeUpsertRequest, fetchChallengeDetail, changeChallengeStatus, type ChallengeStatus, deleteChallenge, adminFetchChallenges, fetchAiGeneratedChallenges, type AiGeneratedChallenge } from "../../api/challengeApi";
+import { createChallenge, updateChallenge, type ChallengeUpsertRequest, fetchChallengeDetail, changeChallengeStatus, type ChallengeStatus, deleteChallenge, adminFetchChallenges, fetchAiGeneratedChallenges, fetchAiGeneratedMonthlyChallenges, type AiGeneratedChallenge } from "../../api/challengeApi";
 import { fetchMonthlyByYm, fetchMonthlyChallenge } from "../../api/monthlyChallenge";
 import { fetchWeeklyByKey, fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import SectionCard from "../../components/challenge/common/SectionCard";
@@ -280,9 +280,13 @@ export default function ChallengeFormPage() {
             (async () => {
                 setAiLoading(true);
                 try {
-                    const resp = await fetchAiGeneratedChallenges();
+                    const resp = type === "CODE" 
+                        ? await fetchAiGeneratedChallenges()
+                        : await fetchAiGeneratedMonthlyChallenges();
                     setAiChallenges(resp.data || []);
-                    setAiWeek(resp.week || "");
+                    // CODE는 week, PORTFOLIO는 ym 필드 사용
+                    const periodKey = type === "CODE" ? (resp as any).week : (resp as any).ym;
+                    setAiWeek(periodKey || "");
                 } catch (e) {
                     console.error("Failed to load AI challenges", e);
                     setAiChallenges([]);
@@ -292,7 +296,7 @@ export default function ChallengeFormPage() {
             })();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewMode, isLoggedIn, urlEditMode]);
+    }, [viewMode, isLoggedIn, urlEditMode, type]);
 
     // 드롭다운 전환 시 동작
     React.useEffect(() => {
@@ -450,29 +454,60 @@ export default function ChallengeFormPage() {
                 </div>
             )}
             {/* 드롭다운: 생성 / 수정·삭제 (생성 페이지에서만 노출) */}
-            {(urlEditMode !== "edit" || isTypeEditRoute) && (
-                <div className="mb-3">
-                    <label className="block mb-1 text-[14px] font-bold text-neutral-900">작업</label>
+            <div className="mb-3 flex gap-8">
+                {(urlEditMode !== "edit" || isTypeEditRoute) && (
+                    <div>
+                        <label className="block mb-1 text-[14px] font-bold text-neutral-900">작업</label>
+                        <div className="w-[220px]">
+                            <Dropdown
+                                options={[{ value: "CREATE", label: "챌린지 생성" }, { value: "MANAGE", label: "챌린지 수정/삭제" }]}
+                                value={viewMode}
+                                onChange={(nm) => {
+                                    const next = nm as "CREATE" | "MANAGE";
+                                    clearForm();
+                                    if (next === "MANAGE") {
+                                        setViewMode("MANAGE");
+                                    } else {
+                                        setSelectedTitle("");
+                                        setShowFullList(true);
+                                        setViewMode("CREATE");
+                                    }
+                                }}
+                                size="sm"
+                            />
+                        </div>
+                    </div>
+                )}
+                <div>
+                    <label className="block mb-1 text-[14px] font-bold text-neutral-900">타입</label>
                     <div className="w-[220px]">
                         <Dropdown
-                            options={[{ value: "CREATE", label: "챌린지 생성" }, { value: "MANAGE", label: "챌린지 수정/삭제" }]}
-                            value={viewMode}
-                            onChange={(nm) => {
-                                const next = nm as "CREATE" | "MANAGE";
-                                clearForm();
-                                if (next === "MANAGE") {
-                                    setViewMode("MANAGE");
-                                } else {
+                            options={[{ value: "CODE", label: "코드" }, { value: "PORTFOLIO", label: "포트폴리오" }]}
+                            value={type}
+                            onChange={(v) => {
+                                setType(v as any);
+                                // CREATE 모드에서 타입 변경 시 폼 초기화
+                                if (viewMode === "CREATE" && editingId === null) {
+                                    setTitle("");
+                                    setSummary("");
+                                    setYm("");
+                                    setWeek("");
+                                    setMust("");
+                                    setMd("");
+                                    setStartAt("");
+                                    setEndAt("");
+                                    setVoteStartAt("");
+                                    setVoteEndAt("");
                                     setSelectedTitle("");
-                                    setShowFullList(true);
-                                    setViewMode("CREATE");
+                                    setShowAiList(true); // 타입 변경 시 AI 목록 자동으로 펼치기
                                 }
                             }}
                             size="sm"
+                            disabled={editingId !== null || urlEditMode === "edit"}
                         />
                     </div>
                 </div>
-            )}
+            </div>
             {/* 상태 전환 버튼 (편집 대상 선택 시 표시) – 목록 패널 아래로 이동 */}
             {/* 저장 확인 모달 */}
             {saveConfirm.open && (
@@ -513,39 +548,42 @@ export default function ChallengeFormPage() {
                     {showAiList ? (
                         <>
                             <div className="mb-2 flex items-center justify-between">
-                                <div className="text-[14px] font-semibold text-emerald-900 dark:text-emerald-100">
-                                    AI 생성 문제 목록 {aiWeek && `(${aiWeek})`}
+                                <div className="text-[14px] font-semibold text-neutral-900 dark:text-white">
+                                    AI 생성 {type === "CODE" ? "코드" : "포트폴리오"} 문제 목록 {aiWeek && `(${aiWeek})`}
                                 </div>
                                 <button 
-                                    className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[12px] hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
+                                    className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[12px] text-neutral-700 hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
                                     onClick={()=> setShowAiList(false)}
                                 >
                                     접기
                                 </button>
                             </div>
                             {aiLoading ? (
-                                <div className="text-[13px] text-emerald-700 dark:text-emerald-200">불러오는 중...</div>
+                                <div className="text-[13px] text-neutral-700 dark:text-white">불러오는 중...</div>
                             ) : (
-                                <ul className="max-h-56 overflow-auto divide-y divide-emerald-200 dark:divide-emerald-700">
+                                <ul className="max-h-64 overflow-auto divide-y divide-emerald-200 dark:divide-emerald-700">
                                     {aiChallenges.map(ai => (
                                         <li key={ai.idx} className="py-2">
-                                            <div className="mb-1.5 flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <div className="text-[13.5px] font-semibold text-emerald-900 dark:text-emerald-100">
+                                            <div className="mb-1.5 flex items-start justify-between gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[13.5px] font-semibold text-neutral-900 dark:text-white mb-1">
                                                         #{ai.idx} {ai.title}
                                                     </div>
-                                                    <div className="mt-1 text-[12px] text-emerald-700 dark:text-emerald-200 line-clamp-2">
+                                                    <div className="text-[12px] text-neutral-700 dark:text-neutral-200 line-clamp-4">
                                                         {ai.summary}
                                                     </div>
                                                 </div>
                                                 <button 
-                                                    className="ml-2 rounded-full border border-emerald-500 bg-white px-3 py-1 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
+                                                    className="flex-shrink-0 rounded-full border border-emerald-500 bg-white px-3 py-1 text-[12px] font-medium text-neutral-900 hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
                                                     onClick={() => {
                                                         // AI 문제를 폼에 로드
-                                                        setType("CODE");
                                                         setTitle(ai.title);
                                                         setSummary(ai.summary);
-                                                        setWeek(aiWeek);
+                                                        if (type === "CODE") {
+                                                            setWeek(aiWeek);
+                                                        } else {
+                                                            setYm(aiWeek);
+                                                        }
                                                         setMust(ai.must_have.join("\n"));
                                                         setMd("");
                                                         setSelectedTitle(ai.title);
@@ -559,7 +597,7 @@ export default function ChallengeFormPage() {
                                         </li>
                                     ))}
                                     {aiChallenges.length === 0 && (
-                                        <li className="py-3 text-[13px] text-emerald-600 dark:text-emerald-200">
+                                        <li className="py-3 text-[13px] text-neutral-600 dark:text-neutral-300">
                                             AI 생성 문제가 없습니다.
                                         </li>
                                     )}
@@ -568,12 +606,12 @@ export default function ChallengeFormPage() {
                         </>
                     ) : (
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-[13px] text-emerald-900 dark:text-emerald-100">
+                            <div className="flex items-center gap-2 text-[13px] text-neutral-900 dark:text-white">
                                 <span className="font-semibold">선택한 AI 문제</span>:
                                 <span>{selectedTitle || "없음"}</span>
                             </div>
                             <button 
-                                className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[12px] hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
+                                className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[12px] text-neutral-700 hover:bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-100" 
                                 onClick={()=> setShowAiList(true)}
                             >
                                 목록 펼치기
@@ -663,38 +701,12 @@ export default function ChallengeFormPage() {
             )}
             <form onSubmit={onSubmit} className="space-y-6 text-[13.5px]">
                 <div>
-                    <label className="block mb-1 text-[14px] font-bold text-neutral-900">타입</label>
-                    <Dropdown
-                        options={[{ value: "CODE", label: "코드" }, { value: "PORTFOLIO", label: "포트폴리오" }]}
-                        value={type}
-                        onChange={(v) => {
-                            setType(v as any);
-                            // CREATE 모드에서 타입 변경 시 폼 초기화
-                            if (viewMode === "CREATE" && editingId === null) {
-                                setTitle("");
-                                setSummary("");
-                                setYm("");
-                                setWeek("");
-                                setMust("");
-                                setMd("");
-                                setStartAt("");
-                                setEndAt("");
-                                setVoteStartAt("");
-                                setVoteEndAt("");
-                                setSelectedTitle("");
-                            }
-                        }}
-                        className="w-full"
-                        size="sm"
-                    />
-                </div>
-                <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">제목</label>
                     <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" placeholder="제목" />
                 </div>
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">요약</label>
-                    <textarea value={summary} onChange={(e) => setSummary(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" rows={4} placeholder="요약" />
+                    <textarea value={summary} onChange={(e) => setSummary(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" rows={7} placeholder="요약" />
                 </div>
                 {type === "PORTFOLIO" ? (
                     <div>
@@ -706,11 +718,11 @@ export default function ChallengeFormPage() {
                 )}
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">필수 요구사항(must) - 줄바꿈 또는 콤마로 구분</label>
-                    <textarea value={must} onChange={(e) => setMust(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" rows={4} placeholder="예: 항목1\n항목2" />
+                    <textarea value={must} onChange={(e) => setMust(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" rows={7} placeholder="예: 항목1\n항목2" />
                 </div>
                 <div>
                     <label className="block mb-1 text-[14px] font-bold text-neutral-900">설명(Markdown 가능)</label>
-                    <textarea value={md} onChange={(e) => setMd(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" rows={6} placeholder="마크다운 본문 (선택)" />
+                    <textarea value={md} onChange={(e) => setMd(e.target.value)} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 outline-none focus:border-emerald-500" rows={7} placeholder="마크다운 본문 (선택)" />
                 </div>
                 {/* 일정: 한 줄에 화살표로 가독성 향상 */}
                 <div>

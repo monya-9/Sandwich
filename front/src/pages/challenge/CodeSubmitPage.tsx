@@ -247,11 +247,34 @@ export default function CodeSubmitPage() {
                 });
                 nav(`/challenge/code/${id}/submissions`, { replace: true });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(isEditMode ? '수정 실패:' : '제출 실패:', error);
+            
+            let errorMessage = isEditMode ? "수정 중 오류가 발생했습니다. 다시 시도해주세요." : "제출 중 오류가 발생했습니다. 다시 시도해주세요.";
+            
+            // 중복 제출 에러 처리
+            if (error?.response?.status === 409) {
+                errorMessage = "이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.";
+            } else if (error?.response?.status === 400) {
+                const serverMessage = error?.response?.data?.message;
+                if (serverMessage) {
+                    if (serverMessage.includes("Submission closed")) {
+                        errorMessage = "제출 기간이 종료되었습니다.";
+                    } else {
+                        errorMessage = serverMessage;
+                    }
+                } else {
+                    errorMessage = "입력 정보를 확인해주세요.";
+                }
+            } else if (error?.response?.status === 404) {
+                errorMessage = "존재하지 않는 챌린지입니다.";
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            }
+            
             setSuccessToast({
                 visible: true,
-                message: isEditMode ? "수정 중 오류가 발생했습니다. 다시 시도해주세요." : "제출 중 오류가 발생했습니다. 다시 시도해주세요."
+                message: errorMessage
             });
         } finally {
             setSubmitting(false);

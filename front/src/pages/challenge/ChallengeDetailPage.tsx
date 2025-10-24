@@ -20,6 +20,9 @@ import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { getVoteSummary, type VoteSummaryResponse } from "../../api/challengeApi";
 import { isAdmin } from "../../utils/authz";
 import { deleteChallenge } from "../../api/challengeApi";
+import Toast from "../../components/common/Toast";
+import { getMe } from "../../api/users";
+import { fetchChallengeSubmissions } from "../../api/submissionApi";
 
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
@@ -323,9 +326,38 @@ export default function ChallengeDetailPage() {
     // 보상 수령 기능 제거됨
     const admin = isAdmin();
     const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
+    
+    // Toast 및 사용자 정보 상태
+    const [toast, setToast] = useState<{
+        visible: boolean;
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+    }>({
+        visible: false,
+        message: '',
+        type: 'info'
+    });
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
+
+    // 현재 사용자 정보 로드
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const me = await getMe();
+                setCurrentUserId(me.id);
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                setCurrentUserId(null);
+            }
+        };
+
+        if (isLoggedIn) {
+            loadCurrentUser();
+        }
+    }, [isLoggedIn]);
 
     useEffect(() => {
         setLoading(true);
@@ -477,11 +509,33 @@ export default function ChallengeDetailPage() {
 
     // 보상 수령 기능 제거됨
 
-    const goPrimary = () => {
+    const goPrimary = async () => {
         if (!data) return;
-        const href = primaryHref(type, id);
         if (!isLoggedIn) return setLoginModalOpen(true);
-        navigate(href);
+        
+        // 제출물이 있는지 확인
+        try {
+            const submissions = await fetchChallengeSubmissions(id, 0, 100);
+            const mySubmission = submissions.content?.find(s => s.owner?.userId === currentUserId);
+            
+            if (mySubmission) {
+                // 이미 제출물이 있는 경우
+                setToast({
+                    visible: true,
+                    message: '이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.',
+                    type: 'warning'
+                });
+            } else {
+                // 제출물이 없는 경우 제출 페이지로 이동
+                const href = primaryHref(type, id);
+                navigate(href);
+            }
+        } catch (error) {
+            console.error('제출물 확인 실패:', error);
+            // 에러 발생 시에도 제출 페이지로 이동 (백엔드에서 다시 확인)
+            const href = primaryHref(type, id);
+            navigate(href);
+        }
     };
     const goSecondary = () => {
         if (!data) return;
@@ -917,6 +971,17 @@ export default function ChallengeDetailPage() {
             )}
 
             {/* 보상 수령 기능 제거됨 */}
+            
+            {/* Toast */}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
         </div>
     );
 }

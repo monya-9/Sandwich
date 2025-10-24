@@ -530,3 +530,14 @@ export async function fetchAiGeneratedChallenges(): Promise<AiChallengeListRespo
   });
   return response.data;
 }
+
+/**
+ * AI가 생성한 월간 포트폴리오 챌린지 목록 조회
+ * /ext 프록시를 통해 https://api.dnutzs.org/api 에 접근
+ */
+export async function fetchAiGeneratedMonthlyChallenges(): Promise<AiChallengeListResponse> {
+  const response = await axios.get('/ext/reco/topics/monthly/list', {
+    timeout: 10000,
+  });
+  return response.data;
+}

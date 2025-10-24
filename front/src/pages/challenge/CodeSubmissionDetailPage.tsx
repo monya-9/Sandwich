@@ -8,6 +8,7 @@ import { fetchChallengeDetail } from "../../api/challengeApi";
 import { getMe } from "../../api/users";
 import api from "../../api/axiosInstance";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import Toast from "../../components/common/Toast";
 
 export default function CodeSubmissionDetailPage() {
     const { id: idStr, submissionId: sidStr } = useParams();
@@ -29,6 +30,15 @@ export default function CodeSubmissionDetailPage() {
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isOwner, setIsOwner] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [toast, setToast] = useState<{
+        visible: boolean;
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+    }>({
+        visible: false,
+        message: '',
+        type: 'success'
+    });
 
     // 현재 사용자 정보 로드
     useEffect(() => {
@@ -191,12 +201,22 @@ export default function CodeSubmissionDetailPage() {
         try {
             await deleteChallengeSubmission(id, sid);
             setDeleteModalOpen(false);
-            alert('제출물이 삭제되었습니다.');
-            nav(`/challenge/code/${id}/submissions`);
+            setToast({
+                visible: true,
+                message: '제출물이 삭제되었습니다.',
+                type: 'success'
+            });
+            setTimeout(() => {
+                nav(`/challenge/code/${id}/submissions`);
+            }, 1000);
         } catch (error) {
             console.error('제출물 삭제 실패:', error);
             setDeleteModalOpen(false);
-            alert('제출물 삭제에 실패했습니다.');
+            setToast({
+                visible: true,
+                message: '제출물 삭제에 실패했습니다.',
+                type: 'error'
+            });
         }
     };
 
@@ -340,6 +360,17 @@ export default function CodeSubmissionDetailPage() {
                 confirmButtonColor="red"
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteModalOpen(false)}
+            />
+
+            {/* Toast */}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={2000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
             />
         </div>
     );
