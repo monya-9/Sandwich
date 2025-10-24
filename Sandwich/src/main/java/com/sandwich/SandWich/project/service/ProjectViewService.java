@@ -67,6 +67,9 @@ public class ProjectViewService {
                 ? projectViewRepository.findByProjectAndViewer(project, viewer)
                 : Optional.empty(); // 비회원은 매번 새로 insert
 
+        if (viewer == null) {
+            return; // Redis 카운터만 증가시키고 종료
+        }
         if (optionalView.isPresent() && !isDuplicate) {
             optionalView.get().increaseCount();
         } else if (!isDuplicate) {  // 중복인 경우 insert 안 함

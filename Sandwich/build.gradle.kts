@@ -52,6 +52,7 @@ dependencies {
    implementation ("org.apache.httpcomponents.client5:httpclient5:5.2.1")
    implementation ("org.springframework.boot:spring-boot-starter-actuator")
    implementation ("org.springframework.boot:spring-boot-starter-webflux")
+   implementation ("org.springframework.boot:spring-boot-starter-cache")
    runtimeOnly ("io.micrometer:micrometer-registry-prometheus")
    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")

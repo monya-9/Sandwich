@@ -156,10 +156,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
                         .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
                         .requestMatchers("/api/emojis/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/discovery/hot-developers").permitAll()
 
                         // ===== 댓글 공개 GET =====
-                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                         // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)
@@ -171,6 +171,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()  // 상세(/{id}) 및 확장 대비
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/votes/summary").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/leaderboard").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/internal/discovery/hot-developers/**").hasRole("ADMIN")
                         // .requestMatchers(HttpMethod.POST, "/internal/ai/**").permitAll()
                         .requestMatchers("/internal/**").hasAuthority("SCOPE_CHALLENGE_BATCH_WRITE")
                         // ===== 사용자 공개 정보 =====
