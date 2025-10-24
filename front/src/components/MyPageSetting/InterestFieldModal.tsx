@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
+import api from "../../api/axiosInstance";
 
-const OPTIONS = [
+const FALLBACK_OPTIONS = [
 	"자료구조 & 알고리즘",
 	"운영체제",
 	"테스트 코드 작성 (TDD)",
@@ -14,7 +15,7 @@ const OPTIONS = [
 	"DB모델링/정규화",
 ] as const;
 
-type Option = typeof OPTIONS[number];
+type Option = typeof FALLBACK_OPTIONS[number];
 
 interface Props {
 	open: boolean;
@@ -25,17 +26,36 @@ interface Props {
 
 const InterestFieldModal: React.FC<Props> = ({ open, initial, onClose, onConfirm }) => {
 	const [selected, setSelected] = useState<Option[]>([]);
+	const [options, setOptions] = useState<string[]>([...FALLBACK_OPTIONS]);
+	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		if (open) setSelected(initial.slice(0, 3));
+		if (open) {
+			setSelected(initial.slice(0, 3));
+			loadOptions();
+		}
 	}, [open, initial]);
 
-	const toggle = (opt: Option) => {
+	const loadOptions = async () => {
+		setLoading(true);
+		try {
+			const res = await api.get<Array<{ id: number; name: string }>>("/meta/interests?type=GENERAL");
+			const data = Array.isArray(res.data) ? res.data : [];
+			const safeOptions = data.length ? data.map((item: { id: number; name: string }) => item.name) : [...FALLBACK_OPTIONS];
+			setOptions(safeOptions);
+		} catch (error) {
+			setOptions([...FALLBACK_OPTIONS]);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const toggle = (opt: string) => {
 		setSelected((prev) => {
-			const exists = prev.includes(opt);
+			const exists = prev.includes(opt as Option);
 			if (exists) return prev.filter((v) => v !== opt);
 			if (prev.length >= 3) return prev; // 최대 3개
-			return [...prev, opt];
+			return [...prev, opt as Option];
 		});
 	};
 
@@ -62,33 +82,40 @@ const InterestFieldModal: React.FC<Props> = ({ open, initial, onClose, onConfirm
 
 				{/* 옵션 영역 */}
 				<div className="px-6 py-4">
-					<div className="flex flex-wrap gap-3">
-						{OPTIONS.map((opt) => {
-							const active = selected.includes(opt);
-							return (
-								<button
-									key={opt}
-									type="button"
-									aria-pressed={active}
-									onClick={() => toggle(opt)}
-									className={`h-11 rounded-[10px] border inline-flex items-center px-4 text-[14px] justify-start whitespace-nowrap ${
-										active
-											? "bg-white border-[#22C55E] text-black"
-											: "bg-white border-[#E5E7EB] text-black"
-									}`}
-								>
-									<span
-										className={`inline-flex items-center justify-center w-4 h-4 rounded-full mr-2 border ${
-											active ? "bg-[#1DB8B8] border-[#1DB8B8] text-white" : "bg-white border-[#D1D5DB] text-transparent"
+					{loading ? (
+						<div className="flex items-center justify-center py-8">
+							<div className="w-6 h-6 border-2 border-[#1DB8B8] border-t-transparent rounded-full animate-spin"></div>
+							<span className="ml-2 text-[14px] text-[#6B7280]">관심 분야 목록을 불러오는 중...</span>
+						</div>
+					) : (
+						<div className="flex flex-wrap gap-3">
+							{options.map((opt) => {
+								const active = selected.includes(opt as Option);
+								return (
+									<button
+										key={opt}
+										type="button"
+										aria-pressed={active}
+										onClick={() => toggle(opt)}
+										className={`h-11 rounded-[10px] border inline-flex items-center px-4 text-[14px] justify-start whitespace-nowrap ${
+											active
+												? "bg-white border-[#22C55E] text-black"
+												: "bg-white border-[#E5E7EB] text-black"
 										}`}
 									>
-										✓
-									</span>
-									<span>{opt}</span>
-								</button>
-							);
-						})}
-					</div>
+										<span
+											className={`inline-flex items-center justify-center w-4 h-4 rounded-full mr-2 border ${
+												active ? "bg-[#1DB8B8] border-[#1DB8B8] text-white" : "bg-white border-[#D1D5DB] text-transparent"
+											}`}
+										>
+											✓
+										</span>
+										<span>{opt}</span>
+									</button>
+								);
+							})}
+						</div>
+					)}
 				</div>
 
 				{/* 풋터 버튼 */}
