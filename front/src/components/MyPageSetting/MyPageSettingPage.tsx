@@ -200,6 +200,9 @@ const MyPageSettingPage: React.FC = () => {
 			setAvatarUrl(url);
 			e.target.value = "";
 			
+			// 헤더와 드롭다운의 프로필 이미지 업데이트를 위한 이벤트 발생
+			window.dispatchEvent(new CustomEvent('profile-image-updated'));
+			
 			setSuccessToast({
 				visible: true,
 				message: "프로필 이미지가 업로드되었습니다."
