@@ -157,7 +157,7 @@ const MyPageSettingPage: React.FC = () => {
 					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 				} catch {}
-			} catch {}
+			} catch (e) {}
 		})();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [email, scopedKey]);
@@ -190,13 +190,20 @@ const MyPageSettingPage: React.FC = () => {
 			// 로컬 미리보기 먼저 표시
 			const preview = URL.createObjectURL(file);
 			setAvatarUrl(preview);
+			
 			// 1) 업로드 → URL 수신
 			const url = await UserApi.uploadImage(file);
+			
 			// 2) 프로필에 이미지 URL 반영 저장
-			await persistProfilePartial({ profileImageUrl: null as any }); // 먼저 비워 flicker 방지
 			await persistProfilePartial({ profileImageUrl: url });
+			
 			setAvatarUrl(url);
 			e.target.value = "";
+			
+			setSuccessToast({
+				visible: true,
+				message: "프로필 이미지가 업로드되었습니다."
+			});
 		} catch (err) {
 			setErrorToast({
 				visible: true,
@@ -216,9 +223,17 @@ const MyPageSettingPage: React.FC = () => {
 
 	// 프로필 부분 업데이트(필드 일부만 변경)
 	const persistProfilePartial = useCallback(async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>, showToast: boolean = true) => {
-		const base = profile;
-		if (!base) return false;
-		await UserApi.updateProfile({
+		// profile 데이터가 없으면 먼저 로드
+		let base = profile;
+		if (!base) {
+			try {
+				base = await UserApi.getMe();
+			} catch (error) {
+				throw error;
+			}
+		}
+		
+		const payload = {
 			nickname: partial.nickname ?? (base.nickname || ""),
 			positionId: partial.positionId ?? (base.position?.id || 0),
 			interestIds: partial.interestIds !== undefined ? partial.interestIds : (base.interests?.map((i) => i.id) || []),
@@ -227,17 +242,30 @@ const MyPageSettingPage: React.FC = () => {
 			github: partial.github ?? (base.github || ""),
 			linkedin: partial.linkedin ?? (base.linkedin || ""),
 			profileImageUrl: (partial.profileImageUrl !== undefined) ? partial.profileImageUrl : (base.profileImage || ""),
-		});
-		const refreshed = await UserApi.getMe();
-		setProfile(refreshed);
+		};
 		
-		if (showToast) {
-			setSuccessToast({
-				visible: true,
-				message: "설정 내용이 저장되었습니다."
-			});
+		try {
+			await UserApi.updateProfile(payload);
+			
+			// 프로필 이미지 업데이트의 경우 로컬 상태만 업데이트 (새로고침 최소화)
+			if (partial.profileImageUrl !== undefined) {
+				setProfile(prev => prev ? { ...prev, profileImage: partial.profileImageUrl } : null);
+			} else {
+				// 다른 필드 업데이트의 경우 전체 새로고침
+				const refreshed = await UserApi.getMe();
+				setProfile(refreshed);
+			}
+			
+			if (showToast) {
+				setSuccessToast({
+					visible: true,
+					message: "설정 내용이 저장되었습니다."
+				});
+			}
+			return true;
+		} catch (error) {
+			throw error;
 		}
-		return true;
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
@@ -495,9 +523,9 @@ const MyPageSettingPage: React.FC = () => {
 		} catch {}
 		
 		try {
-			// 값이 없으면 서버 업데이트 생략
-			if (values.length > 0) {
-				const posId = mapWorkNameToId(values[0]);
+		// 값이 없으면 서버 업데이트 생략
+		if (values.length > 0) {
+			const posId = mapWorkNameToId(values[0]);
 				await persistProfilePartial({ positionId: posId }, false); // 토스트 표시하지 않음
 				
 				// 작업 분야 저장 성공 토스트 표시
@@ -505,10 +533,10 @@ const MyPageSettingPage: React.FC = () => {
 					visible: true,
 					message: "작업 분야가 저장되었습니다."
 				});
-			} else {
-				// 로컬만 변경된 경우에도 사용자 피드백 제공
-				setSuccessToast({
-					visible: true,
+		} else {
+			// 로컬만 변경된 경우에도 사용자 피드백 제공
+			setSuccessToast({
+				visible: true,
 					message: "작업 분야가 해제되었습니다."
 				});
 			}
