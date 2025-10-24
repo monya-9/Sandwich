@@ -14,8 +14,8 @@ const OAuthErrorHandler = () => {
     }, [provider]);
 
     return (
-        <div className="flex justify-center items-center min-h-screen">
-            <div className="text-center text-red-600 text-xl font-semibold">
+        <div className="flex justify-center items-center min-h-screen bg-white dark:bg-black">
+            <div className="text-center text-red-600 dark:text-red-400 text-xl font-semibold">
                 <p>{decodeURIComponent(message)}</p>
                 <p className="mt-2">다시 시도해주세요.</p>
             </div>

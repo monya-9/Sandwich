@@ -101,7 +101,9 @@ const OAuthSuccessHandler: React.FC = () => {
     }, [login, clearState]);
 
     return (
-        <div className="text-center mt-10 text-green-600">로그인 중입니다…</div>
+        <div className="flex justify-center items-center min-h-screen bg-white dark:bg-black">
+            <div className="text-center text-green-600 dark:text-green-400">로그인 중입니다…</div>
+        </div>
     );
 };
 

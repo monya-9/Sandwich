@@ -108,7 +108,7 @@ const ProfileStep = ({ onPrev }: Props) => {
         closable={true}
         onClose={() => setToast(prev => ({ ...prev, visible: false }))}
       />
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
         <img src={logo} alt="logo" className="w-36 mb-10" />
         <div className="w-full max-w-sm space-y-6">
           <NameInput value={nickname} onChange={setNickname} />

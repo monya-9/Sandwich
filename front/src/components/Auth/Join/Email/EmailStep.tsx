@@ -141,7 +141,7 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
     const derivedStatus = isVerified ? "success" : timeLeft <= 0 ? "timeout" : verifyStatus;
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
             <Link to="/">
                 <img src={logo} alt="Sandwich Logo" className="w-36 mb-10" />
             </Link>

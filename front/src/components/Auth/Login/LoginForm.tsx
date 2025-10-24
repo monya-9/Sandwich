@@ -130,7 +130,7 @@ const LoginForm = () => {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
             <Link to="/">
                 <img src={logo} alt="logo" className="w-36 mb-10 mx-auto" />
             </Link>
