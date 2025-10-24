@@ -53,6 +53,9 @@ export const UserApi = {
 	async updateUsername(username: string): Promise<void> {
 		await api.patch("/users/username", { username });
 	},
+	async updateBio(bio: string): Promise<void> {
+		await api.patch("/users/profile/bio", { bio });
+	},
 	async getMe(): Promise<UserProfileResponse> {
 		const res = await api.get<UserProfileResponse>("/users/me");
 		return res.data;
