@@ -91,6 +91,13 @@ const ProfileStep = () => {
                 interestIds,
             });
 
+            // ✅ 닉네임을 localStorage에 저장
+            localStorage.setItem("userNickname", nickname);
+            console.log("🔍 닉네임 저장 완료:", {
+                nickname,
+                storedNickname: localStorage.getItem("userNickname")
+            });
+
             setToast({
                 visible: true,
                 message: "프로필 설정 완료!",
