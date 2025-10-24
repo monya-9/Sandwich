@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaQrcode } from "react-icons/fa";
+import { getStaticUrl } from "../../../config/staticBase";
 
 interface QrCodeActionProps {
   qrImageUrl: string;
@@ -11,7 +12,7 @@ export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl }: QrCode
   const [open, setOpen] = useState(false);
 
   const finalTitle = title || "프로젝트 이름";
-  const finalThumb = thumbnailUrl || "https://via.placeholder.com/56x56.png?text=Thumb";
+  const finalThumb = thumbnailUrl || getStaticUrl("assets/images/default-thumbnail.png");
 
   return (
     <div className="relative">
