@@ -1,7 +1,9 @@
 // src/setupProxy.js
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
-const target = process.env.REACT_APP_API_BASE;
+const target = process.env.REACT_APP_API_BASE ? 
+    process.env.REACT_APP_API_BASE.replace(/\/api$/, '') : 
+    'http://localhost:8080';
 
 /**
  * 주의:
@@ -48,7 +50,7 @@ module.exports = function (app) {
     app.use(
         "/ext",
         createProxyMiddleware({
-            target: "https://api.dnutzs.org",
+            target: "REACT_APP_AI_API_BASE",
             changeOrigin: true,
             ws: false,
             secure: true,

@@ -170,7 +170,7 @@ export async function uploadAttachment(roomId: number, file: File): Promise<Serv
     const token =
         localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
 
-    const res = await fetch(`/api/messages/${roomId}/attachments`, {
+    const res = await fetch(`${process.env.REACT_APP_API_BASE || "/api"}/messages/${roomId}/attachments`, {
         method: "POST",
         body: form,
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,

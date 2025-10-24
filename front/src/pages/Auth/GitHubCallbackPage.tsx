@@ -17,7 +17,7 @@ const GitHubCallback = () => {
 
         if (code) {
             axios
-                .post("/api/auth/signup", {
+                .post(`${process.env.REACT_APP_API_BASE || "/api"}/auth/signup`, {
                     provider: "github",
                     code,
                 })

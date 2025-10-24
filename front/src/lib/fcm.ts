@@ -20,7 +20,7 @@ let cachedFcmToken: string | null = null;
 
 async function registerWebPush(token: string, accessToken: string) {
     try {
-        const res = await fetch("/api/push/register", {
+        const res = await fetch(`${process.env.REACT_APP_API_BASE || "/api"}/push/register`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
