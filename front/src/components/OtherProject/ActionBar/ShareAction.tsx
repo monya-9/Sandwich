@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import { FaShareAlt, FaTwitter, FaFacebook, FaPinterest, FaBlogger } from "react-icons/fa";
 import Toast from "../../common/Toast";
+import { getStaticUrl } from "../../../config/staticBase";
 
 type ShareActionProps = {
   shareUrl?: string;
@@ -37,7 +38,7 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
 
   const finalShareUrl = shareUrl || (typeof window !== "undefined" ? window.location.href : "");
   const finalTitle = title || "프로젝트 이름";
-  const finalThumb = thumbnailUrl || "https://via.placeholder.com/56x56.png?text=Thumb";
+  const finalThumb = thumbnailUrl || getStaticUrl("assets/images/default-thumbnail.png");
 
   const handleCopy = () => {
     if (!finalShareUrl) return;
@@ -57,7 +58,7 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
         size="medium"
         autoClose={2000}
         closable={true}
-        onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+        onClose={() => setToast((prev: { visible: boolean; message: string }) => ({ ...prev, visible: false }))}
       />
       <div className="relative font-gmarket">
       {/* 공유 버튼 (사이드바, 크기 그대로) */}

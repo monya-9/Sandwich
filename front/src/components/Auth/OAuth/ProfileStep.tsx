@@ -5,7 +5,7 @@ import PositionSelect from "../Join/Profile/PositionSelect";
 import InterestSelect from "../Join/Profile/InterestSelect";
 import CompleteButton from "../Join/CompleteButton";
 import NameInput from "../Join/Profile/NameInput";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import { positionMap, interestMap } from "../../../constants/position";
 import Toast from "../../common/Toast";
 import { setToken } from "../../../utils/tokenStorage";
@@ -115,7 +115,7 @@ const ProfileStep = () => {
                 onClose={() => setToast(prev => ({ ...prev, visible: false }))}
             />
             <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
-                <img src={logo} alt="logo" className="w-36 mb-10" />
+                <img src={getStaticUrl("assets/logo.png")} alt="logo" className="w-36 mb-10" />
 
                 <div className="w-full max-w-sm space-y-6">
                     <NameInput value={nickname} onChange={setNickname} />

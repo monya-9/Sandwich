@@ -103,7 +103,7 @@ const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
                     </svg>
                 </button>
                 <Link to="/" className="flex-shrink-0">
-                    <img src={logo} alt="Sandwich" className="w-[100px] h-auto" />
+                    <img src={getStaticUrl("assets/logo.png")} alt="Sandwich" className="w-[100px] h-auto" />
                 </Link>
             </div>
 
