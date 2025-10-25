@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import SearchBar from "./SearchBar";
 import MessageIcon from "../Header/icons/MessageIcon";
 import NotificationIcon from "../Header/icons/NotificationIcon";
