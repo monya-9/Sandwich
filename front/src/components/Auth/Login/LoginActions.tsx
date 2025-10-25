@@ -18,11 +18,7 @@ const LoginActions = ({ isError }: Props) => {
                 </p>
             )}
 
-            <div className="flex justify-center items-center text-xs text-gray-500 dark:text-white gap-2 px-5 mt-2">
-                <span className="cursor-pointer hover:underline">비밀번호 찾기</span>
-                <span>|</span>
-                <span className="cursor-pointer hover:underline">이메일 찾기</span>
-                <span>|</span>
+            <div className="flex justify-center items-center text-xs text-gray-500 dark:text-white mt-2">
                 <span
                     onClick={() => navigate("/join")}
                     className="cursor-pointer text-gray-500 dark:text-white hover:text-green-600 font-medium"

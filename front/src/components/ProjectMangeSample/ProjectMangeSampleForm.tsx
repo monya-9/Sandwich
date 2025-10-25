@@ -3,13 +3,12 @@ import Header from "../common/Header/Header";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
-import { RiText } from "react-icons/ri";
 import { normalizeVideoUrl } from "./VideoUploadSection";
 import ReorderModal from "./ReorderModal";
-import { FaImage, FaTrash } from "react-icons/fa";
+import { FaTrash } from "react-icons/fa";
 import { IoMdVideocam } from "react-icons/io";
 import { FiMaximize2, FiImage, FiMonitor } from "react-icons/fi";
-import { createProject, ProjectRequest, fetchProjectDetail, fetchProjectContents, type ProjectContentResponseItem, deleteAllProjectContents, saveProjectContents, type ProjectContentUpsertItem } from "../../api/projectApi";
+import { fetchProjectDetail, fetchProjectContents, type ProjectContentResponseItem, deleteAllProjectContents, saveProjectContents, type ProjectContentUpsertItem } from "../../api/projectApi";
 import { useNavigate, useParams } from "react-router-dom";
 import ProjectDetailsModal from "./ProjectDetailsModal";
 import ProjectPreviewModal from "./ProjectPreviewModal";
@@ -17,6 +16,7 @@ import UploadDoneModal from "./UploadDoneModal";
 import Toast from "../common/Toast";
 import SettingsPanel from "./SettingsPanel";
 import RightPanelActions from "./RightPanelActions";
+import VideoUrlModal from "./VideoUrlModal";
 import api from "../../api/axiosInstance";
 
 // Quill size whitelist to show pt values like 16pt
@@ -42,17 +42,18 @@ function isJwtExpired(token: string): boolean {
 	} catch { return true; }
 }
 
-function extractSummaryFromHtml(html: string, maxLen = 200): string {
-	try {
-		const div = document.createElement('div');
-		div.innerHTML = html;
-		const text = div.textContent || div.innerText || '';
-		const trimmed = text.replace(/\s+/g, ' ').trim();
-		return trimmed.length > maxLen ? trimmed.slice(0, maxLen) + '…' : trimmed;
-	} catch {
-		return '';
-	}
-}
+// 사용하지 않는 함수 제거
+// function extractSummaryFromHtml(html: string, maxLen = 200): string {
+// 	try {
+// 		const div = document.createElement('div');
+// 		div.innerHTML = html;
+// 		const text = div.textContent || div.innerText || '';
+// 		const trimmed = text.replace(/\s+/g, ' ').trim();
+// 		return trimmed.length > maxLen ? trimmed.slice(0, maxLen) + '…' : trimmed;
+// 	} catch {
+// 		return '';
+// 	}
+// }
 
 export default function ProjectMangeSampleForm() {
 	type ModalBlock = { id: string; type: 'text' | 'image' | 'video'; html: string; text?: string };
@@ -67,6 +68,7 @@ export default function ProjectMangeSampleForm() {
 	const [showEmptyToast, setShowEmptyToast] = useState(false);
 	const toastTimerRef = useRef<number | null>(null);
 	const [isReorderOpen, setIsReorderOpen] = useState(false);
+	const [isVideoUrlModalOpen, setIsVideoUrlModalOpen] = useState(false);
     const getDefaultBg = () => {
         try { return document.documentElement.classList.contains('dark') ? '#000000' : '#FFFFFF'; } catch { return '#FFFFFF'; }
     };
@@ -82,14 +84,14 @@ export default function ProjectMangeSampleForm() {
 	const [hoverEl, setHoverEl] = useState<HTMLElement | null>(null);
 	const [hoverType, setHoverType] = useState<'image' | 'video' | null>(null);
 	const overlayRef = useRef<HTMLDivElement | null>(null);
-	const overlayPosRef = useRef<{ top: number; left: number }>({ top: 0, left: 0 });
-	const rafIdRef = useRef<number | null>(null);
+	// const overlayPosRef = useRef<{ top: number; left: number }>({ top: 0, left: 0 });
+	// const rafIdRef = useRef<number | null>(null);
 	const isTypingRef = useRef<boolean>(false);
 	const hoverElRef = useRef<HTMLElement | null>(null);
-	const [isHoveringOverlay, setIsHoveringOverlay] = useState<boolean>(false);
+	// const [isHoveringOverlay, setIsHoveringOverlay] = useState<boolean>(false);
 	const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 	// Re-render tick for tooltip label immediate update
-	const [overlayTick, setOverlayTick] = useState<number>(0);
+	// const [overlayTick, setOverlayTick] = useState<number>(0);
 	// 문서 전역 포인터 이동 핸들러 보관
 	const docPointerMoveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
 	// 오버레이 드래그/조작 중에는 닫히지 않도록 잠금
@@ -112,7 +114,7 @@ export default function ProjectMangeSampleForm() {
 	};
 	// 사용자 지정 미디어 패딩(px)
 	const [mediaPaddingPx, setMediaPaddingPx] = useState<number>(40);
-	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+	// const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 	// NEW: 10MB 초과 토스트
 	const [showOversizeToast, setShowOversizeToast] = useState(false);
 	const notifyOversize = () => {
@@ -289,30 +291,30 @@ export default function ProjectMangeSampleForm() {
 				};
 
 				// 미디어 가로폭(실제 또는 렌더링) 구하기
-				const getMediaContentWidth = (el: HTMLElement): number => {
-					try {
-						const r = getContentRect(el);
-						if (el.tagName.toLowerCase() === 'img') {
-							const nat = (el as HTMLImageElement).naturalWidth || 0;
-							return Math.max(nat, r.width);
-						}
-						return r.width;
-					} catch { return 0; }
-				};
+				// const getMediaContentWidth = (el: HTMLElement): number => {
+				// 	try {
+				// 		const r = getContentRect(el);
+				// 		if (el.tagName.toLowerCase() === 'img') {
+				// 			const nat = (el as HTMLImageElement).naturalWidth || 0;
+				// 			return Math.max(nat, r.width);
+				// 		}
+				// 		return r.width;
+				// 	} catch { return 0; }
+				// };
 
 				// 어느 방향으로 진입해도 콘텐츠 내부면 즉시 오버레이 표시
-				const ensureOverlayForMedia = (media: HTMLElement, type: 'image' | 'video', ev: PointerEvent) => {
-					const r = getContentRect(media);
-					const x = ev.clientX, y = ev.clientY;
-					if (x < r.left || x > r.right || y < r.top || y > r.bottom) return;
-					/* allow all widths */
-					if (hoverElRef.current !== media) {
-						startOverlayFollow(media, type);
-					} else {
-						// 이미 따라가는 중이면 위치만 갱신
-						positionOverlayTo(media);
-					}
-				};
+				// const ensureOverlayForMedia = (media: HTMLElement, type: 'image' | 'video', ev: PointerEvent) => {
+				// 	const r = getContentRect(media);
+				// 	const x = ev.clientX, y = ev.clientY;
+				// 	if (x < r.left || x > r.right || y < r.top || y > r.bottom) return;
+				// 	/* allow all widths */
+				// 	if (hoverElRef.current !== media) {
+				// 		startOverlayFollow(media, type);
+				// 	} else {
+				// 		// 이미 따라가는 중이면 위치만 갱신
+				// 		positionOverlayTo(media);
+				// 	}
+				// };
 
 				// 오버레이 드래그 시작 시 잠금, 포인터 업에서 해제
 				const handleOverlayPointerDown = () => {
@@ -333,37 +335,37 @@ export default function ProjectMangeSampleForm() {
 					window.addEventListener('pointercancel', onUp, { once: true });
 				};
 
-				const showOverlayForMedia = (media: HTMLElement) => {
-					try {
-						const rect = media.getBoundingClientRect();
-						if (!isFinite(rect.top) || rect.width <= 1 || rect.height <= 1) return;
-						const overlayH = (overlayRef.current?.offsetHeight || 44);
-						const overlayW = (overlayRef.current?.offsetWidth || 220);
-						const maxTop = Math.max(8, window.innerHeight - 8 - overlayH);
-						const halfW = overlayW / 2;
-						// 중앙상단에서 절반 겹치게
-						let top = rect.top - overlayH / 2;
-						let left = rect.left + rect.width / 2;
-						top = Math.min(Math.max(8, top), maxTop);
-						left = Math.min(Math.max(halfW + 8, left), window.innerWidth - halfW - 8);
-						if (overlayRef.current) {
-							overlayRef.current.style.top = `${top}px`;
-							overlayRef.current.style.left = `${left}px`;
-							overlayRef.current.style.display = '';
-						}
-						setHoverEl(media);
-						setHoverType(media.tagName.toLowerCase() === 'img' ? 'image' : 'video');
-						hoverElRef.current = media;
-					} catch {}
-				};
-				const hideOverlayNow = () => {
-					try {
-						if (overlayRef.current) overlayRef.current.style.display = 'none';
-						setHoverEl(null);
-						setHoverType(null);
-						hoverElRef.current = null;
-					} catch {}
-				};
+				// const showOverlayForMedia = (media: HTMLElement) => {
+				// 	try {
+				// 		const rect = media.getBoundingClientRect();
+				// 		if (!isFinite(rect.top) || rect.width <= 1 || rect.height <= 1) return;
+				// 		const overlayH = (overlayRef.current?.offsetHeight || 44);
+				// 		const overlayW = (overlayRef.current?.offsetWidth || 220);
+				// 		const maxTop = Math.max(8, window.innerHeight - 8 - overlayH);
+				// 		const halfW = overlayW / 2;
+				// 		// 중앙상단에서 절반 겹치게
+				// 		let top = rect.top - overlayH / 2;
+				// 		let left = rect.left + rect.width / 2;
+				// 		top = Math.min(Math.max(8, top), maxTop);
+				// 		left = Math.min(Math.max(halfW + 8, left), window.innerWidth - halfW - 8);
+				// 		if (overlayRef.current) {
+				// 			overlayRef.current.style.top = `${top}px`;
+				// 			overlayRef.current.style.left = `${left}px`;
+				// 			overlayRef.current.style.display = '';
+				// 		}
+				// 		setHoverEl(media);
+				// 		setHoverType(media.tagName.toLowerCase() === 'img' ? 'image' : 'video');
+				// 		hoverElRef.current = media;
+				// 	} catch {}
+				// };
+				// const hideOverlayNow = () => {
+				// 	try {
+				// 		if (overlayRef.current) overlayRef.current.style.display = 'none';
+				// 		setHoverEl(null);
+				// 		setHoverType(null);
+				// 		hoverElRef.current = null;
+				// 	} catch {}
+				// };
 
 				const followRafRef = useRef<number | null>(null);
 				const positionOverlayTo = (media: HTMLElement): boolean => {
@@ -415,7 +417,7 @@ export default function ProjectMangeSampleForm() {
 						// 오버레이 내부 판정: contains(target) + 사각형 좌표 보강(드래그/포인터 캡처 대비)
 						const or = overlay?.getBoundingClientRect();
 						const insideOverlayRect = !!(or && x >= or.left && x <= or.right && y >= or.top && y <= or.bottom);
-						const inOverlay = !!(overlay && (((overlay === (ev.target as Node)) || (overlay as any).contains?.(ev.target as Node))) || insideOverlayRect);
+						const inOverlay = !!(overlay && (((overlay === (ev.target as Node)) || ((overlay as any).contains?.(ev.target as Node))) || insideOverlayRect));
 						if (!insideContent && !inOverlay) { stopOverlayFollow(); }
 					};
 					docPointerMoveHandlerRef.current = moveHandler;
@@ -441,7 +443,7 @@ export default function ProjectMangeSampleForm() {
 					const root = quill.root as HTMLElement;
 					const onMove = (ev: PointerEvent) => {
 						try {
-						const overlay = overlayRef.current;
+						// const overlay = overlayRef.current;
 						const x = ev.clientX, y = ev.clientY;
 						// 현재 대상 유지 여부 우선 검사
 						const current = hoverElRef.current as HTMLElement | null;
@@ -483,7 +485,7 @@ export default function ProjectMangeSampleForm() {
 					return () => {
 						try { root.removeEventListener('pointermove', onMove as any); } catch {}
 					};
-				}, []);
+				}, [positionOverlayTo, startOverlayFollow]);
 
 				// Observe editor DOM mutations to keep counts in sync (images/videos/text)
 				useEffect(() => {
@@ -523,7 +525,7 @@ export default function ProjectMangeSampleForm() {
                try { root.addEventListener('load', onLoadCapture, true); } catch {}
                classifyAllImagesInEditor();
                return () => { try { root.removeEventListener('load', onLoadCapture, true); } catch {}; };
-				}, []);
+				}, [classifyAllImagesInEditor]);
 
 				// rAF/리스너 정리
 				useEffect(() => {
@@ -534,6 +536,59 @@ export default function ProjectMangeSampleForm() {
 				}, []);
 
    useEffect(() => { hoverElRef.current = hoverEl; }, [hoverEl]);
+
+   // 이미지 사이 호버 효과와 클릭 이벤트를 위한 이벤트 리스너
+   useEffect(() => {
+      const editor = mainQuillRef.current?.getEditor();
+      if (!editor) return;
+
+      const root = editor.root as HTMLElement;
+      
+      const handleMouseMove = (e: MouseEvent) => {
+         const target = e.target as HTMLElement;
+         if (target.tagName === 'IMG') {
+            // 이미지 호버 시 아래쪽에 삽입 힌트 표시
+            target.style.setProperty('--hover-insert', 'block');
+         }
+      };
+
+      const handleMouseLeave = (e: MouseEvent) => {
+         const target = e.target as HTMLElement;
+         if (target.tagName === 'IMG') {
+            target.style.setProperty('--hover-insert', 'none');
+         }
+      };
+
+      const handleClick = (e: MouseEvent) => {
+         const target = e.target as HTMLElement;
+         
+         // 빈 공간 클릭 시 텍스트 입력 공간 생성
+         if (target.classList.contains('pm-insert-space')) {
+            e.preventDefault();
+            const index = parseInt(target.dataset.insertIndex || '0');
+            editor.insertText(index, '\n', 'user');
+            editor.setSelection(index + 1, 0, 'user');
+         }
+         
+         // 빈 p 태그 클릭 시 텍스트 입력 활성화
+         if (target.tagName === 'P' && target.textContent === '') {
+            const range = editor.getSelection();
+            if (range) {
+               editor.setSelection(range.index, 0, 'user');
+            }
+         }
+      };
+
+      root.addEventListener('mousemove', handleMouseMove);
+      root.addEventListener('mouseleave', handleMouseLeave);
+      root.addEventListener('click', handleClick);
+
+      return () => {
+         root.removeEventListener('mousemove', handleMouseMove);
+         root.removeEventListener('mouseleave', handleMouseLeave);
+         root.removeEventListener('click', handleClick);
+      };
+   }, []);
 
   // 다크/라이트 전환 시, 사용자가 직접 바꾸지 않았다면 기본 배경을 모드에 맞게 동기화
   useEffect(() => { bgColorRef.current = (backgroundColor || '').toUpperCase(); }, [backgroundColor]);
@@ -590,19 +645,19 @@ export default function ProjectMangeSampleForm() {
             } catch {}
             // 메타 항목은 에디터 복원에서 제외
             const contentItems = sorted.filter(it => !(it.type === 'TEXT' && typeof it.data === 'string' && it.data.startsWith('<!--PM_META')));
-            const escAttr = (s: string) => String(s || '').replace(/\"/g, '&quot;');
+            const escAttr = (s: string) => String(s || '').replace(/"/g, '&quot;');
             const html = contentItems
               .map((it) => {
                 if (!it || !it.data) return '';
                 if (it.type === 'IMAGE') {
                   // 붙여넣기 단계에서는 최소 속성만; 이후 DOM에 메타 재적용
-                  try { const obj = JSON.parse(it.data); return `<p><img src=\"${escAttr(obj.src || '')}\" /></p>`; } catch {}
-                  return `<p><img src=\"${escAttr(it.data)}\" /></p>`;
+                  try { const obj = JSON.parse(it.data); return `<p><img src="${escAttr(obj.src || '')}" /></p>`; } catch {}
+                  return `<p><img src="${escAttr(it.data)}" /></p>`;
                 }
                 if (it.type === 'VIDEO') {
                   // Quill가 iframe class/style을 보존하지 않을 수 있어 사후 적용
-                  try { const obj = JSON.parse(it.data); return `<p><iframe class=\"ql-video\" src=\"${escAttr(obj.src || '')}\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe></p>`; } catch {}
-                  return `<p><iframe class=\"ql-video\" src=\"${escAttr(it.data)}\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe></p>`;
+                  try { const obj = JSON.parse(it.data); return `<p><iframe class="ql-video" src="${escAttr(obj.src || '')}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>`; } catch {}
+                  return `<p><iframe class="ql-video" src="${escAttr(it.data)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>`;
                 }
                 // TEXT
                 return it.data;
@@ -731,17 +786,17 @@ export default function ProjectMangeSampleForm() {
 	};
 
 	// 미디어 래퍼 확보 유틸 (원본 크기 유지용)
-	const ensureMediaWrapper = (mediaEl: HTMLElement): HTMLElement => {
-		const parent = mediaEl.parentElement as HTMLElement | null;
-		if (parent && parent.classList.contains('pm-embed-wrap')) return parent;
-		const wrap = document.createElement('div');
-		wrap.className = 'pm-embed-wrap';
-		try {
-			parent?.insertBefore(wrap, mediaEl);
-			wrap.appendChild(mediaEl);
-		} catch {}
-		return wrap;
-	};
+	// const ensureMediaWrapper = (mediaEl: HTMLElement): HTMLElement => {
+	// 	const parent = mediaEl.parentElement as HTMLElement | null;
+	// 	if (parent && parent.classList.contains('pm-embed-wrap')) return parent;
+	// 	const wrap = document.createElement('div');
+	// 	wrap.className = 'pm-embed-wrap';
+	// 	try {
+	// 		parent?.insertBefore(wrap, mediaEl);
+	// 		wrap.appendChild(mediaEl);
+	// 	} catch {}
+	// 	return wrap;
+	// };
 
 	// 패딩 값을 적용하는 유틸 (콘텐츠 크기 변경 최소화: 좌우/하단 패딩만)
 	const applyPadding = (value: number) => {
@@ -749,7 +804,7 @@ export default function ProjectMangeSampleForm() {
 		if (!isPaddingEligible(hoverEl)) { notifyNeed1100(); return; }
 		schedulePadApply(hoverEl as HTMLElement, value);
 		try { (hoverEl as any).dataset.pmPadLast = String(Math.max(0, Math.floor(value))); } catch {}
-		setOverlayTick(t => t + 1);
+		// setOverlayTick(t => t + 1);
 	};
 
 	const togglePadding = () => {
@@ -781,7 +836,7 @@ export default function ProjectMangeSampleForm() {
 			setMediaPaddingPx(restore);
 		}
 		// force re-render so tooltip text updates immediately
-		setOverlayTick(t => t + 1);
+		// setOverlayTick(t => t + 1);
 	};
 	const removeContent = () => {
 		if (!hoverEl) return;
@@ -791,7 +846,7 @@ export default function ProjectMangeSampleForm() {
 		if (!parent) return;
 		parent.removeChild(target);
 		setHoverEl(null);
-		setOverlayTick(t => t + 1);
+		// setOverlayTick(t => t + 1);
 		recalcCounts();
 	};
 	const MAX_INSERT_WIDTH = 1600; // clamp long edge in pixels
@@ -899,28 +954,33 @@ export default function ProjectMangeSampleForm() {
 		const sel = quill.getSelection(true);
 		let insertIndex = sel ? sel.index : quill.getLength();
 
-		// Ensure embed sits on its own line by inserting a newline before if needed
-		try {
-			const prevChar = insertIndex > 0 ? quill.getText(insertIndex - 1, 1) : '\n';
-			if (prevChar !== '\n') {
-				quill.insertText(insertIndex, '\n', 'user');
-				insertIndex += 1;
-			}
-		} catch {}
+		// Check if we're inserting between existing content
+		const prevChar = insertIndex > 0 ? quill.getText(insertIndex - 1, 1) : '\n';
+		// const nextChar = insertIndex < quill.getLength() ? quill.getText(insertIndex, 1) : '\n';
+		
+		// Insert newline before if previous content is not a newline
+		if (prevChar !== '\n') {
+			quill.insertText(insertIndex, '\n', 'user');
+			insertIndex += 1;
+		}
 
 		// Insert the embed
 		quill.insertEmbed(insertIndex, type, value, 'user');
 
-		// Ensure there's a newline after the embed as well
-		try {
-			const afterChar = quill.getText(insertIndex + 1, 1);
-			if (afterChar !== '\n') {
-				quill.insertText(insertIndex + 1, '\n', 'user');
-			}
-		} catch {}
+		// Always insert newlines after embed to create text input space
+		quill.insertText(insertIndex + 1, '\n\n', 'user');
 
-		// Place caret after the embed block
+		// Place caret in the empty line after the embed for text input
 		quill.setSelection(insertIndex + 2, 0, 'user');
+
+		// Ensure there's always a text input space at the end
+		setTimeout(() => {
+			const length = quill.getLength();
+			const lastChar = quill.getText(length - 1, 1);
+			if (lastChar !== '\n') {
+				quill.insertText(length, '\n', 'user');
+			}
+		}, 100);
 
 		scrollToEmbedAtIndex(insertIndex);
 		recalcCounts();
@@ -963,8 +1023,7 @@ export default function ProjectMangeSampleForm() {
 	};
 	const triggerImageAdd = () => { openImagePicker(); };
 	const triggerVideoAdd = () => {
-		const url = window.prompt('동영상 URL을 입력하세요 (YouTube, Vimeo 등)');
-		if (url) { addVideoUrl(url); }
+		setIsVideoUrlModalOpen(true);
 	};
 
 	const buildModules = (toolbarSelector: string) => ({
@@ -1062,7 +1121,14 @@ export default function ProjectMangeSampleForm() {
 	};
 
 	const modal = (
-		<ReorderModal open={isReorderOpen} blocks={reorderBlocks} onConfirm={applyNewOrder} onClose={() => setIsReorderOpen(false)} />
+		<>
+			<ReorderModal open={isReorderOpen} blocks={reorderBlocks} onConfirm={applyNewOrder} onClose={() => setIsReorderOpen(false)} />
+			<VideoUrlModal 
+				open={isVideoUrlModalOpen} 
+				onClose={() => setIsVideoUrlModalOpen(false)} 
+				onConfirm={addVideoUrl} 
+			/>
+		</>
 	);
 
 	const navigate = useNavigate();
@@ -1094,7 +1160,7 @@ export default function ProjectMangeSampleForm() {
 		setIsDetailsOpen(true);
 	};
 
-	const handleSaveDraft = () => {};
+	// const handleSaveDraft = () => {};
 	const openPreview = () => {
 		// 미리보기에서는 커버 이미지를 강제로 설정하지 않음
 		// (텍스트 에디터의 콘텐츠가 상단에 오도록 하기 위함)
@@ -1235,12 +1301,12 @@ export default function ProjectMangeSampleForm() {
        }
     }
 
-   async function handleAfterCreate(userId: number, projectId: number, items: { type: 'IMAGE' | 'TEXT' | 'VIDEO'; data: string; order: number }[], isEdit: boolean) {
-      if (isEdit) {
-         try { await deleteAllProjectContents(userId, projectId); } catch {}
-      }
-      await saveProjectContents(userId, projectId, items);
-   }
+   // async function handleAfterCreate(userId: number, projectId: number, items: { type: 'IMAGE' | 'TEXT' | 'VIDEO'; data: string; order: number }[], isEdit: boolean) {
+   //    if (isEdit) {
+   //       try { await deleteAllProjectContents(userId, projectId); } catch {}
+   //    }
+   //    await saveProjectContents(userId, projectId, items);
+   // }
 
 	return (
 		<>
@@ -1407,7 +1473,7 @@ export default function ProjectMangeSampleForm() {
 									{/* Apply editor inner content spacing; toolbar fixed white; editor follows backgroundColor */}
                                     <style>{`
                                         .pm-sample-editor .ql-container { background: transparent; }
-                        .pm-sample-editor .ql-editor { background: ${backgroundColor} !important; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; color: var(--editor-fg, #111); }
+                        .pm-sample-editor .ql-editor { background: ${backgroundColor} !important; --pm-gap: ${contentGapPx}px; --pm-bg: ${backgroundColor}; color: var(--editor-fg, #111); padding-top: 10px !important; }
                         .dark .pm-sample-editor .ql-editor { color: #fff; }
 																	/* removed pm-vpad-factor to preserve user padding at gap 0 */
 																								/* universal block gap: allow per-block override via --pm-top-gap */
@@ -1445,8 +1511,33 @@ export default function ProjectMangeSampleForm() {
 										.pm-sample-editor .ql-editor img + iframe,
 										.pm-sample-editor .ql-editor iframe + img,
 										.pm-sample-editor .ql-editor iframe + iframe { margin-top: var(--pm-gap) !important; display: block; }
-															/* if previous embed is padded, add pad back to keep exact outer gap */
+																		/* if previous embed is padded, add pad back to keep exact outer gap */
 															.pm-sample-editor .ql-editor img.pm-embed-padded + img,
+																		/* 이미지 사이 호버 효과와 삽입 공간 */
+															.pm-sample-editor .ql-editor img {
+																position: relative;
+																margin-bottom: 8px;
+															}
+															/* 이미지 뒤 빈 공간 */
+															.pm-sample-editor .ql-editor img + p:empty,
+															.pm-sample-editor .ql-editor img + div:empty,
+															.pm-sample-editor .ql-editor p:empty {
+																min-height: 1.2em;
+																margin-top: 4px;
+																margin-bottom: 4px;
+																position: relative;
+																cursor: text;
+																border-radius: 4px;
+															}
+															/* 이미지 맨 끝에 텍스트 입력 공간 추가 */
+															.pm-sample-editor .ql-editor:after {
+																content: '';
+																display: block;
+																min-height: 1.5em;
+																margin-top: 10px;
+																cursor: text;
+																border-radius: 4px;
+															}
 															.pm-sample-editor .ql-editor img.pm-embed-padded + iframe,
 															.pm-sample-editor .ql-editor iframe.pm-embed-padded + img,
 															.pm-sample-editor .ql-editor iframe.pm-embed-padded + iframe { margin-top: calc(var(--pm-gap) + var(--pm-pad, 0px)) !important; }
@@ -1454,21 +1545,21 @@ export default function ProjectMangeSampleForm() {
 									{hoverEl && hoverType && (
 										<div
 											ref={overlayRef}
-											className="bg-white border border-gray-300 rounded shadow-lg flex gap-2 px-4 py-2 relative"
+											className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg flex gap-3 px-6 py-3 relative"
 											style={{ position: 'fixed', transform: 'translateX(-50%) translateZ(0)', zIndex: 10000, pointerEvents: 'auto', willChange: 'top,left,transform' }}
-											onMouseEnter={() => { setIsHoveringOverlay(true); }}
-											onMouseLeave={(e) => { if (overlayDragLockRef.current) return; setIsHoveringOverlay(false); setHoveredButton(null); const rel = (e as any).relatedTarget as any; if (hoverElRef.current && isNode(rel) && (rel === hoverElRef.current || (hoverElRef.current as any).contains?.(rel))) { return; } stopOverlayFollow(); }}
+											onMouseEnter={() => { /* setIsHoveringOverlay(true); */ }}
+											onMouseLeave={(e) => { if (overlayDragLockRef.current) return; /* setIsHoveringOverlay(false); */ setHoveredButton(null); const rel = (e as any).relatedTarget as any; if (hoverElRef.current && isNode(rel) && (rel === hoverElRef.current || (hoverElRef.current as any).contains?.(rel))) { return; } stopOverlayFollow(); }}
 											onPointerDown={handleOverlayPointerDown}
 										>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton('padding')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={togglePadding}
 													type="button"
 												>
-													<FiMaximize2 className="w-4 h-4" />
+													<FiMaximize2 className="w-4 h-4 text-black dark:text-white" />
 												</button>
 												{hoveredButton === 'padding' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
@@ -1481,13 +1572,13 @@ export default function ProjectMangeSampleForm() {
 											</div>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton(hoverType === 'image' ? 'image' : 'url')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={hoverType === 'image' ? changeImage : changeVideoUrl}
 													type="button"
 												>
-													{hoverType === 'image' ? <FiImage className="w-4 h-4" /> : <IoMdVideocam className="w-4 h-4" />}
+													{hoverType === 'image' ? <FiImage className="w-4 h-4 text-black dark:text-white" /> : <IoMdVideocam className="w-4 h-4 text-black dark:text-white" />}
 												</button>
 												{hoveredButton === 'image' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
@@ -1508,13 +1599,43 @@ export default function ProjectMangeSampleForm() {
 											</div>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
+													onMouseEnter={() => setHoveredButton('text')}
+													onMouseLeave={() => setHoveredButton(null)}
+													onClick={() => {
+														const quill = mainQuillRef.current?.getEditor();
+														if (quill && hoverEl) {
+															const range = quill.getSelection();
+															if (range) {
+																// 이미지 아래에 텍스트 입력 공간 생성
+																const insertIndex = range.index + 1;
+																quill.insertText(insertIndex, '\n', 'user');
+																quill.setSelection(insertIndex + 1, 0, 'user');
+															}
+														}
+													}}
+													type="button"
+												>
+													<span className="w-4 h-4 inline-flex items-center justify-center text-sm font-bold text-black dark:text-white">T</span>
+												</button>
+												{hoveredButton === 'text' && (
+													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
+														<div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-lg font-medium" style={{minWidth: 120, textAlign: 'center', letterSpacing: "-0.5px"}}>
+															텍스트 입력
+														</div>
+														<div className="w-2.5 h-2.5 bg-black rotate-45 -mt-1"></div>
+													</div>
+												)}
+											</div>
+											<div className="relative">
+												<button
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton('delete')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={removeContent}
 													type="button"
 												>
-													<span className="w-4 h-4 inline-flex items-center justify-center"><FaTrash className="w-4 h-4" /></span>
+													<span className="w-4 h-4 inline-flex items-center justify-center"><FaTrash className="w-4 h-4 text-black dark:text-white" /></span>
 												</button>
 												{hoveredButton === 'delete' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
@@ -1529,7 +1650,7 @@ export default function ProjectMangeSampleForm() {
 											{/* 1100px 이상 미디어에서만 패딩 조절 노출 */}
 											{isPaddingEligible(hoverEl) && (
 												<div className="flex items-center gap-2 ml-2">
-													<span className="text-xs text-gray-600">패딩</span>
+													<span className="text-xs text-gray-300 dark:text-gray-400">패딩</span>
 													<input
 														type="range"
 														min={0}

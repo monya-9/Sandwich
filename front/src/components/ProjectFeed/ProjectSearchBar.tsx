@@ -3,7 +3,6 @@ import React, { useState, useCallback, useEffect, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { SearchTypeDropdown } from './SearchTypeDropdown';
-import { SortDropdown } from './SortDropdown';
 import { useRecentSearches } from '../../hooks/useRecentSearches';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -13,8 +12,6 @@ interface ProjectSearchBarProps {
   isLoading: boolean;
   searchType: 'PORTFOLIO' | 'ACCOUNT';
   onSearchTypeChange: (type: 'PORTFOLIO' | 'ACCOUNT') => void;
-  sortType: 'latest' | 'popular' | 'recommended';
-  onSortChange: (sort: 'latest' | 'popular' | 'recommended') => void;
   onClearSearch: () => void;
 }
 
@@ -24,8 +21,6 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   isLoading,
   searchType,
   onSearchTypeChange,
-  sortType,
-  onSortChange,
   onClearSearch
 }) => {
   const [searchParams] = useSearchParams();
@@ -83,6 +78,26 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
 
   // 검색 타입 변경은 props로 받은 함수 사용
 
+  // 검색 실행 함수
+  const handleSearchClick = useCallback(async () => {
+    if (searchQuery.trim()) {
+      onSearch(searchQuery.trim());
+      
+      // URL 업데이트
+      window.history.pushState({}, '', `/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      
+      // ✅ 로그인한 사용자만 최근 검색어 저장
+      if (isLoggedIn) {
+        try {
+          await saveSearch(searchQuery.trim(), 'PORTFOLIO');
+        } catch (error) {
+          console.error('최근 검색어 저장 실패:', error);
+          // 에러가 발생해도 검색은 계속 진행
+        }
+      }
+    }
+  }, [searchQuery, onSearch, isLoggedIn, saveSearch]);
+
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
       {/* 검색 입력창 */}
@@ -113,23 +128,22 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
         </div>
       </div>
 
-      {/* 드롭다운 그룹 */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* 검색 타입 드롭다운 */}
-        <div className="flex-1 sm:flex-initial">
-          <SearchTypeDropdown
-            value={searchType}
-            onChange={onSearchTypeChange}
-          />
-        </div>
+      {/* 검색 버튼 */}
+      <button
+        onClick={handleSearchClick}
+        disabled={!searchQuery.trim() || isLoading}
+        className="px-4 sm:px-6 py-2 sm:py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm sm:text-base font-medium rounded-lg transition-colors flex items-center gap-2 sm:gap-3 whitespace-nowrap"
+      >
+        <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span>검색</span>
+      </button>
 
-        {/* 정렬 드롭다운 */}
-        <div className="flex-1 sm:flex-initial">
-          <SortDropdown
-            value={sortType}
-            onChange={onSortChange}
-          />
-        </div>
+      {/* 검색 타입 드롭다운 */}
+      <div className="flex-1 sm:flex-initial">
+        <SearchTypeDropdown
+          value={searchType}
+          onChange={onSearchTypeChange}
+        />
       </div>
     </div>
   );

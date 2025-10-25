@@ -1,5 +1,5 @@
 // src/components/home/MainHeroSection.tsx
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { Project } from '../../types/Project';
 import { resolveCover, swapJpgPng } from '../../utils/getProjectCover';
 import { Link } from 'react-router-dom';
@@ -45,7 +45,10 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     const [isAtStart, setIsAtStart] = useState(true);
     const [isAtEnd, setIsAtEnd] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+    const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+    const [isUserScrolling, setIsUserScrolling] = useState(false);
 
     // 개발자 도구에서 캐시 삭제를 위한 전역 함수 등록
     useEffect(() => {
@@ -75,6 +78,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             return null; 
         }
     });
+    const [isLoadingWeeklyTop, setIsLoadingWeeklyTop] = useState(false);
 
     // 오버라이드 카드에 표시할 제목/썸네일(cover) 동적 로딩 결과 저장: index -> { title, coverUrl }
     const [overrideMeta, setOverrideMeta] = useState<Record<number, { title?: string; coverUrl?: string }>>(() => {
@@ -100,6 +104,12 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         if (!showFakeScroll) setShowFakeScroll(true);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => setShowFakeScroll(false), 5000);
+        
+        // 사용자 스크롤 감지
+        if (!isAutoScrolling) {
+            setIsUserScrolling(true);
+            setTimeout(() => setIsUserScrolling(false), 3000); // 3초 후 자동 스크롤 재개
+        }
     };
 
     useEffect(() => {
@@ -117,6 +127,61 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // 자동 스크롤 애니메이션
+    const startAutoScroll = useCallback(() => {
+        if (autoScrollRef.current) clearInterval(autoScrollRef.current);
+        
+        autoScrollRef.current = setInterval(() => {
+            const el = scrollRef.current;
+            if (!el || isAutoScrolling || isUserScrolling) return;
+            
+            const cardWidth = windowWidth < 768 ? 280 : windowWidth < 1024 ? 350 : 450;
+            const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16; // gap-2, gap-3, gap-4
+            const scrollAmount = cardWidth + gap;
+            
+            setIsAutoScrolling(true);
+            
+            // 현재 스크롤 위치 확인
+            const currentScroll = el.scrollLeft;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            
+            // 끝에 도달했으면 처음으로 돌아가기
+            if (currentScroll + scrollAmount >= maxScroll - 10) { // 10px 여유를 둠
+                el.scrollTo({
+                    left: 0,
+                    behavior: 'smooth'
+                });
+            } else {
+                el.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+            
+            // 애니메이션 완료 후 상태 리셋
+            setTimeout(() => {
+                setIsAutoScrolling(false);
+            }, 1500); // 애니메이션 시간을 조금 더 길게
+        }, 4000); // 4초마다 자동 스크롤 (더 여유있게)
+    }, [windowWidth, isAutoScrolling, isUserScrolling]);
+
+    // 자동 스크롤 시작/중지
+    useEffect(() => {
+        const currentProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
+            ? weeklyTopProjects.slice(0, 15)
+            : projects.slice(0, 15);
+            
+        if (currentProjects.length > 1) {
+            startAutoScroll();
+        }
+        
+        return () => {
+            if (autoScrollRef.current) {
+                clearInterval(autoScrollRef.current);
+            }
+        };
+    }, [projects.length, weeklyTopProjects, startAutoScroll]);
 
     // 피드 페이지를 스캔해서 특정 ID들의 프로젝트를 찾아오는 헬퍼
     async function findProjectsByIdsViaFeed(targetIds: number[], maxPages = 10, pageSize = 100): Promise<Project[]> {
@@ -146,6 +211,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         let isMounted = true;
         (async () => {
             try {
+                setIsLoadingWeeklyTop(true);
                 const items = await fetchWeeklyTop();
                 if (!items || items.length === 0) {
                     // 데이터가 없으면 캐시도 삭제
@@ -179,6 +245,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                     setWeeklyTopProjects(null);
                     try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
                 }
+            } finally {
+                if (isMounted) {
+                    setIsLoadingWeeklyTop(false);
+                }
+                isMounted = false;
             }
         })();
         return () => { isMounted = false; };
@@ -217,11 +288,35 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
     // 표시 소스 선택: 주간 TOP 데이터가 준비되면 그것을 우선 사용
     const displayProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
-        ? weeklyTopProjects.slice(0, 7)
-        : projects.slice(0, 7);
+        ? weeklyTopProjects.slice(0, 15)
+        : projects.slice(0, 15);
 
-    // 버튼 위치 계산
-    const buttonTop = windowWidth < 768 ? '80px' : windowWidth < 1024 ? '100px' : '140px';
+    // 버튼 위치 계산 (카드 컨테이너 중앙)
+    const buttonTop = '50%';
+
+    // 로딩 상태 처리
+    if (isLoadingWeeklyTop && (!weeklyTopProjects || weeklyTopProjects.length === 0)) {
+        return (
+            <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
+                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
+                <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
+                    프로젝트를 불러오는 중입니다…
+                </div>
+            </section>
+        );
+    }
+
+    // 데이터가 없을 때
+    if (displayProjects.length === 0) {
+        return (
+            <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
+                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
+                <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
+                    프로젝트를 불러오는 중입니다…
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
@@ -229,7 +324,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
             <button
                 onClick={scrollLeft}
-                className="absolute left-0 md:left-1 lg:left-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-2 md:mt-3 lg:mt-[15px] bg-white dark:bg-black"
+                className="absolute left-0 md:left-1 lg:left-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 bg-white dark:bg-black transform -translate-y-1/2"
                 style={{ top: buttonTop }}
                 aria-label="왼쪽으로 스크롤"
             >
@@ -238,7 +333,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
             <button
                 onClick={scrollRight}
-                className="absolute right-0 md:right-1 lg:right-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-2 md:mt-3 lg:mt-[15px] bg-white dark:bg-black"
+                className="absolute right-0 md:right-1 lg:right-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 bg-white dark:bg-black transform -translate-y-1/2"
                 style={{ top: buttonTop }}
                 aria-label="오른쪽으로 스크롤"
             >
@@ -266,11 +361,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                         <CardTag
                             key={project.id}
                             {...cardProps}
-                            className="group relative min-w-[200px] md:min-w-[250px] lg:min-w-[300px] h-[140px] md:h-[180px] lg:h-[220px] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
+                            className="group relative min-w-[280px] md:min-w-[350px] lg:min-w-[450px] aspect-[4/3] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
                         >
                             <CoverImage initialSrc={initialSrc} title={displayTitle} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
-                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-xs md:text-sm font-semibold line-clamp-1">
+                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-sm md:text-base lg:text-lg font-semibold line-clamp-1">
                                 {displayTitle}
                             </p>
                         </CardTag>

@@ -28,6 +28,7 @@ const RightPanelActions: React.FC<RightPanelActionsProps> = ({ onImageAdd, onVid
       <Tile onClick={onImageAdd} icon={<FaImage className="w-[40px] h-[40px] text-black dark:text-white" />} label={<>이미지 추가</>} />
       <Tile onClick={onVideoAdd} icon={<IoMdVideocam className="w-[40px] h-[40px] text-black dark:text-white" />} label={<>동영상 추가</>} />
       <Tile onClick={onReorder} icon={<HiMiniArrowsUpDown className="w-[40px] h-[40px] text-black dark:text-white" />} label={<><span>콘텐츠 재정렬</span></>} />
+      
     </div>
   );
 };

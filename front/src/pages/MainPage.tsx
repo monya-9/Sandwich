@@ -1,11 +1,9 @@
 //MainPage.tsx
 import React, { useEffect, useMemo, useState, useContext } from 'react';
 import MainHeroSection from '../components/Main/MainHeroSection';
-import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
 import MainDeveloperHighlight from '../components/Main/MainDeveloperHighlight';
 import SortModal from '../components/Main/SortModal';
-import { dummyProjects } from '../data/dummyProjects';
 import { Project, Category } from '../types/Project';
 import { fetchUserRecommendations } from '../api/reco';
 import { fetchProjectFeed, fetchProjectsMeta } from '../api/projects';
@@ -13,14 +11,7 @@ import { AuthContext } from '../context/AuthContext';
 
 const MainPage = () => {
   // 정렬 옵션을 sessionStorage에서 불러오기 (페이지 이동 시에도 유지)
-  const [selectedCategory, setSelectedCategory] = useState<Category | '전체'>(() => {
-    try {
-      const saved = sessionStorage.getItem('mainPage:selectedCategory');
-      return (saved as Category | '전체') || '전체';
-    } catch {
-      return '전체';
-    }
-  });
+  const selectedCategory: Category | '전체' = '전체'; // 카테고리 필터 제거로 고정
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState(() => {
     try {
@@ -293,42 +284,30 @@ const MainPage = () => {
   const gridPrimary = hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10);
   const heroProjects = hasReco
     ? filteredRecoProjects.slice(0, 7)
-    : (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
+    : sortedProjects.slice(0, 7);
   const gridMore = hasReco
     ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
     : sortedProjects.slice(10);
 
   // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
-  const gridTitle = useReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+  const gridTitle = useReco ? 'AI 추천 프로젝트' : '전체 프로젝트';
 
   return (
     <div className="min-h-screen">
       <main className="px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
-        <MainHeroSection projects={heroProjects.length > 0 ? heroProjects : dummyProjects.slice(0, 7)} />
-
-        <div className="mb-10">
-          <MainCategoryFilter
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            onOpenSortModal={handleOpenSortModal}
-          />
-        </div>
+        <MainHeroSection projects={heroProjects} />
 
         {/* 메인 그리드 */}
-        {isInitialLoad && loadingProjects ? (
-          <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
-            프로젝트를 불러오는 중입니다…
-          </div>
-        ) : useReco ? (
+        {useReco ? (
           hasReco ? (
-            <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+            <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
           ) : (
             <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
               {recoError ? recoError : 'AI 추천을 불러오는 중입니다…'}
             </div>
           )
         ) : (
-          <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+          <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
         )}
 
         {/* 다른 섹션은 항상 표시 */}

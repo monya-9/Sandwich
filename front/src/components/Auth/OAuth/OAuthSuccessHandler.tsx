@@ -75,7 +75,10 @@ const OAuthSuccessHandler: React.FC = () => {
                     (me.username && me.username.trim()) ||
                     "";
 
-                if (display) localStorage.setItem("userNickname", display);
+                if (display) {
+                    localStorage.setItem("userNickname", display);
+                    sessionStorage.setItem("userNickname", display);
+                }
                 if (me.username) {
                     localStorage.setItem("userUsername", me.username);
                     const scopedKey = me.email ? `userUsername:${me.email}` : undefined;
@@ -89,6 +92,11 @@ const OAuthSuccessHandler: React.FC = () => {
                     if (scopedSlugKey) localStorage.setItem(scopedSlugKey, me.profileSlug);
                 }
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
+
+                // 닉네임 변경 이벤트 발생
+                if (display) {
+                    window.dispatchEvent(new Event("user-nickname-updated"));
+                }
 
                 // ✅ 6. 컨텍스트 갱신
                 login(me.email || emailFromUrl);

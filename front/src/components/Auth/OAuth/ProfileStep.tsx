@@ -76,6 +76,10 @@ const ProfileStep = () => {
 
             // ✅ 닉네임을 localStorage에 저장
             localStorage.setItem("userNickname", nickname);
+            sessionStorage.setItem("userNickname", nickname);
+            
+            // 닉네임 변경 이벤트 발생
+            window.dispatchEvent(new Event("user-nickname-updated"));
 
             setToast({
                 visible: true,
