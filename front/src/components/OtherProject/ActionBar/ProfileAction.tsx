@@ -194,6 +194,12 @@ export default function ProfileAction({
 
       {(hover || tooltipHover) && !isMobile && (
         <>
+          {/* 브릿지 영역: 버튼과 툴팁 사이의 간격을 메움 */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[70px] z-40"
+            onMouseEnter={() => setTooltipHover(true)}
+            onMouseLeave={() => setTooltipHover(false)}
+          />
           <div
             ref={tooltipRef}
             className="absolute right-[calc(100%+14px)] rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-center z-50 px-7 py-6 gap-4 w-max min-w-[350px]"

@@ -31,16 +31,13 @@ export default function PublicLikesGrid() {
   }, [userId]);
 
   if (loading) {
-    return <div className="min-h-[360px] flex items-center justify-center text-black/60">불러오는 중…</div>;
+    return <div className="min-h-[360px] flex items-center justify-center text-black/60 dark:text-white/60">불러오는 중…</div>;
   }
 
   if (!items.length) {
     return (
       <div className="min-h-[360px] flex flex-col items-center justify-center text-center">
-        <div className="mt-6 text-[16px] md:text-[18px] text-black/80">아직 좋아요한 작업이 없습니다.</div>
-        <button className="mt-4 h-[42px] px-5 rounded-[21px] border border-black/20 text-[14px] flex items-center text-black bg-white" disabled>
-          크리에이터를 발견하러 가기
-        </button>
+        <div className="text-[16px] md:text-[18px] text-black/80 dark:text-white/80">아직 좋아요한 작업이 없습니다.</div>
       </div>
     );
   }

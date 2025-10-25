@@ -11,6 +11,7 @@ export type UserProfileResponse = {
 	github?: string | null;
 	linkedin?: string | null;
 	profileImage?: string | null;
+	coverImage?: string | null;
 	position?: PositionDto | null;
 	interests: InterestDto[];
 	followerCount: number;

@@ -79,6 +79,8 @@ export default function CommentPanel({
         visible: true,
         message: "댓글이 작성되었습니다!"
       });
+      // 프로젝트 통계 갱신 이벤트 발생
+      window.dispatchEvent(new CustomEvent("project:stats:refresh"));
     } catch (e: any) {
       setErrorToast({
         visible: true,
@@ -96,6 +98,8 @@ export default function CommentPanel({
         visible: true,
         message: "답글이 작성되었습니다!"
       });
+      // 프로젝트 통계 갱신 이벤트 발생
+      window.dispatchEvent(new CustomEvent("project:stats:refresh"));
     } catch (e: any) {
       setErrorToast({
         visible: true,
@@ -120,6 +124,8 @@ export default function CommentPanel({
         visible: true,
         message: "댓글이 삭제되었습니다."
       });
+      // 프로젝트 통계 갱신 이벤트 발생
+      window.dispatchEvent(new CustomEvent("project:stats:refresh"));
     } catch (e: any) {
       setErrorToast({
         visible: true,

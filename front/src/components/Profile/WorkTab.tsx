@@ -143,18 +143,12 @@ const WorkTab: React.FC = () => {
 	};
 
 	if (loading && projects.length === 0) {
-		return <div className="min-h-[360px] flex items-center justify-center text-black/70 dark:text-white/70">불러오는 중…</div>;
+		return <div className="min-h-[360px] flex items-center justify-center text-black/60 dark:text-white/60">불러오는 중…</div>;
 	}
 	if (projects.length === 0) {
 		return (
 			<div className="min-h-[360px] flex flex-col items-center justify-center text-center">
-				<div className="mt-6 text-[16px] md:text-[18px] text-black/90 dark:text-white/90">아직 등록한 작업이 없습니다.</div>
-				<div className="mt-2 text-[14px] md:text-[15px] text-black/70 dark:text-white/70 leading-relaxed">
-					상단의 업로드 버튼으로 프로젝트를 등록해 보세요!
-				</div>
-				<div className="mt-6 flex items-center gap-3">
-					<Link to="/project/edit" className="h-[44px] px-5 rounded-[22px] bg-[#068334] text-white text-[14px] flex items-center">새로운 작업 업로드</Link>
-				</div>
+				<div className="mt-6 text-[16px] md:text-[18px] text-black/80 dark:text-white/80">등록된 작업이 없습니다.</div>
 			</div>
 		);
 	}
@@ -162,8 +156,7 @@ const WorkTab: React.FC = () => {
 	return (
 		<div className="min-h-[360px]">
 			{/* 헤더 액션 */}
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-medium text-black/90 dark:text-white">모든 작업 목록</h3>
+            <div className="flex items-center justify-end mb-4 mt-6">
                 <div className="flex gap-2">
 					{isReorderMode ? (
 						<>

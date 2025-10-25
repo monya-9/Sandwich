@@ -68,6 +68,11 @@ export default function LikeAction({ targetType, targetId, isMobile = false }: L
       setLiked(res.data.likedByMe);
       setCount(res.data.likeCount);
       setToast(res.data.likedByMe ? "like" : "unlike");
+      
+      // 프로젝트 통계 갱신 이벤트 발생
+      if (targetType === "PROJECT") {
+        window.dispatchEvent(new CustomEvent("project:stats:refresh"));
+      }
     } catch (e: any) {
       console.error("좋아요 처리 실패:", e);
       if (e.response?.status === 401) {
