@@ -167,7 +167,7 @@ const AwardCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 				<div className={titleCls}>{item.title}</div>
 				<div className={`mt-2 ${subCls}`}>{period}</div>
 				{item.description ? (
-					<div className={`mt-4 text-[16px] ${isPrivate ? textMuted : "text-[#111827]"}`}>{item.description}</div>
+					<div className={`mt-4 text-[16px] ${isPrivate ? textMuted : "text-[#111827] dark:text-white"}`}>{item.description}</div>
 				) : null}
 			</div>
 		</div>
