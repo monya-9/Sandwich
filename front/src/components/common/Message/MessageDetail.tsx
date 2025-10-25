@@ -663,7 +663,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
           <textarea
               ref={taRef}
               value={text}
-              onChange={(e) => setText(e.currentTarget.value)}
+              onChange={(e) => {
+                  const newText = e.currentTarget.value;
+                  if (newText.length <= 80) {
+                      setText(newText);
+                  }
+              }}
               onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !isComposing) {
                       e.preventDefault();
@@ -672,8 +677,9 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
               }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
-              placeholder="메시지 입력"
+              placeholder="메시지 입력 (최대 80자)"
               rows={1}
+              maxLength={80}
               className="flex-1 border border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-black rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
           />
                     <button
@@ -684,6 +690,13 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                     >
                         {sending ? "전송 중..." : "전송"}
                     </button>
+                </div>
+                
+                {/* 문자 수 표시 */}
+                <div className="flex justify-end">
+                    <span className={`text-xs ${text.length > 70 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
+                        {text.length}/80
+                    </span>
                 </div>
 
                 {/* 이모지/첨부 */}
