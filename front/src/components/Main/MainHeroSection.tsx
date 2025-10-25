@@ -90,26 +90,8 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         } catch { return {}; }
     });
 
-    const scrollLeft = () => {
-        const cardWidth = windowWidth < 768 ? windowWidth - 80 : 
-                         windowWidth < 1024 ? windowWidth - 70 : 
-                         windowWidth < 1280 ? (windowWidth - 100) / 3 : 
-                         windowWidth < 1536 ? (windowWidth - 40) / 4 : 
-                         (windowWidth - 20) / 5;
-        const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16;
-        const scrollAmount = -(cardWidth + gap);
-        scrollRef.current?.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    };
-    const scrollRight = () => {
-        const cardWidth = windowWidth < 768 ? windowWidth - 80 : 
-                         windowWidth < 1024 ? windowWidth - 70 : 
-                         windowWidth < 1280 ? (windowWidth - 100) / 3 : 
-                         windowWidth < 1536 ? (windowWidth - 40) / 4 : 
-                         (windowWidth - 20) / 5;
-        const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16;
-        const scrollAmount = cardWidth + gap;
-        scrollRef.current?.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    };
+    const scrollLeft = () => scrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
+    const scrollRight = () => scrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
 
     const handleScroll = () => {
         if (!scrollRef.current) return;
@@ -154,12 +136,8 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             const el = scrollRef.current;
             if (!el || isAutoScrolling || isUserScrolling) return;
             
-            const cardWidth = windowWidth < 768 ? windowWidth - 80 : 
-                             windowWidth < 1024 ? windowWidth - 70 : 
-                             windowWidth < 1280 ? (windowWidth - 100) / 3 : 
-                             windowWidth < 1536 ? (windowWidth - 40) / 4 : 
-                             (windowWidth - 20) / 5;
-            const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16;
+            const cardWidth = windowWidth < 768 ? 280 : windowWidth < 1024 ? 350 : 450;
+            const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16; // gap-2, gap-3, gap-4
             const scrollAmount = cardWidth + gap;
             
             setIsAutoScrolling(true);
@@ -184,8 +162,8 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             // 애니메이션 완료 후 상태 리셋
             setTimeout(() => {
                 setIsAutoScrolling(false);
-            }, 2000); // 애니메이션 시간을 더 길게
-        }, 5000); // 5초마다 자동 스크롤 (더 여유있게)
+            }, 1500); // 애니메이션 시간을 조금 더 길게
+        }, 4000); // 4초마다 자동 스크롤 (더 여유있게)
     }, [windowWidth, isAutoScrolling, isUserScrolling]);
 
     // 자동 스크롤 시작/중지
@@ -320,7 +298,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     if (isLoadingWeeklyTop && (!weeklyTopProjects || weeklyTopProjects.length === 0)) {
         return (
             <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
-                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-black dark:text-gray-100">이번 주 인기 프로젝트</h1>
+                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
                 <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
                     프로젝트를 불러오는 중입니다…
                 </div>
@@ -332,7 +310,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     if (displayProjects.length === 0) {
         return (
             <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
-                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-black dark:text-gray-100">이번 주 인기 프로젝트</h1>
+                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
                 <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
                     프로젝트를 불러오는 중입니다…
                 </div>
@@ -366,14 +344,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             <div
                 ref={scrollRef}
                 className="custom-scrollbar flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 py-2 mt-2 md:mt-[10px] relative"
-                style={{ 
-                    scrollSnapType: 'x mandatory', 
-                    overflowX: 'auto', 
-                    scrollbarWidth: 'none', 
-                    msOverflowStyle: 'none',
-                    scrollBehavior: 'smooth',
-                    WebkitOverflowScrolling: 'touch'
-                }}
+                style={{ scrollSnapType: 'x mandatory', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {displayProjects.map((project, idx) => {
                     const override = (HERO_OVERRIDES as any)[idx] as { to?: string; image?: string } | undefined;
@@ -390,11 +361,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                         <CardTag
                             key={project.id}
                             {...cardProps}
-                            className="group relative w-[calc(100vw-80px)] md:w-[calc(100vw-70px)] lg:w-[calc((100vw-100px)/3)] xl:w-[calc((100vw-40px)/4)] 2xl:w-[calc((100vw-20px)/5)] aspect-[4/3] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
+                            className="group relative min-w-[280px] md:min-w-[350px] lg:min-w-[450px] aspect-[4/3] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
                         >
                             <CoverImage initialSrc={initialSrc} title={displayTitle} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
-                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-xs md:text-sm font-semibold line-clamp-1">
+                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-sm md:text-base lg:text-lg font-semibold line-clamp-1">
                                 {displayTitle}
                             </p>
                         </CardTag>
