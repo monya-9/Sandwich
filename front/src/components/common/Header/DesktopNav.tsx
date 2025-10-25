@@ -38,6 +38,9 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         return looksLikeJwt ? "" : email;
     }, [email]);
 
+    // 닉네임 변경 감지를 위한 상태
+    const [nicknameUpdateTrigger, setNicknameUpdateTrigger] = useState(0);
+
     const displayName = useMemo(() => {
         const getItem = (k: string) =>
             (typeof window !== "undefined" &&
@@ -51,7 +54,19 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail]);
+    }, [safeEmail, nicknameUpdateTrigger]);
+
+    // 닉네임 변경 이벤트 리스너
+    useEffect(() => {
+        const handleNicknameUpdate = () => {
+            setNicknameUpdateTrigger(prev => prev + 1);
+        };
+
+        window.addEventListener('user-nickname-updated', handleNicknameUpdate);
+        return () => {
+            window.removeEventListener('user-nickname-updated', handleNicknameUpdate);
+        };
+    }, []);
 
     const myId = Number(
         localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"

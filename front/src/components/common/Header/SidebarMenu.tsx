@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from "react";
+import React, { useContext, useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import ProfileCircle from "./ProfileCircle";
@@ -40,6 +40,9 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
         return looksLikeJwt ? "" : email;
     }, [email]);
 
+    // 닉네임 변경 감지를 위한 상태
+    const [nicknameUpdateTrigger, setNicknameUpdateTrigger] = useState(0);
+
     // ✅ 통일된 표시 이름: nickname > username > email 로컬파트 > "사용자"
     const displayName = useMemo(() => {
         const getItem = (k: string) =>
@@ -56,7 +59,19 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail]);
+    }, [safeEmail, nicknameUpdateTrigger]);
+
+    // 닉네임 변경 이벤트 리스너
+    useEffect(() => {
+        const handleNicknameUpdate = () => {
+            setNicknameUpdateTrigger(prev => prev + 1);
+        };
+
+        window.addEventListener('user-nickname-updated', handleNicknameUpdate);
+        return () => {
+            window.removeEventListener('user-nickname-updated', handleNicknameUpdate);
+        };
+    }, []);
 
     return (
         <div
