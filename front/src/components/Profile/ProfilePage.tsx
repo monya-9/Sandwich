@@ -12,6 +12,9 @@ import { CareerApi } from "../../api/careerApi";
 import { EducationApi } from "../../api/educationApi";
 import { AwardApi } from "../../api/awardApi";
 import { AuthContext } from "../../context/AuthContext";
+import { fetchUserProjects, fetchProjectsMeta } from "../../api/projects";
+import api from "../../api/axiosInstance";
+import FollowListModal from "./FollowListModal";
 
 export default function ProfilePage() {
   const { email, nickname } = useContext(AuthContext);
@@ -19,6 +22,16 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<"work" | "like" | "collection" | "draft">("work");
   const [repCareers, setRepCareers] = useState<RepresentativeCareer[]>([]);
   const location = useLocation();
+  
+  // 활동 통계
+  const [workCount, setWorkCount] = useState(0);
+  const [likesReceived, setLikesReceived] = useState(0);
+  const [collectionsCount, setCollectionsCount] = useState(0);
+  
+  // 팔로우 모달
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers");
+  const [myUserId, setMyUserId] = useState(0);
 
   useEffect(() => {
     const path = location.pathname;
@@ -123,6 +136,76 @@ export default function ProfilePage() {
     return () => {
       window.removeEventListener("user-username-updated", onUserUpdated as any);
       window.removeEventListener("user-nickname-updated", onUserUpdated as any);
+    };
+  }, []);
+
+  // 활동 통계 로드
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadStats = async () => {
+      try {
+        // 내 ID 가져오기
+        let myId = 0;
+        try {
+          myId = Number(localStorage.getItem("userId") || sessionStorage.getItem("userId") || '0');
+        } catch {}
+        if (!myId) {
+          try {
+            const meData = (await api.get<{ id: number }>("/users/me")).data;
+            myId = meData?.id || 0;
+          } catch {
+            myId = 0;
+          }
+        }
+        if (!myId || !mounted) return;
+        
+        if (mounted) setMyUserId(myId);
+
+        // 1. 작업 개수 가져오기
+        try {
+          const projectsRes = await fetchUserProjects(myId, 0, 100);
+          if (mounted) {
+            const totalProjects = projectsRes.totalElements || projectsRes.content?.length || 0;
+            setWorkCount(totalProjects);
+            
+            // 2. 좋아요 받은 수 계산
+            const projects = projectsRes.content || [];
+            if (projects.length > 0) {
+              const projectIds = projects.map((p: any) => p.id).filter(Boolean);
+              try {
+                const metaRes = await fetchProjectsMeta(projectIds);
+                const totalLikes = Object.values(metaRes || {}).reduce((sum: number, meta: any) => sum + (meta?.likes || 0), 0);
+                if (mounted) setLikesReceived(totalLikes);
+              } catch {
+                // 메타 정보를 가져올 수 없으면 프로젝트의 likes 필드 합산
+                const totalLikes = projects.reduce((sum: number, p: any) => sum + (p?.likes || 0), 0);
+                if (mounted) setLikesReceived(totalLikes);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("작업 통계 로드 실패:", e);
+        }
+
+        // 3. 내 프로젝트가 다른 사람 컬렉션에 저장된 횟수 가져오기
+        try {
+          const { data } = await api.get('/profiles/me/collection-count');
+          if (mounted) {
+            setCollectionsCount(data?.savedCount || 0);
+          }
+        } catch (e) {
+          console.error("컬렉션 저장 횟수 로드 실패:", e);
+        }
+      } catch (e) {
+        console.error("통계 로드 실패:", e);
+      }
+    };
+
+    loadStats();
+    
+    return () => {
+      mounted = false;
     };
   }, []);
 
@@ -266,27 +349,33 @@ export default function ProfilePage() {
 
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
                 <div className="flex flex-col gap-1">
-                  <div className="text-[14px]">0</div>
+                  <div className="text-[14px]">{workCount}</div>
                   <div className="text-[14px] text-black/60 dark:text-white/60">작업 보기</div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <div className="text-[14px]">0</div>
+                  <div className="text-[14px]">{likesReceived}</div>
                   <div className="text-[14px] text-black/60 dark:text-white/60">좋아요 받음</div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <div className="text-[14px]">0</div>
+                  <div className="text-[14px]">{collectionsCount}</div>
                   <div className="text-[14px] text-black/60 dark:text-white/60">컬렉션 저장됨</div>
                 </div>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
-                <div className="flex flex-col gap-1">
-                  <div className="text-[14px]">0</div>
+                <button 
+                  onClick={() => { setFollowModalType("following"); setFollowModalOpen(true); }}
+                  className="flex flex-col gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
+                >
+                  <div className="text-[14px]">{me?.followingCount ?? 0}</div>
                   <div className="text-[14px] text-black/60 dark:text-white/60">팔로잉</div>
-                </div>
-                <div className="flex flex-col gap-1">
+                </button>
+                <button 
+                  onClick={() => { setFollowModalType("followers"); setFollowModalOpen(true); }}
+                  className="flex flex-col gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
+                >
                   <div className="text-[14px]">{me?.followerCount ?? 0}</div>
                   <div className="text-[14px] text-black/60 dark:text-white/60">팔로워</div>
-                </div>
+                </button>
                 <div />
               </div>
             </div>
@@ -314,6 +403,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* 팔로워/팔로잉 목록 모달 */}
+      <FollowListModal
+        isOpen={followModalOpen}
+        onClose={() => setFollowModalOpen(false)}
+        userId={myUserId}
+        type={followModalType}
+      />
     </div>
   );
 }

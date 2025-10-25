@@ -14,8 +14,7 @@ type Props = {
 export default function ProjectGrid({ works, onProfileDetail }: Props) {
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div className="font-bold text-lg">모든 작업 목록</div>
+      <div className="flex justify-end items-center mb-6">
         <button className="text-gray-500 text-base hover:underline flex items-center gap-1" onClick={onProfileDetail}>
           프로필 자세히 보기
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24">

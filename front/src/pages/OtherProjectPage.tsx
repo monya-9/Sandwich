@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useMemo } from "react";
+import React, { useState, useContext, useEffect, useMemo, useCallback } from "react";
 import ActionBar, { type ActionBarProps } from "../components/OtherProject/ActionBar/ActionBar";
 import ProjectTopInfo from "../components/OtherProject/ProjectTopInfo";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -10,6 +10,7 @@ import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
 import { AuthContext } from "../context/AuthContext";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { fetchProjectDetail, type ProjectDetailResponse, fetchProjectContents, type ProjectContentResponseItem } from "../api/projectApi";
+import { fetchProjectsMeta } from "../api/projects";
 import api from "../api/axiosInstance";
 
 const MAX_WIDTH = 1440;
@@ -62,9 +63,11 @@ export default function OtherProjectPage() {
     const [ownerProfile, setOwnerProfile] = useState<{ id: number; nickname?: string; email?: string; profileImage?: string | null }>(() => ({ id: ownerId || 0 }));
     const [contents, setContents] = useState<ProjectContentResponseItem[]>([]);
     const [initialFollow, setInitialFollow] = useState<boolean | undefined>(undefined);
-    // 카운트 상태 (뷰는 API가 별도 없으므로 일단 0 유지)
+    // 카운트 상태
     const [likesCount, setLikesCount] = useState(0);
     const [commentsCount, setCommentsCount] = useState(0);
+    const [viewsCount, setViewsCount] = useState(0);
+    const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
 
     useEffect(() => {
         if (ownerId && projectId) {
@@ -73,34 +76,66 @@ export default function OtherProjectPage() {
         }
     }, [ownerId, projectId]);
 
-    // 좋아요 카운트 불러오기
-    useEffect(() => {
+    // 메타 정보를 갱신하는 함수 (좋아요, 조회수)
+    const refreshMetaData = useCallback(async () => {
         if (!projectId) return;
-        (async () => {
-            try {
-                const res = await api.get(`/likes`, { params: { targetType: "PROJECT", targetId: projectId } });
-                setLikesCount(res.data?.likeCount || 0);
-            } catch {
-                setLikesCount(0);
+        try {
+            const metaData = await fetchProjectsMeta([projectId]);
+            const meta = metaData[projectId];
+            if (meta) {
+                setLikesCount(meta.likes || 0);
+                setViewsCount(meta.views || 0);
             }
-        })();
+        } catch {
+            // 에러 시 무시
+        }
     }, [projectId]);
+
+    // 댓글 카운트를 갱신하는 함수
+    const refreshCommentsCount = useCallback(async () => {
+        if (!ownerProfile?.nickname || !projectId) return;
+        try {
+            const { fetchComments } = await import("../api/commentApi");
+            const res = await fetchComments(ownerProfile.nickname as string, projectId);
+            const list: any[] = res?.data || [];
+            const total = list.reduce((acc, c) => acc + 1 + ((c?.subComments?.length as number) || 0), 0);
+            setCommentsCount(total);
+        } catch {
+            // 에러 시 무시
+        }
+    }, [ownerProfile?.nickname, projectId]);
+
+    // 프로젝트 메타 정보 불러오기 (좋아요, 조회수)
+    useEffect(() => {
+        refreshMetaData();
+    }, [refreshMetaData]);
 
     // 댓글 카운트 불러오기 (username 필요)
     useEffect(() => {
-        if (!ownerProfile?.nickname || !projectId) return;
-        (async () => {
-            try {
-                const { fetchComments } = await import("../api/commentApi");
-                const res = await fetchComments(ownerProfile.nickname as string, projectId);
-                const list: any[] = res?.data || [];
-                const total = list.reduce((acc, c) => acc + 1 + ((c?.subComments?.length as number) || 0), 0);
-                setCommentsCount(total);
-            } catch {
-                setCommentsCount(0);
-            }
-        })();
-    }, [ownerProfile?.nickname, projectId]);
+        refreshCommentsCount();
+    }, [refreshCommentsCount]);
+
+    // 주기적으로 메타 데이터 갱신 (10초마다)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            refreshMetaData();
+            refreshCommentsCount();
+        }, 10000); // 10초마다 갱신
+
+        return () => clearInterval(interval);
+    }, [refreshMetaData, refreshCommentsCount]);
+
+    // 커스텀 이벤트로 즉시 갱신 트리거
+    useEffect(() => {
+        const handleRefreshStats = () => {
+            refreshMetaData();
+            refreshCommentsCount();
+            setLastUpdateTime(Date.now());
+        };
+
+        window.addEventListener("project:stats:refresh", handleRefreshStats as any);
+        return () => window.removeEventListener("project:stats:refresh", handleRefreshStats as any);
+    }, [refreshMetaData, refreshCommentsCount]);
 
     useEffect(() => {
         // 1) 즉시 스토리지에서 me.id를 읽어 초기 렌더에 소유자 버튼을 최대한 빨리 노출
@@ -351,7 +386,7 @@ export default function OtherProjectPage() {
                                 <div className="mb-8">
                                     <ProjectStatsBox
                                         likes={likesCount}
-                                        views={0}
+                                        views={viewsCount}
                                         comments={commentsCount}
                                         projectName={project.name}
                                         date={headerDate}
@@ -407,7 +442,7 @@ export default function OtherProjectPage() {
                                 <div className="mb-8">
                                 <ProjectStatsBox
                                     likes={likesCount}
-                                    views={0}
+                                    views={viewsCount}
                                     comments={commentsCount}
                                     projectName={project.name}
                                     date={headerDate}

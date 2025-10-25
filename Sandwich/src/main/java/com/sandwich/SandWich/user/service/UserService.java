@@ -471,7 +471,8 @@ public class UserService {
                 user.getProfile() != null ? user.getProfile().getProfileSlug() : null,
                 user.getEmail(),
                 posName,
-                interestNames
+                interestNames,
+                user.getProfile() != null ? user.getProfile().getProfileImage() : null
         );
     }
     private void ensureWallet(long userId) {
