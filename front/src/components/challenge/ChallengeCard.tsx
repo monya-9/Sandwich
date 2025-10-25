@@ -104,12 +104,21 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
 
 
                 <div className="mt-3 flex justify-end gap-2">
-                    <Link
-                        to={href}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
-                    >
-                        {item.ctaLabel} →
-                    </Link>
+                    {href === "#" ? (
+                        <button
+                            disabled
+                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
+                        >
+                            {item.ctaLabel}
+                        </button>
+                    ) : (
+                        <Link
+                            to={href}
+                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
+                        >
+                            {item.ctaLabel} →
+                        </Link>
+                    )}
                 </div>
             </div>
             {/* 삭제 확인 모달 */}
