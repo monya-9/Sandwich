@@ -1,10 +1,7 @@
 // src/setupProxy.js
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
-const envApiBase = process.env.REACT_APP_API_BASE_LOCAL || "/api";
-const target = envApiBase.startsWith("http")
-  ? envApiBase.replace(/\/api$/, '')
-  : 'http://localhost:8080';
+const target = process.env.REACT_APP_API_BASE;
 
 /**
  * 주의:
