@@ -143,13 +143,13 @@ const WorkTab: React.FC = () => {
 	};
 
 	if (loading && projects.length === 0) {
-		return <div className="min-h-[360px] flex items-center justify-center text-black/70">불러오는 중…</div>;
+		return <div className="min-h-[360px] flex items-center justify-center text-black/70 dark:text-white/70">불러오는 중…</div>;
 	}
 	if (projects.length === 0) {
 		return (
 			<div className="min-h-[360px] flex flex-col items-center justify-center text-center">
-				<div className="mt-6 text-[16px] md:text-[18px] text-black/90">아직 등록한 작업이 없습니다.</div>
-				<div className="mt-2 text-[14px] md:text-[15px] text-black/70 leading-relaxed">
+				<div className="mt-6 text-[16px] md:text-[18px] text-black/90 dark:text-white/90">아직 등록한 작업이 없습니다.</div>
+				<div className="mt-2 text-[14px] md:text-[15px] text-black/70 dark:text-white/70 leading-relaxed">
 					상단의 업로드 버튼으로 프로젝트를 등록해 보세요!
 				</div>
 				<div className="mt-6 flex items-center gap-3">

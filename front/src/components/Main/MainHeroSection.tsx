@@ -32,7 +32,7 @@ function CoverImage({ initialSrc, title }: { initialSrc: string; title: string }
 
 /** 첫 번째 카드 오버라이드 설정 */
 const HERO_OVERRIDES = {
-    0: { to: '/other-project/25/128'}, // index 0 → 첫 카드
+    // 0: { to: '/other-project/25/128'}, // index 0 → 첫 카드 (고정 해제)
 } as const;
 
 const WEEKLY_CACHE_KEY = 'cache:weeklyTopProjects:v1';
@@ -47,6 +47,21 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
+    // 개발자 도구에서 캐시 삭제를 위한 전역 함수 등록
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any).clearWeeklyTopCache = () => {
+                try {
+                    sessionStorage.removeItem(WEEKLY_CACHE_KEY);
+                    sessionStorage.removeItem(OVERRIDE_META_CACHE_KEY);
+                    console.log('✅ 주간 TOP 프로젝트 캐시가 삭제되었습니다. 페이지를 새로고침하세요.');
+                } catch (e) {
+                    console.error('❌ 캐시 삭제 실패:', e);
+                }
+            };
+        }
+    }, []);
+
     // 주간 TOP 프로젝트 (로그인 여부 무관, 준비되면 우선 사용)
     const [weeklyTopProjects, setWeeklyTopProjects] = useState<Project[] | null>(() => {
         try {
@@ -54,7 +69,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             if (!raw) return null;
             const arr = JSON.parse(raw);
             return Array.isArray(arr) && arr.length > 0 ? arr as Project[] : null;
-        } catch { return null; }
+        } catch { 
+            // 캐시 오류 시 캐시 삭제
+            try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
+            return null; 
+        }
     });
 
     // 오버라이드 카드에 표시할 제목/썸네일(cover) 동적 로딩 결과 저장: index -> { title, coverUrl }
@@ -128,7 +147,14 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         (async () => {
             try {
                 const items = await fetchWeeklyTop();
-                if (!items || items.length === 0) return;
+                if (!items || items.length === 0) {
+                    // 데이터가 없으면 캐시도 삭제
+                    if (isMounted) {
+                        setWeeklyTopProjects(null);
+                        try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
+                    }
+                    return;
+                }
 
                 // 점수 높은 순으로 정렬 후 상단 N개만 선택
                 const sorted = [...items].sort((a, b) => b.score - a.score);
@@ -137,12 +163,22 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                 // 피드에서 스캔하여 해당 ID들에 매칭되는 프로젝트 회수
                 const mapped = await findProjectsByIdsViaFeed(topIds, 10, 100);
 
-                if (isMounted && mapped.length > 0) {
-                    setWeeklyTopProjects(mapped);
-                    try { sessionStorage.setItem(WEEKLY_CACHE_KEY, JSON.stringify(mapped)); } catch {}
+                if (isMounted) {
+                    if (mapped.length > 0) {
+                        setWeeklyTopProjects(mapped);
+                        try { sessionStorage.setItem(WEEKLY_CACHE_KEY, JSON.stringify(mapped)); } catch {}
+                    } else {
+                        // 매핑된 프로젝트가 없으면 캐시 삭제
+                        setWeeklyTopProjects(null);
+                        try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
+                    }
                 }
             } catch {
-                // 실패 시 무시하고 기존 캐시/props 사용
+                // 실패 시 캐시 삭제하고 일반 프로젝트 사용
+                if (isMounted) {
+                    setWeeklyTopProjects(null);
+                    try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
+                }
             }
         })();
         return () => { isMounted = false; };
@@ -151,6 +187,14 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     // 오버라이드 카드 상세 정보 불러오기: /other-project/{ownerId}/{projectId} (결과 캐시)
     useEffect(() => {
         const entries = Object.entries(HERO_OVERRIDES as any) as Array<[string, { to?: string }]>;
+        
+        // HERO_OVERRIDES가 비어있으면 캐시 삭제
+        if (entries.length === 0) {
+            setOverrideMeta({});
+            try { sessionStorage.removeItem(OVERRIDE_META_CACHE_KEY); } catch {}
+            return;
+        }
+        
         entries.forEach(async ([idxStr, cfg]) => {
             if (!cfg?.to) return;
             const m = cfg.to.match(/^\/other-project\/(\d+)\/(\d+)$/);
@@ -209,7 +253,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             >
                 {displayProjects.map((project, idx) => {
                     const override = (HERO_OVERRIDES as any)[idx] as { to?: string; image?: string } | undefined;
-                    const meta = overrideMeta[idx] || {};
+                    const meta = override ? (overrideMeta[idx] || {}) : {}; // override가 있을 때만 meta 사용
                     const ownerId = (project as any)?.owner?.id || (project as any)?.authorId;
                     const to = override?.to || (ownerId ? `/other-project/${ownerId}/${project.id}` : undefined);
                     const initialSrc = meta.coverUrl || override?.image || (project as any).coverUrl || resolveCover(project, { position: idx });

@@ -191,7 +191,7 @@ const CareerSettingPage: React.FC = () => {
 								<AwardForm onCancel={()=>{ setShowAwardForm(false); setEditingAward(null); }} onDone={handleAwardDone} initial={editingAward || undefined} editingId={editingAward?.id} />
 							) : (
 								awards.length === 0 ? (
-									<div className="text-[14px] text-[#6B7280]">작성된 수상 내역이 없습니다.</div>
+									<div className="text-[14px] text-[#6B7280] dark:text-white/60">작성된 수상 내역이 없습니다.</div>
 								) : (
 									<div className="divide-y divide-[#E5E7EB] space-y-6">
 										{awards.map(a => (
