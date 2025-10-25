@@ -112,3 +112,19 @@ export const incrementProjectViews = async (projectId: number): Promise<void> =>
 export const searchProjects = async (query: string, params: Omit<ProjectFeedParams, 'q'> = {}): Promise<ProjectFeedResponse> => {
   return fetchProjectFeed({ ...params, q: query });
 };
+
+/**
+ * 프로젝트 메타 정보 조회 (좋아요, 댓글, 조회수)
+ */
+export interface ProjectMetaSummary {
+  views: number;
+  likes: number;
+  comments: number;
+}
+
+export const fetchProjectsMeta = async (projectIds: number[]): Promise<Record<number, ProjectMetaSummary>> => {
+  if (projectIds.length === 0) return {};
+  const idsParam = projectIds.join(',');
+  const response = await api.get(`/projects/meta/summary?ids=${idsParam}`);
+  return response.data;
+};

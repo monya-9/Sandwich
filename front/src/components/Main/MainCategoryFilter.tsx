@@ -24,13 +24,13 @@ const MainCategoryFilter: React.FC<Props> = ({
   onOpenSortModal,
 }) => {
   return (
-    <div className="flex justify-center items-center gap-4 px-4 py-2">
-      <div className="flex items-center gap-12">
+    <div className="flex justify-center items-center px-2 md:px-4 py-2">
+      <div className="flex items-center gap-3 md:gap-6 lg:gap-12 overflow-x-auto scrollbar-hide">
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => onSelectCategory(category)}
-            className={`text-base font-semibold px-4 pb-1 transition-all duration-200 ${
+            className={`text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 lg:px-4 pb-1 transition-all duration-200 whitespace-nowrap ${
               selectedCategory === category
                 ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400 font-bold'
                 : 'text-black dark:text-gray-200 border-b-2 border-transparent'
@@ -41,16 +41,25 @@ const MainCategoryFilter: React.FC<Props> = ({
         ))}
 
         {/* 구분선 */}
-        <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-4" />
+        <div className="w-px h-4 md:h-5 bg-gray-300 dark:bg-gray-600 mx-2 md:mx-4 flex-shrink-0" />
 
         {/* 정렬 버튼도 동일한 스타일 적용 */}
         <button
           onClick={onOpenSortModal}
-          className="text-base font-semibold px-4 pb-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400"
+          className="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 lg:px-4 pb-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 whitespace-nowrap flex-shrink-0"
         >
           ↕ 정렬
         </button>
       </div>
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };

@@ -41,13 +41,13 @@ const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
     const totalUnread = messages.reduce((n, m) => n + (m.unreadCount ?? (m.isRead ? 0 : 1)), 0);
 
     return (
-        <DropdownWrapper width="w-96">
+        <DropdownWrapper width="w-[calc(100vw-2rem)] sm:w-[360px] md:w-96">
             {/* 헤더 */}
-            <div className="flex items-center justify-between mb-2 -mx-2 text-sm font-medium">
-                <div className="flex items-center gap-2">
-                    <span className="text-black">메시지</span>
+            <div className="flex items-center justify-between mb-2 -mx-2 text-xs sm:text-sm font-medium">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <span className="text-black truncate">메시지</span>
                     {totalUnread > 0 && (
-                        <span className="text-[11px] bg-green-600 text-white rounded-full px-2 py-0.5">
+                        <span className="text-[10px] sm:text-[11px] bg-green-600 text-white rounded-full px-1.5 sm:px-2 py-0.5 whitespace-nowrap">
               {totalUnread}개 새 메시지
             </span>
                     )}
@@ -58,17 +58,17 @@ const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
                         emitHideDropdowns();
                         navigate("/messages");
                     }}
-                    className="text-green-600 hover:underline text-xs"
+                    className="text-green-600 hover:underline text-[10px] sm:text-xs whitespace-nowrap ml-2"
                 >
                     모든 메시지 보기 &gt;
                 </button>
             </div>
-            <hr className="border-gray-200 mb-3 -mx-6" />
+            <hr className="border-gray-200 mb-3 -mx-4 sm:-mx-6" />
 
             {items.length === 0 ? (
                 <EmptyState text="새로운 메시지가 없어요" />
             ) : (
-                <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
+                <ul className="list-none pl-0 space-y-1.5 sm:space-y-2 max-h-56 sm:max-h-64 overflow-y-auto pr-1">
                     {items.map((m) => {
                         const name = (m as any).title || (m as any).sender || "사용자";
                         const email = (m as any).email as string | undefined;
@@ -88,7 +88,7 @@ const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
                                             goDetail(m.id);
                                         }
                                     }}
-                                    className="relative z-[1] w-full flex items-start gap-3 p-2 rounded-lg text-left text-sm
+                                    className="relative z-[1] w-full flex items-start gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg text-left text-xs sm:text-sm
                              hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500/30"
                                 >
                                     {/* 아바타 */}
@@ -96,35 +96,35 @@ const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
                                         <img
                                             src={avatarUrl}
                                             alt={name}
-                                            className="w-8 h-8 rounded-full object-cover shrink-0"
+                                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0"
                                         />
                                     ) : (
-                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center
-                                    text-sm font-medium text-gray-700 shrink-0">
+                                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 flex items-center justify-center
+                                    text-xs sm:text-sm font-medium text-gray-700 shrink-0">
                                             {avatarLetter(name, email)}
                                         </div>
                                     )}
 
                                     {/* 본문 */}
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <span className="font-medium truncate">{name}</span>
-                                            <span className="text-xs text-gray-400">{toRelativeTime(m.createdAt)}</span>
+                                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                            <span className="font-medium truncate text-xs sm:text-sm">{name}</span>
+                                            <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">{toRelativeTime(m.createdAt)}</span>
                                             {unread > 0 && (
                                                 <span
                                                     aria-label={`안읽은 메시지 ${unread}개`}
                                                     className={[
-                                                        "ml-auto inline-flex items-center justify-center rounded-full bg-green-600 text-white",
+                                                        "ml-auto inline-flex items-center justify-center rounded-full bg-green-600 text-white flex-shrink-0",
                                                         unread >= 10
-                                                            ? "min-w-[18px] h-4 px-1.5 text-[10px]"
-                                                            : "min-w-[16px] h-4 px-1 text-[11px]",
+                                                            ? "min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 px-1 sm:px-1.5 text-[9px] sm:text-[10px]"
+                                                            : "min-w-[14px] sm:min-w-[16px] h-3.5 sm:h-4 px-0.5 sm:px-1 text-[9px] sm:text-[11px]",
                                                     ].join(" ")}
                                                 >
                           {unread > 99 ? "99+" : unread}
                         </span>
                                             )}
                                         </div>
-                                        <p className="text-gray-500 text-xs line-clamp-2 whitespace-pre-line">
+                                        <p className="text-gray-500 text-[10px] sm:text-xs line-clamp-2 whitespace-pre-line">
                                             {m.content}
                                         </p>
                                     </div>

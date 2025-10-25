@@ -84,28 +84,28 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
   // 검색 타입 변경은 props로 받은 함수 사용
 
   return (
-    <div className="flex items-center gap-4 mb-6">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
       {/* 검색 입력창 */}
       <div className="flex-1 relative">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 w-5 h-5" />
+          <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 w-4 h-4 sm:w-5 sm:h-5" />
           <input
             type="text"
             value={searchQuery}
             onChange={handleQueryChange}
             onKeyPress={handleKeyPress}
             placeholder="프로젝트를 검색해보세요..."
-            className="w-full pl-10 pr-12 py-3 rounded-lg outline-none border-0 ring-1 ring-gray-300 dark:ring-white/20 bg-white dark:bg-black text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/70 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
+            className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base rounded-lg outline-none border-0 ring-1 ring-gray-300 dark:ring-white/20 bg-white dark:bg-black text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/70 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
             disabled={false}
           />
           {/* X 버튼 */}
           {searchQuery && (
             <button
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 hover:text-gray-600 dark:hover:text-white transition-colors"
+              className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 hover:text-gray-600 dark:hover:text-white transition-colors"
               type="button"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -113,17 +113,24 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
         </div>
       </div>
 
-      {/* 검색 타입 드롭다운 */}
-      <SearchTypeDropdown
-        value={searchType}
-        onChange={onSearchTypeChange}
-      />
+      {/* 드롭다운 그룹 */}
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* 검색 타입 드롭다운 */}
+        <div className="flex-1 sm:flex-initial">
+          <SearchTypeDropdown
+            value={searchType}
+            onChange={onSearchTypeChange}
+          />
+        </div>
 
-      {/* 정렬 드롭다운 */}
-      <SortDropdown
-        value={sortType}
-        onChange={onSortChange}
-      />
+        {/* 정렬 드롭다운 */}
+        <div className="flex-1 sm:flex-initial">
+          <SortDropdown
+            value={sortType}
+            onChange={onSortChange}
+          />
+        </div>
+      </div>
     </div>
   );
 };

@@ -14,6 +14,7 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
 import MessagesPage from "./pages/Messages/MessagesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // 마이페이지
 import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
@@ -112,6 +113,7 @@ function App() {
                                 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
 
                                 <Route path="/rooms/:id" element={<RoomToMessagesRedirect />} />
                                 <Route path="/rooms" element={<Navigate to="/messages" replace />} />

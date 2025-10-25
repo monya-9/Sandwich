@@ -45,6 +45,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
     const [isAtStart, setIsAtStart] = useState(true);
     const [isAtEnd, setIsAtEnd] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
     // 주간 TOP 프로젝트 (로그인 여부 무관, 준비되면 우선 사용)
     const [weeklyTopProjects, setWeeklyTopProjects] = useState<Project[] | null>(() => {
@@ -88,6 +89,15 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         el.addEventListener('scroll', handleScroll);
         return () => el.removeEventListener('scroll', handleScroll);
     }, [handleScroll]);
+
+    // 화면 크기 변경 감지
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // 피드 페이지를 스캔해서 특정 ID들의 프로젝트를 찾아오는 헬퍼
     async function findProjectsByIdsViaFeed(targetIds: number[], maxPages = 10, pageSize = 100): Promise<Project[]> {
@@ -166,32 +176,35 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         ? weeklyTopProjects.slice(0, 7)
         : projects.slice(0, 7);
 
+    // 버튼 위치 계산
+    const buttonTop = windowWidth < 768 ? '80px' : windowWidth < 1024 ? '100px' : '140px';
+
     return (
-        <section className="w-full relative mb-10 py-[20px]">
-            <h1 className="text-2xl font-bold mb-4 text-left ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
+        <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
+            <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
 
             <button
                 onClick={scrollLeft}
-                className="absolute left-0 w-[50px] h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-[15px] bg-white dark:bg-black"
-                style={{ top: '140px' }}
+                className="absolute left-0 md:left-1 lg:left-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-2 md:mt-3 lg:mt-[15px] bg-white dark:bg-black"
+                style={{ top: buttonTop }}
                 aria-label="왼쪽으로 스크롤"
             >
-                <span className="text-xl rotate-180 text-black dark:text-white" style={{ opacity: isAtStart ? 0.4 : 1 }}>{'>'}</span>
+                <span className="text-base md:text-lg lg:text-xl rotate-180 text-black dark:text-white" style={{ opacity: isAtStart ? 0.4 : 1 }}>{'>'}</span>
             </button>
 
             <button
                 onClick={scrollRight}
-                className="absolute right-0 w-[50px] h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-[15px] bg-white dark:bg-black"
-                style={{ top: '140px' }}
+                className="absolute right-0 md:right-1 lg:right-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-2 md:mt-3 lg:mt-[15px] bg-white dark:bg-black"
+                style={{ top: buttonTop }}
                 aria-label="오른쪽으로 스크롤"
             >
-                <span className="text-xl text-black dark:text-white" style={{ opacity: isAtEnd ? 0.4 : 1 }}>{'>'}</span>
+                <span className="text-base md:text-lg lg:text-xl text-black dark:text-white" style={{ opacity: isAtEnd ? 0.4 : 1 }}>{'>'}</span>
             </button>
 
             {/* 프로젝트 카드 리스트 */}
             <div
                 ref={scrollRef}
-                className="custom-scrollbar flex gap-4 px-4 py-2 mt-[10px] relative"
+                className="custom-scrollbar flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 py-2 mt-2 md:mt-[10px] relative"
                 style={{ scrollSnapType: 'x mandatory', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {displayProjects.map((project, idx) => {
@@ -209,11 +222,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                         <CardTag
                             key={project.id}
                             {...cardProps}
-                            className="group relative min-w-[300px] h-[220px] rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
+                            className="group relative min-w-[200px] md:min-w-[250px] lg:min-w-[300px] h-[140px] md:h-[180px] lg:h-[220px] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
                         >
                             <CoverImage initialSrc={initialSrc} title={displayTitle} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
-                            <p className="absolute bottom-0 left-0 right-0 p-4 text-white text-sm font-semibold line-clamp-1">
+                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-xs md:text-sm font-semibold line-clamp-1">
                                 {displayTitle}
                             </p>
                         </CardTag>
@@ -223,7 +236,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
             {/* 가짜 스크롤바 */}
             <div
-                className="w-[60%] h-[6px] bg-transparent rounded-full mx-auto mt-3 relative overflow-hidden"
+                className="w-[70%] md:w-[65%] lg:w-[60%] h-[4px] md:h-[5px] lg:h-[6px] bg-transparent rounded-full mx-auto mt-2 md:mt-2.5 lg:mt-3 relative overflow-hidden"
                 style={{ opacity: showFakeScroll ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}
                 aria-hidden
             >

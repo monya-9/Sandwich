@@ -24,7 +24,7 @@ export default function ProfilePage() {
     const path = location.pathname;
     if (path.endsWith("/likes")) setActiveTab("like");
     else if (path.endsWith("/collections")) setActiveTab("collection");
-    else if (path.endsWith("/drafts")) setActiveTab("draft");
+    // else if (path.endsWith("/drafts")) setActiveTab("draft"); // 임시저장 기능 준비중
     else setActiveTab("work");
   }, [location.pathname]);
 
@@ -300,7 +300,8 @@ export default function ProfilePage() {
                 <Link to="/profile/work" onClick={()=>setActiveTab("work")} className={`pb-3 ${activeTab==="work" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>작업</Link>
                 <Link to="/profile/likes" onClick={()=>setActiveTab("like")} className={`pb-3 ${activeTab==="like" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>좋아요</Link>
                 <Link to="/profile/collections" onClick={()=>setActiveTab("collection")} className={`pb-3 ${activeTab==="collection" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>컬렉션</Link>
-                <Link to="/profile/drafts" onClick={()=>setActiveTab("draft")} className={`pb-3 ${activeTab==="draft" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>임시저장</Link>
+                {/* 임시저장 기능 준비중 */}
+                {/* <Link to="/profile/drafts" onClick={()=>setActiveTab("draft")} className={`pb-3 ${activeTab==="draft" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>임시저장</Link> */}
               </div>
             </div>
 
@@ -308,7 +309,7 @@ export default function ProfilePage() {
             {activeTab === "work" && <WorkTab />}
             {activeTab === "like" && <LikesTab />}
             {activeTab === "collection" && <CollectionsTab />}
-            {activeTab === "draft" && <DraftsTab />}
+            {/* {activeTab === "draft" && <DraftsTab />} */}
           </section>
         </div>
       </div>
