@@ -1519,12 +1519,7 @@ export default function ProjectMangeSampleForm() {
 																margin-bottom: 4px;
 																position: relative;
 																cursor: text;
-																transition: all 0.2s ease;
 																border-radius: 4px;
-															}
-															.pm-sample-editor .ql-editor p:empty:hover {
-																background: rgba(255, 255, 255, 0.1);
-																border: 1px dashed rgba(255, 255, 255, 0.5);
 															}
 															/* 이미지 맨 끝에 텍스트 입력 공간 추가 */
 															.pm-sample-editor .ql-editor:after {
@@ -1533,12 +1528,7 @@ export default function ProjectMangeSampleForm() {
 																min-height: 1.5em;
 																margin-top: 10px;
 																cursor: text;
-																transition: all 0.2s ease;
 																border-radius: 4px;
-															}
-															.pm-sample-editor .ql-editor:hover:after {
-																background: rgba(255, 255, 255, 0.05);
-																border: 1px dashed rgba(255, 255, 255, 0.3);
 															}
 															.pm-sample-editor .ql-editor img.pm-embed-padded + iframe,
 															.pm-sample-editor .ql-editor iframe.pm-embed-padded + img,
@@ -1547,7 +1537,7 @@ export default function ProjectMangeSampleForm() {
 									{hoverEl && hoverType && (
 										<div
 											ref={overlayRef}
-											className="bg-black dark:bg-black border border-gray-600 dark:border-gray-800 rounded shadow-lg flex gap-3 px-6 py-3 relative"
+											className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg flex gap-3 px-6 py-3 relative"
 											style={{ position: 'fixed', transform: 'translateX(-50%) translateZ(0)', zIndex: 10000, pointerEvents: 'auto', willChange: 'top,left,transform' }}
 											onMouseEnter={() => { /* setIsHoveringOverlay(true); */ }}
 											onMouseLeave={(e) => { if (overlayDragLockRef.current) return; /* setIsHoveringOverlay(false); */ setHoveredButton(null); const rel = (e as any).relatedTarget as any; if (hoverElRef.current && isNode(rel) && (rel === hoverElRef.current || (hoverElRef.current as any).contains?.(rel))) { return; } stopOverlayFollow(); }}
@@ -1555,13 +1545,13 @@ export default function ProjectMangeSampleForm() {
 										>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-3 py-2 hover:bg-gray-800 dark:hover:bg-gray-800 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton('padding')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={togglePadding}
 													type="button"
 												>
-													<FiMaximize2 className="w-6 h-6 text-white" />
+													<FiMaximize2 className="w-4 h-4 text-black dark:text-white" />
 												</button>
 												{hoveredButton === 'padding' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
@@ -1574,13 +1564,13 @@ export default function ProjectMangeSampleForm() {
 											</div>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-3 py-2 hover:bg-gray-800 dark:hover:bg-gray-800 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton(hoverType === 'image' ? 'image' : 'url')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={hoverType === 'image' ? changeImage : changeVideoUrl}
 													type="button"
 												>
-													{hoverType === 'image' ? <FiImage className="w-6 h-6 text-white" /> : <IoMdVideocam className="w-6 h-6 text-white" />}
+													{hoverType === 'image' ? <FiImage className="w-4 h-4 text-black dark:text-white" /> : <IoMdVideocam className="w-4 h-4 text-black dark:text-white" />}
 												</button>
 												{hoveredButton === 'image' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
@@ -1601,7 +1591,7 @@ export default function ProjectMangeSampleForm() {
 											</div>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-3 py-2 hover:bg-gray-800 dark:hover:bg-gray-800 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton('text')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={() => {
@@ -1618,7 +1608,7 @@ export default function ProjectMangeSampleForm() {
 													}}
 													type="button"
 												>
-													<span className="w-6 h-6 inline-flex items-center justify-center text-lg font-bold text-white">T</span>
+													<span className="w-4 h-4 inline-flex items-center justify-center text-sm font-bold text-black dark:text-white">T</span>
 												</button>
 												{hoveredButton === 'text' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
@@ -1631,13 +1621,13 @@ export default function ProjectMangeSampleForm() {
 											</div>
 											<div className="relative">
 												<button
-													className="flex items-center gap-1 px-3 py-2 hover:bg-gray-800 dark:hover:bg-gray-800 rounded text-sm"
+													className="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-sm"
 													onMouseEnter={() => setHoveredButton('delete')}
 													onMouseLeave={() => setHoveredButton(null)}
 													onClick={removeContent}
 													type="button"
 												>
-													<span className="w-6 h-6 inline-flex items-center justify-center"><FaTrash className="w-6 h-6 text-white" /></span>
+													<span className="w-4 h-4 inline-flex items-center justify-center"><FaTrash className="w-4 h-4 text-black dark:text-white" /></span>
 												</button>
 												{hoveredButton === 'delete' && (
 													<div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center z-30 pointer-events-none">
