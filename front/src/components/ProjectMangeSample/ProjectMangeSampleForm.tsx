@@ -16,6 +16,7 @@ import UploadDoneModal from "./UploadDoneModal";
 import Toast from "../common/Toast";
 import SettingsPanel from "./SettingsPanel";
 import RightPanelActions from "./RightPanelActions";
+import VideoUrlModal from "./VideoUrlModal";
 import api from "../../api/axiosInstance";
 
 // Quill size whitelist to show pt values like 16pt
@@ -67,6 +68,7 @@ export default function ProjectMangeSampleForm() {
 	const [showEmptyToast, setShowEmptyToast] = useState(false);
 	const toastTimerRef = useRef<number | null>(null);
 	const [isReorderOpen, setIsReorderOpen] = useState(false);
+	const [isVideoUrlModalOpen, setIsVideoUrlModalOpen] = useState(false);
     const getDefaultBg = () => {
         try { return document.documentElement.classList.contains('dark') ? '#000000' : '#FFFFFF'; } catch { return '#FFFFFF'; }
     };
@@ -1021,8 +1023,7 @@ export default function ProjectMangeSampleForm() {
 	};
 	const triggerImageAdd = () => { openImagePicker(); };
 	const triggerVideoAdd = () => {
-		const url = window.prompt('동영상 URL을 입력하세요 (YouTube, Vimeo 등)');
-		if (url) { addVideoUrl(url); }
+		setIsVideoUrlModalOpen(true);
 	};
 
 	const buildModules = (toolbarSelector: string) => ({
@@ -1120,7 +1121,14 @@ export default function ProjectMangeSampleForm() {
 	};
 
 	const modal = (
-		<ReorderModal open={isReorderOpen} blocks={reorderBlocks} onConfirm={applyNewOrder} onClose={() => setIsReorderOpen(false)} />
+		<>
+			<ReorderModal open={isReorderOpen} blocks={reorderBlocks} onConfirm={applyNewOrder} onClose={() => setIsReorderOpen(false)} />
+			<VideoUrlModal 
+				open={isVideoUrlModalOpen} 
+				onClose={() => setIsVideoUrlModalOpen(false)} 
+				onConfirm={addVideoUrl} 
+			/>
+		</>
 	);
 
 	const navigate = useNavigate();
