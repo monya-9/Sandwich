@@ -10425,3 +10425,129 @@ WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relki
 2025-10-21 21:12:20,334 | INFO | ✔ 추론 → Redis 캐시 업데이트 완료 (9.70s)
 2025-10-21 21:12:20,344 | INFO | Redis 샘플 키 'recs:1' zcard=50
 2025-10-21 21:12:20,344 | INFO | 종료
+2025-10-22 21:44:05,594 | INFO | DB/Redis 연결 점검...
+2025-10-22 21:44:05,818 | INFO | select pg_catalog.version()
+2025-10-22 21:44:05,818 | INFO | [raw sql] {}
+2025-10-22 21:44:05,832 | INFO | select current_schema()
+2025-10-22 21:44:05,832 | INFO | [raw sql] {}
+2025-10-22 21:44:05,846 | INFO | show standard_conforming_strings
+2025-10-22 21:44:05,847 | INFO | [raw sql] {}
+2025-10-22 21:44:05,861 | INFO | BEGIN (implicit)
+2025-10-22 21:44:05,862 | INFO | SELECT 1
+2025-10-22 21:44:05,862 | INFO | [generated in 0.00035s] {}
+2025-10-22 21:44:05,875 | INFO | ROLLBACK
+2025-10-22 21:44:05,938 | INFO | select pg_catalog.version()
+2025-10-22 21:44:05,938 | INFO | [raw sql] {}
+2025-10-22 21:44:05,942 | INFO | select current_schema()
+2025-10-22 21:44:05,942 | INFO | [raw sql] {}
+2025-10-22 21:44:05,944 | INFO | show standard_conforming_strings
+2025-10-22 21:44:05,944 | INFO | [raw sql] {}
+2025-10-22 21:44:05,945 | INFO | BEGIN (implicit)
+2025-10-22 21:44:05,946 | INFO | SELECT 1
+2025-10-22 21:44:05,946 | INFO | [generated in 0.00020s] {}
+2025-10-22 21:44:05,946 | INFO | ROLLBACK
+2025-10-22 21:44:05,960 | INFO | DB/Redis OK
+2025-10-22 21:44:05,961 | INFO | ▶ 메인 DB → AI DB 적재 시작
+2025-10-22 21:44:06,049 | INFO | select pg_catalog.version()
+2025-10-22 21:44:06,049 | INFO | [raw sql] {}
+2025-10-22 21:44:06,066 | INFO | select current_schema()
+2025-10-22 21:44:06,066 | INFO | [raw sql] {}
+2025-10-22 21:44:06,079 | INFO | show standard_conforming_strings
+2025-10-22 21:44:06,080 | INFO | [raw sql] {}
+2025-10-22 21:44:06,093 | INFO | BEGIN (implicit)
+2025-10-22 21:44:06,119 | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-10-22 21:44:06,119 | INFO | [generated in 0.00027s] {'table_name': <sqlalchemy.sql.elements.TextClause object at 0x0000026454C98DF0>, 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-10-22 21:44:06,119 | INFO | SELECT id::bigint AS user_id FROM users WHERE COALESCE(is_deleted,false)=false ORDER BY id
+2025-10-22 21:44:06,119 | INFO | [generated in 0.00010s] {}
+2025-10-22 21:44:06,141 | INFO | COMMIT
+2025-10-22 21:44:06,155 | INFO | BEGIN (implicit)
+2025-10-22 21:44:06,156 | INFO | 
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema NOT IN ('pg_catalog','information_schema')
+      AND table_name IN ('project','projects')
+    ORDER BY table_name
+    
+2025-10-22 21:44:06,156 | INFO | [generated in 0.00027s] {}
+2025-10-22 21:44:06,172 | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-10-22 21:44:06,172 | INFO | [cached since 0.0529s ago] {'table_name': <sqlalchemy.sql.elements.TextClause object at 0x0000026454C9BF40>, 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-10-22 21:44:06,172 | INFO | SELECT id::bigint AS project_id FROM project ORDER BY id
+2025-10-22 21:44:06,172 | INFO | [generated in 0.00011s] {}
+2025-10-22 21:44:06,245 | INFO | COMMIT
+2025-10-22 21:44:06,253 | INFO | ✔ 메인 DB → AI DB 적재 완료 (0.29s)
+2025-10-22 21:44:06,253 | INFO | ▶ interactions.csv 생성 시작
+2025-10-22 21:44:06,278 | INFO | select pg_catalog.version()
+2025-10-22 21:44:06,278 | INFO | [raw sql] {}
+2025-10-22 21:44:06,280 | INFO | select current_schema()
+2025-10-22 21:44:06,280 | INFO | [raw sql] {}
+2025-10-22 21:44:06,281 | INFO | show standard_conforming_strings
+2025-10-22 21:44:06,281 | INFO | [raw sql] {}
+2025-10-22 21:44:06,284 | INFO | BEGIN (implicit)
+2025-10-22 21:44:06,284 | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-10-22 21:44:06,284 | INFO | [generated in 0.00031s] {'table_name': 'SELECT user_id, project_id, weight, ts FROM raw_interactions', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-10-22 21:44:06,297 | INFO | SELECT user_id, project_id, weight, ts FROM raw_interactions
+2025-10-22 21:44:06,297 | INFO | [raw sql] {}
+2025-10-22 21:44:06,315 | INFO | ROLLBACK
+2025-10-22 21:44:06,395 | INFO | select pg_catalog.version()
+2025-10-22 21:44:06,396 | INFO | [raw sql] {}
+2025-10-22 21:44:06,409 | INFO | select current_schema()
+2025-10-22 21:44:06,409 | INFO | [raw sql] {}
+2025-10-22 21:44:06,421 | INFO | show standard_conforming_strings
+2025-10-22 21:44:06,421 | INFO | [raw sql] {}
+2025-10-22 21:44:06,435 | INFO | BEGIN (implicit)
+2025-10-22 21:44:06,436 | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-10-22 21:44:06,436 | INFO | [generated in 0.00017s] {'table_name': <sqlalchemy.sql.elements.TextClause object at 0x0000026454A90400>, 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-10-22 21:44:06,437 | INFO | 
+SELECT id::bigint AS user_id
+FROM users
+WHERE COALESCE(is_deleted,false)=false
+
+2025-10-22 21:44:06,437 | INFO | [generated in 0.00011s] {}
+2025-10-22 21:44:06,450 | INFO | COMMIT
+2025-10-22 21:44:06,497 | INFO | ✔ interactions.csv 생성 완료 (0.24s)
+2025-10-22 21:44:06,497 | INFO | ▶ 유저 피처 인코딩 시작
+2025-10-22 21:44:06,521 | INFO | select pg_catalog.version()
+2025-10-22 21:44:06,522 | INFO | [raw sql] {}
+2025-10-22 21:44:06,524 | INFO | select current_schema()
+2025-10-22 21:44:06,524 | INFO | [raw sql] {}
+2025-10-22 21:44:06,525 | INFO | show standard_conforming_strings
+2025-10-22 21:44:06,526 | INFO | [raw sql] {}
+2025-10-22 21:44:06,531 | INFO | BEGIN (implicit)
+2025-10-22 21:44:06,531 | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-10-22 21:44:06,531 | INFO | [generated in 0.00039s] {'table_name': 'SELECT user_id, skills, interests, position FROM raw_user_features', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-10-22 21:44:06,539 | INFO | SELECT user_id, skills, interests, position FROM raw_user_features
+2025-10-22 21:44:06,539 | INFO | [raw sql] {}
+2025-10-22 21:44:06,542 | INFO | ROLLBACK
+2025-10-22 21:44:06,549 | INFO | ✔ 유저 피처 인코딩 완료 (0.05s)
+2025-10-22 21:44:06,550 | INFO | ▶ 프로젝트 피처 인코딩 시작
+2025-10-22 21:44:06,577 | INFO | select pg_catalog.version()
+2025-10-22 21:44:06,578 | INFO | [raw sql] {}
+2025-10-22 21:44:06,580 | INFO | select current_schema()
+2025-10-22 21:44:06,580 | INFO | [raw sql] {}
+2025-10-22 21:44:06,581 | INFO | show standard_conforming_strings
+2025-10-22 21:44:06,581 | INFO | [raw sql] {}
+2025-10-22 21:44:06,584 | INFO | BEGIN (implicit)
+2025-10-22 21:44:06,584 | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-10-22 21:44:06,584 | INFO | [generated in 0.00041s] {'table_name': 'SELECT project_id, tools, hashtags FROM raw_project_features', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-10-22 21:44:06,594 | INFO | SELECT project_id, tools, hashtags FROM raw_project_features
+2025-10-22 21:44:06,594 | INFO | [raw sql] {}
+2025-10-22 21:44:06,597 | INFO | ROLLBACK
+2025-10-22 21:44:06,606 | INFO | ✔ 프로젝트 피처 인코딩 완료 (0.06s)
+2025-10-22 21:44:06,606 | INFO | ▶ 모델 학습 시작
+2025-10-22 21:44:10,374 | INFO | ✔ 모델 학습 완료 (3.77s)
+2025-10-22 21:44:10,374 | INFO | ▶ 추론 → Redis 캐시 업데이트 시작
+2025-10-22 21:44:19,358 | INFO | ✔ 추론 → Redis 캐시 업데이트 완료 (8.98s)
+2025-10-22 21:44:19,364 | INFO | Redis 샘플 키 'recs:1' zcard=50
+2025-10-22 21:44:19,364 | INFO | 종료

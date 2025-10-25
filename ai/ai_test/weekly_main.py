@@ -1,424 +1,274 @@
-import os, json, datetime, pathlib, random, re, math, subprocess, sys, time, requests
-from typing import List, Dict, Any, Iterable, Tuple
+# weekly_main.py  (Cloud, 주제 자율/중복제외, 히스토리 out/ 저장)
+import os, json, requests, pathlib, re, datetime, sys, random, hashlib, time
+from typing import Dict, Any, List, Iterable, Tuple
 from dotenv import load_dotenv
 
-# ===== env =====
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+# ===== .env =====
+ROOT = pathlib.Path(__file__).resolve().parents[1] if len(pathlib.Path(__file__).resolve().parents) > 1 else pathlib.Path.cwd()
 for p in [ROOT / ".env", ROOT.parents[0] / ".env", pathlib.Path(".env")]:
-    if p.exists(): load_dotenv(p); break
+    try:
+        if p.exists(): load_dotenv(p); break
+    except Exception:
+        pass
 
-# ===== ollama =====
-OLLAMA_BASE = os.getenv("OLLAMA_BASE", "http://localhost:11434")
-MODEL = os.getenv("WEEKLY_MODEL", "qwen3:4b")
-NUM_CTX = int(os.getenv("WEEKLY_NUM_CTX", "2048"))
-MAX_NEW = int(os.getenv("WEEKLY_MAX_NEW_TOKENS", "480"))
-GEN_OPTS_BASE = {"num_ctx": NUM_CTX, "num_predict": MAX_NEW, "temperature": 0.08, "top_p": 0.85}
+# ===== Cloud / API =====
+OLLAMA_BASE   = os.getenv("OLLAMA_BASE", "https://ollama.com").rstrip("/")
+OLLAMA_APIKEY = (os.getenv("OLLAMA_API_KEY") or "").strip()
+MODEL         = os.getenv("WEEKLY_MODEL", "deepseek-v3.1:671b-cloud")
+NUM_CTX       = int(os.getenv("WEEKLY_NUM_CTX", "2048"))
+MAX_NEW       = int(os.getenv("WEEKLY_MAX_NEW_TOKENS", "700"))
+COUNT         = int(os.getenv("WEEKLY_MULTI_COUNT", "3"))
 
-# ===== worker =====
-API_BASE = os.getenv("AI_API_BASE", "https://api.dnutzs.org")
-API_KEY  = (os.getenv("AI_API_KEY") or os.getenv("X_AI_API_KEY") or "").strip()
-HEADER   = os.getenv("AI_HEADER", "X-AI-API-Key")
+API_BASE  = os.getenv("AI_API_BASE", "https://api.dnutzs.org").rstrip("/")
+API_KEY   = (os.getenv("AI_API_KEY") or os.getenv("X_AI_API_KEY") or "").strip()
+AI_HEADER = os.getenv("AI_HEADER", "X-AI-API-Key")
 
-# ===== files =====
-OUT = pathlib.Path("out"); OUT.mkdir(exist_ok=True)
-HIST = OUT / "_weekly_history.json"
-ANS_PATH = OUT / "_weekly_answer.py"
-RAW_PATH = OUT / "_weekly_last_raw.txt"
+OUT_DIR = pathlib.Path("out"); OUT_DIR.mkdir(exist_ok=True)
+HIST    = OUT_DIR / "_weekly_history.json"
 
-from weekly_prompts import WEEK_JSON_SYS, WEEK_JSON_USER, AREA_HINTS
+# ===== 텍스트 유틸 =====
+_UWS   = "\u00A0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u200B"
+_PUNCT = r"\-_/·•()\[\]{}:;,.!?\"'~`@#%^&*+=|\\<>"
+def _normalize(s: str) -> str:
+    import re
+    s = (s or "").casefold()
+    return re.sub(rf"[\s{_UWS}{_PUNCT}]+", "", s)
+def _tokens(s: str) -> List[str]:
+    import re
+    s = re.sub(r"[^\w가-힣]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return [t for t in s.split(" ") if t]
+def _char_ngrams(s: str, n: int = 3) -> List[str]:
+    s = _normalize(s)
+    return [s[i:i+n] for i in range(len(s)-n+1)] if len(s) >= n else [s]
+def _jaccard(a: Iterable[str], b: Iterable[str]) -> float:
+    sa, sb = set(a), set(b)
+    if not sa or not sb: return 0.0
+    return len(sa & sb) / len(sa | sb)
 
-# ===== history =====
-def _load_history() -> list:
+def is_title_novel(title: str, prev_titles: List[str], thr: float = 0.55) -> bool:
+    for p in prev_titles:
+        if _jaccard(_char_ngrams(title), _char_ngrams(p)) >= thr: return False
+        if _jaccard(_tokens(title), _tokens(p)) >= thr: return False
+    return True
+
+def is_area_novel(area: str, recent_areas: List[str], thr: float = 0.55) -> bool:
+    a = _tokens(area)
+    for r in recent_areas:
+        if _jaccard(a, _tokens(r)) >= thr: return False
+    return True
+
+# ===== 히스토리 IO =====
+def _load_hist() -> List[Dict[str, Any]]:
     try:
         if not HIST.exists(): return []
         return json.loads(HIST.read_text("utf-8") or "[]") or []
     except Exception:
         return []
-
-def _save_history(rec: dict):
-    arr = _load_history(); arr.append(rec)
-    if len(arr) > 200: arr = arr[-200:]
+def _save_hist_item(item: Dict[str, Any]) -> None:
+    arr = _load_hist(); arr.append(item)
+    if len(arr) > 300: arr = arr[-300:]
     HIST.write_text(json.dumps(arr, ensure_ascii=False, indent=2), "utf-8")
+def recent_titles(limit=60) -> List[str]:
+    return [x.get("title","") for x in _load_hist()][-limit:]
+def recent_areas(limit=30) -> List[str]:
+    return [x.get("area","") for x in _load_hist()][-limit:]
 
-def _recent_titles(limit=20) -> List[str]:
-    return [str(x.get("title")) for x in _load_history() if x.get("title")][-limit:]
+# ===== 모델 호출 =====
+CODE_BLOCK_RE = re.compile(r"```(?P<lang>[a-zA-Z0-9_-]*)\s*(?P<code>[\s\S]*?)```", re.M)
+def _headers_cloud() -> Dict[str,str]:
+    h = {"Content-Type":"application/json"}
+    if OLLAMA_BASE.startswith("https://ollama.com"):
+        if not OLLAMA_APIKEY: raise RuntimeError("OLLAMA_API_KEY 필요")
+        h["Authorization"] = f"Bearer {OLLAMA_APIKEY}"
+    return h
 
-def _recent_areas(limit=12) -> List[str]:
-    return [str(x.get("area_hint")) for x in _load_history() if x.get("area_hint")][-limit:]
+def _extract_json_candidates(text: str):
+    s = text or ""
+    for m in CODE_BLOCK_RE.finditer(s):
+        if m.group("lang").lower() == "json":
+            yield m.group("code").strip()
+    s2 = re.sub(r"^```(?:json|python)?\s*|\s*```$", "", (text or "").strip(), flags=re.I)
+    n=len(s2); seen=set()
+    for st in range(n):
+        if st<n and s2[st]=="{":
+            i=st; depth=0; ins=False; esc=False
+            while i<n:
+                ch=s2[i]
+                if ins:
+                    if esc: esc=False
+                    elif ch=="\\": esc=True
+                    elif ch=='"': ins=False
+                else:
+                    if ch=='"': ins=True
+                    elif ch=='{': depth+=1
+                    elif ch=='}':
+                        depth-=1
+                        if depth==0:
+                            cand=s2[st:i+1]
+                            if cand not in seen:
+                                seen.add(cand); yield cand
+                            break
+                i+=1
 
-def _recent_summaries(limit=20) -> List[str]:
-    return [str(x.get("summary") or "") for x in _load_history()][-limit:]
-
-# ===== week & hint =====
-def _current_week_str() -> str:
+def _week_str() -> str:
     y, w, _ = datetime.datetime.now().isocalendar()
     return f"{y}W{w:02d}"
 
-def _pick_area_hint(avoid: List[str]) -> str:
-    cand = [a for a in AREA_HINTS if a not in set(avoid[-8:])]
-    return random.choice(cand if cand else AREA_HINTS)
+FORBIDDEN_AI = [
+    "AI","인공지능","머신러닝","딥러닝","LLM","신경망","뉴럴","Transformer","파인튜닝","미세조정",
+    "학습","훈련","추론","강화학습","GPT","Stable Diffusion","Diffusion",
+    "PyTorch","TensorFlow","CUDA","쿠다","GPU","텐서","벡터 임베딩"
+]
+def _contains_forbidden(s: str) -> bool:
+    s = (s or "").lower()
+    return any(k.lower() in s for k in FORBIDDEN_AI)
 
-# ===== text utils =====
-_UWS = "\u00A0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u200B"
-_PUNCT = r"\-_/·•()\[\]{}:;,.!?\"'~`@#%^&*+=|\\<>"
-_norm_re = re.compile(rf"[\s{_UWS}{_PUNCT}]+", re.UNICODE)
-def _normalize(s: str) -> str: return _norm_re.sub("", (s or "").casefold())
-def _tokens(s: str) -> List[str]:
-    s = re.sub(r"[^\w가-힣]+", " ", s); s = re.sub(r"\s+", " ", s).strip()
-    return [t for t in s.split() if t and len(t) >= 2]
-def _trigrams(s: str) -> set:
-    s = re.sub(r"\s+", " ", (s or "").strip())
-    return {s[i:i+3] for i in range(len(s)-2)} if len(s) >= 3 else set()
-def _jaccard(a: Iterable[str], b: Iterable[str]) -> float:
-    sa, sb = set(a), set(b)
-    return 0.0 if not sa or not sb else len(sa & sb) / len(sa | sb)
-def _is_title_novel(title: str, prev: List[str]) -> bool:
-    ntoks = _tokens(title)
-    for p in prev:
-        if _normalize(p) == _normalize(title): return False
-        if _jaccard(ntoks, _tokens(p)) >= 0.55: return False
-    return True
-def _summary_novel(summary: str, prev_summaries: List[str]) -> bool:
-    t = _tokens(summary); tri = _trigrams(summary)
-    for ps in prev_summaries:
-        if _jaccard(t, _tokens(ps)) >= 0.45: return False
-        if _jaccard(tri, _trigrams(ps)) >= 0.40: return False
-    return True
+def _build_messages(week: str, dedup_note: str) -> List[Dict[str,str]]:
+    spec_rule = (
+        "사양 제한: 중저사양 노트북(8–16GB RAM, 내장그래픽/iGPU)에서 풀 수 있는 알고리즘 문제만 허용. "
+        "AI/ML/LLM/딥러닝/외부 AI API/고사양 GPU 의존 금지."
+    )
+    sys_msg = (
+        "너는 한국어 코딩 문제 생성기다. 아래 JSON 스키마로만 답하라.\n"
+        "스키마:{"
+        "\"area\":\"알고리즘 주제 한 줄\","
+        "\"title\":\"문제 제목(최대 26자)\","
+        "\"summary\":\"문제 설명+입력/출력 형식+제약+예시 입력/예시 출력(한국어)\","
+        "\"must_have\":[\"예시 출력의 정답 1개\"],"
+        "\"answer_py\":\"표준입력 읽어 정답 출력하는 파이썬 코드(표준 라이브러리만)\"}\n"
+        f"규칙:\n- {spec_rule}\n- answer_py는 main()과 __name__ 가드 포함.\n- 오직 위 JSON만 출력."
+    )
+    user_msg = (
+        f"[주차] {week}\n"
+        "중복 없이 참신한 주제(area)와 문제를 스스로 정하라. "
+        f"{dedup_note}"
+    )
+    return [{"role":"system","content":sys_msg},{"role":"user","content":user_msg}]
 
-def _strip_codefence(s: str) -> str:
-    s = (s or "").strip()
-    s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE)
-    s = re.sub(r"\s*```$", "", s)
-    return s.strip()
+def _seed_from(tag: str, attempt: int) -> int:
+    h = hashlib.md5(f"{tag}:{attempt}".encode()).hexdigest()
+    return int(h[:8], 16)
 
-def _extract_json_candidates(text: str) -> List[str]:
-    s = _strip_codefence(text or "")
-    out, seen = [], set()
-    n = len(s)
-    for start in range(n):
-        if s[start] != "{": continue
-        i, depth, in_str, esc = start, 0, False, False
-        while i < n:
-            ch = s[i]
-            if in_str:
-                if esc: esc = False
-                elif ch == "\\": esc = True
-                elif ch == '"': in_str = False
-            else:
-                if ch == '"': in_str = True
-                elif ch == "{": depth += 1
-                elif ch == "}":
-                    depth -= 1
-                    if depth == 0:
-                        cand = s[start:i+1]
-                        if cand not in seen:
-                            out.append(cand); seen.add(cand)
-                        break
-            i += 1
-    return out
+def call_model(week: str, tries: int = 9, backoff: float = 0.5) -> Dict[str,Any]:
+    url = f"{OLLAMA_BASE}/api/chat"
+    prev_t = recent_titles(80)
+    prev_a = recent_areas(24)
+    dedup_note = ""
+    if prev_t: dedup_note += "최근 제목과 유사하지 않게 하라. "
+    if prev_a: dedup_note += "최근 사용 주제와 겹치지 마라."
 
-# ===== ollama(generate) =====
-def call_ollama_json(system_msg: str, user_msg: str) -> dict:
-    last_raw = ""
-    for attempt in range(1, 7):
+    for t in range(1, tries+1):
+        seed = _seed_from(week, t) ^ random.getrandbits(16)
         payload = {
             "model": MODEL,
-            "prompt": f"{system_msg}\n\n{user_msg}\n\n[ONLY JSON] 순수 JSON 객체 1개만 출력.",
+            "messages": _build_messages(week, dedup_note),
             "format": "json",
             "stream": False,
-            "options": {**GEN_OPTS_BASE, "temperature": max(0.04, 0.1 - 0.01*attempt)},
+            "options": {
+                "num_ctx": NUM_CTX, "num_predict": MAX_NEW,
+                "temperature": 0.35 + 0.05*(t-1),
+                "top_p": 0.9,
+                "repeat_penalty": 1.1 + 0.02*(t-1),
+                "seed": int(seed)
+            }
         }
         try:
-            r = requests.post(f"{OLLAMA_BASE}/api/generate", json=payload, timeout=240)
-            r.raise_for_status()
+            r = requests.post(url, json=payload, headers=_headers_cloud(), timeout=180)
+            if r.status_code >= 400:
+                time.sleep(backoff * t); continue
+            data = r.json()
+            content = (data.get("message") or {}).get("content") or data.get("response") or ""
         except Exception:
-            time.sleep(0.4 * attempt); continue
-        resp = r.json().get("response", "") or ""
-        last_raw = resp
-        for cand in _extract_json_candidates(resp):
+            time.sleep(backoff * t); continue
+
+        parsed = None
+        for cand in _extract_json_candidates(content):
             try:
                 obj = json.loads(cand)
+                if isinstance(obj, dict):
+                    parsed = obj; break
             except Exception:
-                continue
-            if isinstance(obj, dict) and all(k in obj for k in ("title","summary","must_have","answer_py")):
-                return obj
-        time.sleep(0.4 * attempt)
-    RAW_PATH.write_text(last_raw, encoding="utf-8")
-    raise RuntimeError("Ollama JSON 파싱 실패")
+                pass
+        if not parsed:
+            time.sleep(backoff * t); continue
 
-# ===== 검증/실행 =====
-_BANNED = ["특정 규칙","적절히","임의","등등","…","...","예를 들어"]
-_LATEX_CMD = re.compile(r"\\[a-zA-Z]+")
-_ALLOWED_IMPORT = re.compile(r"^\s*import\s+(math|sys)\s*$|^\s*from\s+(math|sys)\s+import\s+", re.M)
-_FORBIDDEN_CODE = re.compile(r"\b(os|subprocess|socket|requests|eval|exec|__import__|open)\b")
-_DEF_MAIN   = re.compile(r"def\s+main\s*\(\s*\)\s*:\s*[\r\n]+", re.M)
-_MAIN_GUARD = re.compile(r"if\s+__name__\s*==\s*['\"]__main__['\"]\s*:\s*[\r\n]+", re.M)
+        area   = str(parsed.get("area") or "").strip() or "자동 생성 주제"
+        title  = (str(parsed.get("title") or f"자동생성 문제 {t}").strip())[:26]
+        summary= str(parsed.get("summary") or "").strip()
+        must   = parsed.get("must_have") or []
+        answer = str(parsed.get("answer_py") or "").strip()
 
-def _find_tag_line(text: str, tag: str) -> str:
-    m = re.search(rf"{tag}\s*:\s*(.+)", text)
-    return m.group(1).strip() if m else ""
+        if _contains_forbidden(area) or _contains_forbidden(title) or _contains_forbidden(summary):
+            time.sleep(backoff * t); continue
+        if not is_title_novel(title, prev_t):
+            time.sleep(backoff * t); continue
+        if not is_area_novel(area, prev_a):
+            time.sleep(backoff * t); continue
 
-def _parse_ints(s: str) -> List[int]:
-    return [int(x) for x in re.findall(r"-?\d+", s)]
+        return {"area":area,"title":title,"summary":summary,"must_have":must,"answer_py":answer}
 
-def _stdin_from_example(ex_in: str) -> str:
-    nums = _parse_ints(ex_in or "")
-    if nums: return " ".join(str(x) for x in nums)
-    return (ex_in or "").strip()
-
-def _example_not_trivial(ex_in: str) -> bool:
-    nums = _parse_ints(ex_in or "")
-    multi_line = ("\n" in (ex_in or ""))
-    enough_tokens = len(nums) >= 5
-    distinct = len(set(nums)) >= 3
-    any_two_digit = any(abs(x) >= 10 for x in nums)
-    return (enough_tokens or multi_line) and distinct and any_two_digit
-
-def _python_code_ok(code: str) -> bool:
-    if "```" in code: return False
-    if _FORBIDDEN_CODE.search(code): return False
-    for m in re.finditer(r"^\s*(from\s+\w+\s+import|import\s+\w+)", code, re.M):
-        if not _ALLOWED_IMPORT.search(m.group(0)): return False
-    if not _DEF_MAIN.search(code): return False
-    if not _MAIN_GUARD.search(code): return False
-    try:
-        compile(code, "<answer_py>", "exec")
-    except SyntaxError:
-        return False
-    return True
-
-def _run_answer(code: str, stdin_text: str) -> Tuple[bool, str]:
-    ANS_PATH.write_text(code, encoding="utf-8")
-    try:
-        proc = subprocess.run(
-            [sys.executable, str(ANS_PATH)],
-            input=stdin_text.encode("utf-8"),
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            timeout=6,
-        )
-    except subprocess.TimeoutExpired:
-        return False, "timeout"
-    out = proc.stdout.decode("utf-8", errors="replace").replace("\r\n","\n").strip("\n")
-    lines = [ln for ln in out.split("\n") if ln.strip()!=""]
-    return (len(lines)>=1), (lines[0] if lines else "")
-
-# ===== 유사도/신규성 =====
-def _top_tokens(texts: List[str], k=20) -> List[str]:
-    from collections import Counter
-    c = Counter()
-    for t in texts:
-        for tok in _tokens(t):
-            if len(tok) >= 2: c[tok] += 1
-    return [w for w,_ in c.most_common(k)]
-
-def _novel_enough(title: str, summary: str, area: str,
-                  prev_titles: List[str], prev_summaries: List[str], recent_areas: List[str]) -> bool:
-    if area in set(recent_areas[-8:]): return False
-    if not _is_title_novel(title, prev_titles): return False
-    if not _summary_novel(summary, prev_summaries[-12:]): return False
-    return True
-
-def _validate_and_repair(obj: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
-    if not isinstance(obj, dict): return False, {}
-    title   = str(obj.get("title") or "").strip()
-    summary = str(obj.get("summary") or "").strip()
-    must    = obj.get("must_have") or []
-    answer  = str(obj.get("answer_py") or "").strip()
-    if not title or not summary or not isinstance(must, list) or not answer:
-        return False, {}
-    if any(b in summary for b in _BANNED): return False, {}
-    if _LATEX_CMD.search(summary): return False, {}
-    if not _python_code_ok(answer): return False, {}
-
-    ex_in  = _find_tag_line(summary, "예시 입력")
-    ex_out = _find_tag_line(summary, "예시 출력")
-    if not ex_in or not _example_not_trivial(ex_in): return False, {}
-
-    stdin_norm = _stdin_from_example(ex_in)
-    ok_run, got = _run_answer(answer, stdin_norm)
-    if not ok_run or not got: return False, {}
-
-    if not ex_out or (must and must[0].strip() != ex_out):
-        ex_out = got
-        if must: must[0] = ex_out
-        else: must = [ex_out]
-        if "예시 출력" not in summary:
-            summary = summary.strip() + f"\n예시 출력: {ex_out}"
-
-    # 제목 길이 보정
-    if len(title) < 10: title = (title + " 고급 문제")[:26]
-    if len(title) > 26: title = title[:26]
-
-    return True, {
-        "title": title,
-        "summary": re.sub(r"\s{2,}", " ", summary).strip(),
-        "must_have": [must[0]],
-        "answer_py": answer,
-        "example_input": stdin_norm,
-        "example_output": ex_out,
+    # 폴백
+    return {
+        "area":"배열 슬라이딩 윈도우",
+        "title":"특정 합 연속구간 개수",
+        "summary":"정수 배열에서 길이 k 연속구간의 합이 m의 배수인 구간 개수를 구한다.\n예시 입력: 5 3 4\n1 2 3 4 5\n예시 출력: 2",
+        "must_have":["2"],
+        "answer_py":"import sys\n\ndef main():\n    data=sys.stdin.read().strip().split()\n    if not data:\n        print(0);return\n    it=iter(map(int,data))\n    n=next(it);k=next(it);m=next(it)\n    arr=[next(it) for _ in range(n)]\n    s=sum(arr[:k]);cnt=0\n    if s%m==0: cnt+=1\n    for i in range(k,n):\n        s+=arr[i]-arr[i-k]\n        if s%m==0: cnt+=1\n    print(cnt)\n\nif __name__=='__main__':\n    main()\n"
     }
 
-# ===== 로컬 백업 생성기 =====
-def _fallback_problem() -> Dict[str, Any]:
-    n = 12; k = 4; d = 9
-    arr = [13, 2, 17, 8, 11, 6, 25, 9, 4, 16, 7, 10]
-    cnt = 0
-    for i in range(0, n-k+1):
-        window = arr[i:i+k]
-        s = sum(window)
-        if s % 7 == 0 and (max(window) - min(window) >= d):
-            cnt += 1
-    ex_in = f"{n} {k} {d}\n" + " ".join(map(str,arr))
-    ex_out = str(cnt)
-
-    title = "이중 조건 윈도우 구간 집계"
-    summary = (
-        "문제: 1차원 배열에서 길이 k의 연속 구간 중 특정 조건을 만족하는 구간의 개수를 계산한다.\n"
-        "입력: 첫 줄에 정수 n, k, d(1 ≤ k ≤ n ≤ 2×10^5, 0 ≤ d ≤ 10^9). 둘째 줄에 길이 n의 정수 배열이 주어진다(각 원소 |ai| ≤ 10^9).\n"
-        "규칙: 각 길이 k 구간에 대해 (i) 원소 합이 7의 배수이고, (ii) 해당 구간의 최댓값−최솟값 ≥ d 일 때 유효로 간주한다. 배열은 수정하지 않는다.\n"
-        "절차: (1) 윈도우에 새 원소를 추가하고 오래된 원소를 제거하며 합을 관리한다. (2) 최대·최소는 덱 두 개로 유지한다. "
-        "(3) 두 조건을 동시에 만족하면 카운트를 증가시킨다. 빈 배열이나 k>n인 경우는 0으로 처리한다.\n"
-        f"예시 입력: {ex_in}\n"
-        f"예시 출력: {ex_out}\n"
-        "출력 형식: 한 줄에 유효 구간의 개수를 출력한다."
-    )
-    answer_py = """import sys
-from collections import deque
-
-def main():
-    data = sys.stdin.read().strip().split()
-    if not data:
-        print(0); return
-    it = iter(map(int, data))
-    try:
-        n = next(it); k = next(it); d = next(it)
-    except StopIteration:
-        print(0); return
-    arr = [next(it) for _ in range(n)] if n>0 else []
-    if k<=0 or k>n:
-        print(0); return
-
-    s = sum(arr[:k])
-    maxdq = deque()
-    mindq = deque()
-
-    def push(i):
-        x = arr[i]
-        while maxdq and arr[maxdq[-1]] <= x: maxdq.pop()
-        while mindq and arr[mindq[-1]] >= x: mindq.pop()
-        maxdq.append(i); mindq.append(i)
-
-    def clean(i):
-        left = i - k + 1
-        while maxdq and maxdq[0] < left: maxdq.popleft()
-        while mindq and mindq[0] < left: mindq.popleft()
-
-    for i in range(k): push(i)
-    ans = 0
-    if s % 7 == 0 and (arr[maxdq[0]] - arr[mindq[0]] >= d): ans += 1
-
-    for i in range(k, n):
-        s += arr[i] - arr[i-k]
-        push(i); clean(i)
-        if s % 7 == 0 and (arr[maxdq[0]] - arr[mindq[0]] >= d): ans += 1
-
-    print(ans)
-
-if __name__ == "__main__":
-    main()
-"""
-    return {"title": title, "summary": summary, "must_have": [ex_out], "answer_py": answer_py,
-            "example_input": ex_in, "example_output": ex_out}
-
-# ===== markdown / worker =====
-def build_weekly_md(week_str: str, area: str, title: str, summary: str, must: List[str]) -> str:
+# ===== 업서트/MD =====
+def build_md(week: str, area: str, title: str, summary: str, must: List[str]) -> str:
+    m0 = (must or [''])[0]
     return (
-        f"# {week_str} 주간 코딩문제\n"
+        f"# {week} 주간 코딩문제\n"
         f"**제시어:** {area}\n"
-        f"## {title}\n\n"
-        f"{summary}\n\n"
-        f"### 예시 입력의 정답(출력값)\n`{must[0]}`\n"
+        f"## {title}\n\n{summary}\n\n"
+        f"### 예시 입력의 정답(출력값)\n`{m0}`\n"
     )
 
-def upsert_weekly_to_worker(week_str: str, title: str, summary: str, must: List[str], md: str) -> dict:
-    if not API_KEY: raise RuntimeError("AI_API_KEY 필요")
-    url = f"{API_BASE}/api/reco/admin/upsert/topics/weekly"
-    r = requests.post(url, json={"week": week_str, "title": title, "summary": summary, "must": must, "md": md},
-                      headers={HEADER: API_KEY}, timeout=60)
+def upsert_weekly_multi(week: str, idx: int, title: str, summary: str, must: List[str], md: str) -> Dict[str,Any]:
+    if not API_KEY:
+        print("[warn] AI_API_KEY 미설정. 업서트 생략.")
+        return {"skipped": True}
+    url = f"{API_BASE}/api/reco/admin/upsert/topics/weekly-multi"
+    payload = {"week": week, "idx": idx, "title": title, "summary": summary, "must": must, "md": md}
+    r = requests.post(url, json=payload, headers={AI_HEADER: API_KEY, "Content-Type":"application/json"}, timeout=30)
     if r.status_code >= 300:
-        raise RuntimeError(f"worker_error status={r.status_code} body={r.text[:400]}")
-    return r.json()
+        raise RuntimeError(f"upsert_error status={r.status_code} body={r.text[:400]}")
+    try:
+        return r.json()
+    except Exception:
+        return {"raw": r.text}
 
 # ===== main =====
 def main():
-    week = _current_week_str()
-    prev_titles   = _recent_titles(limit=30)
-    prev_summaries= _recent_summaries(limit=30)
-    prev_areas    = _recent_areas(limit=12)
+    week = _week_str()
+    for i in range(1, COUNT+1):
+        obj = call_model(week)
+        area, title, summary, must, answer = (
+            obj["area"], obj["title"], obj["summary"], obj.get("must_have") or [], obj.get("answer_py") or ""
+        )
+        # 해답 저장
+        ans_path = OUT_DIR / f"answer_{week}_{i}.py"
+        ans_path.write_text(answer, encoding="utf-8")
+        print(f"[save] {ans_path}")
 
-    # 금지 토큰 추출(최근 요약에서 자주 쓰인 키워드)
-    banned_tokens = _top_tokens(prev_summaries, k=20)
-
-    last_err = None
-    for attempt in range(1, 12):
-        hint = _pick_area_hint(prev_areas)
-        # 모델 호출
-        obj = None
+        md = build_md(week, area, title, summary, must)
         try:
-            obj = call_ollama_json(
-                WEEK_JSON_SYS,
-                WEEK_JSON_USER(int(week.split("W")[1]), hint, prev_titles, prev_areas, banned_tokens)
-            )
-        except Exception:
-            obj = None
+            res = upsert_weekly_multi(week, i, title, summary, must, md)
+            print(f"[upsert] week={week} idx={i} ->", res)
+        except Exception as e:
+            print(f"[upsert-error] idx={i}: {e}")
 
-        # 검증/수리
-        ok, data = (False, {})
-        if obj:
-            ok, data = _validate_and_repair(obj)
-        if not ok:
-            last_err = RuntimeError("schema_invalid_or_inconsistent"); continue
+        _save_hist_item({"ts": datetime.datetime.now().isoformat(), "week": week, "idx": i,
+                         "area": area, "title": title})
 
-        # 신규성 검사
-        if not _novel_enough(data["title"], data["summary"], hint, prev_titles, prev_summaries, prev_areas):
-            last_err = ValueError("not_novel_enough"); continue
-
-        # 실행 재검증
-        ok2, got = _run_answer(data["answer_py"], data["example_input"])
-        if not ok2 or got != data["example_output"]:
-            last_err = RuntimeError(f"answer_check_failed want={data['example_output']} got={got}"); continue
-
-        md = build_weekly_md(week, hint, data["title"], data["summary"], data["must_have"])
-        resp = upsert_weekly_to_worker(week, data["title"], data["summary"], data["must_have"], md)
-
-        # 히스토리 저장: area와 summary 포함
-        _save_history({
-            "ts": datetime.datetime.now().isoformat(),
-            "week": week,
-            "area_hint": hint,
-            "title": data["title"],
-            "summary": data["summary"]
-        })
-        print("[weekly] ok:", resp)
-        print(f"[weekly] answer saved -> {ANS_PATH}")
-        return
-
-    # 실패 시 백업(백업은 유사도 검사 제외, 단 오늘만 사용)
-    data = _fallback_problem()
-    ok_run, got = _run_answer(data["answer_py"], data["example_input"])
-    if not ok_run or got != data["example_output"]:
-        raise last_err or RuntimeError("weekly_generation_failed")
-
-    md = build_weekly_md(week, "백업-내부", data["title"], data["summary"], data["must_have"])
-    resp = upsert_weekly_to_worker(week, data["title"], data["summary"], data["must_have"], md)
-    _save_history({
-        "ts": datetime.datetime.now().isoformat(),
-        "week": week,
-        "area_hint": "백업-내부",
-        "title": data["title"],
-        "summary": data["summary"]
-    })
-    print("[weekly:fallback] ok:", resp)
+    print(f"[done] week={week} generated={COUNT}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print("FATAL:", e, file=sys.stderr)
+        sys.exit(1)
