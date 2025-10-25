@@ -290,7 +290,7 @@ const MainPage = () => {
     : sortedProjects.slice(10);
 
   // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
-  const gridTitle = useReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+  const gridTitle = useReco ? 'AI 추천 프로젝트' : '전체 프로젝트';
 
   return (
     <div className="min-h-screen">
@@ -298,11 +298,7 @@ const MainPage = () => {
         <MainHeroSection projects={heroProjects} />
 
         {/* 메인 그리드 */}
-        {isInitialLoad && loadingProjects ? (
-          <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
-            프로젝트를 불러오는 중입니다…
-          </div>
-        ) : useReco ? (
+        {useReco ? (
           hasReco ? (
             <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
           ) : (
