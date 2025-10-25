@@ -1,5 +1,5 @@
 // src/components/home/MainHeroSection.tsx
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import type { Project } from '../../types/Project';
 import { resolveCover, swapJpgPng } from '../../utils/getProjectCover';
 import { Link } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { fetchProjectFeed } from '../../api/projects';
 import { fetchProjectDetail } from '../../api/projectApi';
 
 /** 이미지 컴포넌트: jpg 실패 시 png로 한번 더 시도 */
-function CoverImage({ initialSrc, title }: { initialSrc: string; title: string }) {
+const CoverImage = memo(({ initialSrc, title }: { initialSrc: string; title: string }) => {
     const [src, setSrc] = useState(initialSrc);
     const [triedAltExt, setTriedAltExt] = useState(false);
 
@@ -28,7 +28,9 @@ function CoverImage({ initialSrc, title }: { initialSrc: string; title: string }
             }}
         />
     );
-}
+});
+
+CoverImage.displayName = 'CoverImage';
 
 /** 첫 번째 카드 오버라이드 설정 */
 const HERO_OVERRIDES = {
@@ -38,7 +40,7 @@ const HERO_OVERRIDES = {
 const WEEKLY_CACHE_KEY = 'cache:weeklyTopProjects:v1';
 const OVERRIDE_META_CACHE_KEY = 'cache:heroOverrideMeta:v1';
 
-const MainHeroSection = ({ projects }: { projects: Project[] }) => {
+const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [scrollPosition, setScrollPosition] = useState(0);
     const [showFakeScroll, setShowFakeScroll] = useState(false);
@@ -386,6 +388,12 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             </div>
         </section>
     );
-};
+}, (prevProps, nextProps) => {
+    // projects 배열이 동일하면 리렌더링 방지
+    return prevProps.projects.length === nextProps.projects.length &&
+           prevProps.projects.every((p, i) => p.id === nextProps.projects[i]?.id);
+});
+
+MainHeroSection.displayName = 'MainHeroSection';
 
 export default MainHeroSection;
