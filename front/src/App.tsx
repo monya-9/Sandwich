@@ -1,6 +1,6 @@
 // front/src/App.tsx
 import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { AuthProvider } from "./context/AuthContext";
@@ -83,6 +83,51 @@ function RootProjectToOtherRedirect() {
     return <Navigate to={to} replace />;
 }
 
+/** /projects/:id (기존 알림 호환) -> ownerId 찾아서 리다이렉트 */
+function LegacyProjectRedirect() {
+    const { id: projectId } = useParams();
+    const navigate = useNavigate();
+    const [error, setError] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!projectId) {
+            navigate("/search", { replace: true });
+            return;
+        }
+
+        // 피드에서 프로젝트 찾기
+        import("./api/projects").then(async ({ fetchProjectFeed }) => {
+            try {
+                const feed = await fetchProjectFeed({ page: 0, size: 200, sort: 'latest' });
+                const match = (feed.content || []).find((it: any) => it?.id === Number(projectId));
+                const ownerId = (match as any)?.owner?.id || (match as any)?.authorId;
+                if (ownerId) {
+                    navigate(`/other-project/${ownerId}/${projectId}`, { replace: true });
+                } else {
+                    setError(true);
+                }
+            } catch {
+                setError(true);
+            }
+        });
+    }, [projectId, navigate]);
+
+    if (error) {
+        return <Navigate to="/search" replace />;
+    }
+
+    return <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">프로젝트를 찾는 중...</div>
+    </div>;
+}
+
+/** /profile/:userId (기존 알림 호환) -> /users/:userId 리다이렉트 */
+function LegacyProfileRedirect() {
+    const { userId } = useParams();
+    const to = userId ? `/users/${userId}` : "/search";
+    return <Navigate to={to} replace />;
+}
+
 function App() {
     useEffect(() => {
         initFCM(); // 앱 시작 시 1회
@@ -99,6 +144,9 @@ function App() {
                                 {/* Notefolio 스타일 상세 경로 */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
                                 
+                                {/* 기존 알림 호환 경로 (레거시) */}
+                                <Route path="/projects/:id" element={<LegacyProjectRedirect />} />
+                                <Route path="/profile/:userId" element={<LegacyProfileRedirect />} />
 
                                 {/* 신규/편집 업로드 경로 */}
                                 <Route path="/project/edit" element={<ProjectMangeSampleForm />} />

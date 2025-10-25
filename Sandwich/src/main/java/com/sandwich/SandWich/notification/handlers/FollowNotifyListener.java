@@ -20,7 +20,7 @@ public class FollowNotifyListener {
     @TransactionalEventListener
     public void onFollow(FollowCreatedEvent ev) {
         // 팔로워(보낸 사람) 프로필로 이동
-        String deepLink = "/profile/" + ev.getActorId();
+        String deepLink = "/users/" + ev.getActorId();
 
         var payload = NotifyPayload.builder()
                 .event("FOLLOW_CREATED")

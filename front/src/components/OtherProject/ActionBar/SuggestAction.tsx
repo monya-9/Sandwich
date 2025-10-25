@@ -155,10 +155,11 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
       {/* 액션 버튼 */}
       <button
         ref={btnRef}
-        className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
+        className={`flex items-center group relative z-50 ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           if (!ensureLogin()) return;
           setIsModalOpen(true);
         }}
@@ -174,16 +175,17 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
         <>
           {/* 브릿지 영역: 버튼과 툴팁 사이의 간격을 메움 */}
           <div
-            className="absolute right-0 top-0 bottom-0 w-[70px] z-40"
+            className="absolute right-0 top-0 bottom-0 w-[70px] z-30"
             onMouseEnter={() => setTooltipHover(true)}
             onMouseLeave={() => setTooltipHover(false)}
           />
           <div
             ref={popupRef}
-            className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-stretch z-50 py-6 px-7 gap-4 w-max min-w-[350px]"
+            className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-stretch z-40 py-6 px-7 gap-4 w-max min-w-[350px]"
             onMouseEnter={() => setTooltipHover(true)}
             onMouseLeave={() => setTooltipHover(false)}
             onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="absolute -right-2 top-5 w-4 h-4 bg-white rotate-45 rounded-[2px]" />
             <div className="grid grid-cols-[24px_1fr_auto] items-center w-full gap-x-3">
