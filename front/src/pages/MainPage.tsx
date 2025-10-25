@@ -5,7 +5,6 @@ import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
 import MainDeveloperHighlight from '../components/Main/MainDeveloperHighlight';
 import SortModal from '../components/Main/SortModal';
-import { dummyProjects } from '../data/dummyProjects';
 import { Project, Category } from '../types/Project';
 import { fetchUserRecommendations } from '../api/reco';
 import { fetchProjectFeed, fetchProjectsMeta } from '../api/projects';
@@ -293,7 +292,7 @@ const MainPage = () => {
   const gridPrimary = hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10);
   const heroProjects = hasReco
     ? filteredRecoProjects.slice(0, 7)
-    : (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
+    : sortedProjects.slice(0, 7);
   const gridMore = hasReco
     ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
     : sortedProjects.slice(10);
@@ -304,7 +303,7 @@ const MainPage = () => {
   return (
     <div className="min-h-screen">
       <main className="px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
-        <MainHeroSection projects={heroProjects.length > 0 ? heroProjects : dummyProjects.slice(0, 7)} />
+        <MainHeroSection projects={heroProjects} />
 
         <div className="mb-10">
           <MainCategoryFilter
