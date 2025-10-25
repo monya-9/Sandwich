@@ -112,6 +112,59 @@ export default {
       if (limit > 0) items = items.slice(0, limit);
       return json({ week, total: items.length, data: items });
     }
+    // === 추가: 주간 문제 다건 업서트 ===
+    if (url.pathname === "/api/reco/admin/upsert/topics/weekly-multi" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+      const week = String(body.week ?? body.iso ?? body.iso_week ?? "").trim();
+      const idx  = Number(body.idx ?? body.index ?? 0); // 1..3
+      const title = String(body.title ?? "").trim();
+      const summary = String(body.summary ?? "").trim();
+      const must = Array.isArray(body.must) ? body.must
+                 : Array.isArray(body.must_have) ? body.must_have : [];
+      const md = String(body.md ?? "").trim();
+
+      if (!/^20\d{2}W\d{2}$/.test(week)) return json({ error: "bad_week_YYYYWww" }, 400);
+      if (!Number.isFinite(idx) || idx < 1) return json({ error: "bad_idx" }, 400);
+      if (!title || !summary) return json({ error: "missing_fields" }, 400);
+
+      const now = Math.floor(Date.now() / 1000);
+      await env.SANDWICH_RECO.prepare(
+        `INSERT INTO weekly_topics_multi
+           (week, idx, title, summary, must_json, md, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?)
+         ON CONFLICT(week, idx) DO UPDATE SET
+           title=excluded.title,
+           summary=excluded.summary,
+           must_json=excluded.must_json,
+           md=excluded.md,
+           updated_at=excluded.updated_at`
+      ).bind(week, idx, title, summary, JSON.stringify(must || []), md, now, now).run();
+
+      return json({ ok: true, week, idx });
+    }
+
+    // === 추가: 주간 문제 목록 조회 ===
+    // GET /api/reco/topics/weekly/list?week=2025W43  (week 미지정 시 현재 ISO 주)
+    if (url.pathname === "/api/reco/topics/weekly/list" && request.method === "GET") {
+      let week = (url.searchParams.get("week") || "").trim();
+      if (!week) week = isoWeekStr(new Date());
+      const rows = await env.SANDWICH_RECO.prepare(
+        `SELECT week, idx, title, summary, must_json, updated_at
+           FROM weekly_topics_multi
+          WHERE week=?
+          ORDER BY idx ASC`
+      ).bind(week).all();
+      const data = (rows.results || []).map(r => ({
+        idx: r.idx,
+        title: r.title,
+        summary: r.summary,
+        must_have: parseItems(r.must_json || "[]"),
+        updated_at: r.updated_at
+      }));
+      return json({ week, total: data.length, data });
+    }
 
     // ---------- monthly topics read (latest, no md) ----------
     if (url.pathname === "/api/reco/monthly" && request.method === "GET") {
@@ -201,6 +254,76 @@ export default {
            updated_at=excluded.updated_at`
       ).bind(ym, title, summary, JSON.stringify(must || []), md, now, now).run();
       return json({ ok: true, ym });
+    }
+
+    // ========== NEW: monthly topics MULTI upsert (admin) ==========
+    // POST /api/reco/admin/upsert/topics/monthly-multi
+    // { ym, idx:1..3, title, summary, must|must_have, md }
+    if (url.pathname === "/api/reco/admin/upsert/topics/monthly-multi" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+
+      const ym = String(body.ym ?? body.month ?? body["YYYY-MM"] ?? "").trim();
+      const idx = Number(body.idx ?? body.index ?? 0);
+      const title = String(body.title ?? "").trim();
+      const summary = String(body.summary ?? "").trim();
+      const must = Array.isArray(body.must) ? body.must
+                 : Array.isArray(body.must_have) ? body.must_have : [];
+      const md = String(body.md ?? "").trim();
+
+      if (!/^\d{4}-\d{2}$/.test(ym)) return json({ error: "bad_ym_YYYY-MM" }, 400);
+      if (!Number.isFinite(idx) || idx < 1) return json({ error: "bad_idx" }, 400);
+      if (!title || !summary) return json({ error: "missing_fields" }, 400);
+
+      const now = Math.floor(Date.now() / 1000);
+      await env.SANDWICH_RECO.prepare(
+        `INSERT INTO monthly_topics_multi
+           (ym, idx, title, summary, must_json, md, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?)
+         ON CONFLICT(ym, idx) DO UPDATE SET
+           title=excluded.title,
+           summary=excluded.summary,
+           must_json=excluded.must_json,
+           md=excluded.md,
+           updated_at=excluded.updated_at`
+      ).bind(ym, idx, title, summary, JSON.stringify(must || []), md, now, now).run();
+
+      return json({ ok: true, ym, idx });
+    }
+
+    // ========== NEW: monthly topics MULTI list ==========
+    // GET /api/reco/topics/monthly/list?ym=YYYY-MM
+    // ym 없으면 updated_at DESC 기준 최신 ym 선택 후 반환
+    if (url.pathname === "/api/reco/topics/monthly/list" && request.method === "GET") {
+      let ym = (url.searchParams.get("ym") || "").trim();
+
+      if (!ym) {
+        const row = await env.SANDWICH_RECO.prepare(
+          `SELECT ym
+             FROM monthly_topics_multi
+            ORDER BY updated_at DESC, ym DESC
+            LIMIT 1`
+        ).first();
+        if (!row) return json({ found: false, total: 0, data: [] });
+        ym = row.ym;
+      }
+
+      const rows = await env.SANDWICH_RECO.prepare(
+        `SELECT ym, idx, title, summary, must_json, updated_at
+           FROM monthly_topics_multi
+          WHERE ym=?
+          ORDER BY idx ASC`
+      ).bind(ym).all();
+
+      const data = (rows.results || []).map(r => ({
+        idx: r.idx,
+        title: r.title,
+        summary: r.summary,
+        must_have: parseItems(r.must_json || "[]"),
+        updated_at: r.updated_at
+      }));
+
+      return json({ ym, total: data.length, data, found: data.length > 0 });
     }
 
     // ---------- weekly topics upsert (admin) ----------
