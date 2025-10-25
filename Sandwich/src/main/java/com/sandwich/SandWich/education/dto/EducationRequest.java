@@ -8,5 +8,7 @@ public record EducationRequest(
         Integer endYear,
         Integer endMonth,
         String description,
-        boolean isRepresentative
+        boolean isRepresentative,
+        String level,
+        String status
 ) {}

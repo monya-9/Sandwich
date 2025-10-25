@@ -55,9 +55,9 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* 검색바와 필터 옵션 */}
-      <div className="bg-white border-b border-gray-200 px-4 py-6">
+      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-2 sm:px-4 py-3 sm:py-6">
         <div className="max-w-7xl mx-auto">
           <ProjectSearchBar 
             onSearch={handleSearch}
@@ -80,14 +80,14 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {/* 검색 결과 텍스트 - 로딩 중이 아닐 때만 표시 */}
         {filters.q && filters.q.trim() && !isLoading && !isInitialLoading && (
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <div className="text-center mb-4 sm:mb-8">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
               '{filters.q}'에 대한 검색 결과
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-white/70">
               {totalElements.toLocaleString()}개의 포트폴리오를 발견했습니다.
             </p>
           </div>

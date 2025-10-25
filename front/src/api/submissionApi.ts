@@ -16,6 +16,11 @@ export type SubmissionCode = {
   commitSha: string;
 };
 
+export type SubmissionPortfolio = {
+  language?: string;
+  tech?: string[];
+};
+
 export type SubmissionOwner = {
   userId: number;
   username: string;
@@ -34,6 +39,7 @@ export type SubmissionCreateRequest = {
   membersText?: string;
   assets?: SubmissionAsset[];
   code?: SubmissionCode;
+  portfolio?: SubmissionPortfolio;
 };
 
 export type SubmissionResponse = {
@@ -79,6 +85,7 @@ export type SubmissionDetailResponse = {
   membersText?: string;
   assets?: SubmissionAsset[];
   code?: SubmissionCode;
+  portfolio?: SubmissionPortfolio;
   viewCount: number;
   likeCount: number;
   commentCount: number;
@@ -179,6 +186,18 @@ export async function updateChallengeSubmission(
     withCredentials: true,
   });
   return response.data;
+}
+
+/**
+ * 챌린지 제출물 삭제
+ */
+export async function deleteChallengeSubmission(
+  challengeId: number,
+  submissionId: number
+): Promise<void> {
+  await api.delete(`/challenges/${challengeId}/submissions/${submissionId}`, {
+    withCredentials: true,
+  });
 }
 
 /**

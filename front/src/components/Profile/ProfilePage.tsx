@@ -2,7 +2,6 @@ import React, { useEffect, useState, useContext } from "react";
 import { FiPlus } from "react-icons/fi";
 import { UserApi, type UserProfileResponse, type RepresentativeCareer } from "../../api/userApi";
 import { Link, useLocation } from "react-router-dom";
-import { HiCheckCircle } from "react-icons/hi2";
 import WorkTab from "./WorkTab";
 import LikesTab from "./LikesTab";
 import CollectionsTab from "./CollectionsTab";
@@ -17,10 +16,6 @@ import { AuthContext } from "../../context/AuthContext";
 export default function ProfilePage() {
   const { email, nickname } = useContext(AuthContext);
   const [me, setMe] = useState<UserProfileResponse | null>(null);
-  const [showOfferModal, setShowOfferModal] = useState(false);
-  const [allowProjectOffers, setAllowProjectOffers] = useState(true);
-  const [allowJobOffers, setAllowJobOffers] = useState(true);
-  const [showOfferSavedBanner, setShowOfferSavedBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<"work" | "like" | "collection" | "draft">("work");
   const [repCareers, setRepCareers] = useState<RepresentativeCareer[]>([]);
   const location = useLocation();
@@ -29,7 +24,7 @@ export default function ProfilePage() {
     const path = location.pathname;
     if (path.endsWith("/likes")) setActiveTab("like");
     else if (path.endsWith("/collections")) setActiveTab("collection");
-    else if (path.endsWith("/drafts")) setActiveTab("draft");
+    // else if (path.endsWith("/drafts")) setActiveTab("draft"); // 임시저장 기능 준비중
     else setActiveTab("work");
   }, [location.pathname]);
 
@@ -83,7 +78,9 @@ export default function ProfilePage() {
               if (line.startsWith(MAJOR_PREFIX)) major = line.slice(MAJOR_PREFIX.length).trim();
             }
           }
-          const top = e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
+          const top = e.level === "HIGH_SCHOOL" 
+            ? "고등학교"
+            : e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
           rep.push({ type: "EDUCATION", title: top, subtitle: major, description: e.description });
         });
 
@@ -92,9 +89,9 @@ export default function ProfilePage() {
           rep.push({ type: "AWARD", title: a.title, subtitle: a.issuer, description: a.description });
         });
 
-        // PROJECT: 상단 "프로젝트", 하단 역할
+        // PROJECT: 상단 프로젝트 제목, 하단 역할
         (projectsRes || []).filter((p: any) => (p as any).isRepresentative && !isPrivate("project", p.id)).forEach((p: any) => {
-          rep.push({ type: "PROJECT", title: "프로젝트", subtitle: p.role, description: p.description });
+          rep.push({ type: "PROJECT", title: p.title, subtitle: p.role, description: p.description });
         });
 
         if (mounted) setRepCareers(rep);
@@ -137,7 +134,8 @@ export default function ProfilePage() {
   const scopedUsernameLocal = (typeof window !== "undefined" && (localStorage.getItem(usernameScopedKey) || sessionStorage.getItem(usernameScopedKey))) || "";
   const profileUrlScopedKey = userEmailScoped ? `profileUrlSlug:${userEmailScoped}` : "profileUrlSlug";
   const scopedProfileUrl = (typeof window !== "undefined" && (localStorage.getItem(profileUrlScopedKey) || sessionStorage.getItem(profileUrlScopedKey))) || "";
-  const profileUrlSlug = scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
+  // ✅ profileSlug 우선 사용, 없으면 기존 로직 유지
+  const profileUrlSlug = me?.profileSlug || scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
   const profileImageUrl = me?.profileImage || "";
   const initial = (() => {
     const src = (me?.email || "").trim();
@@ -165,12 +163,6 @@ export default function ProfilePage() {
   return (
     <div className="w-full flex justify-center">
       <div className="w-full min-h-screen bg-white dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 pb-20 text-black dark:text-white">
-        {showOfferSavedBanner && (
-          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full bg-black text-white text-[13px] px-3 py-1.5 shadow-lg flex items-center gap-2">
-            <HiCheckCircle className="text-[#22C55E] w-4 h-4" />
-            의뢰&구직 상태가 저장되었습니다.
-          </div>
-        )}
         {/* 배너 (네모, 헤더 하단 초록 라인까지 끌어올림, 가로 전체 확장) */}
         <div className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] dark:bg-[#14181B] h-[300px] md:h-[360px] w-auto rounded-none border-b border-black/10 dark:border-white/10">
           <div className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center">
@@ -214,9 +206,6 @@ export default function ProfilePage() {
               <Link to="/mypage" className="w-full h-[46px] md:h-[48px] rounded-[30px] bg-[#068334] text-white text-[16px] md:text-[18px] flex items-center justify-center">
                 프로필 편집
               </Link>
-              <button onClick={() => setShowOfferModal(true)} className="w-full h-[46px] md:h-[48px] rounded-[30px] border border-[#068334] text-[#068334] text-[16px] md:text-[18px]">
-                의뢰&구직 상태 설정
-              </button>
             </div>
 
             {/* 소개: 값이 있을 때만 표시 */}
@@ -311,7 +300,8 @@ export default function ProfilePage() {
                 <Link to="/profile/work" onClick={()=>setActiveTab("work")} className={`pb-3 ${activeTab==="work" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>작업</Link>
                 <Link to="/profile/likes" onClick={()=>setActiveTab("like")} className={`pb-3 ${activeTab==="like" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>좋아요</Link>
                 <Link to="/profile/collections" onClick={()=>setActiveTab("collection")} className={`pb-3 ${activeTab==="collection" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>컬렉션</Link>
-                <Link to="/profile/drafts" onClick={()=>setActiveTab("draft")} className={`pb-3 ${activeTab==="draft" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>임시저장</Link>
+                {/* 임시저장 기능 준비중 */}
+                {/* <Link to="/profile/drafts" onClick={()=>setActiveTab("draft")} className={`pb-3 ${activeTab==="draft" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`}>임시저장</Link> */}
               </div>
             </div>
 
@@ -319,61 +309,11 @@ export default function ProfilePage() {
             {activeTab === "work" && <WorkTab />}
             {activeTab === "like" && <LikesTab />}
             {activeTab === "collection" && <CollectionsTab />}
-            {activeTab === "draft" && <DraftsTab />}
+            {/* {activeTab === "draft" && <DraftsTab />} */}
           </section>
         </div>
       </div>
 
-      {/* 의뢰&구직 상태 설정 모달 */}
-      {showOfferModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-[520px] bg-white rounded-[12px] p-6 relative min-h-[400px] flex flex-col">
-            <button aria-label="close" className="absolute right-3 top-3 text-black/60 hover:text-black w-8 h-8 text-[25px] flex items-center justify-center" onClick={() => setShowOfferModal(false)}>✕</button>
-            <div className="text-[16px] md:text-[18px] font-semibold">의뢰&구직 상태 설정</div>
-            <p className="mt-6 text-[14px] md:text-[15px] text-black/80 leading-relaxed">
-              프로젝트 의뢰나 구직 제안 받기를 설정하시면 더 많은 기회를 얻을 수 있어요.
-            </p>
-
-            <div className="mt-10 space-y-4">
-              {/* 프로젝트 의뢰 및 프리랜서 제안 받기 */}
-              <div className={`rounded-[12px] border p-4 ${allowProjectOffers ? "border-[#98E1C8] bg-[#E8F7EE]" : "border-[#E5E7EB] bg-white"}`}>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setAllowProjectOffers((v) => !v)}
-                    aria-pressed={allowProjectOffers}
-                    className={`relative inline-flex w-[44px] h-[24px] rounded-full transition-colors ${allowProjectOffers ? "bg-[#068334]" : "bg-[#E5E7EB]"}`}
-                  >
-                    <span className={`absolute top-1/2 -translate-y-1/2 w-[20px] h-[20px] rounded-full bg-white shadow ring-1 ring-black/10 transition-transform ${allowProjectOffers ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
-                  </button>
-                  <div className="text-[15px] md:text-[16px] text-black/80">프로젝트 의뢰 및 프리랜서 제안 받기</div>
-                </div>
-              </div>
-
-              {/* 채용 제안 받기 */}
-              <div className={`rounded-[12px] border p-4 ${allowJobOffers ? "border-[#98E1C8] bg-[#E8F7EE]" : "border-[#E5E7EB] bg-white"}`}>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setAllowJobOffers((v) => !v)}
-                    aria-pressed={allowJobOffers}
-                    className={`relative inline-flex w-[44px] h-[24px] rounded-full transition-colors ${allowJobOffers ? "bg-[#068334]" : "bg-[#E5E7EB]"}`}
-                  >
-                    <span className={`absolute top-1/2 -translate-y-1/2 w-[20px] h-[20px] rounded-full bg-white shadow ring-1 ring-black/10 transition-transform ${allowJobOffers ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
-                  </button>
-                  <div className="text-[15px] md:text-[16px] text-black/80">채용 제안 받기</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-auto">
-              <hr className="border-gray-200 my-4 -mx-6" />
-              <div className="mt-2 flex justify-end gap-2">
-                <button onClick={() => setShowOfferModal(false)} className="h-[36px] px-4 rounded-[18px] border border-black/20 text-[13px]">취소</button>
-                <button onClick={() => { setShowOfferModal(false); setShowOfferSavedBanner(true); window.setTimeout(() => setShowOfferSavedBanner(false), 3000); }} className="h-[36px] px-4 rounded-[18px] bg-[#068334] text-white text-[13px]">완료</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

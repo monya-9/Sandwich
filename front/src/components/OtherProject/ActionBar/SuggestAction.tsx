@@ -12,6 +12,7 @@ import api from "../../../api/axiosInstance";
 
  type Props = {
   targetUserId?: number;
+  isMobile?: boolean;
 };
 
  type PublicProfile = {
@@ -22,7 +23,7 @@ import api from "../../../api/axiosInstance";
   profileImage?: string | null;
 };
 
-export default function SuggestAction({ targetUserId }: Props = {}) {
+export default function SuggestAction({ targetUserId, isMobile = false }: Props = {}) {
   const [hover, setHover] = useState(false);
   const [tooltipHover, setTooltipHover] = useState(false); // 삼각형/팝업 위에 올려도 true
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -154,7 +155,7 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
       {/* 액션 버튼 */}
       <button
         ref={btnRef}
-        className="flex flex-col items-center gap-1 group"
+        className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onClick={() => {
@@ -162,14 +163,14 @@ export default function SuggestAction({ targetUserId }: Props = {}) {
           setIsModalOpen(true);
         }}
       >
-        <div className="w-14 h-14 rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center mb-1">
-          <FaCommentDots className="w-7 h-7" />
+        <div className={`rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
+          <FaCommentDots className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />
         </div>
-        <span className="text-sm text-white font-semibold text-center" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>제안하기</span>
+        <span className={`font-semibold text-center ${isMobile ? 'text-xs text-gray-800' : 'text-sm text-white'}`} style={isMobile ? {} : { textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>제안하기</span>
       </button>
 
       {/* 툴팁 */}
-      {tooltipVisible && !isModalOpen && (
+      {tooltipVisible && !isModalOpen && !isMobile && (
         <>
           <div
             ref={popupRef}

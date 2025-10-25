@@ -2,6 +2,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminFetchChallenges, fetchChallengeDetail, fetchPortfolioLeaderboard, type ChallengeListResponse, type ChallengeListItem, type ChallengeType, type ChallengeStatus } from "../../api/challengeApi";
+import { fetchAiLeaderboard } from "../../api/aiJudgeApi";
+import { fetchUserNameById } from "../../api/userMini";
+import { adminCustomPayout, fetchCustomPayouts } from "../../api/challenge_creditApi";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 export default function ChallengeManagePage() {
     const navigate = useNavigate();
@@ -24,6 +28,49 @@ export default function ChallengeManagePage() {
     const [rewardsError, setRewardsError] = useState<string | null>(null);
     const [rewardsRows, setRewardsRows] = useState<Array<Record<string, any>>>([]);
     const [payoutRows, setPayoutRows] = useState<Array<{ rank: number | string; amount: number; userName?: string; teamName?: string }>>([]);
+
+    // 커스텀 지급 폼 상태
+    const [customUserId, setCustomUserId] = useState<string>("");
+    const [customAmount, setCustomAmount] = useState<string>("");
+    const [customRank, setCustomRank] = useState<string>("");
+    const [customMemo, setCustomMemo] = useState<string>("");
+    const [customReason, setCustomReason] = useState<string>("REWARD_CUSTOM");
+    const [customLoading, setCustomLoading] = useState(false);
+    const [customMsg, setCustomMsg] = useState<string>("");
+    const [customHistory, setCustomHistory] = useState<Array<{ challengeId: number; at: string; userId: number; amount: number; rank?: number; memo?: string; reason?: string }>>([]);
+    const [showCustomBox, setShowCustomBox] = useState(false);
+    
+    // 에러 모달 상태
+    const [errorModal, setErrorModal] = useState({ visible: false, title: "", message: "" });
+    const [customPage, setCustomPage] = useState<number>(0);
+    const [customSize, setCustomSize] = useState<number>(5);
+    const customRowsForSelected = useMemo(() => {
+        if (!selectedChallengeId) return [] as typeof customHistory;
+        return customHistory.filter(h => h.challengeId === selectedChallengeId);
+    }, [customHistory, selectedChallengeId]);
+    const paginatedCustomRows = useMemo(() => {
+        const start = customPage * customSize;
+        const end = start + customSize;
+        return customRowsForSelected.slice(start, end);
+    }, [customRowsForSelected, customPage, customSize]);
+    const customTotalPages = useMemo(() => {
+        return Math.max(1, Math.ceil(customRowsForSelected.length / customSize));
+    }, [customRowsForSelected.length, customSize]);
+
+    // 커스텀 지급 로컬 보관 키 (새로고침 후에도 유지)
+    const STORAGE_KEY = 'adminCustomPayoutHistory:v1';
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) setCustomHistory(parsed);
+        } catch {}
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    useEffect(() => {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(customHistory)); } catch {}
+    }, [customHistory]);
 
     useEffect(() => {
         setAdminLoading(true);
@@ -115,6 +162,31 @@ export default function ChallengeManagePage() {
         setRewardsLoading(true);
         setRewardsError(null);
         setRewardsRows([]);
+        setCustomPage(0);
+        
+        // 백엔드에서 커스텀 지급 내역 가져오기
+        try {
+            const customPayoutsData = await fetchCustomPayouts(item.id, { page: 0, size: 200 });
+            const loadedCustomHistory = customPayoutsData.items.map((item) => ({
+                challengeId: customPayoutsData.challengeId,
+                at: item.createdAt,
+                userId: item.userId,
+                amount: item.amount,
+                rank: undefined,
+                memo: item.username,
+                reason: item.reason,
+            }));
+            
+            // 기존 localStorage 데이터와 병합하여 중복 제거 (백엔드 데이터 우선)
+            setCustomHistory((prev) => {
+                const backendUserIds = new Set(loadedCustomHistory.map(h => `${h.challengeId}-${h.userId}`));
+                const filtered = prev.filter(h => !backendUserIds.has(`${h.challengeId}-${h.userId}`) || h.challengeId !== item.id);
+                return [...loadedCustomHistory, ...filtered];
+            });
+        } catch (e) {
+            console.error('커스텀 지급 내역 조회 실패:', e);
+        }
+        
         try {
             const detail: any = await fetchChallengeDetail(item.id);
             // ruleJson 파싱: 기본 보상 규칙(top/participant) 추출
@@ -191,17 +263,57 @@ export default function ChallengeManagePage() {
                         }
                         setPayoutRows(payouts);
                     } else {
-                        // 2) 코드형: 구성표(ruleJson.top/participant)가 있으면 참가 보상만 표기
-                        const participant = (() => {
-                            try {
-                                const rule = typeof (detail?.ruleJson) === 'string' ? JSON.parse(detail.ruleJson) : detail?.ruleJson;
-                                return rule?.participant;
-                            } catch { return undefined; }
-                        })();
-                        if (participant) {
-                            setPayoutRows([{ rank: '🎖 참가자 전원', amount: Number(participant) }]);
+                        // 2) 코드형: AI 리더보드 기반 지급 미리보기
+                        // - ruleJson.top/participant를 우선 사용, 없으면 기본값
+                        const defaultTop = [10000, 5000, 3000];
+                        const topArr = (ruleTop && ruleTop.length ? ruleTop : defaultTop).map(n => Number(n) || 0);
+                        const participantAmt = (ruleParticipant != null ? Number(ruleParticipant) : 500) || 0;
+
+                        // aiWeek 탐색: aiWeek | ai_week | ruleJson.week
+                        let aiWeek: string | undefined;
+                        try {
+                            aiWeek = (detail?.aiWeek || detail?.ai_week);
+                            if (!aiWeek && detail?.ruleJson) {
+                                const r = typeof detail.ruleJson === 'string' ? JSON.parse(detail.ruleJson) : detail.ruleJson;
+                                aiWeek = r?.week || r?.aiWeek;
+                            }
+                        } catch {}
+
+                        if (!aiWeek) {
+                            // 주차 정보가 없으면 규칙만 표시(참가상 안내)
+                            setPayoutRows([{ rank: '🎖 참가자 전원', amount: participantAmt }]);
                         } else {
-                            setPayoutRows([]);
+                            try {
+                                const ai = await fetchAiLeaderboard(aiWeek);
+                                const lb = Array.isArray(ai?.leaderboard) ? ai.leaderboard : [];
+
+                                // 숫자 id인 항목은 이름을 병렬 조회하여 표시 개선
+                                const idEntries = lb.map(e => ({ ...e, numId: Number.isFinite(Number(String(e.user))) ? Number(String(e.user)) : null }));
+                                const uniqueIds = Array.from(new Set(idEntries.map(e => e.numId).filter(Boolean))) as number[];
+                                const idToName = new Map<number, string | null>();
+                                await Promise.all(uniqueIds.map(async (uid) => {
+                                    const name = await fetchUserNameById(uid);
+                                    idToName.set(uid, name);
+                                }));
+
+                                const payouts = idEntries.map((e) => {
+                                    const idx = (e.rank ?? 0) - 1;
+                                    const isWinner = idx >= 0 && idx < topArr.length && topArr[idx] > 0;
+                                    const amount = isWinner ? (topArr[idx] || 0) : participantAmt;
+                                    const fallback = `user ${e.user}`;
+                                    const pretty = e.numId && idToName.has(e.numId) ? (idToName.get(e.numId) || fallback) : fallback;
+                                    return {
+                                        rank: e.rank,
+                                        amount,
+                                        userName: pretty,
+                                        teamName: '',
+                                    };
+                                });
+                                setPayoutRows(payouts);
+                            } catch {
+                                // 조회 실패 시 최소 안내만
+                                setPayoutRows([{ rank: '🎖 참가자 전원', amount: participantAmt }]);
+                            }
                         }
                     }
                 }
@@ -250,7 +362,9 @@ export default function ChallengeManagePage() {
     }
 
     function downloadCsv(content: string, filename: string) {
-        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        // UTF-8 BOM 추가하여 Excel에서 한글이 깨지지 않도록 함
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -264,9 +378,9 @@ export default function ChallengeManagePage() {
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
             <div className="mb-4 flex items-center justify-between">
-                <h1 className="text-xl font-semibold text-neutral-900">챌린지/보상 테이블</h1>
+                <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">챌린지/보상 테이블</h1>
                 <button
-                    className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm hover:bg-neutral-50"
+                    className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600"
                     onClick={() => navigate('/challenge')}
                 >목록으로</button>
             </div>
@@ -277,20 +391,20 @@ export default function ChallengeManagePage() {
             <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div className="flex flex-col gap-2 md:flex-row md:items-end">
                     <div className="flex flex-col">
-                        <label className="mb-1 text-xs text-neutral-500">제목 검색</label>
+                        <label className="mb-1 text-xs text-neutral-500 dark:text-neutral-300">제목 검색</label>
                         <input
                             value={searchTitle}
                             onChange={e => { setSearchTitle(e.target.value); setPage(0); }}
                             placeholder="제목 입력"
-                            className="h-9 w-64 rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-neutral-500"
+                            className="h-9 w-64 rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-neutral-500 bg-white text-black placeholder-gray-500"
                         />
                     </div>
                     <div className="flex flex-col md:ml-3">
-                        <label className="mb-1 text-xs text-neutral-500">타입</label>
+                        <label className="mb-1 text-xs text-neutral-500 dark:text-neutral-300">타입</label>
                         <select
                             value={filterType}
                             onChange={e => { setPage(0); setFilterType((e.target.value || '') as any); }}
-                            className="h-9 w-36 rounded-md border border-neutral-300 px-2 text-sm"
+                            className="h-9 w-36 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                         >
                             <option value="">전체</option>
                             <option value="CODE">CODE</option>
@@ -298,11 +412,11 @@ export default function ChallengeManagePage() {
                         </select>
                     </div>
                     <div className="flex flex-col md:ml-3">
-                        <label className="mb-1 text-xs text-neutral-500">상태</label>
+                        <label className="mb-1 text-xs text-neutral-500 dark:text-neutral-300">상태</label>
                         <select
                             value={filterStatus}
                             onChange={e => { setPage(0); setFilterStatus((e.target.value || '') as any); }}
-                            className="h-9 w-40 rounded-md border border-neutral-300 px-2 text-sm"
+                            className="h-9 w-40 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                         >
                             <option value="">전체</option>
                             <option value="DRAFT">DRAFT</option>
@@ -313,11 +427,11 @@ export default function ChallengeManagePage() {
                         </select>
                     </div>
                     <div className="flex flex-col md:ml-3">
-                        <label className="mb-1 text-xs text-neutral-500">정렬</label>
+                        <label className="mb-1 text-xs text-neutral-500 dark:text-neutral-300">정렬</label>
                         <select
                             value={sort}
                             onChange={e => { setPage(0); setSort(e.target.value); }}
-                            className="h-9 w-44 rounded-md border border-neutral-300 px-2 text-sm"
+                            className="h-9 w-44 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                         >
                             <option value="-createdAt">생성 기준 최근</option>
                             <option value="createdAt">생성 기준 오래된</option>
@@ -333,46 +447,46 @@ export default function ChallengeManagePage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleExportChallengesCsv}
-                        className="h-9 rounded-md border border-neutral-300 px-3 text-sm hover:bg-neutral-50"
-                    >CSV 익스포트</button>
+                        className="h-9 rounded-md border border-neutral-300 px-3 text-sm hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600"
+                    >엑셀 내보내기</button>
                     <button
-                        className="h-9 rounded-md bg-black px-3 text-sm text-white"
+                        className="h-9 rounded-md bg-black px-3 text-sm text-white dark:bg-white dark:text-black"
                         onClick={() => navigate('/admin/challenges/new')}
                     >챌린지 생성</button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="overflow-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
-                <table className="min-w-full text-sm">
+            <div className="overflow-auto rounded-xl border border-neutral-200 bg-white dark:bg-neutral-800 shadow-sm">
+                <table className="min-w-full text-sm dark:text-white">
                     <thead>
-                        <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-700">
+                        <tr className="border-b border-neutral-200 bg-neutral-50 dark:bg-neutral-700 text-neutral-700 dark:text-white">
                             <th className="px-3 py-2 text-left">ID</th>
                             <th className="px-3 py-2 text-left">제목</th>
                             <th className="px-3 py-2 text-left">타입</th>
                             <th className="px-3 py-2 text-left">상태</th>
                             <th className="px-3 py-2 text-left">시작</th>
                             <th className="px-3 py-2 text-left">마감</th>
-                            <th className="px-3 py-2 text-left">제출수</th>
-                            <th className="px-3 py-2 text-left">투표수</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap items-center">제출수</th>
+                            <th className="px-3 py-2 text-left whitespace-nowrap items-center">투표수</th>
                             <th className="px-3 py-2 text-left">관리</th>
                         </tr>
                     </thead>
                     <tbody>
                         {adminLoading ? (
-                            <tr><td className="px-3 py-3" colSpan={9}>불러오는 중...</td></tr>
+                            <tr><td className="px-3 py-3 dark:text-white" colSpan={9}>불러오는 중...</td></tr>
                         ) : adminError ? (
                             <tr><td className="px-3 py-3 text-red-600" colSpan={9}>{adminError}</td></tr>
                         ) : filteredAdminRows.length === 0 ? (
-                            <tr><td className="px-3 py-6 text-neutral-500" colSpan={9}>데이터가 없습니다.</td></tr>
+                            <tr><td className="px-3 py-6 text-neutral-500 dark:text-neutral-300" colSpan={9}>데이터가 없습니다.</td></tr>
                         ) : (
                             filteredAdminRows.map((item) => (
-                                <tr key={item.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                                <tr key={item.id} className="border-b border-neutral-100 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700">
                                     <td className="px-3 py-2">{item.id}</td>
                                     <td className="px-3 py-2 max-w-[380px] truncate" title={item.title}>{item.title}</td>
                                     <td className="px-3 py-2">{item.type}</td>
                                     <td className="px-3 py-2">
-                                        <span className="inline-flex items-center rounded-md border border-neutral-200 px-2 py-[2px] text-[12px]">{item.status}</span>
+                                        <span className="inline-flex items-center rounded-md border border-neutral-200 dark:border-neutral-600 px-2 py-[2px] text-[12px]">{item.status}</span>
                                     </td>
                                     <td className="px-3 py-2">{new Date(item.startAt).toLocaleString()}</td>
                                     <td className="px-3 py-2">{new Date(item.endAt).toLocaleString()}</td>
@@ -381,11 +495,11 @@ export default function ChallengeManagePage() {
                                     <td className="px-3 py-2">
                                         <div className="flex items-center gap-2 min-w-[130px]">
                                             <button
-                                                className="inline-flex items-center rounded-md border border-neutral-300 px-2 py-[2px] text-[12px] whitespace-nowrap hover:bg-neutral-50"
+                                                className="inline-flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-600 px-2 py-[2px] text-[12px] whitespace-nowrap hover:bg-neutral-50 dark:hover:bg-neutral-700"
                                                 onClick={() => navigate(`/admin/challenges/${item.id}`)}
                                             >수정</button>
                                             <button
-                                                className="inline-flex items-center rounded-md border border-neutral-300 px-2 py-[2px] text-[12px] whitespace-nowrap min-w-[70px] hover:bg-neutral-50"
+                                                className="inline-flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-600 px-2 py-[2px] text-[12px] whitespace-nowrap min-w-[70px] hover:bg-neutral-50 dark:hover:bg-neutral-700"
                                                 onClick={() => handleSelectChallengeForRewards(item)}
                                             >보상보기</button>
                                         </div>
@@ -399,23 +513,23 @@ export default function ChallengeManagePage() {
 
             {/* Pagination */}
             <div className="mt-3 flex items-center justify-between">
-                <div className="text-sm text-neutral-600">총 {totalElementsText}건</div>
+                <div className="text-sm text-neutral-600 dark:text-neutral-300">총 {totalElementsText}건</div>
                 <div className="flex items-center gap-2">
                     <button
-                        className="rounded-md border border-neutral-300 px-2 py-1 text-sm disabled:opacity-50"
+                        className="rounded-md border border-neutral-300 px-2 py-1 text-sm disabled:opacity-50 dark:border-neutral-600 dark:text-white"
                         disabled={!hasPrev}
                         onClick={() => setPage(p => Math.max(0, p - 1))}
                     >이전</button>
-                    <span className="text-sm">{(currentPage ?? 0) + 1} / {effectiveTotalPages}</span>
+                    <span className="text-sm dark:text-white">{(currentPage ?? 0) + 1} / {effectiveTotalPages}</span>
                     <button
-                        className="rounded-md border border-neutral-300 px-2 py-1 text-sm disabled:opacity-50"
+                        className="rounded-md border border-neutral-300 px-2 py-1 text-sm disabled:opacity-50 dark:border-neutral-600 dark:text-white"
                         disabled={!hasNext}
                         onClick={() => setPage(p => p + 1)}
                     >다음</button>
                     <select
                         value={size}
                         onChange={e => { setPage(0); setSize(parseInt(e.target.value, 10)); }}
-                        className="ml-2 h-8 rounded-md border border-neutral-300 px-2 text-sm"
+                        className="ml-2 h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black"
                     >
                         <option value={5}>5</option>
                         <option value={10}>10</option>
@@ -428,41 +542,42 @@ export default function ChallengeManagePage() {
             </div>
 
             {/* Rewards Table (지급 결과가 있으면 그 내용을 보상 테이블 안에서 표시) */}
-            <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <div className="mt-6 rounded-xl border border-neutral-200 bg-white dark:bg-neutral-800 p-4 shadow-sm">
                 <div className="mb-2 flex items-center justify-between">
-                    <div className="text-[15px] font-medium text-neutral-900">
-                        보상 테이블 {selectedChallengeId ? (
-                            <span className="text-neutral-600 text-sm"> - ID {selectedChallengeId} ({selectedChallengeTitle})</span>
+                    <div className="text-[15px] font-medium text-neutral-900 dark:text-white">
+                        기본 보상 {selectedChallengeId ? (
+                            <span className="text-neutral-600 dark:text-neutral-300 text-sm"> - ID {selectedChallengeId} ({selectedChallengeTitle})</span>
                         ) : null}
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2">
                         <button
                             onClick={handleExportRewardsCsv}
                             disabled={!selectedChallengeId || (rewardsRows.length === 0 && payoutRows.length === 0)}
-                            className="h-9 rounded-md border border-neutral-300 px-3 text-sm disabled:opacity-50 hover:enabled:bg-neutral-50"
-                        >CSV 익스포트</button>
+                            className="h-9 rounded-md border border-neutral-300 px-3 text-sm disabled:opacity-50 hover:enabled:bg-neutral-50 dark:border-neutral-600 dark:text-white"
+                        >엑셀 내보내기</button>
+                        {/* 상단에선 커스텀 지급 UI를 표시하지 않음 (커스텀 보상 섹션으로 이동) */}
                     </div>
                 </div>
                 {selectedChallengeId == null ? (
-                    <div className="text-sm text-neutral-600">상단 테이블에서 챌린지를 선택해 보상 구성을 확인하세요.</div>
+                    <div className="text-sm text-neutral-600 dark:text-neutral-300">상단 테이블에서 챌린지를 선택해 보상 구성을 확인하세요.</div>
                 ) : rewardsLoading ? (
-                    <div className="text-sm">불러오는 중...</div>
+                    <div className="text-sm dark:text-white">불러오는 중...</div>
                 ) : rewardsError ? (
                     <div className="text-sm text-red-600">{rewardsError}</div>
                 ) : (rewardsRows.length === 0 && payoutRows.length === 0) ? (
-                    <div className="text-sm text-neutral-600">표시할 보상 항목이 없습니다.</div>
+                    <div className="text-sm text-neutral-600 dark:text-neutral-300">표시할 보상 항목이 없습니다.</div>
                 ) : (
                     <div className="overflow-auto">
-                        <table className="min-w-[480px] text-sm">
+                        <table className="min-w-[480px] text-sm dark:text-white">
                             <thead>
                                 {payoutRows.length > 0 ? (
-                                    <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-700">
+                                    <tr className="border-b border-neutral-200 bg-neutral-50 dark:bg-neutral-700 text-neutral-700 dark:text-white">
                                         <th className="px-3 py-2 text-left">순위</th>
                                         <th className="px-3 py-2 text-left">크레딧</th>
                                         <th className="px-3 py-2 text-left">유저/팀</th>
                                     </tr>
                                 ) : (
-                                    <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-700">
+                                    <tr className="border-b border-neutral-200 bg-neutral-50 dark:bg-neutral-700 text-neutral-700 dark:text-white">
                                         <th className="px-3 py-2 text-left">순위</th>
                                         <th className="px-3 py-2 text-left">크레딧</th>
                                         <th className="px-3 py-2 text-left">KRW</th>
@@ -473,7 +588,7 @@ export default function ChallengeManagePage() {
                             <tbody>
                                 {payoutRows.length > 0 ? (
                                     payoutRows.map((p, i) => (
-                                        <tr key={i} className="border-b border-neutral-100">
+                                        <tr key={i} className="border-b border-neutral-100 dark:border-neutral-700">
                                             <td className="px-3 py-2">{p.rank ?? '-'}</td>
                                             <td className="px-3 py-2">{Number(p.amount || 0).toLocaleString()}</td>
                                             <td className="px-3 py-2">{p.userName || p.teamName || '-'}</td>
@@ -481,7 +596,7 @@ export default function ChallengeManagePage() {
                                     ))
                                 ) : (
                                     rewardsRows.map((r, idx) => (
-                                        <tr key={idx} className="border-b border-neutral-100">
+                                        <tr key={idx} className="border-b border-neutral-100 dark:border-neutral-700">
                                             <td className="px-3 py-2">{r.rank}</td>
                                             <td className="px-3 py-2">{r.credit}</td>
                                             <td className="px-3 py-2">{r.krw || '-'}</td>
@@ -492,11 +607,207 @@ export default function ChallengeManagePage() {
                             </tbody>
                         </table>
                         {payoutRows.length > 0 && (
-                            <div className="mt-2 text-xs text-neutral-500">지급 결과: 투표 종료 후 기본 보상 규칙에 따라 자동 지급된 크레딧 내역입니다.</div>
+                            <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-300">지급 결과: 투표 종료 후 기본 보상 규칙에 따라 자동 지급된 크레딧 내역입니다.</div>
                         )}
                     </div>
                 )}
             </div>
+            {/* 커스텀 보상 섹션: 보상보기 선택 시 동일한 영역에 하단 테이블로 표시 */}
+            {selectedChallengeId != null && (
+                <div className="mt-6 rounded-xl border border-neutral-200 bg-white dark:bg-neutral-800 p-4 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
+                        <div className="text-[15px] font-medium text-neutral-900 dark:text-white">커스텀 보상</div>
+                        {/* 커스텀 지급 네모박스 트리거 */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="h-9 rounded-md border border-neutral-300 px-3 text-sm dark:border-neutral-600 dark:text-white"
+                                onClick={() => {
+                                    // 폼 초기화
+                                    setCustomUserId("");
+                                    setCustomAmount("");
+                                    setCustomRank("");
+                                    setCustomMemo("");
+                                    setCustomReason("REWARD_CUSTOM");
+                                    setCustomMsg("");
+                                    setShowCustomBox(true);
+                                }}
+                            >커스텀 지급</button>
+                        </div>
+                    </div>
+
+                    {/* 커스텀 지급 네모박스 */}
+                    {showCustomBox && (
+                        <div className="mb-4 grid gap-3 md:grid-cols-2">
+                            <div className="flex flex-col gap-2 p-3 border border-neutral-300 rounded-md bg-neutral-50 dark:bg-neutral-800 min-w-[320px]">
+                                <div className="text-sm font-medium text-neutral-900 dark:text-white">커스텀 지급</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <label className="text-xs text-neutral-500 dark:text-neutral-300">userId</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black placeholder-gray-500" value={customUserId} onChange={e=>setCustomUserId(e.target.value)} placeholder="예) 30" />
+                                    <label className="text-xs text-neutral-500 dark:text-neutral-300">amount</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black placeholder-gray-500" value={customAmount} onChange={e=>setCustomAmount(e.target.value)} placeholder="예) 2500" />
+                                    <label className="text-xs text-neutral-500 dark:text-neutral-300">rank(선택)</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black placeholder-gray-500" value={customRank} onChange={e=>setCustomRank(e.target.value)} placeholder="숫자 또는 공란" />
+                                    <label className="text-xs text-neutral-500 dark:text-neutral-300">memo(선택)</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black placeholder-gray-500" value={customMemo} onChange={e=>setCustomMemo(e.target.value)} placeholder="사유/메모" />
+                                    <label className="text-xs text-neutral-500 dark:text-neutral-300">reason(선택)</label>
+                                    <input className="h-8 rounded-md border border-neutral-300 px-2 text-sm bg-white text-black placeholder-gray-500" value={customReason} onChange={e=>setCustomReason(e.target.value)} placeholder="REWARD_CUSTOM" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="h-8 rounded-md border border-neutral-300 bg-black px-3 text-sm text-white disabled:opacity-50 dark:border-neutral-600"
+                                        disabled={customLoading || !customUserId.trim() || !customAmount.trim() || customMsg === "지급 완료" || Number(customUserId) <= 0 || Number(customAmount) <= 0}
+                                        onClick={async ()=>{
+                                            if (!selectedChallengeId) return;
+                                            const userIdNum = Number(customUserId);
+                                            const amountNum = Number(customAmount);
+                                            
+                                            // userId와 amount 유효성 검증
+                                            if (userIdNum <= 0 || !Number.isInteger(userIdNum)) {
+                                                setErrorModal({ visible: true, title: "입력 오류", message: "유효한 userId를 입력해주세요. (양의 정수만 가능)" });
+                                                return;
+                                            }
+                                            if (amountNum <= 0) {
+                                                setErrorModal({ visible: true, title: "입력 오류", message: "크레딧은 0보다 커야 합니다." });
+                                                return;
+                                            }
+                                            
+                                            setCustomLoading(true);
+                                            setCustomMsg("");
+                                            
+                                            // DB에 userId가 존재하는지 확인
+                                            try {
+                                                const userName = await fetchUserNameById(userIdNum);
+                                                if (!userName) {
+                                                    setErrorModal({ visible: true, title: "사용자 없음", message: `userId ${userIdNum}는 존재하지 않는 사용자입니다.` });
+                                                    setCustomLoading(false);
+                                                    return;
+                                                }
+                                            } catch (e) {
+                                                setErrorModal({ visible: true, title: "사용자 없음", message: `userId ${userIdNum}는 존재하지 않는 사용자입니다.` });
+                                                setCustomLoading(false);
+                                                return;
+                                            }
+                                            
+                                            try {
+                                                const payload:any = {
+                                                    userId: userIdNum,
+                                                    amount: amountNum,
+                                                };
+                                                if (customRank.trim()) payload.rank = Number(customRank);
+                                                if (customMemo.trim()) payload.memo = customMemo.trim();
+                                                if (customReason.trim()) payload.reason = customReason.trim();
+                                                const key = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.random()}`;
+                                                await adminCustomPayout(selectedChallengeId, payload, key);
+                                                setCustomMsg("지급 완료");
+                                                
+                                                // 지급 후 백엔드에서 최신 커스텀 지급 내역 다시 가져오기
+                                                try {
+                                                    const customPayoutsData = await fetchCustomPayouts(selectedChallengeId, { page: 0, size: 200 });
+                                                    const loadedCustomHistory = customPayoutsData.items.map((item) => ({
+                                                        challengeId: customPayoutsData.challengeId,
+                                                        at: item.createdAt,
+                                                        userId: item.userId,
+                                                        amount: item.amount,
+                                                        rank: undefined,
+                                                        memo: item.username,
+                                                        reason: item.reason,
+                                                    }));
+                                                    setCustomHistory((prev) => {
+                                                        const backendUserIds = new Set(loadedCustomHistory.map(h => `${h.challengeId}-${h.userId}-${h.at}`));
+                                                        const filtered = prev.filter(h => !backendUserIds.has(`${h.challengeId}-${h.userId}-${h.at}`) && h.challengeId !== selectedChallengeId);
+                                                        return [...loadedCustomHistory, ...filtered];
+                                                    });
+                                                } catch (e) {
+                                                    console.error('커스텀 지급 내역 재조회 실패:', e);
+                                                }
+                                                
+                                                // 지급 완료 후 1.5초 뒤 폼 닫기 및 입력 필드 초기화
+                                                setTimeout(() => {
+                                                    setShowCustomBox(false);
+                                                    setCustomUserId("");
+                                                    setCustomAmount("");
+                                                    setCustomRank("");
+                                                    setCustomMemo("");
+                                                    setCustomMsg("");
+                                                }, 1500);
+                                            } catch (e:any) {
+                                                setErrorModal({ visible: true, title: "지급 실패", message: e?.response?.data?.message || e?.message || '오류가 발생했습니다.' });
+                                            } finally {
+                                                setCustomLoading(false);
+                                            }
+                                        }}
+                                    >{customLoading ? '지급 중...' : (customMsg === "지급 완료" ? '지급 완료' : '지급하기')}</button>
+                                    <button
+                                        className="h-8 rounded-md border border-neutral-300 px-3 text-sm dark:text-white dark:border-neutral-600"
+                                        onClick={()=>{ setShowCustomBox(false); setCustomMsg(""); }}
+                                    >닫기</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 커스텀 지급 내역 테이블 - 폼이 열리면 숨김 */}
+                    {!showCustomBox && (
+                        <div className="overflow-auto">
+                            {customRowsForSelected.length === 0 ? (
+                                <div className="text-sm text-neutral-600 dark:text-neutral-300">커스텀 지급 내역이 없습니다.</div>
+                            ) : (
+                                <>
+                                    <table className="min-w-[600px] text-sm dark:text-white">
+                                        <thead>
+                                            <tr className="border-b border-neutral-200 bg-neutral-50 dark:bg-neutral-700 text-neutral-700 dark:text-white">
+                                                <th className="px-3 py-2 text-left">시간</th>
+                                                <th className="px-3 py-2 text-left">userId</th>
+                                                <th className="px-3 py-2 text-left">사용자명</th>
+                                                <th className="px-3 py-2 text-left">크레딧</th>
+                                                <th className="px-3 py-2 text-left">rank</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {paginatedCustomRows.map((r, idx) => (
+                                                <tr key={idx} className="border-b border-neutral-100 dark:border-neutral-700">
+                                                    <td className="px-3 py-2 whitespace-nowrap">{new Date(r.at).toLocaleString()}</td>
+                                                    <td className="px-3 py-2">{r.userId}</td>
+                                                    <td className="px-3 py-2">{r.memo || '-'}</td>
+                                                    <td className="px-3 py-2">{Number(r.amount || 0).toLocaleString()}</td>
+                                                    <td className="px-3 py-2">{r.rank ?? '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <div className="text-xs text-neutral-500 dark:text-neutral-300">지급 결과: 운영자가 특별 이벤트/보너스에 따라 지급된 크레딧 내역입니다.</div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                className="rounded-md border border-neutral-300 px-2 py-1 text-xs disabled:opacity-50 dark:border-neutral-600 dark:text-white"
+                                                disabled={customPage === 0}
+                                                onClick={() => setCustomPage(p => Math.max(0, p - 1))}
+                                            >이전</button>
+                                            <span className="text-xs dark:text-white">{customPage + 1} / {customTotalPages}</span>
+                                            <button
+                                                className="rounded-md border border-neutral-300 px-2 py-1 text-xs disabled:opacity-50 dark:border-neutral-600 dark:text-white"
+                                                disabled={customPage >= customTotalPages - 1}
+                                                onClick={() => setCustomPage(p => p + 1)}
+                                            >다음</button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+            
+            {/* 에러 모달 */}
+            <ConfirmModal
+                visible={errorModal.visible}
+                title={errorModal.title}
+                message={errorModal.message}
+                confirmText="확인"
+                confirmButtonColor="blue"
+                onConfirm={() => setErrorModal({ visible: false, title: "", message: "" })}
+                onCancel={() => setErrorModal({ visible: false, title: "", message: "" })}
+            />
         </div>
     );
 }

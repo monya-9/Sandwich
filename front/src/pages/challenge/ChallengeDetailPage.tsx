@@ -10,16 +10,19 @@ import { SectionCard, CTAButton } from "../../components/challenge/common";
 import { ChevronDown, ChevronLeft, AlertCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
+import ConfirmModal from "../../components/common/ConfirmModal";
 import { 
     fetchPortfolioLeaderboard, 
     fetchCodeTopSubmitters,
     type LeaderboardEntry 
 } from "../../api/challengeApi";
-import RewardClaimModal from "../../components/challenge/RewardClaimModal";
 import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
 import { getVoteSummary, type VoteSummaryResponse } from "../../api/challengeApi";
 import { isAdmin } from "../../utils/authz";
 import { deleteChallenge } from "../../api/challengeApi";
+import Toast from "../../components/common/Toast";
+import { getMe } from "../../api/users";
+import { fetchChallengeSubmissions } from "../../api/submissionApi";
 
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
@@ -48,7 +51,7 @@ function ScheduleList({ items }: { items: { label: string; date: string }[] }) {
                     {items?.map((s, i) => (
                         <li key={i} className="flex items-center justify-between">
                             <span className="font-medium">{s.label}</span>
-                            <span className="text-neutral-700">{s.date}</span>
+                            <span className="text-neutral-700 dark:text-neutral-200 font-medium">{s.date}</span>
                         </li>
                     ))}
                 </ul>
@@ -94,13 +97,15 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
     return (
         <div className="mb-6">
             <SectionTitle>🤖 AI 자동 채점 기준</SectionTitle>
-            <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                {items?.map((i, idx) => (
-                    <li key={idx}>
-                        {i.label}: <span className="font-medium">{i.weight}점</span>
-                    </li>
-                ))}
-            </ul>
+            <GreenBox>
+                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                    {items?.map((i, idx) => (
+                        <li key={idx}>
+                            {i.label}: <span className="font-medium">{i.weight}점</span>
+                        </li>
+                    ))}
+                </ul>
+            </GreenBox>
         </div>
     );
 }
@@ -315,13 +320,44 @@ export default function ChallengeDetailPage() {
 
     const [open, setOpen] = useState(true);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
-    const [showRewardModal, setShowRewardModal] = useState(false);
-    const [userReward, setUserReward] = useState<RewardItem | null>(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+    // 보상 수령 기능 제거됨
     const admin = isAdmin();
     const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
+    
+    // Toast 및 사용자 정보 상태
+    const [toast, setToast] = useState<{
+        visible: boolean;
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+    }>({
+        visible: false,
+        message: '',
+        type: 'info'
+    });
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
     const navigate = useNavigate();
     const { isLoggedIn } = useContext(AuthContext);
+
+    // 현재 사용자 정보 로드
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const me = await getMe();
+                setCurrentUserId(me.id);
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                setCurrentUserId(null);
+            }
+        };
+
+        if (isLoggedIn) {
+            loadCurrentUser();
+        }
+    }, [isLoggedIn]);
 
     useEffect(() => {
         setLoading(true);
@@ -471,38 +507,35 @@ export default function ChallengeDetailPage() {
         });
     }, [id, navigate, type]); // data 의존성 제거로 무한 루프 방지
 
-    // 보상 수령 가능 여부 확인
-    useEffect(() => {
-        const checkReward = async () => {
-            if (!data || challengeStatus !== "ENDED" || !isLoggedIn) return;
-            
-            try {
-                const rewards = await fetchMyRewards();
-                const challengeReward = rewards.rewards.find(r => r.challengeId === id);
-                setUserReward(challengeReward || null);
-            } catch (error) {
-                console.error('보상 정보 조회 실패:', error);
-            }
-        };
+    // 보상 수령 기능 제거됨
 
-        checkReward();
-    }, [data, challengeStatus, isLoggedIn, id]);
-
-    const handleRewardClaim = () => {
-        setShowRewardModal(true);
-    };
-
-    const onRewardClaimed = () => {
-        // 보상 수령 후 데이터 새로고침
-        setShowRewardModal(false);
-        // 필요시 크레딧 데이터 새로고침
-    };
-
-    const goPrimary = () => {
+    const goPrimary = async () => {
         if (!data) return;
-        const href = primaryHref(type, id);
         if (!isLoggedIn) return setLoginModalOpen(true);
-        navigate(href);
+        
+        // 제출물이 있는지 확인
+        try {
+            const submissions = await fetchChallengeSubmissions(id, 0, 100);
+            const mySubmission = submissions.content?.find(s => s.owner?.userId === currentUserId);
+            
+            if (mySubmission) {
+                // 이미 제출물이 있는 경우
+                setToast({
+                    visible: true,
+                    message: '이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.',
+                    type: 'warning'
+                });
+            } else {
+                // 제출물이 없는 경우 제출 페이지로 이동
+                const href = primaryHref(type, id);
+                navigate(href);
+            }
+        } catch (error) {
+            console.error('제출물 확인 실패:', error);
+            // 에러 발생 시에도 제출 페이지로 이동 (백엔드에서 다시 확인)
+            const href = primaryHref(type, id);
+            navigate(href);
+        }
     };
     const goSecondary = () => {
         if (!data) return;
@@ -538,6 +571,8 @@ export default function ChallengeDetailPage() {
     };
     const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" | null = React.useMemo(() => {
         if (type !== "PORTFOLIO") return null;
+        // 강제 ENDED 상태가 백엔드에 설정된 경우, 날짜와 무관하게 종료로 간주
+        if (challengeStatus === "ENDED") return "ENDED";
         const now = new Date();
         const endAt = parseTs(timeline.endAt);
         const vStart = parseTs(timeline.voteStartAt);
@@ -546,11 +581,69 @@ export default function ChallengeDetailPage() {
         if (vStart && now >= vStart) return "VOTING";
         if (endAt && now >= endAt) return "VOTE_WAITING";
         return "SUBMISSION_OPEN";
-    }, [type, timeline.endAt, timeline.voteStartAt, timeline.voteEndAt]);
+    }, [type, challengeStatus, timeline.endAt, timeline.voteStartAt, timeline.voteEndAt]);
 
     return (
         <div className="mx-auto w-full max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
             <LoginRequiredModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+            
+            {/* 첫 번째 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={deleteModalOpen}
+                title="챌린지 삭제"
+                message="이 챌린지를 삭제하시겠습니까? 되돌릴 수 없습니다."
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (pendingDeleteId === null) return;
+                    try {
+                        // 1. 먼저 일반 삭제 시도 (force 없이)
+                        await deleteChallenge(pendingDeleteId);
+                        setDeleteModalOpen(false);
+                        navigate("/challenge", { replace: true });
+                    } catch (e: any) {
+                        setDeleteModalOpen(false);
+                        // 2. HAS_DEPENDENCIES 에러인 경우, 강제 삭제 확인 모달 표시
+                        if (e.response?.data?.code === 'HAS_DEPENDENCIES') {
+                            setForceDeleteModalOpen(true);
+                        } else {
+                            alert(e.response?.data?.message || "삭제 중 오류가 발생했습니다.");
+                            setPendingDeleteId(null);
+                        }
+                    }
+                }}
+                onCancel={() => {
+                    setDeleteModalOpen(false);
+                    setPendingDeleteId(null);
+                }}
+            />
+            
+            {/* 두 번째 강제 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={forceDeleteModalOpen}
+                title="⚠️ 챌린지 강제 삭제"
+                message={`이 챌린지에는 제출물이 존재합니다.\n강제 삭제 시 모든 제출물이 함께 삭제됩니다.\n\n정말 강제 삭제하시겠습니까?`}
+                confirmText="강제 삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    if (pendingDeleteId === null) return;
+                    try {
+                        await deleteChallenge(pendingDeleteId, { force: true });
+                        setForceDeleteModalOpen(false);
+                        navigate("/challenge", { replace: true });
+                    } catch (e2: any) {
+                        setForceDeleteModalOpen(false);
+                        alert(e2.response?.data?.message || "삭제 중 오류가 발생했습니다.");
+                    }
+                    setPendingDeleteId(null);
+                }}
+                onCancel={() => {
+                    setForceDeleteModalOpen(false);
+                    setPendingDeleteId(null);
+                }}
+            />
             
             {loading ? (
                 /* 로딩 상태 - 전체 화면 */
@@ -590,7 +683,8 @@ export default function ChallengeDetailPage() {
                         {(() => {
                             const labelAndClass = () => {
                                 if (type === "PORTFOLIO") {
-                                    if (derivedStage === "ENDED") return { t: "종료", c: "border-neutral-300 text-neutral-600" };
+                                    // 강제 ENDED 우선 적용
+                                    if (challengeStatus === "ENDED" || derivedStage === "ENDED") return { t: "종료", c: "border-neutral-300 text-neutral-600" };
                                     if (derivedStage === "VOTING") return { t: "투표중", c: "border-purple-300 text-purple-700 bg-purple-50" };
                                     if (derivedStage === "VOTE_WAITING") return { t: "투표대기", c: "border-amber-300 text-amber-700 bg-amber-50" };
                                     return { t: "진행중", c: "border-emerald-300 text-emerald-700 bg-emerald-50" };
@@ -620,29 +714,21 @@ export default function ChallengeDetailPage() {
 
             {/* 상단 CTA */}
             <div className="mb-4 flex flex-wrap gap-2">
-                {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 */}
-                {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && (
+                {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 (관리자 제외) */}
+                {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && !admin && (
                     <button
                         onClick={goPrimary}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                     >
                         <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
                     </button>
                 )}
 
-                {/* 보상 수령 버튼 (종료된 챌린지 + 보상이 있을 때) */}
-                {challengeStatus === "ENDED" && userReward && userReward.status === "PENDING" && (
-                    <button
-                        onClick={handleRewardClaim}
-                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1.5 text-[13px] font-semibold hover:from-orange-600 hover:to-yellow-600"
-                    >
-                        보상 수령하기 →
-                    </button>
-                )}
+                {/* 보상 수령 기능 제거됨 */}
 
                 <button
                     onClick={goSecondary}
-                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                 >
                     <span>{type === "CODE" ? "🗂️" : (derivedStage === "VOTING" ? "🗳️" : "🗂️")}</span> {secondaryLabel(type, challengeStatus, derivedStage)} →
                 </button>
@@ -676,15 +762,9 @@ export default function ChallengeDetailPage() {
                                         챌린지 수정
                                     </Link>
                                     <button
-                                        onClick={async () => {
-                                            const ok = window.confirm("이 챌린지를 삭제하시겠습니까? 되돌릴 수 없습니다.");
-                                            if (!ok) return;
-                                            try {
-                                                await deleteChallenge(id, { force: true });
-                                                navigate("/challenge", { replace: true });
-                                            } catch (e) {
-                                                alert("삭제 중 오류가 발생했습니다.");
-                                            }
+                                        onClick={() => {
+                                            setPendingDeleteId(id);
+                                            setDeleteModalOpen(true);
                                         }}
                                         className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-red-600 hover:bg-red-50"
                                     >
@@ -693,7 +773,7 @@ export default function ChallengeDetailPage() {
                                 </div>
                             )}
                         </div>
-                        <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{data.description}</p>
+                        <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-100">{data.description}</p>
                     </div>
 
                     {/* 필수 조건 (모든 챌린지 타입) */}
@@ -704,7 +784,7 @@ export default function ChallengeDetailPage() {
                     {mustHave?.map((requirement, index) => (
                         <div key={index} className="flex items-start gap-2">
                             <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0"></div>
-                            <span className="text-[13.5px] leading-6 text-neutral-800">{requirement}</span>
+                                        <span className="text-[13.5px] leading-6 text-neutral-800 dark:text-neutral-100">{requirement}</span>
                         </div>
                     ))}
                             </div>
@@ -715,6 +795,7 @@ export default function ChallengeDetailPage() {
                     {type === "CODE" ? (
                         <>
                             <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
+                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards || []} />
                             
                             {/* 코드 챌린지 제출 예시 */}
@@ -743,19 +824,28 @@ export default function ChallengeDetailPage() {
                                     </div>
                                 </GreenBox>
                             </div>
-                            
-                            <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                         </>
                     ) : (
                         <>
-                            <ScheduleList items={(data as PortfolioChallengeDetail).schedule || []} />
+                            {/* 진행 일정: 고정 문구로 노출 */}
+                            <ScheduleList
+                                items={[
+                                    { label: '챌린지 기간', date: '매월 1일 ~ 말일' },
+                                    { label: '투표 기간', date: '다음달 1일 ~ 3일' },
+                                    { label: '결과 발표', date: '다음달 4일, 보상은 크레딧으로 자동 지급' },
+                                ]}
+                            />
+                            {/* 투표 기준: 고정 문구로 노출 */}
                             <div className="mb-6">
                                 <SectionTitle>🗳️ 투표 기준</SectionTitle>
-                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    {(data as PortfolioChallengeDetail).votingCriteria?.map((t, i) => (
-                                        <li key={i}>{t} (1~5점)</li>
-                                    ))}
-                                </ul>
+                                <GreenBox>
+                                    <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
+                                        <li>UI/UX (1~5점)</li>
+                                        <li>기술력 (1~5점)</li>
+                                        <li>창의성(1~5점)</li>
+                                        <li>기획력(1~5점)</li>
+                                    </ul>
+                                </GreenBox>
                             </div>
                             <RewardsTable rewards={(data as PortfolioChallengeDetail).rewards || []} />
                             
@@ -822,7 +912,7 @@ export default function ChallengeDetailPage() {
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     <li>챌린지 시작: 월요일 00:00 (KST) ~ 문제 제출 마감: 일요일 23:59</li>
                                     <li>AI 자동 채점 → 점수/코멘트 반영(수 분 소요)</li>
-                                    <li>커뮤니티 투표 점수와 합산되어 최종 순위 결정, 보상은 크레딧으로 자동 지급</li>
+                                    {/* 포트폴리오 전용 문구 제거: 코드 챌린지에는 투표 점수 합산/자동 지급 안내 미표시 */}
                                 </ul>
                             </div>
                         </>
@@ -854,9 +944,9 @@ export default function ChallengeDetailPage() {
 
                     {/* 하단 고정 CTA */}
                     <div className="sticky bottom-4 mt-6 flex justify-end">
-                        <div className="flex items-center gap-2 rounded-full border border-neutral-300 bg-white/95 px-2 py-2 shadow-lg backdrop-blur">
-                            {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 */}
-                            {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && (
+                        <div className="flex items-center gap-2 rounded-full border px-2 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/70 supports-[backdrop-filter]:dark:bg-neutral-900/40 border-neutral-200 bg-white dark:bg-neutral-800">
+                            {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 (관리자 제외) */}
+                            {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && !admin && (
                                 <CTAButton as="button" onClick={goPrimary}>
                                     {primaryLabel(type)}
                                 </CTAButton>
@@ -880,13 +970,17 @@ export default function ChallengeDetailPage() {
                 </div>
             )}
 
-            {/* 보상 수령 모달 */}
-            <RewardClaimModal
-                isOpen={showRewardModal}
-                onClose={() => setShowRewardModal(false)}
-                challengeTitle={data?.title || ''}
-                userReward={userReward}
-                onRewardClaimed={onRewardClaimed}
+            {/* 보상 수령 기능 제거됨 */}
+            
+            {/* Toast */}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
             />
         </div>
     );

@@ -37,4 +37,11 @@ ON CONFLICT (submission_id) DO UPDATE SET
                @Param("aiComment") String aiComment,
                @Param("scoreJson") String scoreDetailJson,
                @Param("total") java.math.BigDecimal totalScore);
+
+    @Modifying
+    @Transactional
+    @org.springframework.data.jpa.repository.Query(
+            "delete from TestResult t where t.submissionId in :ids"
+    )
+    void deleteBySubmissionIdIn(@Param("ids") java.util.Collection<Long> ids);
 }

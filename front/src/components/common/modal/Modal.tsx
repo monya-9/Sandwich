@@ -34,7 +34,7 @@ export default function Modal({
             <div className="absolute inset-0 bg-[rgba(51,51,51,0.7)]" onClick={onClose} />
             <div
                 className={[
-                    "relative z-10 w-full max-w-[92%] rounded-[24px] bg-[#F2F2F2] shadow-2xl",
+                    "relative z-10 w-full max-w-[92%] rounded-[24px] bg-[#F2F2F2] dark:bg-[#2A2A2A] shadow-2xl",
                     widthClass,
                     heightClass,
                     paddingClass,
@@ -43,7 +43,7 @@ export default function Modal({
                 <button
                     aria-label="닫기"
                     onClick={onClose}
-                    className="absolute right-2.5 top-2.5 rounded-full p-1 text-neutral-500 hover:bg-neutral-100"
+                    className="absolute right-2.5 top-2.5 rounded-full p-1 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
                 >
                     <X className="h-4.5 w-4.5" />
                 </button>

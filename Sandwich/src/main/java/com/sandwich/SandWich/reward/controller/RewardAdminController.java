@@ -84,4 +84,64 @@ public class RewardAdminController {
 
         return Map.of("ok", true, "updated", n);
     }
+    @GetMapping("/{id}/custom-payouts")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String, Object> listCustomPayouts(@PathVariable long id,
+                                                 @RequestParam(required = false) Long userId,
+                                                 @RequestParam(defaultValue = "0") int page,
+                                                 @RequestParam(defaultValue = "50") int size) {
+        Integer chExists = jdbc.queryForObject("select count(*) from challenge where id=?", Integer.class, id);
+        if (chExists == null || chExists == 0) {
+            throw new ResponseStatusException(BAD_REQUEST, "challenge not found");
+        }
+
+        int limit  = Math.max(1, Math.min(size, 200));
+        int offset = Math.max(0, page) * limit;
+
+        String base = """
+        FROM credit_txn t
+        LEFT JOIN users u   ON u.id = t.user_id
+        LEFT JOIN profile p ON p.user_id = u.id
+        WHERE t.ref_id = ?
+          AND t.reason = 'REWARD_CUSTOM'
+    """;
+
+        String where = (userId != null) ? base + " AND t.user_id = ?" : base;
+
+        String listSql = """
+        SELECT
+          t.user_id AS "userId",
+          COALESCE(p.nickname, u.username, u.email) AS "username",
+          t.amount AS "amount",
+          t.reason AS "reason",
+          t.created_at AS "createdAt"
+        """ + where + """
+        ORDER BY t.id DESC
+        LIMIT ? OFFSET ?
+    """;
+
+        Object[] listArgs = (userId != null)
+                ? new Object[]{id, userId, limit, offset}
+                : new Object[]{id, limit, offset};
+
+        var items = jdbc.queryForList(listSql, listArgs);
+
+        Long total = (userId != null)
+                ? jdbc.queryForObject("SELECT COUNT(*) " + where, Long.class, id, userId)
+                : jdbc.queryForObject("SELECT COUNT(*) " + where, Long.class, id);
+
+        Long sum = (userId != null)
+                ? jdbc.queryForObject("SELECT COALESCE(SUM(t.amount),0) " + where, Long.class, id, userId)
+                : jdbc.queryForObject("SELECT COALESCE(SUM(t.amount),0) " + where, Long.class, id);
+
+        return Map.of(
+                "challengeId", id,
+                "page", page,
+                "size", limit,
+                "total", total == null ? 0 : total,
+                "sumAmount", sum == null ? 0 : sum,
+                "items", items
+        );
+    }
+
 }

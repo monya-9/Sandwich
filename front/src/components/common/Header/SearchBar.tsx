@@ -126,18 +126,19 @@ const SearchBar = () => {
                     </svg>
                 </button>
 
-                {/* 드롭다운 */}
+                {/* 드롭다운 - 반응형 */}
                 {isOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-white/20 rounded-lg shadow-lg z-50">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-white/20 rounded-lg shadow-lg z-50 
+                                    w-full md:w-auto md:min-w-[310px]">
                         {/* 추천 검색어 */}
-                        <div className="p-4 border-b border-gray-100 dark:border-white/10">
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">추천 검색어</h3>
-                            <div className="flex flex-wrap gap-2">
+                        <div className="p-3 md:p-4 border-b border-gray-100 dark:border-white/10">
+                            <h3 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">추천 검색어</h3>
+                            <div className="flex flex-wrap gap-1.5 md:gap-2">
                                 {recommendedSearches.map((term) => (
                                     <button
                                         key={term}
                                         onClick={() => handleSearch(term)}
-                                        className="px-3 py-1 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white text-sm rounded-full hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                                        className="px-2.5 md:px-3 py-1 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white text-xs md:text-sm rounded-full hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                                     >
                                         {term}
                                     </button>
@@ -147,25 +148,25 @@ const SearchBar = () => {
 
                         {/* 최근 검색어 - 로그인한 사용자만 표시 */}
                         {isLoggedIn && recentSearches.length > 0 && (
-                            <div className="p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">최근 검색어</h3>
+                            <div className="p-3 md:p-4">
+                                <div className="flex items-center justify-between mb-2 md:mb-3">
+                                    <h3 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">최근 검색어</h3>
                                     <button
                                         onClick={handleClearAllRecentSearches}
-                                        className="text-xs text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white"
+                                        className="text-[10px] md:text-xs text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white"
                                     >
                                         모두 삭제하기
                                     </button>
                                 </div>
-                                <div className="max-h-[120px] overflow-y-auto space-y-2">
+                                <div className="max-h-[100px] md:max-h-[120px] overflow-y-auto space-y-1.5 md:space-y-2">
                                     {recentSearches.slice(0, 3).map((searchItem) => (
                                         <div key={searchItem.id} className="flex items-center justify-between group">
                                             <button
                                                 onClick={() => handleSearch(searchItem.keyword)}
-                                                className="flex items-center text-sm text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white"
+                                                className="flex items-center text-xs md:text-sm text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white min-w-0"
                                             >
                                                 <svg
-                                                    className="w-4 h-4 mr-2 text-gray-400 dark:text-white/60"
+                                                    className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2 text-gray-400 dark:text-white/60 flex-shrink-0"
                                                     fill="none"
                                                     stroke="currentColor"
                                                     viewBox="0 0 24 24"
@@ -177,17 +178,17 @@ const SearchBar = () => {
                                                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                                     />
                                                 </svg>
-                                                {searchItem.keyword}
+                                                <span className="truncate">{searchItem.keyword}</span>
                                             </button>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDeleteRecentSearch(searchItem.id);
                                                 }}
-                                                className="opacity-60 hover:opacity-100 text-gray-400 dark:text-white/60 hover:text-red-500 transition-all"
+                                                className="opacity-60 hover:opacity-100 text-gray-400 dark:text-white/60 hover:text-red-500 transition-all flex-shrink-0 ml-2"
                                                 title="삭제"
                                             >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
                                             </button>
@@ -195,15 +196,15 @@ const SearchBar = () => {
                                     ))}
                                     {/* 나머지 검색어들 (스크롤 가능) */}
                                     {recentSearches.length > 3 && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5 md:space-y-2">
                                             {recentSearches.slice(3).map((searchItem) => (
                                                 <div key={searchItem.id} className="flex items-center justify-between group">
                                                     <button
                                                         onClick={() => handleSearch(searchItem.keyword)}
-                                                        className="flex items-center text-sm text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white"
+                                                        className="flex items-center text-xs md:text-sm text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white min-w-0"
                                                     >
                                                         <svg
-                                                            className="w-4 h-4 mr-2 text-gray-400 dark:text-white/60"
+                                                            className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2 text-gray-400 dark:text-white/60 flex-shrink-0"
                                                             fill="none"
                                                             stroke="currentColor"
                                                             viewBox="0 0 24 24"
@@ -215,17 +216,17 @@ const SearchBar = () => {
                                                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                                             />
                                                         </svg>
-                                                        {searchItem.keyword}
+                                                        <span className="truncate">{searchItem.keyword}</span>
                                                     </button>
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleDeleteRecentSearch(searchItem.id);
                                                         }}
-                                                        className="opacity-60 hover:opacity-100 text-gray-400 dark:text-white/60 hover:text-red-500 transition-all"
+                                                        className="opacity-60 hover:opacity-100 text-gray-400 dark:text-white/60 hover:text-red-500 transition-all flex-shrink-0 ml-2"
                                                         title="삭제"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
                                                     </button>
@@ -241,7 +242,11 @@ const SearchBar = () => {
             </div>
 
             {/* 모바일 검색 아이콘 */}
-            <button className="md:hidden block">
+            <button 
+                className="md:hidden block"
+                onClick={() => navigate('/search')}
+                type="button"
+            >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"

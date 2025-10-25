@@ -23,12 +23,11 @@ export default function LoginRequiredModal({ open, onClose }: Props) {
             <div className="flex h-full flex-col items-center text-center space-y-3">
                 {/* 타이틀 + 본문 : 좌우 패딩 정확히 10px */}
                 <div className="w-full px-[10px]">
-                    <h3 className="mb-2 whitespace-pre-line font-[700] text-[18px] leading-[22px] text-black pt-7 ">
+                    <h3 className="mb-2 whitespace-pre-line font-[700] text-[18px] leading-[22px] text-black dark:text-white pt-7 ">
                         로그인하고{"\n"}샌드위치 시작하기
                     </h3>
-                    <p className="mx-auto w-[260px] text-[13px] leading-[19px] text-black pt-7">
-                        샌드위치는 노트폴리오에는 24만명 이상의 다양한 창작자들이 활동하고 있습니다.
-                        로그인하고 당신의 창작 활동을 시작해보세요!
+                    <p className="mx-auto w-[260px] text-[13px] leading-[19px] text-black dark:text-gray-400 pt-7">
+                        샌드위치에는 다양한 창작자들이 활동하고 있습니다. 로그인하고 당신의 창작 활동을 시작해보세요!
                     </p>
                 </div>
 
@@ -36,16 +35,13 @@ export default function LoginRequiredModal({ open, onClose }: Props) {
                 <div className="w-full px-[10px] pt-5 ">
                     <Link
                         to="/login"
-                        className="inline-flex h-[35px] w-full max-w-[280px] items-center justify-center rounded-[14px] bg-[#068334] text-[15px] font-medium text-white hover:brightness-95"
+                        className="inline-flex h-[35px] w-full max-w-[280px] items-center justify-center rounded-full bg-black dark:bg-white text-[15px] font-bold text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition"
                     >
                         로그인 하러가기
                     </Link>
 
                     {/* 로그인 버튼과 붙게, 그러나 블록 전체에는 padding 10px 유지 */}
-                    <div className="mt-2 text-[12.5px] leading-[18px] text-[#5B5959]">아직 회원이 아닌가요?</div>
-                    <Link to="/join" className="mt-0.5 text-[12.5px] leading-[18px] text-[#068334] underline pt-5">
-                        회원가입 하러가기
-                    </Link>
+                    <div className="mt-2 text-[12.5px] leading-[18px] text-[#5B5959] dark:text-gray-400">아직 회원이 아닌가요? <Link to="/join" className="text-[#068334] dark:text-white underline">회원가입</Link></div>
                 </div>
             </div>
         </Modal>

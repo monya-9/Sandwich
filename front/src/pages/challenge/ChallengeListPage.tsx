@@ -5,13 +5,12 @@ import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
-import RewardClaimModal from "../../components/challenge/RewardClaimModal";
-import { fetchMyRewards, type RewardItem } from "../../api/challenge_creditApi";
+import CodeWinnersSection from "../../components/challenge/CodeWinnersSection";
 import { isAdmin } from "../../utils/authz";
 import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 // 관리자 테이블/보상 로직은 전용 페이지로 이동됨
 
-import { ChevronLeft, ChevronRight, Gift } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ChallengeListPage() {
 	const navigate = useNavigate();
@@ -19,13 +18,16 @@ export default function ChallengeListPage() {
 	const [pastChallenges, setPastChallenges] = useState<ChallengeCardData[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [pastLoading, setPastLoading] = useState(false);
-	const [showRewardModal, setShowRewardModal] = useState(false);
-	const [pendingReward, setPendingReward] = useState<RewardItem | null>(null);
+	const [autoRefreshing, setAutoRefreshing] = useState(false); // 🔥 자동 새로고침 상태
 	const admin = isAdmin();
 	const rolloverRef = useRef(false);
+	
+	// 지난 챌린지 캐러셀 상태
+	const [pastChallengeIndex, setPastChallengeIndex] = useState(0);
+	const itemsPerPage = 4;
 
-	// 현재 챌린지 데이터 가져오기
-	useEffect(() => {
+	// 챌린지 데이터를 가져오는 함수
+	const loadChallenges = React.useCallback(() => {
 		setLoading(true);
 		getDynamicChallenges()
 			.then((dynamicChallenges) => {
@@ -40,42 +42,150 @@ export default function ChallengeListPage() {
 			});
 	}, []);
 
-	// 새로고침 없이 마감 시점 정확히 전환: 각 카드의 expireAtMs를 기준으로 타이머를 1회 설정
+	// 현재 챌린지 데이터 가져오기 (초기 로드)
+	useEffect(() => {
+		loadChallenges();
+	}, [loadChallenges]);
+
+	// 페이지가 다시 활성화될 때 데이터 새로고침 (어드민에서 생성 후 돌아왔을 때)
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (!document.hidden) {
+				console.log('🔄 페이지가 활성화되어 챌린지 데이터를 새로고침합니다.');
+				loadChallenges();
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [loadChallenges]);
+
+	// 🔥 마감 시점에 정확히 자동 전환: 각 챌린지의 정확한 마감 시간에만 새로고침
 	useEffect(() => {
 		const timers: number[] = [];
 		const now = Date.now();
-		challenges.forEach((c) => {
-			if (!c.expireAtMs) return;
-			const delay = c.expireAtMs - now;
-			if (delay <= 0) return;
+		let hasExpiredChallenge = false;
+		
+		// 타이머를 설정하는 헬퍼 함수
+		const setupTimer = (timeMs: number | undefined, label: string, challengeId: number, challengeType: string) => {
+			if (!timeMs) return;
+			
+			const delay = timeMs - now;
+			const timeDate = new Date(timeMs);
+			
+			if (delay <= 0) {
+				console.log(`⏰ [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 시간이 이미 지났습니다! (${timeDate.toLocaleString('ko-KR')})`);
+				hasExpiredChallenge = true;
+				return;
+			}
+			
+			console.log(`⏱️ [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 타이머 설정`);
+			console.log(`   → ${label} 시간: ${timeDate.toLocaleString('ko-KR')}`);
+			console.log(`   → 남은 시간: ${Math.floor(delay / 1000)}초 (${Math.floor(delay / 60000)}분)`);
+			
 			const t = window.setTimeout(async () => {
-				if (rolloverRef.current) return; // 중복 롤오버 방지
+				console.log(`🔔 [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 도달! 자동으로 새로고침합니다.`);
+				
+				if (rolloverRef.current) {
+					console.log('⚠️ 이미 업데이트 중... 스킵');
+					return;
+				}
+				
 				rolloverRef.current = true;
+				setAutoRefreshing(true); // 🔥 로딩 상태 표시
+				
 				try {
+					// 사용자가 변화를 인지할 수 있도록 최소 1초 대기
+					await new Promise(resolve => setTimeout(resolve, 1000));
+					
 					const [freshCurrent, freshPast] = await Promise.all([
 						getDynamicChallenges(),
 						getPastChallenges(),
 					]);
+					console.log(`✅ ${label} 자동 전환 완료!`);
 					setChallenges(freshCurrent);
 					setPastChallenges(freshPast);
 				} catch (e) {
-					// eslint-disable-next-line no-console
-					console.error('auto rollover refresh failed', e);
+					console.error('❌ 자동 새로고침 실패:', e);
 				} finally {
-					rolloverRef.current = false;
+					// 부드러운 전환을 위해 약간의 딜레이 후 로딩 해제
+					setTimeout(() => {
+						setAutoRefreshing(false);
+						rolloverRef.current = false;
+					}, 500);
 				}
 			}, delay);
+			
 			timers.push(t);
+		};
+		
+		challenges.forEach((c) => {
+			if (c.type === 'CODE') {
+				// 코드 챌린지: 마감 시간만 체크
+				setupTimer(c.expireAtMs, '진행 종료 (마감)', c.id, 'CODE');
+			} else if (c.type === 'PORTFOLIO') {
+				// 포트폴리오 챌린지: 3단계 모두 체크
+				console.log(`\n📋 [PORTFOLIO] 챌린지 ID ${c.id} 단계별 타이머 설정 중...`);
+				
+				// 1단계: 제출 종료 → 투표대기
+				setupTimer(c.endAtMs, '제출 종료 (→ 투표대기)', c.id, 'PORTFOLIO');
+				
+				// 2단계: 투표 시작 → 투표중
+				setupTimer(c.voteStartAtMs, '투표 시작 (→ 투표중)', c.id, 'PORTFOLIO');
+				
+				// 3단계: 투표 종료 → 지난 챌린지
+				setupTimer(c.voteEndAtMs, '투표 종료 (→ 지난 챌린지)', c.id, 'PORTFOLIO');
+				
+				console.log(`✅ [PORTFOLIO] 챌린지 ID ${c.id} 모든 단계 타이머 설정 완료\n`);
+			}
 		});
-		return () => { timers.forEach((t) => window.clearTimeout(t)); };
+		
+		// 🔥 이미 마감된 챌린지가 있으면 즉시 새로고침
+		if (hasExpiredChallenge && !rolloverRef.current) {
+			console.log('🔄 이미 마감된 챌린지 발견! 즉시 새로고침합니다.');
+			rolloverRef.current = true;
+			setAutoRefreshing(true); // 🔥 로딩 상태 표시
+			
+			// 사용자 인지를 위한 최소 대기 시간
+			Promise.all([
+				new Promise(resolve => setTimeout(resolve, 1000)),
+				getDynamicChallenges(),
+				getPastChallenges()
+			])
+				.then(([_, freshCurrent, freshPast]) => {
+					setChallenges(freshCurrent as any);
+					setPastChallenges(freshPast as any);
+					console.log('✅ 마감된 챌린지 제거 완료!');
+				})
+				.catch((e) => {
+					console.error('❌ 즉시 새로고침 실패:', e);
+				})
+				.finally(() => {
+					setTimeout(() => {
+						setAutoRefreshing(false);
+						rolloverRef.current = false;
+					}, 500);
+				});
+		}
+		
+		return () => { 
+			timers.forEach((t) => window.clearTimeout(t));
+			if (timers.length > 0) {
+				console.log(`🧹 타이머 ${timers.length}개 정리 완료`);
+			}
+		};
 	}, [challenges]);
 
-	// 지난 챌린지 데이터 가져오기
-	useEffect(() => {
+	// 지난 챌린지 데이터를 가져오는 함수
+	const loadPastChallenges = React.useCallback(() => {
 		setPastLoading(true);
 		getPastChallenges()
 			.then((pastData) => {
 				setPastChallenges(pastData);
+				setPastChallengeIndex(0); // 데이터 로드 시 인덱스 초기화
 			})
 			.catch((error) => {
 				console.error('지난 챌린지 데이터 로딩 실패:', error);
@@ -85,23 +195,46 @@ export default function ChallengeListPage() {
 			});
 	}, []);
 
-	// 수령 대기 중인 보상 확인
+	// 지난 챌린지 데이터 가져오기 (초기 로드)
 	useEffect(() => {
-		const checkPendingRewards = async () => {
-			try {
-				const rewards = await fetchMyRewards();
-				const pending = rewards.rewards.find(reward => reward.status === 'PENDING');
-				setPendingReward(pending || null);
-			} catch (error) {
-				console.error('보상 상태 확인 실패:', error);
-				setPendingReward(null);
+		loadPastChallenges();
+	}, [loadPastChallenges]);
+
+	// 페이지가 다시 활성화될 때 지난 챌린지도 함께 새로고침
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (!document.hidden) {
+				loadPastChallenges();
 			}
 		};
-		checkPendingRewards();
-	}, []);
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [loadPastChallenges]);
+	
+	// 지난 챌린지 캐러셀 핸들러
+	const handlePrevPastChallenges = () => {
+		setPastChallengeIndex(prev => Math.max(0, prev - itemsPerPage));
+	};
+	
+	const handleNextPastChallenges = () => {
+		setPastChallengeIndex(prev => Math.min(pastChallenges.length - itemsPerPage, prev + itemsPerPage));
+	};
+	
+	// 현재 표시할 지난 챌린지
+	const displayedPastChallenges = pastChallenges.slice(pastChallengeIndex, pastChallengeIndex + itemsPerPage);
+	
+	// 이전/다음 버튼 활성화 상태
+	const canGoPrev = pastChallengeIndex > 0;
+	const canGoNext = pastChallengeIndex + itemsPerPage < pastChallenges.length;
+
+    // 보상 수령 기능 제거됨
 
 	return (
-		<div className="w-full bg-white">
+		<div className="w-full bg-white dark:bg-neutral-950">
 			{/* 오렌지 공지 배너 */}
 			<div>
 				<div className="mx-auto max-w-screen-xl px-4 py-4 md:px-6">
@@ -117,20 +250,7 @@ export default function ChallengeListPage() {
 				</div>
 			</div>
 
-			{/* 수령 대기 중인 보상이 있을 때만 표시 */}
-			{pendingReward && (
-				<div className="mx-auto max-w-7xl px-4 md:px-6 mt-4">
-					<div className="flex justify-center">
-						<button
-							onClick={() => setShowRewardModal(true)}
-							className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-3 text-[14px] font-semibold hover:from-orange-600 hover:to-yellow-600 transition-all duration-200"
-						>
-							<Gift className="w-4 h-4" />
-							보상 수령하기
-						</button>
-					</div>
-				</div>
-			)}
+            {/* 보상 수령 기능 제거됨 */}
 
 			{/* WinnersSection + Admin Actions */}
 			<div className="mx-auto max-w-7xl px-4 md:px-6">
@@ -138,8 +258,18 @@ export default function ChallengeListPage() {
 					<h2 className="sr-only">Winners</h2>
 				</div>
 			</div>
-			<div className="relative">
-				<WinnersSection />
+            <div className="relative">
+                {/* TOP Winners 2단 그리드: 포트폴리오 | 코드 */}
+                <div className="mx-auto max-w-screen-xl px-4 md:px-6 mt-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+                        <div className="w-full">
+                            <WinnersSection />
+                        </div>
+                        <div className="w-full">
+                            <CodeWinnersSection />
+                        </div>
+                    </div>
+                </div>
 				{admin && (
 					<div className="mx-auto max-w-7xl px-4 md:px-6">
 						<div className="mt-2 flex justify-end gap-2">
@@ -161,7 +291,7 @@ export default function ChallengeListPage() {
 			</div>
 
 			<main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
-				{loading ? (
+				{(loading || autoRefreshing) ? (
 					/* 로딩 상태 - 전체 화면 */
 					<div className="flex items-center justify-center py-16">
 						<div className="text-center">
@@ -180,23 +310,24 @@ export default function ChallengeListPage() {
 				)}
 
 				{/* 지난 챌린지 - 제목만 */}
-				<h2 className="text-2xl font-bold mb-4 text-left ml-[15px]">지난 챌린지</h2>
+				<h2 className="text-2xl font-bold mb-4 text-left ml-[15px] text-black dark:text-white">지난 챌린지</h2>
 
 				{/* 캐러셀 카드 틀만 감싸기 (타이틀 X, 보더 O) */}
 				<SectionCard bordered className="mt-2 overflow-visible">
 					<div className="relative">
 						{/* ⬅️ 왼쪽 버튼: 카드 밖으로 살짝 */}
 						<button
+							onClick={handlePrevPastChallenges}
 							className={`
 								absolute left-[-10px] md:left-[-14px] top-1/2 -translate-y-1/2
-								rounded-full border p-2 shadow-sm transition-colors
-								${pastChallenges.length <= 4 
-									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed' 
-									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
+								rounded-full border p-2 shadow-sm transition-colors z-10
+								${!canGoPrev
+									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-700' 
+									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700/60 dark:text-neutral-200'
 								}
 							`}
 							aria-label="이전"
-							disabled={pastChallenges.length <= 4}
+							disabled={!canGoPrev}
 						>
 							<ChevronLeft className="h-5 w-5" />
 						</button>
@@ -208,41 +339,46 @@ export default function ChallengeListPage() {
 								[0, 1, 2, 3].map((i) => (
 									<div
 										key={i}
-										className="h-[160px] rounded-2xl border border-neutral-200 bg-neutral-50/60 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
+								className="h-[180px] rounded-2xl border border-neutral-200 bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-800/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
 									/>
 								))
-							) : pastChallenges.length > 0 ? (
+							) : displayedPastChallenges.length > 0 ? (
 								// 실제 지난 챌린지 데이터
-								pastChallenges.slice(0, 4).map((challenge) => (
+								displayedPastChallenges.map((challenge) => (
 									<div
 										key={challenge.id}
-										className="group h-[160px] rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-										onClick={() => window.location.href = `/challenge/${challenge.type.toLowerCase()}/${challenge.id}`}
+								className="group h-[180px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+										onClick={() => navigate(`/challenge/${challenge.type.toLowerCase()}/${challenge.id}`)}
 									>
 										<div className="flex flex-col justify-between h-full">
-											<div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+											<div className="flex-1 overflow-hidden min-h-0">
+                                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
 														challenge.type === 'CODE' 
-															? 'bg-blue-100 text-blue-700' 
-															: 'bg-purple-100 text-purple-700'
+													? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+													: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
 													}`}>
 														{challenge.type === 'CODE' ? '코드' : '포트폴리오'}
 													</span>
                                                 {/* 상태 배지: 지난 챌린지는 모두 종료 처리 */}
-                                                <span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600">
+											<span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300 flex-shrink-0">
                                                     종료
                                                 </span>
 												</div>
-												<h4 className="font-semibold text-sm text-neutral-800 mb-1 line-clamp-2">
+											<h4 className="font-semibold text-sm text-neutral-800 dark:text-neutral-200 mb-2 line-clamp-2">
 													{challenge.subtitle}
 												</h4>
-												<div className="text-xs text-neutral-600">
+											<div className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3">
 													{challenge.description}
 												</div>
 										</div>
-										<div className="text-xs text-neutral-500 text-right">
-											{challenge.ctaLabel}
+										<div className="flex items-center justify-between mt-2 flex-shrink-0 text-xs">
+											<span className="text-neutral-500 dark:text-neutral-400">
+												✅ 종료된 챌린지
+											</span>
+											<span className="text-neutral-500 dark:text-neutral-400">
+												{challenge.ctaLabel}
+											</span>
 										</div>
 									</div>
 								</div>
@@ -256,16 +392,17 @@ export default function ChallengeListPage() {
 
 						{/* ➡️ 오른쪽 버튼: 카드 밖으로 살짝 */}
 						<button
+							onClick={handleNextPastChallenges}
 							className={`
 								absolute right-[-10px] md:right-[-14px] top-1/2 -translate-y-1/2
-								rounded-full border p-2 shadow-sm transition-colors
-								${pastChallenges.length <= 4 
-									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed' 
-									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700'
+								rounded-full border p-2 shadow-sm transition-colors z-10
+								${!canGoNext
+									? 'border-neutral-200 bg-neutral-50 text-neutral-300 cursor-not-allowed dark:border-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-700' 
+									: 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700/60 dark:text-neutral-200'
 								}
 							`}
 							aria-label="다음"
-							disabled={pastChallenges.length <= 4}
+							disabled={!canGoNext}
 						>
 							<ChevronRight className="h-5 w-5" />
 						</button>
@@ -275,20 +412,7 @@ export default function ChallengeListPage() {
 
 			{/* ----- Admin tables removed; moved to dedicated page ----- */}
 
-			{/* 보상 수령 모달 */}
-			{pendingReward && (
-				<RewardClaimModal
-					isOpen={showRewardModal}
-					onClose={() => setShowRewardModal(false)}
-					challengeTitle={pendingReward.challengeTitle}
-					userReward={pendingReward}
-					onRewardClaimed={() => {
-						setShowRewardModal(false);
-						setPendingReward(null); // 수령 완료 후 상태 업데이트
-						console.log("보상 수령 완료!");
-					}}
-				/>
-			)}
+            {/* 보상 수령 기능 제거됨 */}
 		</div>
 	);
 }

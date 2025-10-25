@@ -10,13 +10,14 @@ interface CompleteButtonProps {
 const CompleteButton = ({ onComplete, onPrev, completeDisabled, className = "" }: CompleteButtonProps) => {
     return (
         <div className={`flex justify-center gap-2 pb-[20px] ${className}`}>
-            <button
-                onClick={onPrev}
-                className="px-6 py-2 bg-gray-200 rounded text-black"
-                disabled={!onPrev}
-            >
-                이전
-            </button>
+            {onPrev && (
+                <button
+                    onClick={onPrev}
+                    className="px-6 py-2 bg-gray-200 rounded text-black"
+                >
+                    이전
+                </button>
+            )}
             <button
                 onClick={onComplete}
                 disabled={completeDisabled}

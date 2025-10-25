@@ -9,6 +9,49 @@ import org.springframework.lang.Nullable;
 
 public class SubmissionDtos {
 
+
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class UpdateReq {
+        @Nullable @Size(max = 200)
+        private String title;
+
+        @Valid @Nullable
+        private CreateReq.PortfolioMeta portfolio;
+
+        @Nullable @Size(max = 5000)
+        private String desc;
+
+        @Pattern(regexp="^https?://.*", message="repoUrl must be http/https")
+        @Nullable @Size(max = 2048)
+        private String repoUrl;
+
+        @Pattern(regexp="^https?://.*", message="demoUrl must be http/https")
+        @Nullable @Size(max = 2048)
+        private String demoUrl;
+
+        @Pattern(regexp="^https?://.*", message="coverUrl must be http/https")
+        @Nullable @Size(max = 2048)
+        private String coverUrl;
+
+        @Nullable
+        private com.sandwich.SandWich.challenge.domain.Submission.ParticipationType participationType;
+
+        @Nullable @Size(max=200)
+        private String teamName;
+
+        @Nullable @Size(max=5000)
+        private String membersText;
+
+        @Valid
+        @Size(max = 10, message = "assets can contain up to 10 items")
+        @Nullable
+        private List<CreateReq.Asset> assets;
+
+        @Valid
+        @Nullable
+        private CreateReq.Code code;
+    }
+
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class CreateReq {
         @NotBlank @Size(max = 200)
@@ -57,6 +100,15 @@ public class SubmissionDtos {
         private String language;
         private Double totalScore;
 
+        @Valid @Nullable
+        private PortfolioMeta portfolio;
+
+        @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class PortfolioMeta {
+            private String language;
+            private java.util.List<String> tech;
+        }
+
 
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class Asset {
@@ -98,6 +150,21 @@ public class SubmissionDtos {
         private Owner owner;
         private String language;
         private Double totalScore;
+        private CodeInfo code;   // ← 코드 챌린지용 상세 정보
+        private PortfolioInfo portfolio; // ← 포트폴리오 메타
+
+        @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class CodeInfo {
+            private String language;
+            private String entrypoint;
+            private String commitSha; // optional
+        }
+
+        @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class PortfolioInfo {
+            private String language;            // 예: "TypeScript"
+            private java.util.List<String> tech; // 예: ["Next.js","Spring Boot"]
+        }
 
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class Owner {

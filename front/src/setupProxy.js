@@ -1,7 +1,10 @@
 // src/setupProxy.js
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
-const target = process.env.REACT_APP_API_BASE;
+const envApiBase = process.env.REACT_APP_API_BASE_LOCAL || "/api";
+const target = envApiBase.startsWith("http")
+  ? envApiBase.replace(/\/api$/, '')
+  : 'http://localhost:8080';
 
 /**
  * 주의:
@@ -16,9 +19,9 @@ module.exports = function (app) {
         return next();
     });
 
-    // REST & OAuth (원래대로 통합)
+    // REST & OAuth (원래대로 통합) - 단, /admin 은 HTML GET 은 프록시 제외해야 하므로 별도 처리
     app.use(
-        ["/api", "/admin", "/oauth2/authorization", "/login/oauth2"],
+        ["/api", "/oauth2/authorization", "/login/oauth2"],
         createProxyMiddleware({
             target,
             changeOrigin: true,
@@ -27,11 +30,28 @@ module.exports = function (app) {
         })
     );
 
+    // /admin: 브라우저가 주소창으로 진입한 HTML 요청(GET + Accept: text/html)은 SPA 라우터로 넘기고,
+    // 그 외(XHR/JSON 등)은 백엔드로 프록시
+    app.use(
+        "/admin",
+        (req, res, next) => {
+            const accept = String(req.headers.accept || "");
+            const isHtmlGet = req.method === "GET" && accept.includes("text/html");
+            if (isHtmlGet) return next();
+            return createProxyMiddleware({
+                target,
+                changeOrigin: true,
+                ws: false,
+                logLevel: "warn",
+            })(req, res, next);
+        }
+    );
+
     // 외부 공개 추천 API 프록시 (개발 환경 CORS 우회): /ext → https://api.dnutzs.org/api
     app.use(
         "/ext",
         createProxyMiddleware({
-            target: "https://api.dnutzs.org",
+            target: process.env.REACT_APP_AI_API_BASE || "https://api.dnutzs.org",
             changeOrigin: true,
             ws: false,
             secure: true,
@@ -62,8 +82,8 @@ module.exports = function (app) {
             pathRewrite: { "^/stomp": "/ws" }, // 백엔드 엔드포인트가 /ws 라는 가정
             logLevel: "warn",
             // 끊김 시 write-after-end 노이즈 줄이기 위한 타임아웃/에러 처리
-            proxyTimeout: 30_000,
-            timeout: 30_000,
+            proxyTimeout: 60_000,
+            timeout: 60_000,
             onError(err, req, res) {
                 try {
                     res.writeHead(502, { "Content-Type": "text/plain" });

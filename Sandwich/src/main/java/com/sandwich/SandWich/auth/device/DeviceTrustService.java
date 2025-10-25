@@ -39,21 +39,27 @@ public class DeviceTrustService {
     public void remember(HttpServletRequest req, HttpServletResponse res, Long userId, String deviceName) {
         String deviceId = random(24);
         String secret   = random(32);
+        String uaHash = Integer.toHexString(String.valueOf(req.getHeader("User-Agent")).hashCode());
+        String ip = req.getRemoteAddr();
+        System.out.println("### [TRUST] remember() enter userId=" + userId + " deviceId=" + deviceId + " ip=" + ip + " uaHash=" + uaHash + " deviceName=" + deviceName);
+
         var e = UserDevice.builder()
                 .userId(userId)
                 .deviceId(deviceId)
                 .deviceSecretHash(encoder.encode(secret))
-                .uaHash(Integer.toHexString(String.valueOf(req.getHeader("User-Agent")).hashCode()))
-                .lastIp(req.getRemoteAddr())
-                .deviceName(deviceName) // 엔티티에 컬럼 추가한 경우
+                .uaHash(uaHash)
+                .lastIp(ip)
+                .deviceName(deviceName)
                 .trustUntil(OffsetDateTime.now().plus(30, ChronoUnit.DAYS))
                 .build();
+
         repo.save(e);
+        System.out.println("### [TRUST] saved row id=" + e.getId());
 
         addCookie(res,"tdid",deviceId,30*24*3600);
         addCookie(res,"tdt", secret, 30*24*3600);
+        System.out.println("### [TRUST] cookies set tdid/tdt");
     }
-
     private void addCookie(HttpServletResponse res,String n,String v,int maxAge){
         Cookie c = new Cookie(n, v);
         c.setHttpOnly(true);

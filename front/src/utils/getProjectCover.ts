@@ -1,5 +1,6 @@
 // src/utils/getProjectCover.ts
 import type { Project } from "../types/Project";
+import { getStaticUrl } from "../config/staticBase";
 
 /** 실제 public/images/projects 파일들에 맞추세요 (예: 01~17은 jpg, 18은 png) */
 export const LOCAL_IMAGES = [
@@ -15,14 +16,14 @@ function normalizeIndex(n: number) {
 /** 리스트 내 '위치'(0-based index)로 커버 선택 → 한 리스트 안에서 중복 방지 */
 export function coverByIndex(position: number, basePath = "/images/projects") {
     const file = LOCAL_IMAGES[normalizeIndex(position)];
-    return `${basePath}/${file}`;
+    return getStaticUrl(`${basePath}/${file}`);
 }
 
 /** id 기반(이전 방식). 여러 리스트/페이지에서도 안정적인 매핑 */
 export function coverById(p: Pick<Project, "id">, basePath = "/images/projects") {
     const idx0 = normalizeIndex((p.id ?? 1) - 1);
     const file = LOCAL_IMAGES[idx0];
-    return `${basePath}/${file}`;
+    return getStaticUrl(`${basePath}/${file}`);
 }
 
 /** cover 우선 → position 있으면 index 기반 → 없으면 id 기반 */

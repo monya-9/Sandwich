@@ -10,7 +10,7 @@ const JoinPage = () => {
     const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
 
     return (
-        <div className="min-h-screen flex justify-center items-center">
+        <div className="min-h-screen flex justify-center items-center bg-white dark:bg-black">
             {step === 0 && <JoinIntro onNext={nextStep} />}
             {step === 1 && <EmailStep onNext={nextStep} onPrev={prevStep} />}
             {step === 2 && <ProfileStep onPrev={prevStep} />} {/* ✅ 최종 단계 */}

@@ -37,38 +37,48 @@ export const dummyChallenges: ChallengeCardData[] = [
 export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
     try {
         // 1. 백엔드 챌린지 데이터 가져오기 (우선순위)
-        const backendChallenges = await fetchChallenges(0, 20); // 더 많이 가져와서 필터링
+        const backendChallenges = await fetchChallenges(0, 100); // 충분히 많이 가져와서 필터링
         
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
         const challenges = backendChallenges.content || [] as any[];
+        const now = new Date();
+        
         const isAllowed = (t: "CODE" | "PORTFOLIO", status: any) => {
             const s = String(status || '').toUpperCase();
             return t === 'CODE' ? s === 'OPEN' : (s === 'OPEN' || s === 'VOTING');
         };
+        
         const byLatestRegistered = (type: "CODE" | "PORTFOLIO") =>
             [...challenges]
                 .filter(c => {
-                    // 타입과 상태 체크
-                    if (c.type !== type || !isAllowed(type, c.status)) {
+                    // 타입 체크
+                    if (c.type !== type) {
                         return false;
                     }
                     
-                    // 날짜 체크: 현재 날짜가 시작일과 "마감 기준" 사이에 있어야 함
-                    const now = new Date();
-                    const startAt = c.startAt ? new Date(c.startAt as any) : null;
-                    // CODE: endAt, PORTFOLIO: voteEndAt(있으면) / 없으면 endAt
-                    const endAtRaw = type === 'PORTFOLIO' ? (c.voteEndAt || c.endAt) : c.endAt;
-                    const endAt = endAtRaw ? new Date(endAtRaw as any) : null;
-                    
-                    // 시작일이 있고 현재가 시작일보다 이전이면 제외
-                    if (startAt && now < startAt) {
+                    // 상태가 허용되는지 확인 (OPEN/VOTING)
+                    if (!isAllowed(type, c.status)) {
                         return false;
                     }
                     
-                    // 마감 기준이 있고 현재가 그 이후면 제외
-                    if (endAt && now > endAt) {
-                        return false;
+                    // 🔥 마감 시간 체크 추가 - 시간이 지났으면 상태와 관계없이 제외
+                    if (type === 'CODE') {
+                        // 코드 챌린지: endAt이 지났으면 제외
+                        const endAt = c.endAt ? new Date(c.endAt as any) : null;
+                        if (endAt && now > endAt) {
+                            console.log(`⏰ [FILTER] CODE 챌린지 ID ${c.id} - 마감시간 경과로 제외 (endAt: ${endAt})`);
+                            return false;
+                        }
+                    } else {
+                        // 포트폴리오 챌린지: voteEndAt 또는 endAt이 지났으면 제외
+                        const voteEndAt = c.voteEndAt ? new Date(c.voteEndAt as any) : null;
+                        const endAt = c.endAt ? new Date(c.endAt as any) : null;
+                        const finalEndTime = voteEndAt || endAt;
+                        if (finalEndTime && now > finalEndTime) {
+                            console.log(`⏰ [FILTER] PORTFOLIO 챌린지 ID ${c.id} - 마감시간 경과로 제외 (endAt: ${finalEndTime})`);
+                            return false;
+                        }
                     }
                     
                     return true;
@@ -83,6 +93,13 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
                 })[0];
         const codeChallenge = byLatestRegistered("CODE");
         const portfolioChallenge = byLatestRegistered("PORTFOLIO");
+        
+        // 디버깅: 선택된 챌린지 확인
+        console.log('🔍 [DEBUG] 현재 챌린지 선택 결과:');
+        console.log('  - CODE 챌린지:', codeChallenge ? `ID: ${codeChallenge.id}, 제목: ${codeChallenge.title}, 상태: ${codeChallenge.status}` : '없음');
+        console.log('  - PORTFOLIO 챌린지:', portfolioChallenge ? `ID: ${portfolioChallenge.id}, 제목: ${portfolioChallenge.title}, 상태: ${portfolioChallenge.status}` : '없음');
+        console.log('  - 전체 챌린지 수:', challenges.length);
+        console.log('  - PORTFOLIO 타입 챌린지들:', challenges.filter(c => c.type === 'PORTFOLIO').map(c => ({ id: c.id, title: c.title, status: c.status })));
         
         // 최신 단건 상세를 불러와 카드 내용을 백엔드 기준으로 구성
         const [codeDetail, portfolioDetail] = await Promise.all([
@@ -100,8 +117,28 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             }
         };
 
-        const codeUse = (codeDetail && isAllowed('CODE', codeDetail.status)) ? codeDetail : null;
-        const portfolioUse = (portfolioDetail && isAllowed('PORTFOLIO', portfolioDetail.status)) ? portfolioDetail : null;
+        // 상세 데이터도 마감 시간 체크
+        const codeUse = (() => {
+            if (!codeDetail || !isAllowed('CODE', codeDetail.status)) return null;
+            const endAt = codeDetail.endAt ? new Date(codeDetail.endAt as any) : null;
+            if (endAt && now > endAt) {
+                console.log(`⏰ [DETAIL] CODE 챌린지 ID ${codeDetail.id} - 마감시간 경과로 제외`);
+                return null;
+            }
+            return codeDetail;
+        })();
+        
+        const portfolioUse = (() => {
+            if (!portfolioDetail || !isAllowed('PORTFOLIO', portfolioDetail.status)) return null;
+            const voteEndAt = portfolioDetail.voteEndAt ? new Date(portfolioDetail.voteEndAt as any) : null;
+            const endAt = portfolioDetail.endAt ? new Date(portfolioDetail.endAt as any) : null;
+            const finalEndTime = voteEndAt || endAt;
+            if (finalEndTime && now > finalEndTime) {
+                console.log(`⏰ [DETAIL] PORTFOLIO 챌린지 ID ${portfolioDetail.id} - 마감시간 경과로 제외`);
+                return null;
+            }
+            return portfolioDetail;
+        })();
         const codeRule = parseRule(codeUse?.ruleJson);
         const portfolioRule = parseRule(portfolioUse?.ruleJson);
 
@@ -138,51 +175,77 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             return { text: '진행중', klass: 'border-emerald-300 text-emerald-700 bg-emerald-50' };
         };
 
-        return [
-            {
-                id: codeChallenge?.id || 1, // 백엔드 ID 사용, 없으면 기본값
+        const result: ChallengeCardData[] = [];
+        
+        // CODE 챌린지 추가 (백엔드 데이터가 있을 때만)
+        if (codeChallenge?.id) {
+            const codeExpireMs = codeChallenge.endAt ? new Date(codeChallenge.endAt as any).getTime() : undefined;
+            console.log(`📌 [BUILD] CODE 챌린지 ID ${codeChallenge.id} 생성`);
+            console.log(`   → endAt: ${codeChallenge.endAt}`);
+            console.log(`   → expireAtMs: ${codeExpireMs} (${codeExpireMs ? new Date(codeExpireMs).toLocaleString('ko-KR') : '없음'})`);
+            
+            result.push({
+                id: codeChallenge.id,
                 type: "CODE",
                 title: "이번 주 코드 챌린지",
                 subtitle: (codeUse?.title || weeklyData?.title) as string,
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
-                        <p className="text-[13px]">조건: 자동 채점 지원 · 중복 제출 가능</p>
+                        <p className="text-[13px]">조건: 자동 채점 지원 · 제출은 챌린지당 1회</p>
                     </div>
                 ),
                 ctaLabel: "참여하러 가기",
-                adminEditHref: codeChallenge?.id ? `/admin/challenges/${codeChallenge.id}` : undefined,
+                adminEditHref: `/admin/challenges/${codeChallenge.id}`,
                 listHref: "/challenge?type=CODE",
-                // 🔥 새로 추가: 문제 요약 정보
                 summary: codeRule.summary || codeRule.md || codeUse?.summary || weeklyData?.summary || 'AI가 생성한 주간 코드 챌린지입니다.',
                 must: Array.isArray(codeRule.must) && codeRule.must.length > 0 ? codeRule.must : weeklyData?.must,
-                startDate: codeChallenge?.startAt ? new Date(codeChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
-                expireAtMs: codeChallenge?.endAt ? new Date(codeChallenge.endAt as any).getTime() : undefined,
+                startDate: codeChallenge.startAt ? new Date(codeChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
+                expireAtMs: codeExpireMs,
                 ...(badgeOf(codeChallenge) ? { statusBadge: badgeOf(codeChallenge)!.text, statusBadgeClass: badgeOf(codeChallenge)!.klass } : {}),
-            },
-            {
-                id: portfolioChallenge?.id || 2, // 백엔드 ID 사용, 없으면 기본값
+            });
+        }
+        
+        // PORTFOLIO 챌린지 추가 (백엔드 데이터가 있을 때만)
+        if (portfolioChallenge?.id) {
+            // 포트폴리오 챌린지의 모든 단계 시간 정보
+            const endAtMs = portfolioChallenge.endAt ? new Date(portfolioChallenge.endAt as any).getTime() : undefined;
+            const voteStartAtMs = portfolioChallenge.voteStartAt ? new Date(portfolioChallenge.voteStartAt as any).getTime() : undefined;
+            const voteEndAtMs = portfolioChallenge.voteEndAt ? new Date(portfolioChallenge.voteEndAt as any).getTime() : undefined;
+            const portfolioExpireMs = voteEndAtMs || endAtMs; // 최종 마감 시간
+            
+            console.log(`📌 [BUILD] PORTFOLIO 챌린지 ID ${portfolioChallenge.id} 생성`);
+            console.log(`   → endAt: ${portfolioChallenge.endAt} (${endAtMs ? new Date(endAtMs).toLocaleString('ko-KR') : '없음'})`);
+            console.log(`   → voteStartAt: ${portfolioChallenge.voteStartAt} (${voteStartAtMs ? new Date(voteStartAtMs).toLocaleString('ko-KR') : '없음'})`);
+            console.log(`   → voteEndAt: ${portfolioChallenge.voteEndAt} (${voteEndAtMs ? new Date(voteEndAtMs).toLocaleString('ko-KR') : '없음'})`);
+            console.log(`   → expireAtMs: ${portfolioExpireMs} (${portfolioExpireMs ? new Date(portfolioExpireMs).toLocaleString('ko-KR') : '없음'})`);
+            
+            result.push({
+                id: portfolioChallenge.id,
                 type: "PORTFOLIO", 
                 title: "이번 달 포트폴리오 챌린지",
                 subtitle: `${monthlyData?.emoji || ''} ${portfolioUse?.title || monthlyData?.title}`.trim(),
                 description: (
                     <div className="space-y-3 text-[13.5px] leading-6 text-neutral-800">
-                        <p className="text-[13px]">조건: 팀/개인 참여 가능 · 투표로 순위 결정</p>
+                        <p className="text-[13px]">조건: 팀/개인 참여 가능 · 투표로 순위 결정 · 제출은 챌린지당 1회</p>
                     </div>
                 ),
                 ctaLabel: "참여하러 가기",
-                adminEditHref: portfolioChallenge?.id ? `/admin/challenges/${portfolioChallenge.id}` : undefined,
+                adminEditHref: `/admin/challenges/${portfolioChallenge.id}`,
                 listHref: "/challenge?type=PORTFOLIO",
-                // 🔥 새로 추가: 문제 요약 정보
                 summary: portfolioRule.summary || portfolioRule.md || portfolioUse?.summary || monthlyData?.description || 'AI가 생성한 테마 기반의 월간 챌린지입니다.',
                 must: Array.isArray(portfolioRule.must) && portfolioRule.must.length > 0 ? portfolioRule.must : monthlyData?.mustHave,
-                startDate: portfolioChallenge?.startAt ? new Date(portfolioChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
-                expireAtMs: (() => {
-                    const raw = (portfolioChallenge?.voteEndAt || portfolioChallenge?.endAt) as any;
-                    return raw ? new Date(raw).getTime() : undefined;
-                })(),
+                startDate: portfolioChallenge.startAt ? new Date(portfolioChallenge.startAt).toLocaleDateString('ko-KR') : undefined,
+                expireAtMs: portfolioExpireMs,
+                // 🔥 포트폴리오 챌린지 단계별 전환을 위한 시간 정보
+                endAtMs: endAtMs,
+                voteStartAtMs: voteStartAtMs,
+                voteEndAtMs: voteEndAtMs,
                 ...(badgeOf(portfolioChallenge) ? { statusBadge: badgeOf(portfolioChallenge)!.text, statusBadgeClass: badgeOf(portfolioChallenge)!.klass } : {}),
-            },
-        ];
+            });
+        }
+        
+        // 챌린지가 하나도 없으면 더미 데이터 반환
+        return result.length > 0 ? result : dummyChallenges;
     } catch (error) {
         console.error('챌린지 데이터 로딩 실패:', error);
         return dummyChallenges; // 에러 시 기본 더미 데이터 반환
@@ -192,15 +255,22 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
 // 🆕 지난 챌린지 데이터 가져오기 (지난 대결 보기용)
 export async function getPastChallenges(): Promise<ChallengeCardData[]> {
     try {
-        const backendChallenges = await fetchChallenges(0, 50); // 많이 가져와서 과거 챌린지 찾기
+        const backendChallenges = await fetchChallenges(0, 100); // 최대 100개까지 가져오기
         
         if (!backendChallenges.content || backendChallenges.content.length === 0) {
             return [];
         }
 
-        // ENDED 상태 챌린지만 필터링
+        // ENDED 상태 챌린지만 필터링 (OPEN, VOTING 상태는 현재 챌린지이므로 제외)
         const pastChallenges = backendChallenges.content
             .filter(c => {
+                const status = String(c.status || '').toUpperCase();
+                
+                // OPEN이나 VOTING 상태면 현재 진행 중인 챌린지이므로 제외
+                if (status === 'OPEN' || status === 'VOTING') {
+                    return false;
+                }
+                
                 const type = String(c.type || '').toUpperCase();
                 const now = new Date();
                 const endAtRaw = type === 'PORTFOLIO' ? (c.voteEndAt || c.endAt) : c.endAt;
@@ -209,20 +279,35 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                 return c.status === 'ENDED' || (endAt && now > endAt);
             })
             .sort((a, b) => {
-                // 종료일 기준으로 최신순 정렬 (endAt이 없으면 startAt 사용)
+                // 종료일 기준으로 최신순 정렬
+                // 포트폴리오: 투표 종료일(voteEndAt) 우선, 없으면 제출 종료일(endAt), 없으면 시작일(startAt)
+                // 코드: 제출 종료일(endAt) 우선, 없으면 시작일(startAt)
                 const aType = String(a.type || '').toUpperCase();
                 const bType = String(b.type || '').toUpperCase();
-                const aEndKey = aType === 'PORTFOLIO' ? (a.voteEndAt || a.endAt || a.startAt) : (a.endAt || a.startAt);
-                const bEndKey = bType === 'PORTFOLIO' ? (b.voteEndAt || b.endAt || b.startAt) : (b.endAt || b.startAt);
+                
+                const getEndDate = (challenge: any) => {
+                    if (challenge.type === 'PORTFOLIO') {
+                        // 포트폴리오는 투표 종료일을 우선으로 사용
+                        return challenge.voteEndAt || challenge.endAt || challenge.startAt;
+                    } else {
+                        // 코드는 제출 종료일을 사용
+                        return challenge.endAt || challenge.startAt;
+                    }
+                };
+                
+                const aEndKey = getEndDate(a);
+                const bEndKey = getEndDate(b);
                 const aEndDate = new Date(aEndKey).getTime();
                 const bEndDate = new Date(bEndKey).getTime();
                 return bEndDate - aEndDate;
-            })
-            .slice(0, 8); // 최대 8개만
+            }); // 제한 없이 모든 종료된 챌린지 표시
 
         return pastChallenges.map(challenge => {
-            const endDate = new Date(challenge.endAt || challenge.startAt);
+            // 포트폴리오는 투표 종료일, 코드는 제출 종료일을 표시
             const isCode = challenge.type === "CODE";
+            const endDate = isCode 
+                ? new Date(challenge.endAt || challenge.startAt)
+                : new Date(challenge.voteEndAt || challenge.endAt || challenge.startAt);
             const statusBadge = '종료';
             const statusBadgeClass = 'border-neutral-300 bg-neutral-50 text-neutral-600';
             
@@ -234,10 +319,10 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                 description: (
                     <div className="space-y-2 text-[13.5px] leading-6 text-neutral-600">
                         <p>📅 {endDate.toLocaleDateString('ko-KR')} 종료</p>
-                        <p className="text-[12px] text-gray-500">✅ 종료된 챌린지</p>
                     </div>
                 ),
                 ctaLabel: "자세히 보기",
+                adminEditHref: `/admin/challenges/${challenge.id}`,
                 statusBadge,
                 statusBadgeClass,
             };

@@ -8,6 +8,8 @@ import { fetchWeeklyLatest } from "../../api/weeklyChallenge";
 import EmptySubmissionState from "../../components/challenge/EmptySubmissionState";
 import api from "../../api/axiosInstance";
 import AdminRebuildButton from "../../components/challenge/AdminRebuildButton";
+import Toast from "../../components/common/Toast";
+import { getMe } from "../../api/users";
 
 export default function CodeSubmissionListPage() {
     const { id: idStr } = useParams();
@@ -30,6 +32,33 @@ export default function CodeSubmissionListPage() {
     const [submissionLikes, setSubmissionLikes] = useState<Record<number, { liked: boolean; count: number }>>({});
     // 재집계 성공 시 강제 재조회 트리거
     const [reloadKey, setReloadKey] = useState(0);
+    
+    // 현재 사용자 정보 및 Toast 상태
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [toast, setToast] = useState<{
+        visible: boolean;
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+    }>({
+        visible: false,
+        message: '',
+        type: 'info'
+    });
+
+    // 현재 사용자 정보 로드
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const me = await getMe();
+                setCurrentUserId(me.id);
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                setCurrentUserId(null);
+            }
+        };
+
+        loadCurrentUser();
+    }, []);
 
     // 백엔드 챌린지 데이터 로드 (우선순위)
     useEffect(() => {
@@ -149,6 +178,22 @@ export default function CodeSubmissionListPage() {
         }
     };
 
+    // 제출하기 버튼 클릭 핸들러
+    const handleSubmitClick = () => {
+        // 현재 사용자의 제출물이 있는지 확인
+        if (currentUserId && submissions.some(s => s.owner?.userId === currentUserId)) {
+            // 이미 제출물이 있는 경우
+            setToast({
+                visible: true,
+                message: '이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.',
+                type: 'warning'
+            });
+        } else {
+            // 제출물이 없는 경우 제출 페이지로 이동
+            nav(`/challenge/code/${id}/submit`);
+        }
+    };
+
     // 제목 결정 로직 (백엔드 우선, 없으면 AI 데이터, 마지막 기본값)
     const getHeaderTitle = () => {
         if (loadingChallenge || loadingWeekly) {
@@ -183,7 +228,7 @@ export default function CodeSubmissionListPage() {
                 titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                 actionButton={
                     challengeStatus === "ENDED" ? undefined : (
-                        <CTAButton as="button" onClick={() => nav(`/challenge/code/${id}/submit`)}>
+                        <CTAButton as="button" onClick={handleSubmitClick}>
                             코드 제출하기
                         </CTAButton>
                     )
@@ -238,10 +283,21 @@ export default function CodeSubmissionListPage() {
             ) : (
                 <EmptySubmissionState 
                     type="CODE" 
-                    onSubmit={() => nav(`/challenge/code/${id}/submit`)} 
+                    onSubmit={handleSubmitClick} 
                     challengeStatus={challengeStatus}
                 />
             )}
+
+            {/* Toast */}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={3000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
         </div>
     );
 }

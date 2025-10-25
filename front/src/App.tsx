@@ -14,6 +14,7 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
 import MessagesPage from "./pages/Messages/MessagesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // 마이페이지
 import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
@@ -59,6 +60,7 @@ import ChallengeManagePage from "./pages/admin/ChallengeManagePage";
 import SecurityOtpHistoryPage from "./pages/admin/SecurityOtpHistoryPage";
 import SecurityDeviceManagePage from "./pages/admin/SecurityDeviceManagePage";
 import DeviceManagePage from "./pages/mypage/DeviceManagePage";
+import AccountDeletionPage from "./pages/mypage/AccountDeletionPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -111,6 +113,7 @@ function App() {
                                 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
 
                                 <Route path="/rooms/:id" element={<RoomToMessagesRedirect />} />
                                 <Route path="/rooms" element={<Navigate to="/messages" replace />} />
@@ -120,6 +123,7 @@ function App() {
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
                                 <Route path="/mypage/devices" element={<DeviceManagePage />} />
+                                <Route path="/mypage/account-deletion" element={<AccountDeletionPage />} />
 
                                 {/* 프로필 페이지 */}
                                 <Route path="/profile" element={<ProfilePage />} />
@@ -144,6 +148,7 @@ function App() {
                                 <Route path="/challenge/code/:id/submissions" element={<CodeSubmissionListPage />} />
                                 <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />
                                 <Route path="/challenge/portfolio/:id/vote/:projectId" element={<PortfolioProjectDetailPage />} />
+                                <Route path="/challenge/portfolio/:id/projects/:projectId" element={<PortfolioProjectDetailPage />} />
                                 <Route path="/challenge/code/:id/submissions/:submissionId" element={<CodeSubmissionDetailPage />} />
 
                                 {/* (예시) 코드 제출 수정 */}

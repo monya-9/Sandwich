@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { useNavigate } from "react-router-dom";
-import error404 from "../assets/images/404_error.png";
+import { getStaticUrl } from "../config/staticBase";
 
 const NotFoundPage = () => {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ const NotFoundPage = () => {
         <div className="mb-8">
           <div className="mx-auto mb-6 w-full max-w-[1000px]">
             <img
-              src={error404}
+              src={getStaticUrl("assets/images/404_error.png")}
               alt="404"
               className="w-full h-auto object-contain"
             />

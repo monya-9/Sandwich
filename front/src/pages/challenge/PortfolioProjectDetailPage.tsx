@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { SectionCard, CTAButton, ChallengeCommentSection, CommentResponse } from "../../components/challenge/common";
-import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare } from "lucide-react";
+import { ChevronLeft, Star, ExternalLink, Heart, Eye, MessageSquare, Edit2, Trash2 } from "lucide-react";
 import Toast from "../../components/common/Toast";
-import { fetchChallengeSubmissionDetail, type SubmissionDetailResponse } from "../../api/submissionApi";
+import { fetchChallengeSubmissionDetail, deleteChallengeSubmission, type SubmissionDetailResponse } from "../../api/submissionApi";
 import { 
     fetchChallengeDetail, 
     createVote, 
@@ -12,8 +12,10 @@ import {
     type VoteRequest,
     type MyVoteResponse
 } from "../../api/challengeApi";
+import { getMe } from "../../api/users";
 import api from "../../api/axiosInstance";
 import { isAdmin } from "../../utils/authz";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 function Stars({
                    value,
@@ -80,6 +82,35 @@ export default function PortfolioProjectDetailPage() {
         message: '',
         type: 'info'
     });
+
+    // 현재 사용자 및 소유자 확인
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [isOwner, setIsOwner] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+    // 현재 사용자 정보 로드
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const me = await getMe();
+                setCurrentUserId(me.id);
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                setCurrentUserId(null);
+            }
+        };
+
+        loadCurrentUser();
+    }, []);
+
+    // 소유자 확인
+    useEffect(() => {
+        if (currentUserId && item?.owner?.userId) {
+            setIsOwner(currentUserId === item.owner.userId);
+        } else {
+            setIsOwner(false);
+        }
+    }, [currentUserId, item]);
 
     // 챌린지 상태 로드
     useEffect(() => {
@@ -458,6 +489,65 @@ export default function PortfolioProjectDetailPage() {
         }
     };
 
+    // 제출 기간 확인 (포트폴리오는 제출 기간 내에서만 수정/삭제 가능)
+    const canEditOrDelete = () => {
+        if (!isOwner) return false;
+        
+        const now = new Date();
+        const endAt = parseTs(timeline.endAt);
+        
+        // 제출 기간(now < challenge.endAt) 내에서만 가능
+        return !!(endAt && now < endAt);
+    };
+
+    // 제출물 삭제
+    const handleDelete = async () => {
+        if (!canEditOrDelete()) {
+            setDeleteModalOpen(false);
+            setToast({
+                visible: true,
+                message: '제출 기간이 종료되어 삭제할 수 없습니다.',
+                type: 'error'
+            });
+            return;
+        }
+
+        try {
+            await deleteChallengeSubmission(id, pid);
+            setDeleteModalOpen(false);
+            setToast({
+                visible: true,
+                message: '제출물이 삭제되었습니다.',
+                type: 'success'
+            });
+            setTimeout(() => {
+                nav(`/challenge/portfolio/${id}/vote`);
+            }, 1000);
+        } catch (error) {
+            console.error('제출물 삭제 실패:', error);
+            setDeleteModalOpen(false);
+            setToast({
+                visible: true,
+                message: '제출물 삭제에 실패했습니다.',
+                type: 'error'
+            });
+        }
+    };
+
+    // 제출물 수정
+    const handleEdit = () => {
+        if (!canEditOrDelete()) {
+            setToast({
+                visible: true,
+                message: '제출 기간이 종료되어 수정할 수 없습니다.',
+                type: 'error'
+            });
+            return;
+        }
+        
+        nav(`/challenge/portfolio/${id}/submit?edit=${pid}`);
+    };
+
     return (
         <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
             {/* 토스트 */}
@@ -507,17 +597,41 @@ export default function PortfolioProjectDetailPage() {
 
             <SectionCard className="!px-5 !py-5">
                 {/* 작성자 */}
-                <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                        {item.owner?.username?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                    <div className="leading-tight">
-                        <div className="text-[13px] font-semibold text-neutral-900">
-                            {item.owner?.username || '익명'}
-                            {item.teamName ? ` · ${item.teamName}` : ""}
+                <div className="mb-3 flex items-center gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
+                            {item.owner?.username?.charAt(0).toUpperCase() || 'U'}
                         </div>
-                        <div className="text-[12.5px] text-neutral-600">{item.owner?.position || '개발자'}</div>
+                        <div className="leading-tight">
+                            <div className="text-[13px] font-semibold text-neutral-900">
+                                {item.owner?.username || '익명'}
+                                {item.teamName ? ` · ${item.teamName}` : ""}
+                            </div>
+                            <div className="text-[12.5px] text-neutral-600">{item.owner?.position || '개발자'}</div>
+                        </div>
                     </div>
+                    
+                    {/* 수정/삭제 버튼 (소유자이고 제출 기간 내이며 챌린지가 종료되지 않았을 때만 표시) */}
+                    {isOwner && canEditOrDelete() && challengeStatus !== "ENDED" && !isChallengeEnded && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleEdit}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="수정"
+                            >
+                                <Edit2 className="h-3.5 w-3.5" />
+                                수정
+                            </button>
+                            <button
+                                onClick={() => setDeleteModalOpen(true)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                title="삭제"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                삭제
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 기술 스택 */}
@@ -727,6 +841,18 @@ export default function PortfolioProjectDetailPage() {
                 challengeStatus={challengeStatus}
                 comments={comments}
                 onCommentsChange={setComments}
+            />
+
+            {/* 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={deleteModalOpen}
+                title="제출물 삭제"
+                message="정말로 이 제출물을 삭제하시겠습니까?"
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteModalOpen(false)}
             />
         </div>
     );

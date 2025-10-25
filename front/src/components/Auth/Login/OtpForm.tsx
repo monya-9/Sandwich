@@ -1,7 +1,7 @@
 // src/components/Auth/Login/OtpForm.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import api from "../../../api/axiosInstance";
 import Toast from "../../common/Toast";
 
@@ -164,14 +164,14 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
             <Link to="/">
-                <img src={logo} alt="logo" className="w-36 mb-10 mx-auto" />
+                <img src={getStaticUrl("assets/logo.png")} alt="logo" className="w-36 mb-10 mx-auto" />
             </Link>
 
             <div className="w-full max-w-sm">
-                <h2 className="text-xl font-bold mb-2">이메일 인증</h2>
-                <p className="text-sm text-gray-600 mb-2">
+                <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">이메일 인증</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     <span className="font-medium">{maskedEmail}</span>로<br />
                     인증코드를 보내드렸습니다.
                 </p>
@@ -225,7 +225,7 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
                         onChange={(e) => handleOtpChange(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder="6자리 인증코드"
-                        className="w-full px-4 py-3 text-center text-lg tracking-widest border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-3 text-center text-lg tracking-widest border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 bg-white dark:bg-gray-800 text-black dark:text-white"
                         maxLength={6}
                         autoComplete="off"
                     />
@@ -240,7 +240,7 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
                         onChange={(e) => setRememberDevice(e.target.checked)}
                         className="mr-2"
                     />
-                    <label htmlFor="rememberDevice" className="text-sm text-gray-700">
+                    <label htmlFor="rememberDevice" className="text-sm text-gray-700 dark:text-gray-300">
                         이 브라우저 기억하기 (30일)
                     </label>
                 </div>
@@ -264,11 +264,11 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
                 </button>
 
                 {/* 재전송 및 뒤로가기 */}
-                <div className="flex justify-center items-center text-sm text-gray-500 gap-2 mt-4">
+                <div className="flex justify-center items-center text-sm text-gray-500 dark:text-gray-400 gap-2 mt-4">
                     <button
                         onClick={handleResend}
                         disabled={isResending}
-                        className={`hover:text-green-600 hover:underline disabled:text-gray-400 ${
+                        className={`hover:text-green-600 hover:underline disabled:text-gray-400 dark:disabled:text-gray-600 ${
                             isExpired ? "text-green-600 font-medium" : ""
                         }`}
                     >

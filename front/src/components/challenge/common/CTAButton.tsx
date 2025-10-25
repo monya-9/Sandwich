@@ -33,6 +33,7 @@ export default function CTAButton({
     const base =
         "group inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition " +
         "border-neutral-300 text-neutral-900 hover:border-neutral-400 hover:bg-neutral-50 " +
+        "dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700 dark:hover:border-neutral-500 " +
         (disabled ? "opacity-50 pointer-events-none" : "");
 
     // 1) a 태그

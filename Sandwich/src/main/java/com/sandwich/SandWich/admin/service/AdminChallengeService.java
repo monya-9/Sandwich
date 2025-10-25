@@ -16,11 +16,15 @@ import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
 import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLogRepository;
 import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.common.exception.exceptiontype.ConflictException;
+import com.sandwich.SandWich.common.exception.exceptiontype.NotFoundException;
 import com.sandwich.SandWich.common.util.RedisUtil;
+import com.sandwich.SandWich.reward.repository.RewardPayoutRepository;
 import com.sandwich.SandWich.reward.service.RewardPayoutService;
 import com.sandwich.SandWich.reward.service.RewardRule;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -33,6 +37,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
+import com.sandwich.SandWich.social.domain.LikeTargetType;
+import com.sandwich.SandWich.challenge.repository.*;
+import com.sandwich.SandWich.social.repository.LikeRepository;
+import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.grader.repository.TestResultRepository;
 
 
 @Service
@@ -47,7 +56,16 @@ public class AdminChallengeService {
     private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository auditRepo;
     private final ChallengeSyncLogRepository logs;
     private final SubmissionRepository submissionRepo;
+
+    private final ChallengeRepository challengeRepo;
+    private final RewardPayoutRepository rewardPayoutRepo;
+    private final EntityManager em;
     private final PortfolioVoteRepository voteRepo;
+    private final SubmissionAssetRepository assetRepo;
+    private final CodeSubmissionRepository codeRepo;
+    private final LikeRepository likeRepo;
+    private final CommentRepository commentRepo;
+    private final TestResultRepository testResultRepo;
     private final RedisUtil redisUtil;
     private final ApplicationEventPublisher publisher;
 
@@ -69,6 +87,8 @@ public class AdminChallengeService {
         audit("CREATE_CHALLENGE", "CHALLENGE", c.getId(), req); // no-op
         return c.getId();
     }
+
+
 
     @Transactional
     public void patch(Long id, PatchReq req) {
@@ -171,40 +191,49 @@ public class AdminChallengeService {
 
     @Transactional
     public void delete(Long challengeId, boolean force) {
-        Challenge c = repo.findById(challengeId)
+        // 0) 존재 확인
+        var c = repo.findById(challengeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
 
-        if (reward.isPublished(challengeId) && !force) {
-            throw new BadRequestException("CANNOT_DELETE_PUBLISHED",
-                    "보상 지급된 챌린지는 삭제할 수 없습니다. force=true로 강제 삭제하세요.");
+        // 1) 보상 지급 챌린지 삭제 금지 (포트폴리오와 동일 정책)
+        if (rewardPayoutRepo.existsByChallengeId(challengeId)) {
+            throw new ConflictException("HAS_PAYOUTS", "보상 지급된 챌린지는 삭제할 수 없습니다.");
         }
 
-        long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
-        long voteCount = 0L;
-        try {
-            voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
-                    .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
-        } catch (Exception ignore) {}
-
-        if (!force && (submissionCount > 0 || voteCount > 0)) {
-            throw new BadRequestException("HAS_DEPENDENCIES",
-                    "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+        // 2) force=false면 “의존성 있으면 막기”를 유지하고 싶다면 ↓ (원래 UX 유지)
+        if (!force) {
+            long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
+            long voteCount = 0L;
+            try {
+                voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
+                        .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
+            } catch (Exception ignore) {}
+            if (submissionCount > 0 || voteCount > 0) {
+                throw new BadRequestException("HAS_DEPENDENCIES",
+                        "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+            }
         }
 
+
+        // 3) 캐시 정리 + TestResult 명시적 삭제 (CASCADE 미설정)
         var subIds = submissionRepo.findIdsByChallengeId(challengeId);
         for (Long sid : subIds) {
             redisUtil.deleteValue("viewcount:submission:" + sid);
         }
+        
+        // TestResult는 FK CASCADE가 없어서 명시적으로 삭제 필요
+        if (!subIds.isEmpty()) {
+            try {
+                testResultRepo.deleteBySubmissionIdIn(subIds);
+            } catch (Exception ignore) {}
+        }
 
-        try { voteRepo.deleteByChallengeId(challengeId); } catch (Exception ignore) {}
+        // 4) 부모 한 줄 삭제 → DB FK ON DELETE CASCADE 가 자식 전체 정리
+        int affected = challengeRepo.deleteByIdHard(challengeId);
+        if (affected == 0) throw new NotFoundException("Challenge not found: " + challengeId);
+        em.clear();
 
-        submissionRepo.deleteByChallengeId(challengeId);
-
-        repo.delete(c);
-
-        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of(
-                "force", force, "submissionCount", submissionCount, "voteCount", voteCount
-        ));
+        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of("force", force));
     }
 
     @Transactional

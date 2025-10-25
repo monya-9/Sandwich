@@ -2,7 +2,7 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import LoginInput from "./LoginInput";
 import LoginButton from "./LoginButton";
 import KeepLoginCheck from "./KeepLoginCheck";
@@ -130,9 +130,9 @@ const LoginForm = () => {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
             <Link to="/">
-                <img src={logo} alt="logo" className="w-36 mb-10 mx-auto" />
+                <img src={getStaticUrl("assets/logo.png")} alt="logo" className="w-36 mb-10 mx-auto" />
             </Link>
 
             <div className="space-y-2">

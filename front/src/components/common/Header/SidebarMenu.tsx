@@ -2,7 +2,7 @@ import React, { useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import ProfileCircle from "./ProfileCircle";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 
 interface Props {
     isOpen: boolean;
@@ -10,8 +10,28 @@ interface Props {
     onLogout: () => void;
 }
 
+function isAdminFromStoredToken(): boolean {
+    try {
+        const token =
+            (typeof window !== 'undefined' && (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken'))) || '';
+        if (!token) return false;
+        const parts = token.split('.');
+        if (parts.length !== 3) return false;
+        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const json = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf-8');
+        const payload = JSON.parse(decodeURIComponent(Array.prototype.map.call(json, (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+        const candidates = [payload.roles, payload.authorities, payload.auth, payload.scope, payload.scopes, payload.role];
+        const toStr = (v: any) => (typeof v === 'string' ? v : Array.isArray(v) ? v.join(' ') : '');
+        const txt = toStr(candidates.find(Boolean)).toUpperCase();
+        return txt.includes('ROLE_ADMIN') || txt.split(/[ ,]/).includes('ADMIN');
+    } catch {
+        return false;
+    }
+}
+
 const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
     const { isLoggedIn, email } = useContext(AuthContext);
+    const isAdmin = isAdminFromStoredToken();
 
     // ✅ 안전한 이메일 (JWT 혼입 방지)
     const safeEmail = useMemo(() => {
@@ -65,7 +85,7 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
                 ) : (
                     // 비로그인 상태
                     <div className="mb-6 flex flex-col items-start w-full px-1">
-                        <img src={logo} alt="Sandwich" className="w-[80px] mb-5 mt-4" />
+                        <img src={getStaticUrl("assets/logo.png")} alt="Sandwich" className="w-[80px] mb-5 mt-4" />
                         <p className="text-gray-600 text-sm mb-6 leading-5">
                             회원가입 또는 로그인을 통해
                             <br />
@@ -88,22 +108,37 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
                     </div>
                 )}
 
-                <hr className="my-4" />
-
                 <nav className="flex flex-col gap-4">
                     <Link to="/" onClick={onClose} className="text-base font-medium">
                         둘러보기
                     </Link>
-                    <Link to="/community" onClick={onClose} className="text-base font-medium">
-                        커뮤니티
+                    <Link to="/challenge" onClick={onClose} className="text-base font-medium">
+                        챌린지
                     </Link>
-                    {/* 관리자 전용 메뉴는 App 라우트 가드(RequireAdmin)에서 실제 보호됨 */}
-                    <Link to="/admin/security/otp" onClick={onClose} className="text-base font-medium">
-                        보안 ▸ OTP 이력
-                    </Link>
-                    <Link to="/admin/security/devices" onClick={onClose} className="text-base font-medium">
-                        보안 ▸ 사용자 관리
-                    </Link>
+                    
+                    <hr className="my-2" />
+
+                    {isLoggedIn && (
+                        <>
+                            <Link to="/profile" onClick={onClose} className="text-base font-medium">
+                                나의 포트폴리오
+                            </Link>
+                            <Link to="/mypage" onClick={onClose} className="text-base font-medium">
+                                마이페이지
+                            </Link>
+                        </>
+                    )}
+
+                    {isAdmin && (
+                        <>
+                            <Link to="/admin/security/otp" onClick={onClose} className="text-base font-medium">
+                                보안 ▸ OTP 이력
+                            </Link>
+                            <Link to="/admin/security/devices" onClick={onClose} className="text-base font-medium">
+                                보안 ▸ 사용자 관리
+                            </Link>
+                        </>
+                    )}
                 </nav>
 
                 {isLoggedIn && (

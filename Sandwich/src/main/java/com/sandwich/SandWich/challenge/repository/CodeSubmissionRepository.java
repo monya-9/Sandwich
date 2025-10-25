@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface CodeSubmissionRepository extends JpaRepository<CodeSubmission, Long> {
     Optional<CodeSubmission> findBySubmission_Id(Long submissionId);
     void deleteBySubmission_IdIn(Collection<Long> submissionIds);
+    java.util.List<CodeSubmission> findBySubmission_IdIn(java.util.Collection<Long> submissionIds);
+
 }

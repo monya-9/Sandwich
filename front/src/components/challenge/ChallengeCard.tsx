@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { isAdmin } from "../../utils/authz";
 import { deleteChallenge } from "../../api/challengeApi";
+import ConfirmModal from "../common/ConfirmModal";
 
 export type ChallengeCardData = {
     id: number;
@@ -23,6 +24,10 @@ export type ChallengeCardData = {
     startDate?: string;     // 시작일 정보
     /** 마감 기준 시간(코드:endAt, 포트폴리오:voteEndAt|endAt) – 메인 자동 이동 스케줄링용 */
     expireAtMs?: number;
+    /** 🔥 포트폴리오 챌린지 중간 단계 전환용 시간 정보 */
+    endAtMs?: number;           // 제출 종료 시간 (진행중 → 투표대기)
+    voteStartAtMs?: number;     // 투표 시작 시간 (투표대기 → 투표중)
+    voteEndAtMs?: number;       // 투표 종료 시간 (투표중 → 종료)
     /** 상태 배지 텍스트 (선택) */
     statusBadge?: string;
     /** 상태 배지 스타일 클래스 (선택) */
@@ -37,6 +42,7 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
     const admin = isAdmin();
     const navigate = useNavigate();
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false);
 
     return (
         <section className="mb-8">
@@ -55,14 +61,14 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
             </h3>
 
             {/* 카드 본문 */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] p-5 md:p-7">
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/60 p-5 md:p-7">
                 <div className="mb-1 flex items-center justify-between">
-                    <p className="text-[15px] font-semibold text-black dark:text-white">{item.subtitle}</p>
+                    <p className="text-[15px] font-semibold text-black dark:text-neutral-100">{item.subtitle}</p>
                     {admin && item.adminEditHref && (
                         <div className="flex gap-2">
                             <Link
                                 to={item.adminEditHref}
-                                className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-white/10"
+                                className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
                             >
                                 챌린지 수정
                             </Link>
@@ -75,26 +81,23 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                         </div>
                     )}
                 </div>
-                <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-[var(--text-secondary)]">
+                <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-neutral-200">
                     {item.description}
                 </div>
 
                 {/* Summary 표시 */}
                 {item.summary && (
-                    <div className="mt-4 p-3 bg-neutral-50 rounded-lg">
-                        <div className="font-medium text-neutral-700 mb-2 text-sm">📋 문제 설명</div>
-                        <div className="text-xs leading-relaxed text-neutral-600">
-                            {item.summary.length > 200 
-                                ? `${item.summary.substring(0, 200)}...`
-                                : item.summary
-                            }
+                    <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-lg">
+                        <div className="font-medium text-neutral-700 dark:text-neutral-200 mb-2 text-sm">📋 문제 설명</div>
+                        <div className="text-[13px] leading-6 text-neutral-700 dark:text-neutral-300 whitespace-pre-line">
+                            {item.summary}
                         </div>
                     </div>
                 )}
 
                 {/* 시작일 정보 - 문제 설명 박스 아래 */}
                 {item.startDate && (
-                    <div className="mt-3 text-xs text-neutral-500">
+                    <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
                         📅 시작일: {item.startDate}
                     </div>
                 )}
@@ -103,45 +106,64 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                 <div className="mt-3 flex justify-end gap-2">
                     <Link
                         to={href}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-white/10"
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
                     >
                         {item.ctaLabel} →
                     </Link>
                 </div>
             </div>
             {/* 삭제 확인 모달 */}
-            {deleteOpen && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-                    <div className="w-full max-w-sm rounded-lg bg-white p-5">
-                        <div className="mb-3 text-[15px] font-bold text-red-600">챌린지 삭제</div>
-                        <ul className="mb-4 list-disc pl-5 text-[13.5px] leading-6 text-neutral-800">
-                            <li>삭제 후 되돌릴 수 없습니다.</li>
-                            <li>관련 데이터에 영향이 있을 수 있습니다.</li>
-                        </ul>
-                        <div className="mb-5 text-[13.5px]">정말로 이 챌린지를 삭제하시겠습니까?</div>
-                        <div className="flex justify-end gap-2">
-                            <button className="rounded-md border px-3 py-1.5 text-[13px]" onClick={() => setDeleteOpen(false)}>취소</button>
-                            <button
-                                className="rounded-md bg-red-600 px-3 py-1.5 text-[13px] font-semibold text-white"
-                                onClick={async () => {
-                                    try {
-                                        await deleteChallenge(item.id, { force: true });
-                                        setDeleteOpen(false);
-                                        navigate(0);
-                                    } catch (e) {
-                                        // eslint-disable-next-line no-console
-                                        console.error('delete challenge failed', e);
-                                        setDeleteOpen(false);
-                                        alert('삭제 중 오류가 발생했습니다.');
-                                    }
-                                }}
-                            >
-                                삭제
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                visible={deleteOpen}
+                title="챌린지 삭제"
+                message={`삭제 후 되돌릴 수 없습니다.\n관련 데이터에 영향이 있을 수 있습니다.\n\n정말로 이 챌린지를 삭제하시겠습니까?`}
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    try {
+                        // 1. 먼저 일반 삭제 시도 (force 없이)
+                        await deleteChallenge(item.id);
+                        setDeleteOpen(false);
+                        navigate(0);
+                    } catch (e: any) {
+                        // eslint-disable-next-line no-console
+                        console.error('delete challenge failed', e);
+                        // 2. HAS_DEPENDENCIES 에러인 경우, 강제 삭제 확인 모달 표시
+                        if (e.response?.data?.code === 'HAS_DEPENDENCIES') {
+                            setDeleteOpen(false);
+                            setForceDeleteModalOpen(true);
+                        } else {
+                            setDeleteOpen(false);
+                            alert(e.response?.data?.message || '삭제 중 오류가 발생했습니다.');
+                        }
+                    }
+                }}
+                onCancel={() => setDeleteOpen(false)}
+            />
+            
+            {/* 강제 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={forceDeleteModalOpen}
+                title="⚠️ 챌린지 강제 삭제"
+                message={`이 챌린지에는 제출물이 존재합니다.\n강제 삭제 시 모든 제출물이 함께 삭제됩니다.\n\n정말 강제 삭제하시겠습니까?`}
+                confirmText="강제 삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={async () => {
+                    try {
+                        await deleteChallenge(item.id, { force: true });
+                        setForceDeleteModalOpen(false);
+                        navigate(0);
+                    } catch (e2: any) {
+                        setForceDeleteModalOpen(false);
+                        alert(e2.response?.data?.message || '삭제 중 오류가 발생했습니다.');
+                    }
+                }}
+                onCancel={() => {
+                    setForceDeleteModalOpen(false);
+                }}
+            />
         </section>
     );
 }

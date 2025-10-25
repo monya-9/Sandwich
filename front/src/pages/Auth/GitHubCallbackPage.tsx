@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Toast from "../../components/common/Toast";
+import { API_BASE } from "../../config/apiBase";
 
 const GitHubCallback = () => {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ const GitHubCallback = () => {
 
         if (code) {
             axios
-                .post("/api/auth/signup", {
+                .post(`${API_BASE}/auth/signup`, {
                     provider: "github",
                     code,
                 })

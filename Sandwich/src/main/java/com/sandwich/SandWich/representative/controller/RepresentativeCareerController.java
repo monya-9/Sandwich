@@ -5,6 +5,7 @@ import com.sandwich.SandWich.award.service.AwardService;
 import com.sandwich.SandWich.career.service.CareerService;
 import com.sandwich.SandWich.careerProject.service.CareerProjectService;
 import com.sandwich.SandWich.education.service.EducationService;
+import com.sandwich.SandWich.project.service.ProjectFeatureService;
 import com.sandwich.SandWich.representative.dto.RepresentativeCareerResponse;
 import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class RepresentativeCareerController {
     private final EducationService educationService;
     private final AwardService awardService;
     private final CareerProjectService projectService;
+    private final ProjectFeatureService portfolioProjectFeatureService;
 
     @GetMapping("/representative-careers")
     public ResponseEntity<List<RepresentativeCareerResponse>> getAll(@AuthenticationPrincipal UserDetailsImpl userDetails) {
@@ -43,7 +45,11 @@ public class RepresentativeCareerController {
         );
 
         projectService.getRepresentativeProjects(user).forEach(p ->
-                result.add(new RepresentativeCareerResponse("PROJECT", p.getTitle(), p.getTechStack(), p.getDescription()))
+                result.add(new RepresentativeCareerResponse("PROJECT_RESUME", p.getTitle(), p.getTechStack(), p.getDescription()))
+        );
+
+        portfolioProjectFeatureService.getRepresentativeProjects(user).forEach(p ->
+                result.add(new RepresentativeCareerResponse("PROJECT_PORTFOLIO", p.getTitle(), p.getTools(), p.getDescription()))
         );
 
         return ResponseEntity.ok(result);

@@ -19,6 +19,7 @@ import Toast from "../../components/common/Toast";
 import api from "../../api/axiosInstance";
 import AdminRebuildButton from "../../components/challenge/AdminRebuildButton";
 import { isAdmin } from "../../utils/authz";
+import { getMe } from "../../api/users";
 
 export default function PortfolioVotePage() {
     const { id: idStr } = useParams();
@@ -41,14 +42,32 @@ export default function PortfolioVotePage() {
     const [reloadKey, setReloadKey] = useState(0);
     
     // 토스트 상태
-    const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' }>({
+    const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' | 'warning' }>({
         visible: false,
         message: '',
         type: 'info'
     });
     
+    // 현재 사용자 정보
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    
     const nav = useNavigate();
     const admin = isAdmin();
+
+    // 현재 사용자 정보 로드
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const me = await getMe();
+                setCurrentUserId(me.id);
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                setCurrentUserId(null);
+            }
+        };
+
+        loadCurrentUser();
+    }, []);
 
     // 실제 API에서 제출물 데이터 가져오기
     useEffect(() => {
@@ -238,6 +257,8 @@ export default function PortfolioVotePage() {
         return isNaN(d.getTime()) ? null : d;
     };
     const derivedStage: "SUBMISSION_OPEN" | "VOTE_WAITING" | "VOTING" | "ENDED" = (() => {
+        // 강제 ENDED 상태가 설정된 경우 날짜와 무관하게 종료로 간주
+        if (challengeStatus === "ENDED") return "ENDED";
         const now = new Date();
         const endAt = parseTs(timeline.endAt);
         const vStart = parseTs(timeline.voteStartAt);
@@ -304,6 +325,22 @@ export default function PortfolioVotePage() {
         }
     };
 
+    // 제출하기 버튼 클릭 핸들러
+    const handleSubmitClick = () => {
+        // 현재 사용자의 제출물이 있는지 확인
+        if (currentUserId && submissions.some(s => s.owner?.userId === currentUserId)) {
+            // 이미 제출물이 있는 경우
+            setToast({
+                visible: true,
+                message: '이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.',
+                type: 'warning'
+            });
+        } else {
+            // 제출물이 없는 경우 제출 페이지로 이동
+            nav(`/challenge/portfolio/${id}/submit`);
+        }
+    };
+
     return (
         <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
             {/* 토스트 알림 */}
@@ -335,7 +372,7 @@ export default function PortfolioVotePage() {
                         titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
                             derivedStage === "SUBMISSION_OPEN" ? (
-                                <CTAButton as={Link} href={`/challenge/portfolio/${id}/submit`}>
+                                <CTAButton as="button" onClick={handleSubmitClick}>
                                     프로젝트 제출하기
                                 </CTAButton>
                             ) : undefined
@@ -404,7 +441,7 @@ export default function PortfolioVotePage() {
                                 const likeInfo = submissionLikes[submission.id] || { liked: false, count: submission.likeCount || 0 };
                                 
                                 return (
-                                <div key={submission.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
                                     {/* 1. 프로필 정보 */}
                                     <div className="p-4 pb-3">
                                         <div className="flex items-center gap-3">
@@ -436,17 +473,17 @@ export default function PortfolioVotePage() {
                                             
                                             {/* 사용자명 & 직책 */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-semibold text-gray-900 truncate">
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-neutral-100 truncate">
                                                     {submission.owner?.username || '익명'}
                                                 </div>
-                                                <div className="text-xs text-gray-500">개발자</div>
+                                                <div className="text-xs text-gray-500 dark:text-neutral-400">개발자</div>
                                             </div>
                                         </div>
                                     </div>
                                     
                                     {/* 2. 썸네일 이미지 */}
                                     {submission.coverUrl && (
-                                        <div className="relative h-48 bg-gray-100">
+                                        <div className="relative h-48 bg-gray-100 dark:bg-neutral-800">
                                             <img 
                                                 src={submission.coverUrl} 
                                                 alt={submission.title}
@@ -461,24 +498,24 @@ export default function PortfolioVotePage() {
                                     
                                     <div className="p-4">
                                         {/* 3. 제목 */}
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2 line-clamp-2">
                                             {submission.title || `제출물 #${submission.id}`}
                                         </h3>
                                         
                                         {/* 4. 소개/설명 */}
                                         {submission.desc && (
-                                            <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                                            <p className="text-sm text-gray-600 dark:text-neutral-300 mb-4 line-clamp-3">
                                                 {submission.desc}
                                             </p>
                                         )}
                                         
                                         {/* 5. 하단: 좋아요, 조회수, 댓글, 전체보기 */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-neutral-800">
+                                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-neutral-400">
                                                 {/* 좋아요 */}
                                                 <button 
                                                     onClick={(e) => handleLike(e, submission.id)}
-                                                    className={`flex items-center gap-1 hover:text-gray-700 transition-colors ${likeInfo.liked ? 'text-red-500' : ''}`}
+                                                    className={`flex items-center gap-1 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors ${likeInfo.liked ? 'text-red-500' : ''}`}
                                                 >
                                                     <svg className="w-4 h-4" fill={likeInfo.liked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -505,7 +542,7 @@ export default function PortfolioVotePage() {
                                             {/* 전체보기 버튼 */}
                                             <Link 
                                                 to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
+                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                                             >
                                                 전체보기
                                             </Link>
@@ -520,7 +557,7 @@ export default function PortfolioVotePage() {
                         derivedStage === "SUBMISSION_OPEN" ? (
                             <EmptySubmissionState 
                                 type="PORTFOLIO" 
-                                onSubmit={() => nav(`/challenge/portfolio/${id}/submit`)} 
+                                onSubmit={handleSubmitClick} 
                                 challengeStatus={challengeStatus}
                             />
                         ) : (
