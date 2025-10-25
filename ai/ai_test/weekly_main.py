@@ -1,4 +1,3 @@
-# weekly_main.py  (Cloud, 주제 자율/중복제외, 히스토리 out/ 저장)
 import os, json, requests, pathlib, re, datetime, sys, random, hashlib, time
 from typing import Dict, Any, List, Iterable, Tuple
 from dotenv import load_dotenv

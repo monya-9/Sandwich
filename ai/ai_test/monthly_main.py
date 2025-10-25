@@ -1,4 +1,3 @@
-# monthly_main.py  (Cloud, 창의 주제/중복제외, AI·GPU 금지, 히스토리 out/ 저장)
 import os, json, pathlib, datetime, argparse, time, hashlib, random, re, sys
 from typing import List, Dict, Any, Tuple, Iterable
 import requests
