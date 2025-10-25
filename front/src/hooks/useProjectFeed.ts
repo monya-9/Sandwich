@@ -1,6 +1,6 @@
 // 프로젝트 피드 상태 관리 훅
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchProjectFeed, ProjectFeedParams } from '../api/projects';
+import { fetchProjectFeed, fetchProjectsMeta, ProjectFeedParams } from '../api/projects';
 import { Project } from '../types/Project';
 
 interface UseProjectFeedReturn {
@@ -48,9 +48,26 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       setFilters(params);
       
       const response = await fetchProjectFeed(params);
+      const projects = response.content || [];
+
+      // 프로젝트 메타 정보 가져오기 (좋아요, 댓글, 조회수)
+      if (projects.length > 0) {
+        const projectIds = projects.map(p => p.id);
+        const metaData = await fetchProjectsMeta(projectIds);
+        
+        // 메타 정보를 프로젝트에 병합
+        const projectsWithMeta = projects.map(project => ({
+          ...project,
+          likes: metaData[project.id]?.likes || 0,
+          comments: metaData[project.id]?.comments || 0,
+          views: metaData[project.id]?.views || 0,
+        }));
+
+        setProjects(projectsWithMeta);
+      } else {
+        setProjects([]);
+      }
       
-      
-      setProjects(response.content || []);
       setTotalElements(response.totalElements || 0);
       setTotalPages(response.totalPages || 0);
       setCurrentPage(response.page || 0);
@@ -77,7 +94,26 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
         size: 20 // ✅ 사이즈를 20으로 변경
       });
       
-      setProjects(prev => [...prev, ...response.content]);
+      const newProjects = response.content || [];
+      
+      // 새 프로젝트들의 메타 정보 가져오기
+      if (newProjects.length > 0) {
+        const projectIds = newProjects.map(p => p.id);
+        const metaData = await fetchProjectsMeta(projectIds);
+        
+        // 메타 정보를 프로젝트에 병합
+        const newProjectsWithMeta = newProjects.map(project => ({
+          ...project,
+          likes: metaData[project.id]?.likes || 0,
+          comments: metaData[project.id]?.comments || 0,
+          views: metaData[project.id]?.views || 0,
+        }));
+
+        setProjects(prev => [...prev, ...newProjectsWithMeta]);
+      } else {
+        setProjects(prev => [...prev, ...newProjects]);
+      }
+      
       setCurrentPage(nextPage);
       
     } catch (err) {
