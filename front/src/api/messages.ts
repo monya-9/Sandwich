@@ -1,4 +1,5 @@
 import api from "./axiosInstance";
+import { API_BASE } from "../config/apiBase";
 
 /** ===== 서버 스키마 ===== */
 export type ServerMessageType =
@@ -170,7 +171,7 @@ export async function uploadAttachment(roomId: number, file: File): Promise<Serv
     const token =
         localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
 
-    const res = await fetch(`/api/messages/${roomId}/attachments`, {
+    const res = await fetch(`${API_BASE}/messages/${roomId}/attachments`, {
         method: "POST",
         body: form,
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,

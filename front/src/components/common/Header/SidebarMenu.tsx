@@ -2,7 +2,7 @@ import React, { useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import ProfileCircle from "./ProfileCircle";
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 
 interface Props {
     isOpen: boolean;
@@ -65,7 +65,7 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
                 ) : (
                     // 비로그인 상태
                     <div className="mb-6 flex flex-col items-start w-full px-1">
-                        <img src={logo} alt="Sandwich" className="w-[80px] mb-5 mt-4" />
+                        <img src={getStaticUrl("assets/logo.png")} alt="Sandwich" className="w-[80px] mb-5 mt-4" />
                         <p className="text-gray-600 text-sm mb-6 leading-5">
                             회원가입 또는 로그인을 통해
                             <br />

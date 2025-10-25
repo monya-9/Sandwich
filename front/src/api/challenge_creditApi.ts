@@ -2,6 +2,7 @@
 // 챌린지 크레딧/보상 관련 API
 
 import api from './axiosInstance';
+import { API_BASE } from '../config/apiBase';
 
 // ===== 크레딧 관련 타입 정의 =====
 
@@ -82,7 +83,7 @@ export async function adminCustomPayout(
  const res = await api.post(`/admin/rewards/${challengeId}/custom-payout`, payload, {
    withCredentials: true,
    // 관리자 엔드포인트는 서버 루트에 매핑되어 있으므로 기본 '/api' prefix를 비활성화
-   baseURL: '',
+   baseURL: API_BASE,
    headers,
  });
  return res.data;
@@ -111,7 +112,7 @@ export async function fetchCustomPayouts(
   const res = await api.get(`/admin/rewards/${challengeId}/custom-payouts`, {
     params: params || {},
     withCredentials: true,
-    baseURL: '',
+    baseURL: API_BASE,
   });
   return res.data;
 }

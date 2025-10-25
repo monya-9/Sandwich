@@ -6,7 +6,6 @@ import TagList from "../components/OtherProject/TagList";
 import ProjectStatsBox from "../components/OtherProject/ProjectStatsBox";
 import ProjectGrid from "../components/OtherProject/ProjectGrid";
 import CommentPanel from "../components/OtherProject/ActionBar/CommentPanel";
-import QueenImg from "../assets/images/Queen.jpg";
 import { AuthContext } from "../context/AuthContext";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { fetchProjectDetail, type ProjectDetailResponse, fetchProjectContents, type ProjectContentResponseItem } from "../api/projectApi";

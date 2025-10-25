@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import logo from "../../../../assets/logo.png";
+import { getStaticUrl } from "../../../../config/staticBase";
 import SNSButtonGroup from "./SNSButtonGroup";
 import RecentLogin from "../../RecentLogin";
 
@@ -12,7 +12,7 @@ const JoinIntro = ({ onNext }: JoinIntroProps) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
             <Link to="/">
-                <img src={logo} alt="Sandwich Logo" className="w-36 mb-10" />
+                <img src={getStaticUrl("assets/logo.png")} alt="Sandwich Logo" className="w-36 mb-10" />
             </Link>
 
             <h1 className="text-xl font-semibold mb-2 dark:text-white">반가워요 👋</h1>

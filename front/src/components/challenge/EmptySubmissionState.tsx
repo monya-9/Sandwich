@@ -1,7 +1,7 @@
 // src/components/challenge/EmptySubmissionState.tsx
 import React from "react";
 import { CTAButton } from "./common";
-import logoImage from "../../assets/logo.png";
+import { getStaticUrl } from "../../config/staticBase";
 
 type EmptySubmissionStateProps = {
     type: "CODE" | "PORTFOLIO";
@@ -16,7 +16,7 @@ export default function EmptySubmissionState({ type, onSubmit, challengeStatus }
     return (
         <div className="flex flex-col items-center justify-center py-16 text-center">
             <img 
-                src={logoImage} 
+                src={getStaticUrl("assets/logo.png")} 
                 alt="Sandwich Logo" 
                 className="w-32 h-auto mb-6 opacity-60 object-contain"
             />

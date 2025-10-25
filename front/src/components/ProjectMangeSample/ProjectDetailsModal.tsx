@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { createProject, uploadImage, ProjectRequest, updateProject, addEnvVarsBulk, EnvVarRequest, getEnvVars, uploadDeployFile, deleteDeployFile } from "../../api/projectApi";
 import { createGithubBranchAndPR } from "../../api/projectApi";
-import logoPng from "../../assets/logo.png";
+import { getStaticUrl } from "../../config/staticBase";
 import { FiImage } from "react-icons/fi";
 import { HiOutlineUpload } from "react-icons/hi";
 import CoverCropper from "./CoverCropper";
@@ -105,7 +105,7 @@ const MediaPicker: React.FC<{
 };
 
 const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, libraryImages, editMode = false, initialDetail, editOwnerId, editProjectId, onTitleChange, onSummaryChange, onCategoriesChange, onCoverChange }) => {
-  const [coverUrl, setCoverUrl] = useState<string>(logoPng);
+  const [coverUrl, setCoverUrl] = useState<string>(getStaticUrl("assets/logo.png"));
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null); // 업로드 실패 시 지연 업로드용
   const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const [title, setTitle] = useState("");
@@ -730,7 +730,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <img 
                   src={coverUrl} 
                   alt="cover" 
-                  className={`w-full h-full select-none ${coverUrl === logoPng ? 'object-contain' : 'object-cover object-top'}`} 
+                  className={`w-full h-full select-none ${coverUrl === getStaticUrl("assets/logo.png") ? 'object-contain' : 'object-cover object-top'}`} 
                   draggable={false} 
                 />
               ) : (
