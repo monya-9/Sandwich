@@ -30,6 +30,7 @@ public class Profile extends BaseEntity {
     private String github;
     private String linkedin;
     private String profileImage;
+    private String coverImage;
 
     public void updateFrom(UserProfileRequest dto) {
         this.bio = dto.getBio();
@@ -38,5 +39,6 @@ public class Profile extends BaseEntity {
         this.linkedin = dto.getLinkedin();
         this.profileImage = dto.getProfileImageUrl();
         this.nickname = dto.getNickname();
+        this.coverImage = dto.getCoverImageUrl();
     }
 }

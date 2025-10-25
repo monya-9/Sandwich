@@ -172,6 +172,12 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
       {/* 툴팁 */}
       {tooltipVisible && !isModalOpen && !isMobile && (
         <>
+          {/* 브릿지 영역: 버튼과 툴팁 사이의 간격을 메움 */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[70px] z-40"
+            onMouseEnter={() => setTooltipHover(true)}
+            onMouseLeave={() => setTooltipHover(false)}
+          />
           <div
             ref={popupRef}
             className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-stretch z-50 py-6 px-7 gap-4 w-max min-w-[350px]"

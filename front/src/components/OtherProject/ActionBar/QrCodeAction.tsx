@@ -8,19 +8,24 @@ interface QrCodeActionProps {
   title?: string;
   thumbnailUrl?: string;
   isMobile?: boolean;
+  qrCodeEnabled?: boolean;
 }
 
-export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile = false }: QrCodeActionProps) {
+export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile = false, qrCodeEnabled = true }: QrCodeActionProps) {
   const [open, setOpen] = useState(false);
 
   const finalTitle = title || "프로젝트 이름";
   const finalThumb = thumbnailUrl || getStaticUrl("assets/images/default-thumbnail.png");
 
+  const isDisabled = !qrCodeEnabled;
+
   return (
     <div className="relative">
       <button
-        className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
-        onClick={() => setOpen(true)}
+        className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'} ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+        onClick={() => !isDisabled && setOpen(true)}
+        disabled={isDisabled}
+        title={isDisabled ? "QR 코드가 생성되지 않았습니다" : ""}
       >
         <div className={`rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
           <FaQrcode className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />

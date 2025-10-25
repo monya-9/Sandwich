@@ -15,6 +15,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { fetchUserProjects, fetchProjectsMeta } from "../../api/projects";
 import api from "../../api/axiosInstance";
 import FollowListModal from "./FollowListModal";
+import ConfirmModal from "../common/ConfirmModal";
 
 export default function ProfilePage() {
   const { email, nickname } = useContext(AuthContext);
@@ -32,6 +33,11 @@ export default function ProfilePage() {
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers");
   const [myUserId, setMyUserId] = useState(0);
+  
+  // 배경 이미지 업로드
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [hoveringCover, setHoveringCover] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
 
   useEffect(() => {
     const path = location.pathname;
@@ -243,19 +249,126 @@ export default function ProfilePage() {
     return "🎓";
   };
 
+  // 배경 이미지 업로드 핸들러
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingCover(true);
+      // 이미지 업로드
+      const url = await UserApi.uploadImage(file);
+      
+      // 서버에 배경 이미지 URL 저장
+      await api.patch("/users/profile/cover", { url });
+      
+      // 로컬 상태 업데이트
+      if (me) {
+        setMe({ ...me, coverImage: url });
+      }
+    } catch (error) {
+      console.error("배경 이미지 업로드 실패:", error);
+      alert("배경 이미지 업로드에 실패했습니다.");
+    } finally {
+      setUploadingCover(false);
+      // input value 초기화 (같은 파일 재선택 가능하도록)
+      e.target.value = "";
+    }
+  };
+
+  // 배경 이미지 제거 핸들러
+  const handleCoverImageRemove = async () => {
+    try {
+      setUploadingCover(true);
+      setShowRemoveModal(false);
+      // 서버에 null 저장하여 제거
+      await api.patch("/users/profile/cover", { url: null });
+      
+      // 로컬 상태를 undefined로 업데이트 (완전히 제거)
+      if (me) {
+        setMe({ ...me, coverImage: undefined });
+      }
+    } catch (error) {
+      console.error("배경 이미지 제거 실패:", error);
+      alert("배경 이미지 제거에 실패했습니다.");
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   return (
     <div className="w-full flex justify-center">
       <div className="w-full min-h-screen bg-white dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 pb-20 text-black dark:text-white">
         {/* 배너 (네모, 헤더 하단 초록 라인까지 끌어올림, 가로 전체 확장) */}
-        <div className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] dark:bg-[#14181B] h-[300px] md:h-[360px] w-auto rounded-none border-b border-black/10 dark:border-white/10">
-          <div className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center">
-            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full ring-2 ring-white border border-transparent flex items-center justify-center overflow-hidden bg-transparent">
-              {/* 배경 이미지 업로드 아이콘 */}
-              <FiPlus className="text-white text-[22px] md:text-[26px]" />
+        <div 
+          className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] dark:bg-[#14181B] h-[300px] md:h-[360px] w-auto rounded-none border-b border-black/10 dark:border-white/10"
+          style={me?.coverImage && typeof me.coverImage === 'string' && me.coverImage.trim() !== "" ? {
+            backgroundImage: `url(${me.coverImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : {}}
+          onMouseEnter={() => setHoveringCover(true)}
+          onMouseLeave={() => setHoveringCover(false)}
+        >
+          <input
+            type="file"
+            id="cover-upload"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverImageUpload}
+            disabled={uploadingCover}
+          />
+          
+          {/* 배경 이미지가 없을 때: 기본 업로드 UI */}
+          {(!me?.coverImage || (typeof me.coverImage === 'string' && me.coverImage.trim() === "")) && (
+            <label
+              htmlFor="cover-upload"
+              className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              <div className="w-11 h-11 md:w-12 md:h-12 rounded-full ring-2 ring-white border border-transparent flex items-center justify-center overflow-hidden bg-black/30 backdrop-blur-sm">
+                {uploadingCover ? (
+                  <div className="text-white text-sm">...</div>
+                ) : (
+                  <FiPlus className="text-white text-[22px] md:text-[26px]" />
+                )}
+              </div>
+              <div className="mt-2 text-white text-[18px] md:text-[22px] font-semibold leading-tight tracking-tight">
+                배경 이미지 업로드
+              </div>
+              <div className="mt-1 text-white/80 text-xs md:text-sm">권장 사이즈 : 2560 x 360 px</div>
+            </label>
+          )}
+          
+          {/* 배경 이미지가 있을 때: 호버 시 변경/제거 버튼 */}
+          {me?.coverImage && typeof me.coverImage === 'string' && me.coverImage.trim() !== "" && hoveringCover && !uploadingCover && (
+            <div className="absolute inset-0 bg-black/60 flex items-end justify-center pb-16 md:pb-20 transition-all">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-white text-[18px] md:text-[22px] font-semibold">배경 이미지 변경</div>
+                <div className="mt-1 text-white/80 text-xs md:text-sm">권장 사이즈 : 2560 x 360 px</div>
+                <div className="flex gap-3 mt-4">
+                  <label
+                    htmlFor="cover-upload"
+                    className="px-6 py-2.5 bg-[#068334] text-white rounded-full text-[14px] md:text-[16px] font-semibold cursor-pointer hover:bg-[#057028] transition-colors"
+                  >
+                    변경하기
+                  </label>
+                  <button
+                    onClick={() => setShowRemoveModal(true)}
+                    className="px-6 py-2.5 bg-white text-[#068334] rounded-full text-[14px] md:text-[16px] font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    제거하기
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="mt-2 text-white text-[18px] md:text-[22px] font-semibold leading-tight tracking-tight">배경 이미지 업로드</div>
-            <div className="mt-1 text-white/80 text-xs md:text-sm">권장 사이즈 : 2560 x 376 px</div>
-          </div>
+          )}
+          
+          {/* 업로드 중 */}
+          {uploadingCover && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="text-white text-[18px] md:text-[22px]">처리 중...</div>
+            </div>
+          )}
         </div>
 
         {/* 본문 레이아웃: 좌측 슬림 패널 + 우측 콘텐츠 */}
@@ -409,6 +522,18 @@ export default function ProfilePage() {
         onClose={() => setFollowModalOpen(false)}
         userId={myUserId}
         type={followModalType}
+      />
+
+      {/* 배경 이미지 제거 확인 모달 */}
+      <ConfirmModal
+        visible={showRemoveModal}
+        title="배경 이미지 제거"
+        message="배경 이미지를 제거하시겠습니까?&#10;이 작업은 되돌릴 수 없습니다."
+        confirmText="제거하기"
+        cancelText="취소"
+        confirmButtonColor="red"
+        onConfirm={handleCoverImageRemove}
+        onCancel={() => setShowRemoveModal(false)}
       />
     </div>
   );

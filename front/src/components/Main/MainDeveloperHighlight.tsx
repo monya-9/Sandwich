@@ -113,18 +113,21 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
           {topUsers.map((developer) => (
             <div
               key={developer.userId}
-              className="bg-white dark:bg-black rounded-xl md:rounded-2xl w-[160px] md:w-[200px] lg:w-[240px] px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 flex flex-col items-center flex-shrink-0 shadow-[0_0_4px_rgba(0,0,0,0.25)] transition-transform duration-200 hover:-translate-y-1 cursor-pointer"
-              onClick={() => navigate(`/profile/${developer.userId}`)}
+              className="bg-white dark:bg-black rounded-xl md:rounded-2xl w-[160px] md:w-[200px] lg:w-[240px] px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 flex flex-col items-center flex-shrink-0 shadow-[0_0_4px_rgba(0,0,0,0.25)] transition-transform duration-200 hover:-translate-y-1"
             >
               {/* 프로필 이미지 또는 이니셜 */}
               {developer.avatarUrl && developer.avatarUrl !== '' && !developer.avatarUrl.includes('cdn.example.com') ? (
                 <img
                   src={developer.avatarUrl}
                   alt={developer.nickname || '사용자'}
-                  className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full object-cover border border-gray-300 dark:border-transparent"
+                  className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full object-cover border border-gray-300 dark:border-transparent cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/users/${developer.userId}`)}
                 />
               ) : (
-                <div className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-transparent flex items-center justify-center text-sm md:text-base lg:text-lg font-medium text-gray-800 dark:text-white">
+                <div 
+                  className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-transparent flex items-center justify-center text-sm md:text-base lg:text-lg font-medium text-gray-800 dark:text-white cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/users/${developer.userId}`)}
+                >
                   {developer.nickname ? developer.nickname.charAt(0) : '?'}
                 </div>
               )}
@@ -144,10 +147,10 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
                 {developer.projects.slice(0, 3).map((project, idx) => (
                   <div
                     key={`${developer.userId}-${project.projectId}-${idx}`}
-                    className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-gray-300 dark:bg-gray-600 rounded-md overflow-hidden"
+                    className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-gray-300 dark:bg-gray-600 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation(); // 부모 클릭 이벤트 방지
-                      navigate(`/otherproject/${project.projectId}`);
+                      navigate(`/other-project/${developer.userId}/${project.projectId}`);
                     }}
                   >
                     {project.coverUrl && project.coverUrl !== 'null' && !project.coverUrl.includes('cdn.example.com') ? (
@@ -163,11 +166,6 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
                     )}
                   </div>
                 ))}
-              </div>
-
-              {/* 트렌드 스코어 표시 (선택사항) */}
-              <div className="mt-1.5 md:mt-2 text-xs text-gray-500 dark:text-gray-400">
-                점수: {developer.trendScore.toFixed(1)}
               </div>
             </div>
           ))}

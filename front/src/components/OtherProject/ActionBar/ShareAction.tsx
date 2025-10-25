@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
-import { FaShareAlt, FaTwitter, FaFacebook, FaPinterest, FaBlogger } from "react-icons/fa";
+import { FaShareAlt } from "react-icons/fa";
 import Toast from "../../common/Toast";
 import { getStaticUrl } from "../../../config/staticBase";
 
@@ -10,24 +10,6 @@ type ShareActionProps = {
   title?: string;
   isMobile?: boolean;
 };
-
-const KakaoIcon = () => (
-  <svg
-    width="44"
-    height="44"
-    viewBox="0 0 40 40"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="block"
-    style={{ transform: "translateY(-4px)" }}
-  >
-    <circle cx="20" cy="20" r="20" fill="#FEE500" />
-    <path
-      d="M20 12C13.9 12 9 15.95 9 20.32c0 2.46 1.46 4.62 3.79 6.11L11 32l5.02-2.75c1.1.15 2.23.24 3.38.24 6.09 0 11-3.95 11-8.32S26.09 12 20 12z"
-      fill="#391B1B"
-    />
-  </svg>
-);
 
 export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = false }: ShareActionProps) {
   const [open, setOpen] = useState(false);
@@ -119,61 +101,7 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
               {/* divider */}
               <div className="w-full h-px bg-gray-200 mb-6" />
 
-              {/* SNS 리스트 - 중앙정렬, gap, 클릭 전체, 크기 맞춤 */}
-              <div className="flex flex-row gap-9 w-full justify-center mb-8">
-                <a
-                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="트위터"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
-                >
-                  <FaTwitter className="text-[2.1rem] text-sky-500" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">트위터</span>
-                </a>
-                <a
-                  href={`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="페이스북"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
-                >
-                  <FaFacebook className="text-[2.1rem] text-blue-600" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">페이스북</span>
-                </a>
-                <a
-                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="핀터레스트"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
-                >
-                  <FaPinterest className="text-[2.1rem] text-red-500" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">핀터레스트</span>
-                </a>
-                <a
-                  href={`https://blog.naver.com/openapi/share?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="블로그"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
-                >
-                  <FaBlogger className="text-[2.1rem] text-green-500" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">블로그</span>
-                </a>
-                <a
-                  href={`https://sharer.kakao.com/talk?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="카카오톡"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
-                >
-                  <KakaoIcon />
-                  <span className="text-[15px] mt-0.8 text-gray-800 group-hover:underline">카카오</span>
-                </a>
-              </div>
-              {/* divider */}
-              <div className="w-full h-px bg-gray-200 mb-6" />
+              {/* SNS 리스트 숨김 처리 */}
 
               <div className="flex w-full mt-1">
                 <input

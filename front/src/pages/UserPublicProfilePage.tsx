@@ -19,6 +19,7 @@ type PublicProfile = {
   position?: string | null;
   interests?: string[] | null;
   profileImage?: string | null;
+  coverImage?: string | null;
   followerCount?: number;
   followingCount?: number;
   profileSlug?: string | null; // 프로필 URL용 슬러그
@@ -239,7 +240,14 @@ export default function UserPublicProfilePage() {
           />
         )}
         {/* 배경: 업로드 UI 제거, 읽기 전용 배너 */}
-        <div className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] h-[300px] md:h-[360px] w-auto rounded-none" />
+        <div 
+          className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] h-[300px] md:h-[360px] w-auto rounded-none"
+          style={data?.coverImage && typeof data.coverImage === 'string' && data.coverImage.trim() !== "" ? {
+            backgroundImage: `url(${data.coverImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : {}}
+        />
 
         {/* 본문 레이아웃 */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-[minmax(300px,420px)_1fr] gap-8 items-start">
