@@ -2,13 +2,13 @@
 import React from "react";
 import { getStaticUrl } from "../../../../config/staticBase";
 import SNSButton from "./SNSButton";
-import { SOCIAL_LOGIN_BASE } from "../../../../config/apiBase";
 
 const SNSButtonGroup = () => {
+    const API_BASE = process.env.REACT_APP_API_BASE;
     const handleSocialLogin = (provider: "google" | "github") => {
         // ✅ 소셜 로그인은 직접 백엔드로 이동 (프록시 거치지 않음)
-        window.location.href = `${SOCIAL_LOGIN_BASE}/oauth2/authorization/${provider}`;
-    };
+window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;    
+};
 
     return (
         <div className="flex justify-center items-center gap-4">
