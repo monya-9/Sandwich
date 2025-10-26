@@ -127,41 +127,64 @@ export default function WinnersSection() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchWinnersData = async () => {
-            try {
-                setLoading(true);
-                
-                // 1. 종료된 포트폴리오 챌린지 목록 가져오기
-                const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED");
-                const endedPortfolioChallenges = challengesResponse.content;
-                
-                if (endedPortfolioChallenges.length === 0) {
-                    setWinners([]);
-                    setError(null);
-                    return;
-                }
-
-                // 2. 가장 최근 종료된 포트폴리오 챌린지 선택
-                const latestChallenge = endedPortfolioChallenges[0]; // 이미 날짜순 정렬되어 있음
-                
-                // 3. 해당 챌린지의 리더보드 가져오기
-                const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
-                
-                console.log('리더보드 데이터:', leaderboardData.entries);
-                
-                setWinners(leaderboardData.entries.slice(0, 3));
-                setError(null);
-                
-            } catch (err) {
-                setError("우승자 정보를 불러올 수 없습니다.");
+    const fetchWinnersData = async () => {
+        try {
+            setLoading(true);
+            
+            // 1. 종료된 포트폴리오 챌린지 목록 가져오기
+            const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED");
+            const endedPortfolioChallenges = challengesResponse.content;
+            
+            if (endedPortfolioChallenges.length === 0) {
                 setWinners([]);
-            } finally {
-                setLoading(false);
+                setError(null);
+                return;
+            }
+
+            // 2. 가장 최근 종료된 포트폴리오 챌린지 선택
+            const latestChallenge = endedPortfolioChallenges[0]; // 이미 날짜순 정렬되어 있음
+            
+            // 3. 해당 챌린지의 리더보드 가져오기
+            const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
+            
+            console.log('리더보드 데이터:', leaderboardData.entries);
+            
+            setWinners(leaderboardData.entries.slice(0, 3));
+            setError(null);
+            
+        } catch (err) {
+            setError("우승자 정보를 불러올 수 없습니다.");
+            setWinners([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchWinnersData();
+    }, []);
+
+    // 페이지 가시성 변경 시 새로고침 (챌린지 상태 변경 감지)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                console.log('🔄 포트폴리오 Winners 섹션 새로고침');
+                fetchWinnersData();
             }
         };
 
-        fetchWinnersData();
+        const handleChallengeStatusChange = () => {
+            console.log('🔄 챌린지 상태 변경 감지 - 포트폴리오 Winners 섹션 새로고침');
+            fetchWinnersData();
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('challengeStatusChanged', handleChallengeStatusChange);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('challengeStatusChanged', handleChallengeStatusChange);
+        };
     }, []);
 
     // 데이터가 없어도 폼은 유지하되, 더미 데이터로 표시

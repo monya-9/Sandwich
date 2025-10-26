@@ -34,62 +34,86 @@ export default function CodeWinnersSection() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    const run = async () => {
+  const fetchWinnersData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 1) 최근 ENDED CODE 챌린지 조회
+      const list = await fetchChallenges(0, 20, "CODE", "ENDED");
+      const content = list?.content || [];
+      if (!content.length) { setWinners([]); return; }
+      // 종료일 기준 내림차순으로 가장 최근 종료 선택
+      const latest = content.slice().sort((a: any, b: any) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime())[0];
+
+      // 2) week 추출 (ruleJson.week)
+      let week: string | null = null;
       try {
-        setLoading(true);
-        setError(null);
+        const detail = await fetchChallengeDetail(latest.id);
+        // 1) 최우선: detail.aiWeek 컬럼
+        week = (detail as any)?.aiWeek || null;
+        if (!week) {
+          // 2) ruleJson 안의 week
+          const raw = (detail as any)?.ruleJson ?? latest.ruleJson;
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          week = parsed?.week || parsed?.aiWeek || null;
+        }
+      } catch {}
+      if (!week) { setWinners([]); return; }
 
-        // 1) 최근 ENDED CODE 챌린지 조회
-        const list = await fetchChallenges(0, 20, "CODE", "ENDED");
-        const content = list?.content || [];
-        if (!content.length) { setWinners([]); return; }
-        // 종료일 기준 내림차순으로 가장 최근 종료 선택
-        const latest = content.slice().sort((a: any, b: any) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime())[0];
+      // 3) AI 리더보드 상위 3 조회 + 이름 매핑
+      const lb = await fetchAiLeaderboard(week);
+      const top3 = (lb?.leaderboard || []).slice(0, 3);
 
-        // 2) week 추출 (ruleJson.week)
-        let week: string | null = null;
-        try {
-          const detail = await fetchChallengeDetail(latest.id);
-          // 1) 최우선: detail.aiWeek 컬럼
-          week = (detail as any)?.aiWeek || null;
-          if (!week) {
-            // 2) ruleJson 안의 week
-            const raw = (detail as any)?.ruleJson ?? latest.ruleJson;
-            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-            week = parsed?.week || parsed?.aiWeek || null;
-          }
-        } catch {}
-        if (!week) { setWinners([]); return; }
+      const idSet = new Set<number>();
+      top3.forEach(e => { const n = Number(String(e.user)); if (Number.isFinite(n)) idSet.add(n); });
+      const idArr = Array.from(idSet);
+      const nameMap = new Map<number, string | null>();
+      await Promise.all(idArr.map(async (id) => {
+        const name = await fetchUserNameById(id);
+        nameMap.set(id, name);
+      }));
 
-        // 3) AI 리더보드 상위 3 조회 + 이름 매핑
-        const lb = await fetchAiLeaderboard(week);
-        const top3 = (lb?.leaderboard || []).slice(0, 3);
+      const winnersMapped: SimpleWinner[] = top3.map(e => {
+        const n = Number(String(e.user));
+        const fallback = `user ${e.user}`;
+        const name = Number.isFinite(n) && nameMap.has(n) ? (nameMap.get(n) || fallback) : fallback;
+        return { rank: e.rank, name };
+      });
+      setWinners(winnersMapped);
+    } catch (e) {
+      setError("코드 리더보드를 불러오지 못했습니다.");
+      setWinners([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const idSet = new Set<number>();
-        top3.forEach(e => { const n = Number(String(e.user)); if (Number.isFinite(n)) idSet.add(n); });
-        const idArr = Array.from(idSet);
-        const nameMap = new Map<number, string | null>();
-        await Promise.all(idArr.map(async (id) => {
-          const name = await fetchUserNameById(id);
-          nameMap.set(id, name);
-        }));
+  React.useEffect(() => {
+    fetchWinnersData();
+  }, []);
 
-        const winnersMapped: SimpleWinner[] = top3.map(e => {
-          const n = Number(String(e.user));
-          const fallback = `user ${e.user}`;
-          const name = Number.isFinite(n) && nameMap.has(n) ? (nameMap.get(n) || fallback) : fallback;
-          return { rank: e.rank, name };
-        });
-        setWinners(winnersMapped);
-      } catch (e) {
-        setError("코드 리더보드를 불러오지 못했습니다.");
-        setWinners([]);
-      } finally {
-        setLoading(false);
+  // 페이지 가시성 변경 시 새로고침 (챌린지 상태 변경 감지)
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 코드 Winners 섹션 새로고침');
+        fetchWinnersData();
       }
     };
-    run();
+
+    const handleChallengeStatusChange = () => {
+      console.log('🔄 챌린지 상태 변경 감지 - 코드 Winners 섹션 새로고침');
+      fetchWinnersData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('challengeStatusChanged', handleChallengeStatusChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('challengeStatusChanged', handleChallengeStatusChange);
+    };
   }, []);
 
   // 데이터가 없어도 폼은 유지하되, 더미 데이터로 표시

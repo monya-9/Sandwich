@@ -304,6 +304,16 @@ export default function PortfolioProjectDetailPage() {
     const handleVote = async () => {
         if (!item) return;
         
+        // 자기 자신의 작품에는 투표할 수 없음
+        if (isOwner) {
+            setToast({
+                visible: true,
+                message: "자기 작품에는 투표할 수 없습니다.",
+                type: 'error'
+            });
+            return;
+        }
+        
         setVoteLoading(true);
         try {
             const voteData: VoteRequest = {

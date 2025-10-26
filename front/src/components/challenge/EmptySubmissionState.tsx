@@ -7,9 +7,10 @@ type EmptySubmissionStateProps = {
     type: "CODE" | "PORTFOLIO";
     onSubmit: () => void;
     challengeStatus?: string | null;
+    isAdmin?: boolean;
 };
 
-export default function EmptySubmissionState({ type, onSubmit, challengeStatus }: EmptySubmissionStateProps) {
+export default function EmptySubmissionState({ type, onSubmit, challengeStatus, isAdmin = false }: EmptySubmissionStateProps) {
     const isCode = type === "CODE";
     const isEnded = challengeStatus === "ENDED";
     
@@ -34,7 +35,7 @@ export default function EmptySubmissionState({ type, onSubmit, challengeStatus }
                     )
                 }
             </p>
-            {!isEnded && (
+            {!isEnded && !isAdmin && (
                 <CTAButton as="button" onClick={onSubmit}>
                     첫 번째 제출하기 🚀
                 </CTAButton>

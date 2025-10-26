@@ -246,6 +246,42 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             });
         }
         
+        // 🔥 포트폴리오 챌린지만 있고 코드 챌린지가 없으면 코드 챌린지 섹션을 맨 앞에 추가
+        if (portfolioUse && !codeUse) {
+            result.unshift({
+                id: 11100, // 더미 ID
+                type: "CODE",
+                title: "이번 주 코드 챌린지",
+                subtitle: "🔄 준비 중",
+                description: (
+                    <div className="space-y-2 text-[13.5px] leading-6 text-neutral-500 dark:text-neutral-400">
+                        <p>이번 주 코드 챌린지를 준비하고 있습니다.</p>
+                        <p className="text-[13px]">곧 새로운 챌린지가 시작됩니다. 조금만 기다려주세요! 🚀</p>
+                    </div>
+                ),
+                ctaLabel: "준비 중",
+                ctaHref: "#",
+            });
+        }
+        
+        // 🔥 코드 챌린지만 있고 포트폴리오 챌린지가 없으면 포트폴리오 챌린지 섹션을 맨 뒤에 추가
+        if (codeUse && !portfolioUse) {
+            result.push({
+                id: 22200, // 더미 ID
+                type: "PORTFOLIO",
+                title: "이번 달 포트폴리오 챌린지",
+                subtitle: "🔄 준비 중",
+                description: (
+                    <div className="space-y-2 text-[13.5px] leading-6 text-neutral-500 dark:text-neutral-400">
+                        <p>이번 달 포트폴리오 챌린지를 준비하고 있습니다.</p>
+                        <p className="text-[13px]">곧 새로운 챌린지가 시작됩니다. 조금만 기다려주세요! 🚀</p>
+                    </div>
+                ),
+                ctaLabel: "준비 중",
+                ctaHref: "#",
+            });
+        }
+        
         // 챌린지가 하나도 없으면 더미 데이터 반환
         return result.length > 0 ? result : dummyChallenges;
     } catch (error) {

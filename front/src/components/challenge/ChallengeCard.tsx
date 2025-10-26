@@ -89,7 +89,7 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                 {item.summary && (
                     <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-lg">
                         <div className="font-medium text-neutral-700 dark:text-neutral-200 mb-2 text-sm">📋 문제 설명</div>
-                        <div className="text-[13px] leading-6 text-neutral-700 dark:text-neutral-300 whitespace-pre-line">
+                        <div className="text-[13px] leading-6 text-neutral-700 dark:text-neutral-300 whitespace-pre-line max-h-[120px] overflow-y-auto">
                             {item.summary}
                         </div>
                     </div>

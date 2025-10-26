@@ -80,6 +80,23 @@ const MainPage = () => {
   useEffect(() => {
     const loadProjects = async () => {
       setLoadingProjects(true);
+      
+      // 캐시 키 생성
+      const cacheKey = `projects:${selectedUploadTime}`;
+      
+      // 캐시에서 먼저 복원 (즉시 표시)
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached && isInitialLoad) {
+          const parsedCache = JSON.parse(cached) as Project[];
+          if (Array.isArray(parsedCache) && parsedCache.length > 0) {
+            setActualProjects(parsedCache);
+          }
+        }
+      } catch (e) {
+        // 캐시 복원 실패 시 무시
+      }
+      
       try {
         // 업로드 시간을 API 파라미터로 변환
         let uploadedWithin: '24h' | '7d' | '1m' | '3m' | undefined;
@@ -93,11 +110,10 @@ const MainPage = () => {
           uploadedWithin = '3m';
         }
 
-        // 초기 로딩: 30개만 빠르게 로드
-        const initialSize = isInitialLoad ? 30 : 500;
+        // 최적화: 필요한 만큼만 로드 (100개로 제한)
         const response = await fetchProjectFeed({
           page: 0,
-          size: initialSize,
+          size: 100,
           uploadedWithin,
         });
 
@@ -117,33 +133,13 @@ const MainPage = () => {
           }));
 
           setActualProjects(projectsWithMeta);
-          setIsInitialLoad(false); // 첫 로딩 완료
-
-          // 백그라운드에서 나머지 프로젝트 로드 (초기 로딩인 경우에만)
-          if (initialSize === 30) {
-            setTimeout(async () => {
-              try {
-                const fullResponse = await fetchProjectFeed({
-                  page: 0,
-                  size: 500,
-                  uploadedWithin,
-                });
-                const fullProjects = fullResponse.content || [];
-                if (fullProjects.length > 0) {
-                  const fullProjectIds = fullProjects.map(p => p.id);
-                  const fullMetaData = await fetchProjectsMeta(fullProjectIds);
-                  const fullProjectsWithMeta = fullProjects.map(project => ({
-                    ...project,
-                    likes: fullMetaData[project.id]?.likes || 0,
-                    comments: fullMetaData[project.id]?.comments || 0,
-                    views: fullMetaData[project.id]?.views || 0,
-                  }));
-                  setActualProjects(fullProjectsWithMeta);
-                }
-              } catch (error) {
-                console.error('추가 프로젝트 로딩 실패:', error);
-              }
-            }, 100);
+          setIsInitialLoad(false);
+          
+          // 캐시에 저장
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithMeta));
+          } catch (e) {
+            // sessionStorage 저장 실패 시 무시
           }
         } else {
           setActualProjects([]);
@@ -162,18 +158,22 @@ const MainPage = () => {
     };
 
     loadProjects();
-  }, [selectedUploadTime]);
+  }, [selectedUploadTime, isInitialLoad]);
 
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
-    setLoadingReco(true);
-    setRecoError(null);
-    setIsNewUser(false);
-    fetchUserRecommendations(userId)
-      .then(async (response) => {
+    
+    const loadRecommendations = async () => {
+      setLoadingReco(true);
+      setRecoError(null);
+      setIsNewUser(false);
+      
+      try {
+        const response = await fetchUserRecommendations(userId);
+        
         // total이 0이면 신규 유저로 판단하여 기본 최신순 프로젝트 사용
         if (response.total === 0) {
-          setIsNewUser(true); // 신규 유저 플래그 설정
+          setIsNewUser(true);
           setRecoProjects(null);
           if (cacheKey) {
             try { sessionStorage.removeItem(cacheKey); } catch {}
@@ -182,35 +182,31 @@ const MainPage = () => {
         }
 
         const sortedByScore = [...response.data].sort((a, b) => b.score - a.score);
-        // 초기에는 50개만 빠르게 로드
-        const feed = await fetchProjectFeed({ page: 0, size: 50, sort: 'latest' });
+        
+        // 최적화: 필요한 만큼만 로드 (100개로 제한)
+        const feed = await fetchProjectFeed({ page: 0, size: 100, sort: 'latest' });
         const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
         const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
+        
         setRecoProjects(mapped);
+        
+        // 캐시에 저장
         if (cacheKey) {
-          try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); } catch {}
-        }
-
-        // 백그라운드에서 전체 데이터 로드
-        setTimeout(async () => {
-          try {
-            const fullFeed = await fetchProjectFeed({ page: 0, size: 500, sort: 'latest' });
-            const fullById = new Map<number, Project>((fullFeed.content || []).map((p: Project) => [p.id, p]));
-            const fullMapped: Project[] = sortedByScore.map(i => fullById.get(i.project_id)).filter((p): p is Project => !!p);
-            setRecoProjects(fullMapped);
-            if (cacheKey) {
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(fullMapped)); } catch {}
-            }
-          } catch (error) {
-            console.error('추가 추천 프로젝트 로딩 실패:', error);
+          try { 
+            sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
+          } catch {
+            // sessionStorage 저장 실패 시 무시
           }
-        }, 100);
-      })
-      .catch(() => {
-        // 실패 시 에러 메시지 표시
+        }
+      } catch (error) {
+        console.error('추천 프로젝트 로딩 실패:', error);
         setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      })
-      .finally(() => setLoadingReco(false));
+      } finally {
+        setLoadingReco(false);
+      }
+    };
+    
+    loadRecommendations();
   }, [userId, isLoggedIn, cacheKey]);
 
   const handleOpenSortModal = () => {

@@ -1,6 +1,6 @@
 // MainProjectGrid.tsx
 // 카드 형태로 프로젝트 리스트 보여주는 영역 (재사용 가능하게 title props로 제목 받기)
-import React from 'react';
+import React, { memo } from 'react';
 import ProjectCard from './ProjectCard';
 import { Project } from '../../types/Project';
 
@@ -10,7 +10,7 @@ type MainProjectGridProps = {
   onOpenSortModal?: () => void;
 };
 
-const MainProjectGrid: React.FC<MainProjectGridProps> = ({ title, projects, onOpenSortModal }) => {
+const MainProjectGrid: React.FC<MainProjectGridProps> = memo(({ title, projects, onOpenSortModal }) => {
   return (
     <section className="px-3 py-4 md:px-5 md:py-5 lg:px-6 lg:py-6">
       <div className="flex justify-between items-center mb-3 md:mb-4">
@@ -33,6 +33,13 @@ const MainProjectGrid: React.FC<MainProjectGridProps> = ({ title, projects, onOp
       </div>
     </section>
   );
-};
+}, (prevProps, nextProps) => {
+  // title이나 projects 배열이 동일하면 리렌더링 방지
+  return prevProps.title === nextProps.title &&
+         prevProps.projects.length === nextProps.projects.length &&
+         prevProps.projects.every((p, i) => p.id === nextProps.projects[i]?.id);
+});
+
+MainProjectGrid.displayName = 'MainProjectGrid';
 
 export default MainProjectGrid;
