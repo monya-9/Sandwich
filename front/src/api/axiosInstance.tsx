@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosHeaders, AxiosRequestConfig } from "axios";
 import { getV3Token } from "../lib/recaptchaV3";
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE || "/api",
+    baseURL: "/api",
     withCredentials: true,
 });
 
@@ -86,7 +86,7 @@ function isRefreshable401(error: AxiosError) {
 let isRefreshing = false;
 let pendingQueue: Array<(token: string | null) => void> = [];
 
-const REFRESH_ENDPOINT = `${process.env.REACT_APP_API_BASE || "/api"}/auth/refresh`;
+const REFRESH_ENDPOINT = "/api/auth/refresh";
 
 function resolveQueue(token: string | null) {
     pendingQueue.forEach((cb) => cb(token));
@@ -109,6 +109,8 @@ api.interceptors.response.use(
         if (original?._retry) return Promise.reject(error);
 
         if (!isRefreshable401(error)) {
+            // refresh token이 없으면 그냥 에러 반환 (로그인하지 않은 상태)
+            // 페이지 새로고침하지 않음
             return Promise.reject(error);
         }
 
@@ -167,14 +169,15 @@ api.interceptors.response.use(
             // ✅ 리프레시 실패 시 자동 로그아웃
             console.warn('[AUTH] 리프레시 토큰 실패, 자동 로그아웃 처리');
             try {
-                // AuthContext의 logout 함수 호출
                 const { clearAllUserData } = await import('../utils/tokenStorage');
                 clearAllUserData();
                 
-                // 페이지 새로고침으로 AuthContext 상태 초기화
+                // AuthContext 상태 초기화를 위해 새로고침
                 window.location.reload();
             } catch (logoutError) {
                 console.error('[AUTH] 자동 로그아웃 실패:', logoutError);
+                // 실패해도 페이지 새로고침
+                window.location.reload();
             }
             
             return Promise.reject(e);
