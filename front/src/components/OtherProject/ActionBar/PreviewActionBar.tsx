@@ -24,27 +24,11 @@ interface PreviewActionBarProps {
 }
 
 export default function PreviewActionBar({ onCommentClick, project }: PreviewActionBarProps) {
-	const normalizeBase = (u?: string) => {
-		let s = String(u || "").trim();
-		if (!s) return "";
-		if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`;
-		return s.replace(/\/$/, "");
-	};
-	const cloudfrontBase = normalizeBase(process.env.REACT_APP_CLOUDFRONT_BASE as any);
-	const numericPath = project.ownerId && project.id ? `/${project.ownerId}/${project.id}/` : undefined;
-	const cfUrl = numericPath ? (cloudfrontBase ? `${cloudfrontBase}${numericPath}` : numericPath) : undefined;
-	const serverShare = project.shareUrl || undefined;
-
-	const ensureIndexHtml = (u?: string) => {
-		if (!u) return undefined;
-		if (/index\.html$/i.test(u)) return u;
-		if (/\/\d+\/\d+\/?$/.test(u) || /\/$/.test(u)) return u.replace(/\/?$/, "/index.html");
-		return u;
-	};
-
-	const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
-	const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
-	const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl) || (typeof window !== "undefined" ? window.location.href : "#");
+	// 백엔드에서 제공하는 shareUrl 사용 (이미 올바른 CloudFront URL)
+	const shareUrlFinal = project.shareUrl?.replace(/\/$/, "") || undefined;
+	
+	// 라이브/QR용: index.html 추가
+	const liveUrl = shareUrlFinal ? `${shareUrlFinal}/index.html` : (typeof window !== "undefined" ? window.location.href : "#");
 
 	return (
 		<aside className="flex flex-col items-center gap-4">
