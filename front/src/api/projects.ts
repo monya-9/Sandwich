@@ -69,7 +69,10 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
   }
 
   const url = `/projects?${searchParams.toString()}`;
-  const response = await api.get(url);
+  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
+  const response = await api.get(url, {
+    headers: { 'X-Skip-Auth-Refresh': '1' }
+  });
   return response.data;
 };
 
@@ -78,7 +81,10 @@ export const fetchUserProjects = async (userId: number, page = 0, size = 20): Pr
   try {
     return await fetchProjectFeed({ authorId: userId, page, size, sort: 'latest' });
   } catch {
-    const response = await api.get(`/projects/user/${userId}?page=${page}&size=${size}`);
+    // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
+    const response = await api.get(`/projects/user/${userId}?page=${page}&size=${size}`, {
+      headers: { 'X-Skip-Auth-Refresh': '1' }
+    });
     return response.data;
   }
 };
@@ -87,7 +93,10 @@ export const fetchUserProjects = async (userId: number, page = 0, size = 20): Pr
  * 프로젝트 상세 조회
  */
 export const fetchProjectDetail = async (projectId: number): Promise<Project> => {
-  const response = await api.get(`/projects/${projectId}`);
+  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
+  const response = await api.get(`/projects/${projectId}`, {
+    headers: { 'X-Skip-Auth-Refresh': '1' }
+  });
   return response.data;
 };
 
@@ -125,6 +134,9 @@ export interface ProjectMetaSummary {
 export const fetchProjectsMeta = async (projectIds: number[]): Promise<Record<number, ProjectMetaSummary>> => {
   if (projectIds.length === 0) return {};
   const idsParam = projectIds.join(',');
-  const response = await api.get(`/projects/meta/summary?ids=${idsParam}`);
+  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
+  const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
+    headers: { 'X-Skip-Auth-Refresh': '1' }
+  });
   return response.data;
 };
