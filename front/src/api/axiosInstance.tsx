@@ -26,6 +26,16 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
     recaptchaInstalled = true;
 
     api.interceptors.request.use(async (config) => {
+        // ✅ Public API 체크: X-Skip-Auth-Refresh 헤더가 있으면 처리 건너뛰기
+        const headers: any = config.headers;
+        const isPublicApi = headers?.get 
+            ? headers.get('X-Skip-Auth-Refresh') === '1'
+            : (headers?.['X-Skip-Auth-Refresh'] === '1' || headers?.['x-skip-auth-refresh'] === '1');
+        
+        if (isPublicApi) {
+            return config; // Public API는 인증 관련 처리 없이 바로 반환
+        }
+
         // 1) 토큰 자동 부착(기존 로직 유지)
         const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
         if (token) config.headers = setAuthHeader(config.headers, token);
@@ -75,18 +85,26 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
                 const match = Object.entries(actionMap).find(([path]) => url.startsWith(path));
                 if (match) {
                     const [, action] = match;
-                    const v3token = await getV3Token(action);
-                    const headers: any = config.headers || {};
-                    if (headers instanceof AxiosHeaders || typeof headers.set === "function") {
-                        headers.set("X-Recaptcha-Token", v3token);
-                    } else {
-                        headers["X-Recaptcha-Token"] = v3token;
+                    try {
+                        const v3token = await getV3Token(action);
+                        if (v3token) {
+                            const h: any = config.headers || {};
+                            if (h instanceof AxiosHeaders || typeof h.set === "function") {
+                                h.set("X-Recaptcha-Token", v3token);
+                            } else {
+                                h["X-Recaptcha-Token"] = v3token;
+                            }
+                            config.headers = h;
+                        }
+                    } catch (v3Error) {
+                        // v3 토큰 발급 실패해도 서버에서 RECAPTCHA_FAIL 로 처리되므로 요청은 그대로 진행
+                        console.warn('[Recaptcha] v3 token 발급 실패:', v3Error);
                     }
-                    config.headers = headers;
                 }
             }
-        } catch {
-            // v3 토큰 발급 실패해도 서버에서 RECAPTCHA_FAIL 로 처리되므로 요청은 그대로 진행
+        } catch (error) {
+            // 전체 interceptor 처리 실패해도 요청은 진행
+            console.warn('[Request Interceptor] 처리 중 오류 발생:', error);
         }
 
         return config;
