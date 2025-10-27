@@ -121,7 +121,6 @@ export async function fetchChallenges(
     params,
     withCredentials: true,
     timeout: 8000,
-    headers: { 'X-Skip-Auth-Refresh': '1' },
   });
   return response.data;
 }
@@ -133,7 +132,6 @@ export async function fetchChallengeDetail(challengeId: number): Promise<any> {
   const response = await api.get(`/challenges/${challengeId}`, {
     withCredentials: true,
     timeout: 8000,
-    headers: { 'X-Skip-Auth-Refresh': '1' },
   });
   return response.data;
 }
