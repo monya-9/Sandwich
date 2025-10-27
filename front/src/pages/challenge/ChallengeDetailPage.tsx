@@ -23,6 +23,7 @@ import { deleteChallenge } from "../../api/challengeApi";
 import Toast from "../../components/common/Toast";
 import { getMe } from "../../api/users";
 import { fetchChallengeSubmissions } from "../../api/submissionApi";
+import api from "../../api/axiosInstance";
 
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
@@ -346,8 +347,8 @@ export default function ChallengeDetailPage() {
     useEffect(() => {
         const loadCurrentUser = async () => {
             try {
-                const me = await getMe();
-                setCurrentUserId(me.id);
+                const { data } = await api.get('/users/me');
+                setCurrentUserId(data.id);
             } catch (error) {
                 console.error('사용자 정보 로드 실패:', error);
                 setCurrentUserId(null);

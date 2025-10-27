@@ -43,10 +43,35 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
             }
         }
 
-        // 3) reCAPTCHA v3: 지정 경로에만 헤더 자동 부착
+        // 3) 챌린지 관련 GET 요청에 자동으로 X-Skip-Auth-Refresh 헤더 추가
+        const url = String(config.url || "");
+        const method = (config.method || 'get').toLowerCase();
+        const isChallengeReadRequest = method === 'get' && (
+            url.includes('/challenges') ||
+            url.includes('/ext/reco') ||
+            url.includes('/users/me') ||
+            url.includes('/me/credits') ||
+            url.includes('/me/rewards') ||
+            url.includes('/likes') ||
+            url.includes('/comments') ||
+            url.includes('/users/') ||
+            url.includes('/profiles/') ||
+            url.includes('/members/')
+        );
+        
+        if (isChallengeReadRequest) {
+            const headers: any = config.headers || {};
+            if (headers instanceof AxiosHeaders || typeof headers.set === "function") {
+                headers.set("X-Skip-Auth-Refresh", "1");
+            } else {
+                headers["X-Skip-Auth-Refresh"] = "1";
+            }
+            config.headers = headers;
+        }
+
+        // 4) reCAPTCHA v3: 지정 경로에만 헤더 자동 부착
         try {
             if (typeof window !== "undefined") {
-                const url = String(config.url || "");
                 const match = Object.entries(actionMap).find(([path]) => url.startsWith(path));
                 if (match) {
                     const [, action] = match;
