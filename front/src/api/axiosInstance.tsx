@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosHeaders, AxiosRequestConfig } from "axios";
 import { getV3Token } from "../lib/recaptchaV3";
 
 const api = axios.create({
-    baseURL: "/api",
+    baseURL: process.env.REACT_APP_API_BASE || "/api",
     withCredentials: true,
 });
 
@@ -86,7 +86,7 @@ function isRefreshable401(error: AxiosError) {
 let isRefreshing = false;
 let pendingQueue: Array<(token: string | null) => void> = [];
 
-const REFRESH_ENDPOINT = `api/auth/refresh`;
+const REFRESH_ENDPOINT = `${process.env.REACT_APP_API_BASE || "/api"}/auth/refresh`;
 
 function resolveQueue(token: string | null) {
     pendingQueue.forEach((cb) => cb(token));
