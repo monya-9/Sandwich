@@ -16,7 +16,6 @@ import com.sandwich.SandWich.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -37,9 +36,6 @@ public class ProjectService {
     private final S3Uploader s3Uploader;
     private final FollowRepository followRepository;
     private final Clock clock;
-
-    @Value("${cloudfront.domain}")
-    private String cloudFrontDomain;
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
@@ -67,17 +63,16 @@ public class ProjectService {
         // 1차 저장
         Project saved = projectRepository.save(project);
 
-        // CloudFront URL 생성 (공유용: 슬래시 없음)
-        String shareUrl = "https://" + cloudFrontDomain + "/" + user.getId() + "/" + saved.getId();
-        saved.setShareUrl(shareUrl);
+        // 서버에서 공유 URL 생성 및 저장
+        String previewUrl = "https://sandwich.com/" + user.getUsername() + "/" + saved.getId();
+        saved.setShareUrl(previewUrl);
 
-        // QR 코드 생성 및 업로드 조건 체크 (QR용: index.html 포함)
+        // QR 코드 생성 및 업로드 조건 체크
         if (request.getQrCodeEnabled() != null && request.getQrCodeEnabled()) {
-            String qrUrl = shareUrl + "/index.html";
-            log.info("[QR 생성] 시작 - qrUrl: {}", qrUrl);
-            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(qrUrl, 300, 300);
+            log.info("[QR 생성] 시작 - previewUrl: {}", previewUrl);
+            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(previewUrl, 300, 300);
             log.info("[QR 생성] 완료 - {} 바이트", qrImage.length);
-            String qrImageUrl = s3Uploader.uploadQrImage(qrImage);
+            String qrImageUrl = s3Uploader.uploadQrImage(qrImage);  // ⚠️ S3Uploader 주입 필요
             saved.setQrImageUrl(qrImageUrl);
             log.info("[QR 업로드] 완료 - S3 URL: {}", qrImageUrl);
         }
@@ -85,7 +80,7 @@ public class ProjectService {
         // 다시 저장 (공유 URL + QR 이미지 포함)
         projectRepository.save(saved);
 
-        return new ProjectResponse(saved.getId(), shareUrl);
+        return new ProjectResponse(saved.getId(), previewUrl);
     }
 
     @Transactional(readOnly = true)
