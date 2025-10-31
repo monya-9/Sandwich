@@ -157,6 +157,7 @@ public class AdminChallengeController {
                 .ruleJson(c.getRuleJson() == null ? "{}" : c.getRuleJson().toString())
                 .submissionCount(subCnt)
                 .voteCount(voteCnt)
+                .selectedIdx(c.getSelectedIdx())
                 .build();
     }
 
