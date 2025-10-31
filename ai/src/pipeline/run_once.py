@@ -8,10 +8,6 @@ def mask_dsn(url: str) -> str:
     # postgresql+psycopg2://user:pass@host:5432/db?... → 비번 마스킹
     return re.sub(r'(://[^:/\s]+:)[^@]+(@)', r'\1****\2', url)
 
-# SQLAlchemy/urllib 상세 로그
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)   # SQL 로그 원하면 DEBUG
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
 # --- 부트스트랩: 경로/환경 세팅
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))  # src/를 최우선으로
