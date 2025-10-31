@@ -55,6 +55,7 @@ public class AdminChallengeQueryService {
             var content = filtered.stream()
                     .map(c -> AdminChallengeDtos.ListItem.builder()
                             .id(c.getId())
+                            .selectedIdx(c.getSelectedIdx())
                             .type(c.getType())
                             .title(c.getTitle())
                             .status(c.getStatus())

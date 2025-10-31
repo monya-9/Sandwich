@@ -80,6 +80,7 @@ public class AdminChallengeService {
         c.setEndAt(req.getEndAt());
         c.setVoteStartAt(req.getVoteStartAt());
         c.setVoteEndAt(req.getVoteEndAt());
+        c.setSelectedIdx(req.getSelectedIdx());
         c.setStatus(req.getStatus() == null ? ChallengeStatus.DRAFT : req.getStatus());
 
         validateWindow(c);
@@ -103,6 +104,7 @@ public class AdminChallengeService {
         if (req.getVoteStartAt() != null) c.setVoteStartAt(req.getVoteStartAt());
         if (req.getVoteEndAt() != null) c.setVoteEndAt(req.getVoteEndAt());
         if (req.getStatus() != null) c.setStatus(req.getStatus());
+        if (req.getSelectedIdx() != null) c.setSelectedIdx(req.getSelectedIdx());
 
         validateWindow(c);
         audit("PATCH_CHALLENGE", "CHALLENGE", id, req); // no-op
