@@ -5,6 +5,7 @@ import api from "./axiosInstance";
 export interface CommentResponse {
   id: number;
   comment: string;
+  userId: number;
   username: string;
   profileImageUrl?: string;
   createdAt: string;

@@ -209,17 +209,17 @@ export default function CodeSubmissionListPage() {
         // 백엔드 데이터 우선 사용
         if (challengeData?.title) {
             const title = challengeData.title.replace(/^코드 챌린지:\s*/, "");
-            return `샌드위치 코드 챌린지 투표: ${title}`;
+            return `샌드위치 코드 챌린지: ${title}`;
         }
         
         // AI 데이터 백업 사용
         if (weeklyData?.title) {
             const title = weeklyData.title.replace(/^코드 챌린지:\s*/, "");
-            return `샌드위치 코드 챌린지 투표: ${title}`;
+            return `샌드위치 코드 챌린지: ${title}`;
         }
         
         // 기본값
-        return `샌드위치 코드 챌린지 투표: 챌린지 #${id}`;
+        return `샌드위치 코드 챌린지: 챌린지 #${id}`;
     };
 
     return (
@@ -265,9 +265,11 @@ export default function CodeSubmissionListPage() {
                                 key={safeId}
                                 submission={{
                                     id: submissionId,
+                                    authorId: submission.owner?.userId,
                                     authorInitial: (submission.owner?.username || `U${submissionId}`).charAt(0).toUpperCase(),
                                     authorName: submission.owner?.username || `제출자 ${submissionId}`,
                                     authorRole: submission.owner?.position || "개발자",
+                                    authorProfileImageUrl: submission.owner?.profileImageUrl,
                                     title: submission.title || `제출물 #${submissionId}`,
                                     desc: submission.desc || `언어: ${submission.language || 'Unknown'} | 총점: ${submission.totalScore || 0}`,
                                     likes: likeInfo.count,

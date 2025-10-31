@@ -1,14 +1,16 @@
 // src/components/challenge/common/SubmissionCard.tsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart, Eye, MessageSquare } from "lucide-react";
 import { SectionCard } from "./index";
 
 export interface SubmissionCardData {
     id: number;
+    authorId?: number; // 사용자 ID 추가
     authorInitial: string;
     authorName: string;
     authorRole: string;
+    authorProfileImageUrl?: string; // 프로필 이미지 URL 추가
     teamName?: string;
     title: string;
     summary?: string;  // 포트폴리오용
@@ -30,18 +32,52 @@ interface SubmissionCardProps {
 }
 
 export function SubmissionCard({ submission, onLike, href, actionText = "평가하러 가기 →" }: SubmissionCardProps) {
+    const navigate = useNavigate();
+    
+    // 사용자 프로필로 이동하는 핸들러
+    const handleAuthorClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (submission.authorId) {
+            navigate(`/users/${submission.authorId}`);
+        }
+    };
+    
     return (
-        <Link to={href} className="block">
+        <div className="block">
             <SectionCard bordered className="!p-0 hover:shadow-md transition-shadow bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700">
                 {/* 작성자 정보 - 썸네일 위에 */}
                 <div className="p-4 pb-2">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-[12px] font-bold text-neutral-900 dark:text-neutral-100">
-                            {submission.authorInitial}
+                        {/* 아바타 - 클릭 가능 */}
+                        <div 
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-[12px] font-bold text-neutral-900 dark:text-neutral-100 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+                            onClick={handleAuthorClick}
+                        >
+                            {submission.authorProfileImageUrl ? (
+                                <img 
+                                    src={submission.authorProfileImageUrl}
+                                    alt={submission.authorName}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        target.parentElement!.innerHTML = `<span class="text-[12px] font-bold">${submission.authorInitial}</span>`;
+                                    }}
+                                />
+                            ) : (
+                                <span>{submission.authorInitial}</span>
+                            )}
                         </div>
+                        {/* 사용자명 & 직책 */}
                         <div className="leading-tight">
                             <div className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-100">
-                                {submission.authorName}{submission.teamName ? ` · ${submission.teamName}` : ""}
+                                <span 
+                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={handleAuthorClick}
+                                >
+                                    {submission.authorName}{submission.teamName ? ` · ${submission.teamName}` : ""}
+                                </span>
                             </div>
                             <div className="text-[11px] text-neutral-600 dark:text-neutral-400">{submission.authorRole}</div>
                         </div>
@@ -93,10 +129,15 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
                                 {submission.comments}
                             </span>
                         </div>
-                        <span className="text-[11px] font-semibold text-neutral-900 dark:text-neutral-100">{actionText}</span>
+                        <Link 
+                            to={href} 
+                            className="text-[11px] font-semibold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
+                            {actionText}
+                        </Link>
                     </div>
                 </div>
             </SectionCard>
-        </Link>
+        </div>
     );
 }
