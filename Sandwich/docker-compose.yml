@@ -27,6 +27,8 @@ services:
       APP_WEB_BASE_URL: http://localhost
       MFA_ENABLED: "true"
       MFA_BLOCK_OTP_APIS: "false"
+      WEB_CORS_ALLOWED_ORIGINS: "http://localhost,http://localhost:3000,https://sandwich-dev.com,https://d31vlhzf7p5sqr.cloudfront.net"
+      WEB_CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
     entrypoint:
       - /bin/sh
       - -lc
