@@ -70,24 +70,14 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         boolean trustedNow = deviceTrustService.isTrusted(request);
         System.out.println("### [OAUTH2] isTrusted=" + trustedNow);
 
-        if (rememberFlag && !trustedNow) {
-            deviceTrustService.remember(request, response, user.getId(), deviceName);
-            System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
-        } else if (rememberFlag) {
-            System.out.println("### [OAUTH2] remember skipped (already trusted)");
-        } else {
-            System.out.println("### [OAUTH2] remember skipped (flag=false)");
-        }
-
-
-        // ===== 임시 강제 호출(문제 분리용): 아래 한 줄이 DB insert를 만든다면 파이프라인은 정상 ====
-        deviceTrustService.remember(request, response, user.getId(), "Temp-Force"); // <-- 테스트 후 제거
-        System.out.println("### [OAUTH2] forced remember() called");
-
-        // 정상 경로(플래그 기반)
         if (rememberFlag) {
-            deviceTrustService.remember(request, response, user.getId(), deviceName);
-            System.out.println("### [OAUTH2] remember() called with deviceName=" + deviceName);
+            if (trustedNow) {
+                deviceTrustService.extendCurrentDevice(request, user.getId(), 30); // 아래 B에서 새로 만듭니다.
+                System.out.println("### [OAUTH2] extend trust 30d");
+            } else {
+                deviceTrustService.remember(request, response, user.getId(), deviceName);
+                System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
+            }
         } else {
             System.out.println("### [OAUTH2] remember skipped (flag=false)");
         }
