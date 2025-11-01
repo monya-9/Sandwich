@@ -5,6 +5,7 @@ import { getV3Token } from "../lib/recaptchaV3";
 const api = axios.create({
     baseURL: "/api",
     withCredentials: true,
+    timeout: 30000, // 30초 타임아웃 (504 에러 방지)
 });
 
 /* -------- Authorization 헤더 세팅 -------- */
@@ -39,24 +40,30 @@ function isPublicApiRequest(config: any): boolean {
         const headers: any = config.headers || {};
         let headerValue = null;
         
-        // AxiosHeaders 객체인 경우
+        // 다양한 헤더 객체 타입 지원 (배포 환경 호환성 강화)
+        // 1) AxiosHeaders 객체
         if (headers instanceof AxiosHeaders) {
             headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
         } 
-        // get 메서드가 있는 경우 (다른 Headers 객체)
+        // 2) get 메서드가 있는 Headers 객체
         else if (typeof headers.get === 'function') {
             headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
         } 
-        // 일반 객체인 경우
-        else {
-            headerValue = headers['X-Skip-Auth-Refresh'] || headers['x-skip-auth-refresh'];
+        // 3) 일반 객체 - 직접 접근 (배포 환경에서 가장 안전)
+        else if (headers && typeof headers === 'object') {
+            // 대소문자 모두 체크
+            headerValue = headers['X-Skip-Auth-Refresh'] || 
+                         headers['x-skip-auth-refresh'] ||
+                         headers['X-SKIP-AUTH-REFRESH'];
         }
         
-        if (headerValue === '1') {
-            return true; // 헤더로 명시되어 있으면 즉시 반환
+        // 헤더 값이 '1'이면 public API
+        if (headerValue === '1' || headerValue === 1 || String(headerValue) === '1') {
+            return true;
         }
     } catch (e) {
         // 헤더 체크 실패 시 URL 패턴으로 폴백
+        console.warn('[isPublicApiRequest] 헤더 체크 실패:', e);
     }
     
     // ✅ 2순위: URL 패턴 기반 체크 (헤더 누락 시 안전망)
@@ -115,11 +122,12 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
     recaptchaInstalled = true;
 
     api.interceptors.request.use(async (config) => {
-        // ✅ Public API 체크: URL 패턴 + 헤더 기반 (이중 체크)
+        // ✅ Public API 체크: URL 패턴 + 헤더 기반 (이중 체크) - 먼저 체크해서 불필요한 처리 건너뛰기
         const isPublicApi = isPublicApiRequest(config);
         
         if (isPublicApi) {
-            return config; // Public API는 인증 관련 처리 없이 바로 반환
+            // Public API는 인증/reCAPTCHA 처리 없이 즉시 반환 (성능 최적화)
+            return config;
         }
 
         // 1) 토큰 자동 부착(기존 로직 유지)
@@ -172,7 +180,13 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
                 if (match) {
                     const [, action] = match;
                     try {
-                        const v3token = await getV3Token(action);
+                        // reCAPTCHA 타임아웃 추가 (3초) - 블로킹 방지
+                        const v3tokenPromise = getV3Token(action);
+                        const timeoutPromise = new Promise<string>((_, reject) => 
+                            setTimeout(() => reject(new Error("reCAPTCHA timeout")), 3000)
+                        );
+                        const v3token = await Promise.race([v3tokenPromise, timeoutPromise]);
+                        
                         if (v3token) {
                             const h: any = config.headers || {};
                             if (h instanceof AxiosHeaders || typeof h.set === "function") {
@@ -183,8 +197,8 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
                             config.headers = h;
                         }
                     } catch (v3Error) {
-                        // v3 토큰 발급 실패해도 서버에서 RECAPTCHA_FAIL 로 처리되므로 요청은 그대로 진행
-                        console.warn('[Recaptcha] v3 token 발급 실패:', v3Error);
+                        // v3 토큰 발급 실패/타임아웃해도 서버에서 RECAPTCHA_FAIL 로 처리되므로 요청은 그대로 진행
+                        console.warn('[Recaptcha] v3 token 발급 실패/타임아웃:', v3Error);
                     }
                 }
             }

@@ -143,10 +143,40 @@ export interface ProjectMetaSummary {
 
 export const fetchProjectsMeta = async (projectIds: number[]): Promise<Record<number, ProjectMetaSummary>> => {
   if (projectIds.length === 0) return {};
-  const idsParam = projectIds.join(',');
-  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
-  const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
-    headers: { 'X-Skip-Auth-Refresh': '1' }
-  });
-  return response.data;
+  
+  // ✅ 배치 처리: ID가 많으면 여러 번 나눠서 요청 (504 타임아웃 방지)
+  const BATCH_SIZE = 10; // 한 번에 최대 10개씩 처리
+  const results: Record<number, ProjectMetaSummary> = {};
+  
+  try {
+    if (projectIds.length <= BATCH_SIZE) {
+      // 작은 경우 한 번에 처리
+      const idsParam = projectIds.join(',');
+      const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
+        headers: { 'X-Skip-Auth-Refresh': '1' },
+        timeout: 15000 // 15초 타임아웃
+      });
+      return response.data || {};
+    } else {
+      // 많은 경우 배치로 나눠서 처리
+      for (let i = 0; i < projectIds.length; i += BATCH_SIZE) {
+        const batch = projectIds.slice(i, i + BATCH_SIZE);
+        const idsParam = batch.join(',');
+        try {
+          const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
+            headers: { 'X-Skip-Auth-Refresh': '1' },
+            timeout: 15000 // 15초 타임아웃
+          });
+          Object.assign(results, response.data || {});
+        } catch (batchError) {
+          // 배치 실패해도 다음 배치는 계속 시도
+          console.warn(`[fetchProjectsMeta] 배치 ${i / BATCH_SIZE + 1} 실패:`, batchError);
+        }
+      }
+      return results;
+    }
+  } catch (error) {
+    console.error('[fetchProjectsMeta] 전체 실패:', error);
+    return {};
+  }
 };

@@ -23,12 +23,17 @@ export type ProjectDetailResponse = {
 };
 
 export async function fetchProjectDetail(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectDetailResponse> {
+  // ✅ public API: 프로젝트 상세는 인증 없이 조회 가능
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
-    const res = await api.get(url);
+    const res = await api.get(url, {
+      headers: { 'X-Skip-Auth-Refresh': '1' }
+    });
     return res.data;
   }
-  const res = await api.get(`/projects/${userId}/${projectId}`);
+  const res = await api.get(`/projects/${userId}/${projectId}`, {
+    headers: { 'X-Skip-Auth-Refresh': '1' }
+  });
   return res.data;
 }
 
@@ -112,13 +117,18 @@ export async function deleteProject(userId: number, projectId: number, baseUrl: 
 export type ProjectContentResponseItem = { id: number; type: "IMAGE" | "TEXT" | "VIDEO"; data: string; order: number };
 
 export async function fetchProjectContents(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectContentResponseItem[]> {
+  // ✅ public API: 프로젝트 컨텐츠는 인증 없이 조회 가능
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents`.replace(/\/+/, "/");
-    const res = await api.get(url);
+    const res = await api.get(url, {
+      headers: { 'X-Skip-Auth-Refresh': '1' }
+    });
     return res.data;
   }
   
-  const res = await api.get(`/projects/${userId}/${projectId}/contents`);
+  const res = await api.get(`/projects/${userId}/${projectId}/contents`, {
+    headers: { 'X-Skip-Auth-Refresh': '1' }
+  });
   return res.data;
 }
 
