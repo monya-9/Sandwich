@@ -10,3 +10,4 @@ caches/
 wrapper/
 daemon/
 native/
+.tmp/
