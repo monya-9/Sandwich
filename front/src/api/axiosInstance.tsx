@@ -5,7 +5,8 @@ import { getV3Token } from "../lib/recaptchaV3";
 const api = axios.create({
     baseURL: "/api",
     withCredentials: true,
-    timeout: 30000, // 30초 타임아웃 (504 에러 방지)
+    timeout: 15000, // 15초 타임아웃 (서버 응답이 너무 느릴 때 빠르게 실패 처리)
+    // ⚠️ 주의: 개별 API 호출에서 timeout을 명시하면 그 값이 우선됨
 });
 
 /* -------- Authorization 헤더 세팅 -------- */
@@ -34,84 +35,90 @@ function isPublicApiRequest(config: any): boolean {
     const url = String(config.url || '').toLowerCase();
     const method = String(config.method || 'get').toUpperCase();
     
-    // ✅ 1순위: 헤더 기반 체크 (모든 메서드, 가장 신뢰성 높음)
-    // 헤더가 있으면 무조건 public API로 처리 (배포 환경 호환성 최고)
-    try {
-        const headers: any = config.headers || {};
-        let headerValue = null;
+    // ✅ 1순위: URL 패턴 기반 체크 (가장 빠르고 확실 - 핫 개발자처럼!)
+    // GET 메서드이고 Public API 패턴이면 즉시 반환
+    if (method === 'GET') {
+        const publicApiPatterns = [
+            // 프로젝트 (가장 자주 사용)
+            /^\/projects(\?|$)/,                          // GET /api/projects
+            /^\/projects\/\d+(\?|$)/,                    // GET /api/projects/{id} (단일 ID)
+            /^\/projects\/\d+\/\d+(\?|$)/,               // GET /api/projects/{userId}/{projectId}
+            /^\/projects\/\d+\/\d+\/contents(\?|$)/,     // GET /api/projects/{userId}/{projectId}/contents
+            /^\/projects\/user\/\d+(\?|$)/,              // GET /api/projects/user/{userId}
+            /^\/projects\/meta\/summary(\?|$)/,          // GET /api/projects/meta/summary
+            
+            // 댓글
+            /^\/comments\//,
+            
+            // 챌린지
+            /^\/challenges(\?|$)/,
+            /^\/challenges\/\d+(\?|$)/,
+            /^\/challenges\/\d+\/leaderboard(\?|$)/,
+            
+            // 사용자 프로필
+            /^\/users\/\d+(\?|$)/,
+            /^\/users\/\d+\/representative-careers(\?|$)/,
+            /^\/users\/\d+\/follow-counts(\?|$)/,
+            
+            // 프로필
+            /^\/profiles\/\d+\/collection-count(\?|$)/,
+            
+            // 검색
+            /^\/search\/accounts(\?|$)/,
+            
+            // Discovery
+            /^\/discovery\/hot-developers(\?|$)/,
+            
+            // 메타 정보
+            /^\/meta\//,
+        ];
         
-        // 다양한 헤더 객체 타입 지원 (배포 환경 호환성 강화)
-        // 1) AxiosHeaders 객체
-        if (headers instanceof AxiosHeaders) {
-            headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
-        } 
-        // 2) get 메서드가 있는 Headers 객체
-        else if (typeof headers.get === 'function') {
-            headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
-        } 
-        // 3) 일반 객체 - 직접 접근 (배포 환경에서 가장 안전)
-        else if (headers && typeof headers === 'object') {
-            // 대소문자 모두 체크
-            headerValue = headers['X-Skip-Auth-Refresh'] || 
-                         headers['x-skip-auth-refresh'] ||
-                         headers['X-SKIP-AUTH-REFRESH'];
+        if (publicApiPatterns.some(pattern => pattern.test(url))) {
+            return true; // URL 패턴으로 즉시 인식 (헤더 체크 없음!)
         }
-        
-        // 헤더 값이 '1'이면 public API
-        if (headerValue === '1' || headerValue === 1 || String(headerValue) === '1') {
-            return true;
-        }
-    } catch (e) {
-        // 헤더 체크 실패 시 URL 패턴으로 폴백
-        console.warn('[isPublicApiRequest] 헤더 체크 실패:', e);
     }
     
-    // ✅ 2순위: URL 패턴 기반 체크 (헤더 누락 시 안전망)
-    // 인증/로그인 관련 API (모든 메서드 허용)
+    // ✅ 2순위: 인증/로그인 관련 API (모든 메서드 허용)
     const authApiPatterns = [
-        /^\/auth\/(login|signup|refresh)$/,          // POST /api/auth/{login|signup|refresh}
-        /^\/auth\/otp\//,                             // POST /api/auth/otp/**
-        /^\/email\//,                                 // POST /api/email/**
-        /^\/auth\/check-email(\?|$)/,                 // GET /api/auth/check-email
+        /^\/auth\/(login|signup|refresh)$/,
+        /^\/auth\/otp\//,
+        /^\/email\//,
+        /^\/auth\/check-email(\?|$)/,
     ];
     
     if (authApiPatterns.some(pattern => pattern.test(url))) {
         return true;
     }
     
-    // GET 메서드만 추가 체크 (일반 조회 API)
-    if (method !== 'GET') return false;
+    // ✅ 3순위: 헤더 기반 체크 (명시적 신호가 있을 때만 - 빠른 URL 패턴 체크 후)
+    try {
+        const headers: any = config.headers || {};
+        let headerValue = null;
+        
+        // 가장 빠른 방식: 직접 접근 먼저 시도
+        if (headers && typeof headers === 'object') {
+            headerValue = headers['X-Skip-Auth-Refresh'] || 
+                         headers['x-skip-auth-refresh'] ||
+                         headers['X-SKIP-AUTH-REFRESH'];
+        }
+        
+        // AxiosHeaders나 get 메서드가 있는 경우만 추가 체크 (느림)
+        if (!headerValue) {
+            if (headers instanceof AxiosHeaders) {
+                headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
+            } else if (typeof headers.get === 'function') {
+                headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
+            }
+        }
+        
+        if (headerValue === '1' || headerValue === 1 || String(headerValue) === '1') {
+            return true;
+        }
+    } catch (e) {
+        // 헤더 체크 실패는 무시 (URL 패턴으로 이미 대부분 처리됨)
+    }
     
-    // 핵심 Public API 패턴만 유지 (최소한의 안전망)
-    // 주의: 백엔드 SecurityConfig 변경 시 여기도 업데이트 필요!
-    const publicApiPatterns = [
-        // 프로젝트 (가장 자주 사용)
-        /^\/projects(\?|$)/,                          // GET /api/projects
-        /^\/projects\/\d+\/\d+(\?|$)/,                // GET /api/projects/{userId}/{id}
-        /^\/projects\/meta\/summary(\?|$)/,           // GET /api/projects/meta/summary
-        
-        // 댓글
-        /^\/comments\//,                              // GET /api/comments/**
-        
-        // 챌린지
-        /^\/challenges(\?|$)/,                        // GET /api/challenges
-        /^\/challenges\/\d+(\?|$)/,                   // GET /api/challenges/{id}
-        /^\/challenges\/\d+\/leaderboard(\?|$)/,      // GET /api/challenges/{id}/leaderboard
-        
-        // 사용자 프로필
-        /^\/users\/\d+(\?|$)/,                        // GET /api/users/{id}
-        
-        // 검색
-        /^\/search\/accounts(\?|$)/,                  // GET /api/search/accounts
-        
-        // Discovery
-        /^\/discovery\/hot-developers(\?|$)/,         // GET /api/discovery/hot-developers
-        
-        // 메타 정보
-        /^\/meta\//,                                  // GET /api/meta/**
-    ];
-    
-    return publicApiPatterns.some(pattern => pattern.test(url));
+    return false;
 }
 
 /* -------- reCAPTCHA v3 자동 부착 활성화 -------- */

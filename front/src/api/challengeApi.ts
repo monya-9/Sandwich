@@ -117,6 +117,7 @@ export async function fetchChallenges(
   if (type) params.type = type;
   if (status) params.status = status;
   
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   const response = await api.get('/challenges', {
     params,
     withCredentials: true,
@@ -129,6 +130,7 @@ export async function fetchChallenges(
  * 특정 챌린지 상세 조회
  */
 export async function fetchChallengeDetail(challengeId: number): Promise<any> {
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   const response = await api.get(`/challenges/${challengeId}`, {
     withCredentials: true,
     timeout: 8000,
@@ -348,11 +350,10 @@ export async function fetchPortfolioLeaderboard(
   challengeId: number, 
   limit: number = 10
 ): Promise<LeaderboardResponse> {
-  // ✅ public API: 리더보드는 인증 없이 조회 가능
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   const response = await api.get(`/challenges/${challengeId}/leaderboard`, {
     params: { limit },
     withCredentials: true,
-    headers: { 'X-Skip-Auth-Refresh': '1' }
   });
   
   // API 응답이 { items: [...] } 형태인 경우 { entries: [...] } 형태로 변환

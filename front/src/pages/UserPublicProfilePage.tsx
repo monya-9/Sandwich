@@ -97,7 +97,11 @@ export default function UserPublicProfilePage() {
     let mounted = true;
     (async () => {
       try {
-        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`);
+        // ✅ public API: 대표 커리어는 인증 없이 조회 가능
+        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`, {
+          headers: { 'X-Skip-Auth-Refresh': '1' },
+          timeout: 30000
+        });
         if (mounted) {
           setRepCareers(response.data);
         }
@@ -149,7 +153,11 @@ export default function UserPublicProfilePage() {
 
         // 3. 해당 사용자의 프로젝트가 컬렉션에 저장된 횟수 가져오기
         try {
-          const { data } = await api.get(`/profiles/${userId}/collection-count`);
+          // ✅ public API: 컬렉션 카운트는 인증 없이 조회 가능
+          const { data } = await api.get(`/profiles/${userId}/collection-count`, {
+            headers: { 'X-Skip-Auth-Refresh': '1' },
+            timeout: 30000
+          });
           if (mounted) {
             setPublicCollectionsCount(data?.savedCount || 0);
           }
@@ -159,7 +167,11 @@ export default function UserPublicProfilePage() {
 
         // 4. 팔로워/팔로잉 수 가져오기
         try {
-          const { data } = await api.get(`/users/${userId}/follow-counts`);
+          // ✅ public API: 팔로우 통계는 인증 없이 조회 가능
+          const { data } = await api.get(`/users/${userId}/follow-counts`, {
+            headers: { 'X-Skip-Auth-Refresh': '1' },
+            timeout: 30000
+          });
           if (mounted) {
             setFollowerCount(data?.followerCount || 0);
             setFollowingCount(data?.followingCount || 0);
