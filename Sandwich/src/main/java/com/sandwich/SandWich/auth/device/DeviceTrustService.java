@@ -60,13 +60,13 @@ public class DeviceTrustService {
         addCookie(res,"tdt", secret, 30*24*3600);
         System.out.println("### [TRUST] cookies set tdid/tdt");
     }
-    private void addCookie(HttpServletResponse res,String n,String v,int maxAge){
+    private void addCookie(HttpServletResponse res, String n, String v, int maxAge) {
         Cookie c = new Cookie(n, v);
         c.setHttpOnly(true);
         c.setSecure(true);
         c.setPath("/");
         c.setMaxAge(maxAge);
-        c.setAttribute("SameSite","Lax");
+        c.setAttribute("SameSite", "None");
         res.addCookie(c);
     }
     private String readCookie(HttpServletRequest req, String k){
