@@ -610,13 +610,44 @@ export default function PortfolioProjectDetailPage() {
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2 justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                            {item.owner?.username?.charAt(0).toUpperCase() || 'U'}
+                        {/* 아바타 - 클릭 가능 */}
+                        <div 
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+                            onClick={() => {
+                                if (item.owner?.userId) {
+                                    nav(`/users/${item.owner.userId}`);
+                                }
+                            }}
+                        >
+                            {item.owner?.profileImageUrl ? (
+                                <img 
+                                    src={item.owner.profileImageUrl} 
+                                    alt={item.owner.username}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        target.parentElement!.innerHTML = `<span class="text-[13px] font-bold">${item.owner?.username?.charAt(0).toUpperCase() || 'U'}</span>`;
+                                    }}
+                                />
+                            ) : (
+                                <span>{item.owner?.username?.charAt(0).toUpperCase() || 'U'}</span>
+                            )}
                         </div>
+                        {/* 사용자명 & 직책 */}
                         <div className="leading-tight">
                             <div className="text-[13px] font-semibold text-neutral-900">
-                                {item.owner?.username || '익명'}
-                                {item.teamName ? ` · ${item.teamName}` : ""}
+                                <span 
+                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => {
+                                        if (item.owner?.userId) {
+                                            nav(`/users/${item.owner.userId}`);
+                                        }
+                                    }}
+                                >
+                                    {item.owner?.username || '익명'}
+                                    {item.teamName ? ` · ${item.teamName}` : ""}
+                                </span>
                             </div>
                             <div className="text-[12.5px] text-neutral-600">{item.owner?.position || '개발자'}</div>
                         </div>

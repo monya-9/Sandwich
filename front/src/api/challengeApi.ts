@@ -321,6 +321,7 @@ export type LeaderboardEntry = {
   userId: number;
   userName: string;
   userInitial: string;
+  profileImageUrl?: string;
   teamName?: string;
   totalScore?: number;
   voteCount?: number;
@@ -360,6 +361,7 @@ export async function fetchPortfolioLeaderboard(
         userId: item.owner?.userId || 0,
         userName: item.owner?.username || 'Unknown',
         userInitial: item.owner?.username ? item.owner.username.charAt(0) : 'U',
+        profileImageUrl: item.owner?.profileImageUrl || item.owner?.profileImage || item.owner?.avatarUrl || item.owner?.avatar,
         teamName: item.teamName || '',
         totalScore: item.totalScore || 0,
         voteCount: item.voteCount || 0,
@@ -396,9 +398,10 @@ export async function fetchCodeTopSubmitters(
   const submissions = response.data.content || [];
   const entries: LeaderboardEntry[] = submissions.map((sub: any, index: number) => ({
     rank: index + 1,
-    userId: sub.authorId || sub.userId,
-    userName: sub.authorName || sub.userName || 'Unknown',
-    userInitial: (sub.authorName || sub.userName || 'U')[0].toUpperCase(),
+    userId: sub.authorId || sub.userId || sub.owner?.userId,
+    userName: sub.authorName || sub.userName || sub.owner?.username || 'Unknown',
+    userInitial: (sub.authorName || sub.userName || sub.owner?.username || 'U')[0].toUpperCase(),
+    profileImageUrl: sub.authorProfileImageUrl || sub.profileImageUrl || sub.owner?.profileImageUrl || sub.owner?.profileImage || sub.owner?.avatarUrl || sub.owner?.avatar,
     totalScore: sub.likeCount || 0,
     voteCount: sub.likeCount || 0,
   }));

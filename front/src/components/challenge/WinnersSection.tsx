@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { WinnerEntry } from "../../data/Challenge/winnersDummy";
 import { 
     fetchChallenges, 
@@ -18,14 +19,26 @@ const getMedalIcon = (rank: number) => {
 
 /** 1·2·3등 카드(ChallengeDetailPage와 동일한 스타일) */
 function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
+    const navigate = useNavigate();
+    
     // WinnerEntry와 LeaderboardEntry 모두 호환되도록 처리
     const rank = data.rank as 1 | 2 | 3;
     const userInitial = 'userInitial' in data ? data.userInitial : (data as LeaderboardEntry).userInitial;
     const name = 'name' in data ? data.name : (data as LeaderboardEntry).userName;
     const teamName = 'teamName' in data ? data.teamName : undefined;
+    const profileImageUrl = 'profileImageUrl' in data ? data.profileImageUrl : undefined;
+    const userId = 'userId' in data ? data.userId : undefined;
+    
+    console.log('👤 WinnerCard:', { rank, name, profileImageUrl, userId, data });
 
     // 이름과 팀 이름을 "제출자 이름 • 팀 이름" 형식으로 표시
     const displayName = teamName ? `${name} • ${teamName}` : name;
+    
+    const handleProfileClick = () => {
+        if (userId) {
+            navigate(`/users/${userId}`);
+        }
+    };
 
     return (
         <div className="text-center">
@@ -34,13 +47,32 @@ function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
                 {getMedalIcon(rank)}
             </div>
             
-            {/* 이니셜 */}
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-                <span className="font-bold text-lg text-gray-700">{userInitial}</span>
+            {/* 프로필 이미지 또는 이니셜 - 클릭 가능 */}
+            <div 
+                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleProfileClick}
+            >
+                {profileImageUrl ? (
+                    <img 
+                        src={profileImageUrl} 
+                        alt={name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${userInitial}</span>`;
+                        }}
+                    />
+                ) : (
+                    <span className="font-bold text-lg text-gray-700">{userInitial}</span>
+                )}
             </div>
             
-            {/* 이름과 팀 이름 */}
-            <div className="font-semibold text-gray-800 mb-1 break-words text-sm">
+            {/* 이름과 팀 이름 - 클릭 가능 */}
+            <div 
+                className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleProfileClick}
+            >
                 {displayName}
             </div>
             
