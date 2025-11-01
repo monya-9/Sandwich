@@ -2,10 +2,28 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // ---- CORS ----
+    const origin = request.headers.get('Origin') || '';
+    const ALLOW = new Set(['https://sandwich-dev.com']);
+    const cors = (o) => ({
+      'Access-Control-Allow-Origin': ALLOW.has(o) ? o : '',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Vary': 'Origin',
+      // 'Access-Control-Max-Age': '3600', // 필요 시 주석 해제
+    });
+    // Preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: { ...cors(origin) } });
+    }
+
     const json = (obj, status = 200) =>
       new Response(JSON.stringify(obj), {
         status,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          ...cors(origin),
+        },
       });
 
     const needKey = (req) => {
@@ -112,6 +130,7 @@ export default {
       if (limit > 0) items = items.slice(0, limit);
       return json({ week, total: items.length, data: items });
     }
+
     // === 추가: 주간 문제 다건 업서트 ===
     if (url.pathname === "/api/reco/admin/upsert/topics/weekly-multi" && request.method === "POST") {
       if (!needKey(request)) return json({ error: "unauthorized" }, 401);
@@ -146,7 +165,7 @@ export default {
     }
 
     // === 추가: 주간 문제 목록 조회 ===
-    // GET /api/reco/topics/weekly/list?week=2025W43  (week 미지정 시 현재 ISO 주)
+    // GET /api/reco/topics/weekly/list?week=2025W43
     if (url.pathname === "/api/reco/topics/weekly/list" && request.method === "GET") {
       let week = (url.searchParams.get("week") || "").trim();
       if (!week) week = isoWeekStr(new Date());
@@ -257,8 +276,6 @@ export default {
     }
 
     // ========== NEW: monthly topics MULTI upsert (admin) ==========
-    // POST /api/reco/admin/upsert/topics/monthly-multi
-    // { ym, idx:1..3, title, summary, must|must_have, md }
     if (url.pathname === "/api/reco/admin/upsert/topics/monthly-multi" && request.method === "POST") {
       if (!needKey(request)) return json({ error: "unauthorized" }, 401);
       let body; try { body = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
@@ -292,8 +309,6 @@ export default {
     }
 
     // ========== NEW: monthly topics MULTI list ==========
-    // GET /api/reco/topics/monthly/list?ym=YYYY-MM
-    // ym 없으면 updated_at DESC 기준 최신 ym 선택 후 반환
     if (url.pathname === "/api/reco/topics/monthly/list" && request.method === "GET") {
       let ym = (url.searchParams.get("ym") || "").trim();
 
@@ -405,6 +420,7 @@ export default {
       ).bind(week, JSON.stringify(items), now).run();
       return json({ ok: true, week, count: items.length });
     }
+
     // GET /api/reco/judge/leaderboard/:week
     if (request.method === "GET") {
       const m = url.pathname.match(/^\/api\/reco\/judge\/leaderboard\/([A-Za-z0-9W]+)$/);
@@ -419,7 +435,6 @@ export default {
         return json({ week, leaderboard: rs.results ?? [] });
       }
     }
-
 
     // GET /api/reco/judge/result/:week/:user
     if (request.method === "GET") {
@@ -436,66 +451,61 @@ export default {
       }
     }
 
-
     // POST /api/reco/judge/ingest
-if (url.pathname === "/api/reco/judge/ingest" && request.method === "POST") {
-  if (!needKey(request)) return json({ error: "unauthorized" }, 401);
-  let p; try { p = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
+    if (url.pathname === "/api/reco/judge/ingest" && request.method === "POST") {
+      if (!needKey(request)) return json({ error: "unauthorized" }, 401);
+      let p; try { p = await request.json(); } catch { return json({ error: "bad_json" }, 400); }
 
-  // 유효성
-  if (!p || !p.week) return json({ error: "missing_week" }, 400);
-  const DB = env.SANDWICH_RECO;
+      if (!p || !p.week) return json({ error: "missing_week" }, 400);
+      const DB = env.SANDWICH_RECO;
 
-  try {
-    // upsert 준비
-    const stmts = [];
-    for (const e of (p.leaderboard || [])) {
-      stmts.push(
-        DB.prepare(
-          `INSERT INTO weekly_ranks
-           (week,user,rank,score,accuracy,time_med_sec,time_mean_sec,time_p95_sec,mem_med_mb,mem_p95_mb)
-           VALUES (?,?,?,?,?,?,?,?,?,?)
-           ON CONFLICT(week,user) DO UPDATE SET
-             rank=excluded.rank, score=excluded.score, accuracy=excluded.accuracy,
-             time_med_sec=excluded.time_med_sec, time_mean_sec=excluded.time_mean_sec,
-             time_p95_sec=excluded.time_p95_sec, mem_med_mb=excluded.mem_med_mb, mem_p95_mb=excluded.mem_p95_mb`
-        ).bind(
-          p.week, e.user, e.rank, e.score, e.accuracy,
-          e.time_med_sec ?? null, e.time_mean_sec ?? null, e.time_p95_sec ?? null,
-          e.mem_med_mb ?? null, e.mem_p95_mb ?? null
-        )
-      );
-    }
-    for (const r of (p.results || [])) {
-      stmts.push(
-        DB.prepare(
-          `INSERT INTO weekly_results
-           (week,user,passed_all,message,first_fail_case,reason,hint,diff)
-           VALUES (?,?,?,?,?,?,?,?)
-           ON CONFLICT(week,user) DO UPDATE SET
-             passed_all=excluded.passed_all, message=excluded.message,
-             first_fail_case=excluded.first_fail_case, reason=excluded.reason,
-             hint=excluded.hint, diff=excluded.diff`
-        ).bind(
-          p.week, r.user, r.passed_all ? 1 : 0, r.message,
-          r.first_fail_case ?? null, r.reason ?? null, r.hint ?? null, r.diff ?? null
-        )
-      );
-    }
+      try {
+        const stmts = [];
+        for (const e of (p.leaderboard || [])) {
+          stmts.push(
+            DB.prepare(
+              `INSERT INTO weekly_ranks
+               (week,user,rank,score,accuracy,time_med_sec,time_mean_sec,time_p95_sec,mem_med_mb,mem_p95_mb)
+               VALUES (?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(week,user) DO UPDATE SET
+                 rank=excluded.rank, score=excluded.score, accuracy=excluded.accuracy,
+                 time_med_sec=excluded.time_med_sec, time_mean_sec=excluded.time_mean_sec,
+                 time_p95_sec=excluded.time_p95_sec, mem_med_mb=excluded.mem_med_mb, mem_p95_mb=excluded.mem_p95_mb`
+            ).bind(
+              p.week, e.user, e.rank, e.score, e.accuracy,
+              e.time_med_sec ?? null, e.time_mean_sec ?? null, e.time_p95_sec ?? null,
+              e.mem_med_mb ?? null, e.mem_p95_mb ?? null
+            )
+          );
+        }
+        for (const r of (p.results || [])) {
+          stmts.push(
+            DB.prepare(
+              `INSERT INTO weekly_results
+               (week,user,passed_all,message,first_fail_case,reason,hint,diff)
+               VALUES (?,?,?,?,?,?,?,?)
+               ON CONFLICT(week,user) DO UPDATE SET
+                 passed_all=excluded.passed_all, message=excluded.message,
+                 first_fail_case=excluded.first_fail_case, reason=excluded.reason,
+                 hint=excluded.hint, diff=excluded.diff`
+            ).bind(
+              p.week, r.user, r.passed_all ? 1 : 0, r.message,
+              r.first_fail_case ?? null, r.reason ?? null, r.hint ?? null, r.diff ?? null
+            )
+          );
+        }
 
-    // D1 batch는 너무 크면 실패할 수 있음 → 40개씩 끊어서 실행
-    let wrote = 0;
-    for (let i = 0; i < stmts.length; i += 40) {
-      const chunk = stmts.slice(i, i + 40);
-      const res = await DB.batch(chunk);
-      wrote += res.length;
+        let wrote = 0;
+        for (let i = 0; i < stmts.length; i += 40) {
+          const chunk = stmts.slice(i, i + 40);
+          const res = await DB.batch(chunk);
+          wrote += res.length;
+        }
+        return json({ ok: true, wrote });
+      } catch (err) {
+        return json({ error: "d1_batch_failed", detail: String(err) }, 500);
+      }
     }
-    return json({ ok: true, wrote });
-  } catch (err) {
-    // 에러 원인 확인용 상세 반환
-    return json({ error: "d1_batch_failed", detail: String(err) }, 500);
-  }
-}
 
     return json({ error: "not_found" }, 404);
   },

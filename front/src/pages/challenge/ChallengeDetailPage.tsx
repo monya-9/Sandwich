@@ -113,6 +113,7 @@ function AIScoringList({ items }: { items?: { label: string; weight: number }[] 
 
 /* ---------- TOP Winners Component ---------- */
 function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challengeId: number }) {
+    const navigate = useNavigate();
     const [winners, setWinners] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -233,6 +234,8 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
         winners.find(w => w.rank === 3)
     ].filter(Boolean) as LeaderboardEntry[];
 
+    console.log('🏆 ChallengeDetailPage Winners:', orderedWinners);
+
     return (
         <div className="mb-6">
             <h2 className="text-xl font-bold mb-4 text-center">
@@ -240,21 +243,49 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
             </h2>
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="flex justify-between items-start w-full">
-                    {orderedWinners.map((winner) => (
-                        <div key={winner.userId} className="flex-1 flex justify-center">
+                    {orderedWinners.map((winner) => {
+                        console.log('👤 Winner:', { rank: winner.rank, userName: winner.userName, profileImageUrl: winner.profileImageUrl });
+                        return (<div key={winner.userId} className="flex-1 flex justify-center">
                             <div className="text-center">
                                 {/* 메달 아이콘 */}
                                 <div className="mb-2 text-3xl">
                                     {getMedalIcon(winner.rank)}
                                 </div>
                                 
-                                {/* 이니셜 */}
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                    <span className="font-bold text-lg text-gray-700">{winner.userInitial}</span>
+                                {/* 프로필 이미지 또는 이니셜 - 클릭 가능 */}
+                                <div 
+                                    className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => {
+                                        if (winner.userId) {
+                                            navigate(`/users/${winner.userId}`);
+                                        }
+                                    }}
+                                >
+                                    {winner.profileImageUrl ? (
+                                        <img 
+                                            src={winner.profileImageUrl} 
+                                            alt={winner.userName}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.style.display = 'none';
+                                                target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${winner.userInitial}</span>`;
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="font-bold text-lg text-gray-700">{winner.userInitial}</span>
+                                    )}
                                 </div>
                                 
-                                {/* 이름과 팀 이름 */}
-                                <div className="font-semibold text-gray-800 mb-1 break-words text-sm">
+                                {/* 이름과 팀 이름 - 클릭 가능 */}
+                                <div 
+                                    className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => {
+                                        if (winner.userId) {
+                                            navigate(`/users/${winner.userId}`);
+                                        }
+                                    }}
+                                >
                                     {winner.teamName ? `${winner.userName} • ${winner.teamName}` : winner.userName}
                                 </div>
                                 
@@ -265,8 +296,8 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
                                      `${winner.voteCount || 0}표`}
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        </div>);
+                    })}
                 </div>
             </div>
         </div>

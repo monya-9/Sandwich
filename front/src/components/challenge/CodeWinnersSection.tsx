@@ -1,10 +1,11 @@
 // src/components/challenge/CodeWinnersSection.tsx
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchChallenges, fetchChallengeDetail } from "../../api/challengeApi";
 import { fetchAiLeaderboard } from "../../api/aiJudgeApi";
-import { fetchUserNameById } from "../../api/userMini";
+import { fetchUserById } from "../../api/userMini";
 
-type SimpleWinner = { rank: number; name: string };
+type SimpleWinner = { rank: number; name: string; profileImageUrl?: string; userId?: number };
 
 const getMedalIcon = (rank: number) => {
   switch (rank) {
@@ -16,14 +17,43 @@ const getMedalIcon = (rank: number) => {
 };
 
 function WinnerCard({ w }: { w: SimpleWinner }) {
+  const navigate = useNavigate();
   const initial = String(w.name || "?").charAt(0).toUpperCase();
+  
+  const handleProfileClick = () => {
+    if (w.userId) {
+      navigate(`/users/${w.userId}`);
+    }
+  };
+  
   return (
     <div className="text-center">
       <div className="mb-2 text-3xl">{getMedalIcon(w.rank)}</div>
-      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-        <span className="font-bold text-lg text-gray-700">{initial}</span>
+      <div 
+        className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={handleProfileClick}
+      >
+        {w.profileImageUrl ? (
+          <img 
+            src={w.profileImageUrl} 
+            alt={w.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${initial}</span>`;
+            }}
+          />
+        ) : (
+          <span className="font-bold text-lg text-gray-700">{initial}</span>
+        )}
       </div>
-      <div className="font-semibold text-gray-800 mb-1 break-words text-sm">{w.name}</div>
+      <div 
+        className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={handleProfileClick}
+      >
+        {w.name}
+      </div>
       <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">{w.rank}위</div>
     </div>
   );
@@ -68,17 +98,21 @@ export default function CodeWinnersSection() {
       const idSet = new Set<number>();
       top3.forEach(e => { const n = Number(String(e.user)); if (Number.isFinite(n)) idSet.add(n); });
       const idArr = Array.from(idSet);
-      const nameMap = new Map<number, string | null>();
+      const userMap = new Map<number, { name: string | null; profileImageUrl?: string }>();
       await Promise.all(idArr.map(async (id) => {
-        const name = await fetchUserNameById(id);
-        nameMap.set(id, name);
+        const user = await fetchUserById(id);
+        const name = user?.nickname || user?.displayName || user?.username || user?.userName || null;
+        const profileImageUrl = user?.profileImageUrl || user?.profileImage || user?.avatarUrl || user?.avatar;
+        console.log(`👤 User ${id}:`, { name, profileImageUrl, rawUser: user });
+        userMap.set(id, { name, profileImageUrl });
       }));
 
       const winnersMapped: SimpleWinner[] = top3.map(e => {
         const n = Number(String(e.user));
         const fallback = `user ${e.user}`;
-        const name = Number.isFinite(n) && nameMap.has(n) ? (nameMap.get(n) || fallback) : fallback;
-        return { rank: e.rank, name };
+        const userInfo = Number.isFinite(n) && userMap.has(n) ? userMap.get(n)! : { name: null, profileImageUrl: undefined };
+        const name = userInfo.name || fallback;
+        return { rank: e.rank, name, profileImageUrl: userInfo.profileImageUrl, userId: Number.isFinite(n) ? n : undefined };
       });
       setWinners(winnersMapped);
     } catch (e) {
