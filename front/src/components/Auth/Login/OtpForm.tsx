@@ -81,11 +81,14 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
         setError("");
 
         try {
+            // ✅ public API: OTP 인증은 인증 없이 호출
             const res = await api.post("/auth/otp/verify", {
                 pendingId,
                 code: otpCode.trim(),
                 rememberDevice,
                 deviceName: "Web Browser"
+            }, {
+                headers: { 'X-Skip-Auth-Refresh': '1' }
             });
 
             const { accessToken, refreshToken } = res.data;
@@ -120,7 +123,10 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
         setError("");
 
         try {
-            await api.post("/auth/otp/resend", { pendingId });
+            // ✅ public API: OTP 재전송은 인증 없이 호출
+            await api.post("/auth/otp/resend", { pendingId }, {
+                headers: { 'X-Skip-Auth-Refresh': '1' }
+            });
             
             // 🆕 재전송 성공 시 타이머 리셋
             setTimeLeft(300);

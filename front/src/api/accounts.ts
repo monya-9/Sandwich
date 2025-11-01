@@ -65,7 +65,10 @@ export const searchAccounts = async (params: AccountSearchParams): Promise<Accou
   
   try {
     const url = `/search/accounts?${searchParams.toString()}`;
-    const response = await api.get<AccountSearchResponse>(url);
+    // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
+    const response = await api.get<AccountSearchResponse>(url, {
+      headers: { 'X-Skip-Auth-Refresh': '1' }
+    });
     return response.data;
   } catch (error: any) {
     console.error('계정 검색 API 호출 실패:', error);

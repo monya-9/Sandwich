@@ -348,9 +348,11 @@ export async function fetchPortfolioLeaderboard(
   challengeId: number, 
   limit: number = 10
 ): Promise<LeaderboardResponse> {
+  // ✅ public API: 리더보드는 인증 없이 조회 가능
   const response = await api.get(`/challenges/${challengeId}/leaderboard`, {
     params: { limit },
     withCredentials: true,
+    headers: { 'X-Skip-Auth-Refresh': '1' }
   });
   
   // API 응답이 { items: [...] } 형태인 경우 { entries: [...] } 형태로 변환

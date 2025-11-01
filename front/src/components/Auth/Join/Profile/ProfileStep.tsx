@@ -72,12 +72,15 @@ const ProfileStep = ({ onPrev }: Props) => {
       console.log({ position, positionId, interests, interestIds });
 
       // ✅ /auth/signup 호출 시, v3 토큰은 인터셉터가 자동으로 X-Recaptcha-Token 헤더로 부착됨
+      // ✅ public API: 회원가입은 인증 없이 호출
       await api.post("/auth/signup", {
         email,
         password,
         nickname,
         positionId,
         interestIds,
+      }, {
+        headers: { 'X-Skip-Auth-Refresh': '1' }
       });
 
       setToast({

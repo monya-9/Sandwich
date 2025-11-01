@@ -1,7 +1,7 @@
 // pages/GitHubCallback.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axiosInstance";
 import Toast from "../../components/common/Toast";
 
 const GitHubCallback = () => {
@@ -16,10 +16,13 @@ const GitHubCallback = () => {
         const code = new URL(window.location.href).searchParams.get("code");
 
         if (code) {
-            axios
-                .post(`${process.env.REACT_APP_API_BASE || "/api"}/auth/signup`, {
+            // ✅ public API: 소셜 로그인은 인증 없이 호출
+            api
+                .post("/auth/signup", {
                     provider: "github",
                     code,
+                }, {
+                    headers: { 'X-Skip-Auth-Refresh': '1' }
                 })
                 .then((res) => {
                     const { accessToken, refreshToken } = res.data;

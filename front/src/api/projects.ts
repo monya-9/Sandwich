@@ -70,10 +70,20 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
 
   const url = `/projects?${searchParams.toString()}`;
   // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
-  const response = await api.get(url, {
-    headers: { 'X-Skip-Auth-Refresh': '1' }
-  });
-  return response.data;
+  try {
+    const response = await api.get(url, {
+      headers: { 'X-Skip-Auth-Refresh': '1' }
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('[fetchProjectFeed] API 호출 실패:', {
+      url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+    throw error;
+  }
 };
 
 /** 사용자별 프로젝트 목록 (우선 /projects?authorId=, 실패 시 /projects/user/) */

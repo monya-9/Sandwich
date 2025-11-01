@@ -18,6 +18,95 @@ function setAuthHeader(headers: AxiosRequestConfig["headers"], token: string) {
     return headers;
 }
 
+/* -------- Public API 판단 (헤더 우선 + URL 패턴 폴백) -------- */
+/**
+ * Public API 판단 로직
+ * 
+ * 우선순위:
+ * 1. 헤더 기반 체크 (X-Skip-Auth-Refresh) - 명시적이고 신뢰성 높음
+ * 2. URL 패턴 기반 체크 - 헤더 누락 시 안전망 역할
+ * 
+ * 참고: SecurityConfig.java의 permitAll 경로와 일치해야 함
+ * 위치: Sandwich/Sandwich/src/main/java/.../SecurityConfig.java
+ */
+function isPublicApiRequest(config: any): boolean {
+    const url = String(config.url || '').toLowerCase();
+    const method = String(config.method || 'get').toUpperCase();
+    
+    // ✅ 1순위: 헤더 기반 체크 (모든 메서드, 가장 신뢰성 높음)
+    // 헤더가 있으면 무조건 public API로 처리 (배포 환경 호환성 최고)
+    try {
+        const headers: any = config.headers || {};
+        let headerValue = null;
+        
+        // AxiosHeaders 객체인 경우
+        if (headers instanceof AxiosHeaders) {
+            headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
+        } 
+        // get 메서드가 있는 경우 (다른 Headers 객체)
+        else if (typeof headers.get === 'function') {
+            headerValue = headers.get('X-Skip-Auth-Refresh') || headers.get('x-skip-auth-refresh');
+        } 
+        // 일반 객체인 경우
+        else {
+            headerValue = headers['X-Skip-Auth-Refresh'] || headers['x-skip-auth-refresh'];
+        }
+        
+        if (headerValue === '1') {
+            return true; // 헤더로 명시되어 있으면 즉시 반환
+        }
+    } catch (e) {
+        // 헤더 체크 실패 시 URL 패턴으로 폴백
+    }
+    
+    // ✅ 2순위: URL 패턴 기반 체크 (헤더 누락 시 안전망)
+    // 인증/로그인 관련 API (모든 메서드 허용)
+    const authApiPatterns = [
+        /^\/auth\/(login|signup|refresh)$/,          // POST /api/auth/{login|signup|refresh}
+        /^\/auth\/otp\//,                             // POST /api/auth/otp/**
+        /^\/email\//,                                 // POST /api/email/**
+        /^\/auth\/check-email(\?|$)/,                 // GET /api/auth/check-email
+    ];
+    
+    if (authApiPatterns.some(pattern => pattern.test(url))) {
+        return true;
+    }
+    
+    // GET 메서드만 추가 체크 (일반 조회 API)
+    if (method !== 'GET') return false;
+    
+    // 핵심 Public API 패턴만 유지 (최소한의 안전망)
+    // 주의: 백엔드 SecurityConfig 변경 시 여기도 업데이트 필요!
+    const publicApiPatterns = [
+        // 프로젝트 (가장 자주 사용)
+        /^\/projects(\?|$)/,                          // GET /api/projects
+        /^\/projects\/\d+\/\d+(\?|$)/,                // GET /api/projects/{userId}/{id}
+        /^\/projects\/meta\/summary(\?|$)/,           // GET /api/projects/meta/summary
+        
+        // 댓글
+        /^\/comments\//,                              // GET /api/comments/**
+        
+        // 챌린지
+        /^\/challenges(\?|$)/,                        // GET /api/challenges
+        /^\/challenges\/\d+(\?|$)/,                   // GET /api/challenges/{id}
+        /^\/challenges\/\d+\/leaderboard(\?|$)/,      // GET /api/challenges/{id}/leaderboard
+        
+        // 사용자 프로필
+        /^\/users\/\d+(\?|$)/,                        // GET /api/users/{id}
+        
+        // 검색
+        /^\/search\/accounts(\?|$)/,                  // GET /api/search/accounts
+        
+        // Discovery
+        /^\/discovery\/hot-developers(\?|$)/,         // GET /api/discovery/hot-developers
+        
+        // 메타 정보
+        /^\/meta\//,                                  // GET /api/meta/**
+    ];
+    
+    return publicApiPatterns.some(pattern => pattern.test(url));
+}
+
 /* -------- reCAPTCHA v3 자동 부착 활성화 -------- */
 let recaptchaInstalled = false;
 /** 특정 경로에 요청 보낼 때 v3 토큰을 X-Recaptcha-Token 으로 자동 부착 */
@@ -26,11 +115,8 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
     recaptchaInstalled = true;
 
     api.interceptors.request.use(async (config) => {
-        // ✅ Public API 체크: X-Skip-Auth-Refresh 헤더가 있으면 처리 건너뛰기
-        const headers: any = config.headers;
-        const isPublicApi = headers?.get 
-            ? headers.get('X-Skip-Auth-Refresh') === '1'
-            : (headers?.['X-Skip-Auth-Refresh'] === '1' || headers?.['x-skip-auth-refresh'] === '1');
+        // ✅ Public API 체크: URL 패턴 + 헤더 기반 (이중 체크)
+        const isPublicApi = isPublicApiRequest(config);
         
         if (isPublicApi) {
             return config; // Public API는 인증 관련 처리 없이 바로 반환
