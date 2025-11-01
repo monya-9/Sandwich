@@ -49,40 +49,61 @@ public class DeployWorkflowService {
         // 3. workflow YAML 생성
         String workflowYaml = """
             name: Deploy Project
-            
+
             on:
               push:
                 branches:
                   - main
-            
+
             env:
               AWS_REGION: ap-northeast-2
               S3_BUCKET: sandwich-user-projects
               USER_ID: ${{ secrets.USER_ID }}
               PROJECT_ID: ${{ secrets.PROJECT_ID }}
               ECS_CONTAINER_NAME: "app-container"
-            
+
             jobs:
               build-and-deploy:
                 runs-on: ubuntu-latest
                 steps:
                   - name: Checkout code
                     uses: actions/checkout@v3
-            
+
                   - name: Install Node.js
                     uses: actions/setup-node@v3
                     with:
                       node-version: '18'
-            
-                  - name: Install dependencies
-                    run: npm install
-            
-                  - name: Build project
-                    run: npm run build
-            
-                  - name: Check build folder contents
-                    run: ls -la build || echo "build 폴더가 없습니다"
-            
+
+                  # package.json이 있을 경우만 install + build 수행
+                  - name: Build (if needed)
+                    run: |
+                      if [ -f package.json ]; then
+                        echo "package.json found — installing dependencies..."
+                        npm ci
+                        if npm run | grep -q " build"; then
+                          echo "build script detected — running npm run build..."
+                          npm run build || true
+                        else
+                          echo "No build script found — skipping build."
+                        fi
+                      else
+                        echo "No package.json found — skipping frontend build."
+                      fi
+
+                  # build / dist / out 중 존재하는 폴더 자동 탐색
+                  - name: Pick deploy dir (build/dist/out or .)
+                    id: pick
+                    run: |
+                      for d in build dist out; do
+                        if [ -d "$d" ]; then
+                          echo "dir=$d" >> $GITHUB_OUTPUT
+                          echo "Detected deploy dir: $d"
+                          exit 0
+                        fi
+                      done
+                      echo "dir=." >> $GITHUB_OUTPUT
+                      echo "No build/dist/out found, deploying repository root (static files)."
+
                   - name: Configure AWS credentials
                     uses: aws-actions/configure-aws-credentials@v3
                     with:
@@ -92,40 +113,35 @@ public class DeployWorkflowService {
 
                   - name: Download additional files from S3
                     run: |
-                      ADDITIONAL_FILES=(
-                        $(aws s3 ls s3://sandwich-user-projects/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/deploy/ --recursive | awk '{print $4}')
-                      )
                       mkdir -p additional
-                      for file in "${ADDITIONAL_FILES[@]}"; do
-                        echo "Downloading $file..."
-                        aws s3 cp s3://sandwich-user-projects/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/deploy/$file additional/$file
-                      done
+                      aws s3 sync "s3://${{ env.S3_BUCKET }}/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/deploy/" additional/ || true
 
                   - name: Create ECS Cluster
                     run: |
                       aws ecs create-cluster --cluster-name sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} || true
-            
+
                   - name: Create ECS Service
                     run: |
-                      aws ecs create-service \\
-                        --cluster sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} \\
-                        --service-name sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} \\
-                        --task-definition sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} \\
-                        --desired-count 1 \\
-                        --launch-type FARGATE \\
+                      aws ecs create-service \
+                        --cluster sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} \
+                        --service-name sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} \
+                        --task-definition sandwich-${{ github.repository_owner }}-${{ github.event.repository.name }} \
+                        --desired-count 1 \
+                        --launch-type FARGATE \
                         --network-configuration "awsvpcConfiguration={subnets=[subnet-0c63ddf51361003c7],securityGroups=[sg-05757f4e3849d99cf],assignPublicIp=ENABLED}" || true
-            
+
                   - name: Login to Amazon ECR
                     uses: aws-actions/amazon-ecr-login@v2
-            
+
                   - name: Create ECR repository if not exists
                     run: |
                       aws ecr describe-repositories --repository-names "sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}" || \
                       aws ecr create-repository --repository-name "sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}"
-            
-                  - name: Build and Push Docker image
+
+                  - name: Build and Push Docker image (only if Dockerfile exists)
                     run: |
                       if [ -f Dockerfile ]; then
+                        echo "Dockerfile found — building image..."
                         IMAGE_TAG=${GITHUB_SHA}
                         ECR_URI=398808282696.dkr.ecr.ap-northeast-2.amazonaws.com/sandwich-user-projects/${{ env.USER_ID }}-${{ env.PROJECT_ID }}
                         docker build -t $ECR_URI:$IMAGE_TAG .
@@ -134,18 +150,29 @@ public class DeployWorkflowService {
                         docker push $ECR_URI:latest
                         echo "[{\\"name\\": \\"${{ env.ECS_CONTAINER_NAME }}\\", \\"imageUri\\": \\"$ECR_URI:$IMAGE_TAG\\"}]" > imagedefinitions.json
                       else
-                        echo "No Dockerfile, skipping Docker build"
+                        echo "No Dockerfile found — skipping Docker build."
                       fi
-            
+
                   - name: Deploy to S3
-                    run: aws s3 sync build/ s3://${{ env.S3_BUCKET }}/${{ env.USER_ID }}/${{ env.PROJECT_ID }} --acl public-read
-            
+                    run: |
+                      SRC="${{ steps.pick.outputs.dir }}"
+                      if [ "$SRC" = "." ]; then
+                        echo "Deploying repository root to S3..."
+                        aws s3 sync . "s3://${{ env.S3_BUCKET }}/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/" \
+                          --exclude ".git/*" --exclude ".github/*" --exclude "node_modules/*"
+                      else
+                        echo "Deploying $SRC folder to S3..."
+                        aws s3 sync "$SRC/" "s3://${{ env.S3_BUCKET }}/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/" --delete
+                      fi
+
                   - name: Invalidate CloudFront cache
                     run: |
+                      echo "Invalidating CloudFront cache..."
                       aws cloudfront create-invalidation \
-                      --distribution-id ${{ secrets.SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID }} \
-                      --paths "/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/*"
+                        --distribution-id ${{ secrets.SANDWICH_USER_CLOUDFRONT_DISTRIBUTION_ID }} \
+                        --paths "/${{ env.USER_ID }}/${{ env.PROJECT_ID }}/*"
             """;
+
 
         // 4. Base64 인코딩 후 커밋
         String base64 = Base64.getEncoder().encodeToString(workflowYaml.getBytes(StandardCharsets.UTF_8));
