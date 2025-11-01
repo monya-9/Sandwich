@@ -5,3 +5,8 @@
 **/.DS_Store
 
 .idea
+
+caches/
+wrapper/
+daemon/
+native/
