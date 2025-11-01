@@ -207,14 +207,58 @@ const MainPage = () => {
           const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
           const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
           
-          setRecoProjects(mapped);
-          
-          // 캐시에 저장
-          if (cacheKey) {
-            try { 
-              sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
-            } catch {
-              // sessionStorage 저장 실패 시 무시
+          // ✅ AI 추천 프로젝트에도 메타 정보 가져오기 (좋아요, 댓글, 조회수)
+          if (mapped.length > 0) {
+            try {
+              const projectIds = mapped.map(p => p.id);
+              const metaData = await fetchProjectsMeta(projectIds);
+              
+              // 메타 정보를 프로젝트에 병합
+              const mappedWithMeta = mapped.map(project => ({
+                ...project,
+                likes: metaData[project.id]?.likes || 0,
+                comments: metaData[project.id]?.comments || 0,
+                views: metaData[project.id]?.views || 0,
+              }));
+              
+              setRecoProjects(mappedWithMeta);
+              
+              // 캐시에 메타 정보 포함된 데이터 저장
+              if (cacheKey) {
+                try { 
+                  sessionStorage.setItem(cacheKey, JSON.stringify(mappedWithMeta)); 
+                } catch {
+                  // sessionStorage 저장 실패 시 무시
+                }
+              }
+            } catch (metaError) {
+              // ✅ 메타 API 실패 시 기본값으로 표시
+              console.warn('AI 추천 프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
+              const mappedWithDefaults = mapped.map(project => ({
+                ...project,
+                likes: project.likes || 0,
+                comments: project.comments || 0,
+                views: project.views || 0,
+              }));
+              setRecoProjects(mappedWithDefaults);
+              
+              // 캐시에 기본값 저장
+              if (cacheKey) {
+                try { 
+                  sessionStorage.setItem(cacheKey, JSON.stringify(mappedWithDefaults)); 
+                } catch {}
+              }
+            }
+          } else {
+            setRecoProjects(mapped);
+            
+            // 캐시에 저장
+            if (cacheKey) {
+              try { 
+                sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
+              } catch {
+                // sessionStorage 저장 실패 시 무시
+              }
             }
           }
         } catch (feedError) {

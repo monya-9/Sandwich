@@ -137,52 +137,129 @@ export interface ProjectMetaSummary {
   comments: number;
 }
 
+// ✅ 중복 요청 방지: 같은 ID들에 대한 요청 추적
+const ongoingMetaRequests = new Map<string, Promise<Record<number, ProjectMetaSummary>>>();
+
 export const fetchProjectsMeta = async (projectIds: number[]): Promise<Record<number, ProjectMetaSummary>> => {
   if (projectIds.length === 0) return {};
   
+  // ✅ 중복 요청 방지: 같은 ID들의 요청이 이미 진행 중이면 대기
+  const requestKey = [...projectIds].sort((a, b) => a - b).join(',');
+  
+  // 진행 중인 요청이 있으면 기다리되, 타임아웃인 경우는 새로 시도
+  const existingRequest = ongoingMetaRequests.get(requestKey);
+  if (existingRequest) {
+    try {
+      // 기존 요청이 성공하면 그 결과 반환
+      return await existingRequest;
+    } catch (error: any) {
+      // 기존 요청이 실패했고, 타임아웃이 아닌 경우에만 삭제하고 새로 시도
+      const isTimeout = error.code === 'ECONNABORTED' && (
+        error.message?.includes('timeout') || 
+        error.message?.includes('exceeded')
+      );
+      if (!isTimeout) {
+        ongoingMetaRequests.delete(requestKey);
+      }
+      // 타임아웃인 경우 기존 요청을 계속 기다리지 않고 새로 시도
+      // (기존 요청은 결국 타임아웃될 것이므로)
+    }
+  }
+  
   // ✅ 배치 처리: ID가 많으면 여러 번 나눠서 요청 (504 타임아웃 방지)
-  const BATCH_SIZE = 5; // 한 번에 최대 5개씩 처리 (서버가 느릴 때 더 작은 배치로)
+  // 배포 환경이 느릴 수 있으므로 배치 크기 줄이고 타임아웃 증가
+  const BATCH_SIZE = 3; // 한 번에 최대 3개씩 처리 (서버가 느릴 때 더 작은 배치로)
   const results: Record<number, ProjectMetaSummary> = {};
   
-  try {
-    if (projectIds.length <= BATCH_SIZE) {
-      // 작은 경우 한 번에 처리
-      const idsParam = projectIds.join(',');
-      // ✅ 헤더 제거 (URL 패턴으로 이미 처리됨 - 핫 개발자처럼!)
-      const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
-        timeout: 10000 // 10초 타임아웃
-      });
-      return response.data || {};
-    } else {
-      // 많은 경우 배치로 나눠서 처리 (순차적으로 - 동시 요청으로 인한 취소 방지)
-      for (let i = 0; i < projectIds.length; i += BATCH_SIZE) {
-        const batch = projectIds.slice(i, i + BATCH_SIZE);
-        const idsParam = batch.join(',');
-        try {
-          // ✅ 헤더 제거 (URL 패턴으로 이미 처리됨 - 핫 개발자처럼!)
-          const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
-            timeout: 10000 // 모든 배치에 동일한 타임아웃
-          });
-          Object.assign(results, response.data || {});
-        } catch (batchError: any) {
-          // AbortError는 정상 취소이므로 무시 (컴포넌트 언마운트 등)
-          if (batchError.name === 'AbortError' || batchError.code === 'ERR_CANCELED' || batchError.code === 'ECONNABORTED') {
-            console.log(`[fetchProjectsMeta] 배치 ${i / BATCH_SIZE + 1} 취소됨 (정상)`);
-            break; // 취소된 경우 전체 중단
+  // 새로운 요청을 Promise로 감싸서 추적
+  const requestPromise = (async () => {
+    try {
+      if (projectIds.length <= BATCH_SIZE) {
+        // 작은 경우 한 번에 처리
+        const idsParam = projectIds.join(',');
+        // ✅ 헤더 제거 (URL 패턴으로 이미 처리됨 - 핫 개발자처럼!)
+        const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
+          timeout: 25000 // 25초 타임아웃 (배포 환경 서버가 느릴 수 있음)
+        });
+        return response.data || {};
+      } else {
+        // 많은 경우 배치로 나눠서 처리 (순차적으로 - 동시 요청으로 인한 취소 방지)
+        for (let i = 0; i < projectIds.length; i += BATCH_SIZE) {
+          const batch = projectIds.slice(i, i + BATCH_SIZE);
+          const idsParam = batch.join(',');
+          try {
+            // ✅ 헤더 제거 (URL 패턴으로 이미 처리됨 - 핫 개발자처럼!)
+            const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
+              timeout: 25000 // 25초 타임아웃 (배포 환경 서버가 느릴 수 있음)
+            });
+            Object.assign(results, response.data || {});
+          } catch (batchError: any) {
+            // ✅ 타임아웃 체크 (여러 방식으로 확인)
+            const isTimeout = 
+              batchError.code === 'ECONNABORTED' && (
+                batchError.message?.includes('timeout') ||
+                batchError.message?.includes('exceeded') ||
+                batchError.config?.timeout
+              );
+            
+            if (isTimeout) {
+              // 타임아웃은 서버 과부하로 인한 것이므로 조용히 처리
+              console.warn(`[fetchProjectsMeta] 배치 ${i / BATCH_SIZE + 1} 타임아웃 (서버 과부하 가능성)`);
+              // 타임아웃은 다음 배치 계속 시도
+              continue;
+            }
+            
+            // ✅ AbortError/취소는 컴포넌트 언마운트나 중복 요청 취소로 인한 정상 취소
+            // (타임아웃이 아닌 경우에만)
+            if (batchError.name === 'AbortError' || batchError.code === 'ERR_CANCELED' || batchError.code === 'ECONNABORTED') {
+              // 실제 타임아웃이 아닌 경우만 취소로 처리
+              if (!batchError.message?.includes('timeout') && !batchError.message?.includes('exceeded')) {
+                console.log(`[fetchProjectsMeta] 배치 ${i / BATCH_SIZE + 1} 취소됨 (컴포넌트 언마운트/중복 요청 취소)`);
+                break; // 취소된 경우 전체 중단
+              }
+            }
+            
+            // 배치 실패해도 다음 배치는 계속 시도
+            console.warn(`[fetchProjectsMeta] 배치 ${i / BATCH_SIZE + 1} 실패:`, batchError);
           }
-          // 배치 실패해도 다음 배치는 계속 시도
-          console.warn(`[fetchProjectsMeta] 배치 ${i / BATCH_SIZE + 1} 실패:`, batchError);
+        }
+        return results;
+      }
+    } catch (error: any) {
+      // ✅ 타임아웃 체크 (여러 방식으로 확인)
+      const isTimeout = 
+        error.code === 'ECONNABORTED' && (
+          error.message?.includes('timeout') ||
+          error.message?.includes('exceeded') ||
+          error.config?.timeout
+        );
+      
+      if (isTimeout) {
+        // 타임아웃은 서버 과부하로 인한 것이므로 조용히 처리
+        console.warn('[fetchProjectsMeta] 전체 타임아웃 (서버 과부하 가능성)');
+        return {};
+      }
+      
+      // ✅ AbortError/취소는 컴포넌트 언마운트나 중복 요청 취소로 인한 정상 취소
+      // (타임아웃이 아닌 경우에만)
+      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
+        // 실제 타임아웃이 아닌 경우만 취소로 처리
+        if (!error.message?.includes('timeout') && !error.message?.includes('exceeded')) {
+          console.log('[fetchProjectsMeta] 요청 취소됨 (컴포넌트 언마운트/중복 요청 취소)');
+          return {};
         }
       }
-      return results;
-    }
-  } catch (error: any) {
-    // AbortError는 정상 취소이므로 무시
-    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
-      console.log('[fetchProjectsMeta] 요청 취소됨 (정상)');
+      
+      console.error('[fetchProjectsMeta] 전체 실패:', error);
       return {};
+    } finally {
+      // 요청 완료 후 추적 해제
+      ongoingMetaRequests.delete(requestKey);
     }
-    console.error('[fetchProjectsMeta] 전체 실패:', error);
-    return {};
-  }
+  })();
+  
+  // 진행 중인 요청으로 등록
+  ongoingMetaRequests.set(requestKey, requestPromise);
+  
+  return requestPromise;
 };

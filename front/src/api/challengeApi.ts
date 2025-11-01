@@ -111,7 +111,8 @@ export async function fetchChallenges(
   page: number = 0,
   size: number = 20,
   type?: ChallengeType,
-  status?: ChallengeStatus
+  status?: ChallengeStatus,
+  config?: { signal?: AbortSignal }
 ): Promise<ChallengeListResponse> {
   const params: any = { page, size };
   if (type) params.type = type;
@@ -129,7 +130,10 @@ export async function fetchChallenges(
 /**
  * 특정 챌린지 상세 조회
  */
-export async function fetchChallengeDetail(challengeId: number): Promise<any> {
+export async function fetchChallengeDetail(
+  challengeId: number,
+  config?: { signal?: AbortSignal }
+): Promise<any> {
   // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   const response = await api.get(`/challenges/${challengeId}`, {
     withCredentials: true,
