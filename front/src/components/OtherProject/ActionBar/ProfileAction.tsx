@@ -13,6 +13,7 @@ interface ProfileActionProps {
   email?: string;
   isOwner?: boolean;
   initialIsFollowing?: boolean;
+  isMobile?: boolean;
 }
 
 export default function ProfileAction({
@@ -23,6 +24,7 @@ export default function ProfileAction({
   email,
   isOwner = false,
   initialIsFollowing,
+  isMobile = false,
 }: ProfileActionProps = {}) {
   const [hover, setHover] = useState(false);
   const [tooltipHover, setTooltipHover] = useState(false);
@@ -144,11 +146,11 @@ export default function ProfileAction({
   );
 
   const avatar = profileImageUrl ? (
-    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full overflow-hidden ring-1 ring-gray-300 focus:outline-none" aria-label="프로필로 이동">
+    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full overflow-hidden ring-1 ring-gray-300 dark:ring-[var(--border-color)] focus:outline-none" aria-label="프로필로 이동">
       <img src={profileImageUrl} alt="avatar" className="w-full h-full object-cover" />
     </button>
   ) : (
-    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center text-2xl ring-1 ring-gray-300 focus:outline-none" aria-label="프로필로 이동">
+    <button type="button" onClick={goProfile} className="w-[72px] h-[72px] rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-gray-700 dark:text-white font-bold flex items-center justify-center text-2xl ring-1 ring-gray-300 dark:ring-[var(--border-color)] focus:outline-none" aria-label="프로필로 이동">
       {(email?.[0] || userName?.[0] || "?").toUpperCase()}
     </button>
   );
@@ -183,22 +185,29 @@ export default function ProfileAction({
       <div ref={containerRef} className="relative">
         {showLoginPrompt && (<LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />)}
 
-        <button ref={btnRef} className="flex flex-col items-center gap-1 group" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={goProfile}>
-          <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center mb-1">
-            <FaUser className="w-7 h-7" />
+        <button ref={btnRef} className={`flex items-center group relative z-50 ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={(e) => { e.stopPropagation(); goProfile(); }}>
+          <div className={`rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
+            <FaUser className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />
           </div>
-          <span className="text-sm text-white font-semibold text-center" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>프로필</span>
+          <span className={`font-semibold text-center ${isMobile ? 'text-xs text-gray-800' : 'text-sm text-white'}`} style={isMobile ? {} : { textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>프로필</span>
       </button>
 
-      {(hover || tooltipHover) && (
+      {(hover || tooltipHover) && !isMobile && (
         <>
+          {/* 브릿지 영역: 버튼과 툴팁 사이의 간격을 메움 */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[70px] z-30"
+            onMouseEnter={() => setTooltipHover(true)}
+            onMouseLeave={() => setTooltipHover(false)}
+          />
           <div
             ref={tooltipRef}
-            className="absolute right-[calc(100%+14px)] rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-center z-50 px-7 py-6 gap-4 w-max min-w-[350px]"
+            className="absolute right-[calc(100%+14px)] rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-center z-40 px-7 py-6 gap-4 w-max min-w-[350px]"
             style={{ top: (cardTopPx ?? 0) + "px" }}
             onMouseEnter={() => setTooltipHover(true)}
             onMouseLeave={() => { setTooltipHover(false); setFollowBtnHover(false); }}
             onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="absolute -right-2 top-5 w-4 h-4 bg-white rotate-45 rounded-[2px]" />
             {avatar}

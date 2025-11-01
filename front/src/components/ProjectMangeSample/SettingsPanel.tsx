@@ -71,13 +71,56 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ backgroundColor, onBackgr
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const inputWrapRef = useRef<HTMLDivElement | null>(null);
 	const [isPickerOpen, setIsPickerOpen] = useState(false);
-	const [hexValue, setHexValue] = useState<string>((backgroundColor || "#FFFFFF").toUpperCase());
+	const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+	const [hexValue, setHexValue] = useState<string>(() => {
+		const defaultColor = document.documentElement.classList.contains('dark') ? "#000000" : "#FFFFFF";
+		const currentColor = backgroundColor || defaultColor;
+		// 라이트모드에서 #000000이면 #FFFFFF로 변경
+		if (!document.documentElement.classList.contains('dark') && currentColor === "#000000") {
+			return "#FFFFFF";
+		}
+		return currentColor.toUpperCase();
+	});
 	const [format, setFormat] = useState<ColorFormat>("HEX");
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
+	// 테마 변경 감지
 	useEffect(() => {
-		setHexValue((backgroundColor || "#FFFFFF").toUpperCase());
-	}, [backgroundColor]);
+		const observer = new MutationObserver(() => {
+			const newIsDarkMode = document.documentElement.classList.contains('dark');
+			setIsDarkMode(newIsDarkMode);
+			
+			// 테마 변경 시 즉시 기본값으로 리셋
+			if (!newIsDarkMode) {
+				// 라이트모드로 변경: 검정색이면 흰색으로
+				if (hexValue === '#000000') {
+					setHexValue('#FFFFFF');
+					onBackgroundColorChange('#FFFFFF');
+				}
+			} else {
+				// 다크모드로 변경: 흰색이면 검정색으로
+				if (hexValue === '#FFFFFF') {
+					setHexValue('#000000');
+					onBackgroundColorChange('#000000');
+				}
+			}
+		});
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		return () => observer.disconnect();
+	}, [hexValue, onBackgroundColorChange]);
+
+	useEffect(() => {
+		const defaultColor = isDarkMode ? "#000000" : "#FFFFFF";
+		const currentColor = backgroundColor || defaultColor;
+		
+		// 라이트모드에서 #000000이면 #FFFFFF로 변경
+		if (!isDarkMode && currentColor === "#000000") {
+			setHexValue("#FFFFFF");
+			onBackgroundColorChange("#FFFFFF");
+		} else {
+			setHexValue(currentColor.toUpperCase());
+		}
+	}, [backgroundColor, isDarkMode, onBackgroundColorChange]);
 
 	const rgb = useMemo(() => hexToRgb(hexValue) || { r: 255, g: 255, b: 255 }, [hexValue]);
 	const hsl = useMemo(() => rgbToHsl(rgb.r, rgb.g, rgb.b), [rgb]);
@@ -139,20 +182,24 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ backgroundColor, onBackgr
 		onBackgroundColorChange(hex);
 	};
 
-	return (
-		<div className="border border-[#ADADAD] rounded-[10px] p-[24px]" ref={containerRef}>
-			<label className="block text-[#ADADAD] text-[20px] mb-1">배경색상 설정</label>
+    return (
+        <div className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded-[10px] p-[24px] bg-white dark:bg-[var(--surface)]" ref={containerRef}>
+            <label className="block text-[#ADADAD] dark:text-white/60 text-[20px] mb-1">배경색상 설정</label>
 			<div className="mb-[24px] relative">
 				<div className="relative" ref={inputWrapRef} onClick={() => setIsPickerOpen(true)}>
-					<div className="absolute top-0 bottom-0 left-[20%] w-px bg-[#D1D5DB] pointer-events-none z-20" />
+                    <div className="absolute top-0 bottom-0 left-[20%] w-px bg-[#D1D5DB] dark:bg-[var(--border-color)] pointer-events-none z-20" />
 					<input
 						type="text"
-						className="w-full h-10 border border-[#ADADAD] rounded pr-3 text-black placeholder:text-[#9CA3AF]"
+                        className="settings-panel-bg-input w-full h-10 border border-[#ADADAD] dark:border-[var(--border-color)] rounded pr-3 text-black dark:text-white placeholder:text-[#9CA3AF] dark:placeholder:text-white/40"
 						style={{
 							paddingLeft: "calc(20% + 12px)",
-							background:
-								`linear-gradient(to right, ${hexValue} 0%, ${hexValue} 20%, transparent 20%, transparent 100%)`
-						}}
+							backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff',
+							color: isDarkMode ? '#ffffff' : '#000000',
+							background: `linear-gradient(to right, ${hexValue} 0%, ${hexValue} 20%, ${isDarkMode ? '#2a2a2a' : '#ffffff'} 20%, ${isDarkMode ? '#2a2a2a' : '#ffffff'} 100%)`,
+							// CSS 변수 무시하고 직접 값 설정
+							'--surface-light': isDarkMode ? '#2a2a2a' : '#ffffff',
+							'--text-primary': isDarkMode ? '#ffffff' : '#000000'
+						} as React.CSSProperties}
 						value={hexValue}
 						onChange={handleTextChange}
 						onBlur={handleBlur}
@@ -160,8 +207,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ backgroundColor, onBackgr
 					/>
 				</div>
 				{isPickerOpen && (
-					<div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg shadow-xl bg-white p-3 border border-[#E5E7EB]">
-						<div className="absolute -top-1 left-10 w-3 h-3 rotate-45 bg-white border-l border-t border-[#E5E7EB]" />
+                    <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg shadow-xl bg-white dark:bg-[var(--surface)] p-3 border border-[#E5E7EB] dark:border-[var(--border-color)]">
+                        <div className="absolute -top-1 left-10 w-3 h-3 rotate-45 bg-white dark:bg-[var(--surface)] border-l border-t border-[#E5E7EB] dark:border-[var(--border-color)]" />
 						<HexColorPicker color={hexValue} onChange={onPick} style={{ width: "100%" }} />
 						<div className="mt-3">
 							<div className="flex items-center gap-2">
@@ -170,33 +217,34 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ backgroundColor, onBackgr
 										color={hexValue}
 										onChange={(v: string) => onPick(v.toUpperCase())}
 										prefixed
-										className="flex-1 h-8 border border-[#D1D5DB] rounded px-2 text-black"
+                                        className="flex-1 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white"
+                                        style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }}
 									/>
 								)}
 								{format === "RGB" && (
 									<div className="flex gap-2">
-										<input className="w-16 h-8 border border-[#D1D5DB] rounded px-2 text-black" value={rgb.r} onChange={(e) => onRgbChange("r", e.target.value)} />
-										<input className="w-16 h-8 border border-[#D1D5DB] rounded px-2 text-black" value={rgb.g} onChange={(e) => onRgbChange("g", e.target.value)} />
-										<input className="w-16 h-8 border border-[#D1D5DB] rounded px-2 text-black" value={rgb.b} onChange={(e) => onRgbChange("b", e.target.value)} />
+                                        <input className="w-16 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white" style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }} value={rgb.r} onChange={(e) => onRgbChange("r", e.target.value)} />
+                                        <input className="w-16 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white" style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }} value={rgb.g} onChange={(e) => onRgbChange("g", e.target.value)} />
+                                        <input className="w-16 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white" style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }} value={rgb.b} onChange={(e) => onRgbChange("b", e.target.value)} />
 									</div>
 								)}
 								{format === "HSL" && (
 									<div className="flex gap-2">
-										<input className="w-16 h-8 border border-[#D1D5DB] rounded px-2 text-black" value={hsl.h} onChange={(e) => onHslChange("h", e.target.value)} />
-										<input className="w-16 h-8 border border-[#D1D5DB] rounded px-2 text-black" value={hsl.s} onChange={(e) => onHslChange("s", e.target.value)} />
-										<input className="w-16 h-8 border border-[#D1D5DB] rounded px-2 text-black" value={hsl.l} onChange={(e) => onHslChange("l", e.target.value)} />
+                                        <input className="w-16 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white" style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }} value={hsl.h} onChange={(e) => onHslChange("h", e.target.value)} />
+                                        <input className="w-16 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white" style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }} value={hsl.s} onChange={(e) => onHslChange("s", e.target.value)} />
+                                        <input className="w-16 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded px-2 text-black dark:text-white" style={{ backgroundColor: isDarkMode ? '#2a2a2a' : '#ffffff', color: isDarkMode ? '#ffffff' : '#000000' }} value={hsl.l} onChange={(e) => onHslChange("l", e.target.value)} />
 									</div>
 								)}
 								<div className="relative">
-									<button type="button" className="w-8 h-8 border border-[#D1D5DB] rounded flex items-center justify-center" onClick={() => setDropdownOpen((v) => !v)}>
+                                    <button type="button" className="w-8 h-8 border border-[#D1D5DB] dark:border-[var(--border-color)] rounded flex items-center justify-center bg-white dark:bg-[var(--surface)] text-black dark:text-white" onClick={() => setDropdownOpen((v) => !v)}>
 										<span className="select-none">▾</span>
 									</button>
 									{dropdownOpen && (
-										<div className="absolute right-0 top-full mt-1 bg-white border border-[#E5E7EB] rounded shadow-md z-10">
+                                        <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded shadow-md z-10">
 											{(["HEX", "RGB", "HSL"] as ColorFormat[]).map((f) => (
 												<button
 													key={f}
-													className={`px-3 py-1 text-sm w-24 text-left hover:bg-gray-100 ${f === format ? "font-semibold" : ""}`}
+                                                    className={`px-3 py-1 text-sm w-24 text-left hover:bg-gray-100 dark:hover:bg-white/5 ${f === format ? "font-semibold" : ""} text-black dark:text-white`}
 													onClick={() => { setFormat(f); setDropdownOpen(false); }}
 												>
 													{f}
@@ -206,13 +254,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ backgroundColor, onBackgr
 									)}
 								</div>
 							</div>
-							<div className="mt-2 text-xs text-[#6B7280] select-none">{format}</div>
+                            <div className="mt-2 text-xs text-[#6B7280] dark:text-white/60 select-none">{format}</div>
 						</div>
 					</div>
 				)}
 			</div>
 
-			<label className="block text-[#ADADAD] text-[20px] mb-1">콘텐츠 간격 설정</label>
+            <label className="block text-[#ADADAD] dark:text-white/60 text-[20px] mb-1">콘텐츠 간격 설정</label>
 			<div className="flex items-center gap-3">
 				<input
 					type="range"
@@ -220,10 +268,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ backgroundColor, onBackgr
 					max={100}
 					step={1}
 					value={contentGapPx}
-					onChange={(e) => onContentGapChange(Number(e.target.value))}
-					className="w-[215px] accent-black"
+                    onChange={(e) => onContentGapChange(Number(e.target.value))}
+                    className="w-[215px] dark:accent-white"
 				/>
-				<span className="text-[15px]">{contentGapPx}px</span>
+                <span className="text-[15px] text-black dark:text-white">{contentGapPx}px</span>
 			</div>
 		</div>
 	);

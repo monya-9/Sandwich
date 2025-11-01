@@ -1,5 +1,5 @@
 // src/components/project/ProjectCard.tsx
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Project } from '../../types/Project';
 import { dummyUsers } from '../../data/dummyUsers';
@@ -10,7 +10,7 @@ type Props = {
     indexInList?: number; // 중복 방지용
 };
 
-const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
+const ProjectCard: React.FC<Props> = memo(({ project, indexInList }) => {
     const navigate = useNavigate();
     const [isHovered, setIsHovered] = useState(false);
     const [imgErr, setImgErr] = useState(false);
@@ -80,19 +80,19 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
     };
 
     return (
-        <div className="relative w-full flex flex-col items-center mb-5">
+        <div className="relative w-full flex flex-col items-center mb-3 md:mb-4 lg:mb-5">
             {/* 이미지 영역(비율 고정) */}
             <div
-                className="relative w-full rounded-[20px] overflow-hidden cursor-pointer"
+                className="relative w-full rounded-xl md:rounded-[18px] lg:rounded-[20px] overflow-hidden cursor-pointer"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleCardClick}
             >
                 {/* 핵심: 비율 고정 */}
-                <div className="relative w-full aspect-[4/3] bg-gray-200">
+                <div className="relative w-full aspect-[4/3] bg-gray-200 dark:bg-gray-700">
                     {imgErr ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                            <span className="text-sm text-gray-500">{(project.title || '프로젝트').slice(0, 14)}</span>
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                            <span className="text-xs md:text-sm text-gray-500 dark:text-gray-300">{(project.title || '프로젝트').slice(0, 14)}</span>
                         </div>
                     ) : (
                         <img
@@ -105,22 +105,22 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
                     )}
 
                     {isHovered && (
-                        <div className="absolute inset-0 bg-black/40 flex items-end justify-start p-4 transition-opacity duration-300">
-                            <p className="text-white text-sm font-medium truncate w-full">{project.title}</p>
+                        <div className="absolute inset-0 bg-black/40 flex items-end justify-start p-2 md:p-3 lg:p-4 transition-opacity duration-300">
+                            <p className="text-white text-xs md:text-sm font-medium truncate w-full">{project.title}</p>
                         </div>
                     )}
                 </div>
             </div>
 
             {/* 작성자 + 정보 영역 */}
-            <div className="w-full mt-1 flex justify-between items-center px-1">
-                <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gray-200 text-xs font-semibold flex items-center justify-center text-gray-700">
+            <div className="w-full mt-1 md:mt-1.5 flex justify-between items-center gap-2 px-0.5 md:px-1">
+                <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
+                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] md:text-xs font-semibold flex items-center justify-center text-gray-700 dark:text-gray-100 flex-shrink-0">
                         {initial}
                     </div>
-                    <span className="text-sm text-black">{username}</span>
+                    <span className="text-xs md:text-sm text-black dark:text-gray-100 truncate overflow-hidden">{username}</span>
                 </div>
-                <div className="text-xs text-gray-600 flex gap-3">
+                <div className="text-[10px] md:text-xs text-gray-600 dark:text-gray-300 flex gap-1.5 md:gap-2 lg:gap-3 flex-shrink-0 whitespace-nowrap">
                     <span>👁 {project.views || 0}</span>
                     <span>♥ {project.likes || 0}</span>
                     <span>💬 {project.comments || 0}</span>
@@ -128,6 +128,14 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
             </div>
         </div>
     );
-};
+}, (prevProps, nextProps) => {
+    // props가 동일하면 리렌더링 방지
+    return prevProps.project.id === nextProps.project.id &&
+           prevProps.project.likes === nextProps.project.likes &&
+           prevProps.project.comments === nextProps.project.comments &&
+           prevProps.project.views === nextProps.project.views;
+});
+
+ProjectCard.displayName = 'ProjectCard';
 
 export default ProjectCard;

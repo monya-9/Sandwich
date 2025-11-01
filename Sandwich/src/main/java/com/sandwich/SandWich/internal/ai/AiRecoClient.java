@@ -57,10 +57,24 @@ public class AiRecoClient {
 
     // === 응답 DTO ===
     public record MonthlyResp(String ym, boolean found, Data data) {
-        public record Data(String title, String summary, java.util.List<String> must_have, String md) {}
+        public record Data(
+                String title,
+                String summary,
+                @com.fasterxml.jackson.annotation.JsonAlias({"must","must_have"})
+                java.util.List<String> must_have,
+                Long updated_at,
+                String md // 있어도 되고 없어도 됨 (없으면 null)
+        ) {}
     }
 
     public record WeeklyResp(String week, boolean found, Data data) {
-        public record Data(String title, String summary, java.util.List<String> must, String md) {}
+        public record Data(
+                String title,
+                String summary,
+                @com.fasterxml.jackson.annotation.JsonAlias({"must","must_have"})
+                java.util.List<String> must_have,
+                Long updated_at,
+                String md
+        ) {}
     }
 }

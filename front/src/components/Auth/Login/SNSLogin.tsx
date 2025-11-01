@@ -1,26 +1,28 @@
 // src/components/Auth/Login/SNSLogin.tsx
 import React from "react";
-import githubIcon from "../../../assets/icons/github.png";
-import googleIcon from "../../../assets/icons/Google.png";
+import { getStaticUrl } from "../../../config/staticBase";
 
 const SNSLogin: React.FC = () => {
+    const API_BASE = process.env.REACT_APP_API_BASE;
     const handleSocialLogin = (provider: "google" | "github") => {
-        // ✅ 바로 백엔드 OAuth2 엔드포인트로 이동
-        window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+    // ✅ 바로 백엔드 OAuth2 엔드포인트로 이동
+    window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;    
     };
 
     return (
         <div className="mt-4">
-            <p className="text-sm text-gray-600">SNS로 간편하게 로그인하기</p>
+            <p className="text-sm text-gray-600 dark:text-white">SNS로 간편하게 로그인하기</p>
             <div className="flex justify-center gap-4 mt-5">
+                <div className="w-8 h-8 bg-transparent dark:bg-white rounded-full flex items-center justify-center cursor-pointer transition-colors">
+                    <img
+                        src={getStaticUrl("assets/icons/github.png")}
+                        alt="GitHub"
+                        className="w-8 h-8 dark:w-6 dark:h-6"
+                        onClick={() => handleSocialLogin("github")}
+                    />
+                </div>
                 <img
-                    src={githubIcon}
-                    alt="GitHub"
-                    className="w-8 h-8 cursor-pointer"
-                    onClick={() => handleSocialLogin("github")}
-                />
-                <img
-                    src={googleIcon}
+                    src={getStaticUrl("assets/icons/Google.png")}
                     alt="Google"
                     className="w-8 h-8 cursor-pointer"
                     onClick={() => handleSocialLogin("google")}

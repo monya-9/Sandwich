@@ -34,6 +34,9 @@ public class Challenge extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "selected_idx")
+    private Integer selectedIdx;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ChallengeType type;
@@ -41,7 +44,6 @@ public class Challenge extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String title;
 
-    /** DB는 jsonb, 여기서는 raw JSON string 으로 보관 */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "rule_json", columnDefinition = "jsonb")
     private JsonNode ruleJson;
@@ -57,6 +59,21 @@ public class Challenge extends BaseEntity {
 
     @Column(name = "vote_end_at")
     private OffsetDateTime voteEndAt;
+
+    @Column(length = 20)
+    private String source;// AI_BATCH | AI_FETCH | AI_PUSH | MANUAL
+
+    @Column(name = "source_ref", length = 100)
+    private String sourceRef;
+
+    @Column(name = "idempotency_key", length = 120, unique = false)
+    private String idempotencyKey;
+
+    @Column(name = "ai_month", length = 7)
+    private String aiMonth; // 'YYYY-MM'
+
+    @Column(name = "ai_week", length = 8)
+    private String aiWeek;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

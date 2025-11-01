@@ -156,27 +156,30 @@ const CollectionsTab: React.FC = () => {
 			<div className="w-full">
 				<Toast visible={!!banner} message={banner || ""} type="success" size="medium" autoClose={2500} closable={true} onClose={() => setBanner(null)} />
 				{/* 상단 안내 박스 */}
-				<button
-					onClick={() => { setEditingId(null); setOpen(true); }}
-					className="mt-6 w-full rounded-[8px] border border-dashed border-[#D1D5DB] bg-[#F8FAFB] px-6 py-8 text-black/80 hover:bg-[#F3F6F8]"
-				>
+                <button
+                    onClick={() => { setEditingId(null); setOpen(true); }}
+                    className="mt-6 w-full rounded-[8px] border border-dashed border-[#D1D5DB] dark:border-[var(--border-color)] bg-[#F8FAFB] dark:bg-[var(--surface)] px-6 py-8 text-black/80 dark:text-white/80 hover:bg-[#F3F6F8] dark:hover:bg-white/5"
+                >
 					<div className="flex flex-col items-center gap-2">
-						<div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#E8F7EE]">
-							<FiPlus className="text-[#068334]" />
+                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#E8F7EE] dark:bg-white/10">
+                            <FiPlus className="text-[#068334]" />
 						</div>
-						<div className="text-[14px] md:text-[15px] font-medium">컬렉션 폴더 추가</div>
-						<div className="text-[12px] md:text-[13px] text-black/60">마음에 드는 작업을 개인별로 분류하여 저장해보세요.</div>
+                        <div className="text-[14px] md:text-[15px] font-medium">컬렉션 폴더 추가</div>
+                        <div className="text-[12px] md:text-[13px] text-black/60 dark:text-white/60">마음에 드는 작업을 개인별로 분류하여 저장해보세요.</div>
 					</div>
 				</button>
 
-				{/* 리스트: 프로젝트 카드 크기와 동일한 그리드/카드 구조 */}
-				<div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-left">
-					{loading ? (
-						<div className="text-[13px] text-black/50 col-span-full text-center py-10">불러오는 중…</div>
-					) : folders.length === 0 ? (
-						<div className="text-[13px] text-black/50 col-span-full text-center py-10">등록된 컬렉션이 없습니다.</div>
-					) : (
-						folders.map((f) => (
+				{loading ? (
+					<div className="min-h-[360px] flex items-center justify-center text-black/60 dark:text-white/60">불러오는 중…</div>
+				) : folders.length === 0 ? (
+					<div className="min-h-[360px] flex flex-col items-center justify-center text-center">
+						<div className="mt-6 text-[16px] md:text-[18px] text-black/80 dark:text-white/80">아직 공개 컬렉션이 없습니다.</div>
+					</div>
+				) : (
+					<>
+						{/* 리스트: 프로젝트 카드 크기와 동일한 그리드/카드 구조 */}
+						<div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-left">
+							{folders.map((f) => (
 							<div key={f.id}>
 								<div className="relative rounded-xl overflow-hidden cursor-pointer group" onMouseLeave={() => setMenuOpenId(null)} onClick={() => navigate(`/collections/${f.id}`)}>
 									<div className="relative w-full aspect-[4/3] bg-gray-200">
@@ -214,57 +217,59 @@ const CollectionsTab: React.FC = () => {
 									{/* 하단 그라데이션 오버레이 */}
 									<div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 									{/* 좌상단 점3 메뉴 버튼 */}
-									<button
-										className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                                    <button
+                                        className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow ring-1 ring-white/80 opacity-0 group-hover:opacity-100 transition-opacity"
 										onClick={(e) => { e.stopPropagation(); setMenuOpenId(v => v === f.id ? null : f.id); }}
 										aria-label="폴더 메뉴"
 									>
 										···
 									</button>
 									{menuOpenId === f.id && (
-										<div className="absolute top-12 left-2 bg-white rounded-md shadow-lg border border-black/10 overflow-hidden z-10" onClick={(e) => e.stopPropagation()}>
-											<button className="px-4 py-2 text-sm hover:bg-gray-100 w-full text-left" onClick={() => onEdit(f.id)}>수정하기</button>
-											<button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left" onClick={() => askDelete(f.id)}>삭제하기</button>
+                                        <div className="absolute top-12 left-2 bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-10" onClick={(e) => e.stopPropagation()}>
+                                            <button className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left text-black dark:text-white" onClick={() => onEdit(f.id)}>수정하기</button>
+                                            <button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left" onClick={() => askDelete(f.id)}>삭제하기</button>
 										</div>
 									)}
 								</div>
 								<div className="mt-2 px-1">
-									<div className="text-[15px] font-medium line-clamp-1">{f.title || "이름 없음"}</div>
-									<div className="text-[12px] text-black/50 inline-flex items-center gap-1">총 {(f.itemCount ?? 0)}개의 작업  |  {f.private ? (<><Lock className="w-3 h-3" /> 비공개 컬렉션</>) : "공개 컬렉션"}</div>
+                                    <div className="text-[15px] font-medium line-clamp-1 text-black dark:text-white">{f.title || "이름 없음"}</div>
+                                    <div className="text-[12px] text-black/50 dark:text-white/60 inline-flex items-center gap-1">총 {(f.itemCount ?? 0)}개의 작업  |  {f.private ? (<><Lock className="w-3 h-3" /> 비공개 컬렉션</>) : "공개 컬렉션"}</div>
 								</div>
 							</div>
-					))
-					)}
-				</div>
+							))
+							}
+						</div>
+					</>
+				)}
 
 				{/* 커스텀 포털 모달: OtherProject와 동일 스타일 */}
 				{open && ReactDOM.createPortal(
 					<div className="fixed inset-0 z-[20050] flex items-center justify-center p-4">
-						<div className="absolute inset-0 bg-[rgba(0,0,0,0.55)]" onClick={resetAndClose} />
-						<div className="relative z-[20051] w-full max-w-[500px] rounded-[12px] bg-white shadow-2xl">
-							<div className="flex items-center justify-between px-6 h-14 border-b border-black/10">
-								<div className="text-[16px] font-semibold">{editingId ? "컬렉션 폴더 수정하기" : "컬렉션 폴더 만들기"}</div>
+                        <div className="absolute inset-0 bg-[rgba(0,0,0,0.55)]" onClick={resetAndClose} />
+                        <div className="relative z-[20051] w-full max-w-[500px] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
+                            <div className="flex items-center justify-between px-6 h-14 border-b border-black/10 dark:border-[var(--border-color)]">
+                                <div className="text-[16px] font-semibold text-black dark:text-white">{editingId ? "컬렉션 폴더 수정하기" : "컬렉션 폴더 만들기"}</div>
 								<button aria-label="닫기" onClick={resetAndClose} className="p-2 rounded-md hover:bg-neutral-100">
 									<X className="w-4 h-4" />
 								</button>
 							</div>
-							<form onSubmit={onSubmit} className="px-6 py-4 space-y-4 max-h-[70vh] min-h-[420px] overflow-y-auto">
-								<div>
-									<label className="block text-[13px] text-black/70 mb-1">컬렉션 이름</label>
-									<input value={name} onChange={(e) => setName(e.target.value.slice(0,30))} placeholder="이름을 입력해주세요 (최대 30자)" className="w-full h-[44px] rounded-md border border-[#D1D5DB] px-3 text-[14px] bg-white" />
-								</div>
-								<div>
-									<label className="block text-[13px] text-black/70 mb-1">컬렉션 소개</label>
-									<textarea value={desc} onChange={(e) => setDesc(e.target.value.slice(0,1000))} placeholder="소개를 입력해주세요. (최대 1000자)" className="w-full min-h-[120px] rounded-md border border-[#D1D5DB] px-3 py-2 text-[14px] bg-white resize-y" />
-								</div>
-								<label className="inline-flex items-center gap-2 text-[13px] text-black/80">
-									<input type="checkbox" checked={isPrivate} onChange={(e)=>setIsPrivate(e.target.checked)} />
-									<span>이 폴더를 비공개로 설정</span>
-								</label>
-								<div className="flex items-center justify-end gap-2 pt-2">
-									<button type="button" className="h-10 px-4 rounded-md bg-white border border-[#D1D5DB] text-black/70 hover:bg-neutral-50" onClick={resetAndClose}>취소</button>
-									<button type="submit" className="h-10 px-5 rounded-md bg-[#068334] text-white hover:bg-[#05702C] disabled:opacity-50" disabled={!name.trim() || saving}>{saving ? "저장 중..." : (editingId ? "완료" : "확인")}</button>
-								</div>
+                            <form onSubmit={onSubmit} className="px-6 py-4 space-y-4 max-h-[70vh] min-h-[420px] overflow-y-auto">
+                                <div>
+                                    <label className="block text-[13px] text-black/70 dark:text-white/70 mb-1">컬렉션 이름</label>
+                                    <input value={name} onChange={(e) => setName(e.target.value.slice(0,30))} placeholder="이름을 입력해주세요 (최대 30자)" className="w-full h-[44px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 text-[14px] bg-white dark:bg-[var(--surface)] dark:text-white" />
+                                </div>
+                                <div>
+                                    <label className="block text-[13px] text-black/70 dark:text-white/70 mb-1">컬렉션 소개</label>
+                                    <textarea value={desc} onChange={(e) => setDesc(e.target.value.slice(0,1000))} placeholder="소개를 입력해주세요. (최대 1000자)" className="w-full min-h-[120px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 py-2 text-[14px] bg-white dark:bg-[var(--surface)] dark:text-white resize-y" />
+                                </div>
+                                <label className="inline-flex items-center gap-2 text-[13px] text-black/80 dark:text-white/80">
+                                    <input type="checkbox" checked={isPrivate} onChange={(e)=>setIsPrivate(e.target.checked)} />
+                                    <span>이 폴더를 비공개로 설정</span>
+                                </label>
+                                <div className="flex items-center justify-end gap-2 pt-2">
+                                    <button type="button" className="h-10 px-4 rounded-md bg-white dark:bg-[var(--surface)] border border-[#D1D5DB] dark:border-[var(--border-color)] text-black/70 dark:text-white hover:bg-neutral-50 dark:hover:bg-white/5" onClick={resetAndClose}>취소</button>
+                                    <button type="submit" className="h-10 px-5 rounded-md bg-[#068334] text-white hover:bg-[#05702C] disabled:opacity-50" disabled={!name.trim() || saving}>{saving ? "저장 중..." : (editingId ? "완료" : "확인")}</button>
+                                </div>
 							</form>
 						</div>
 					</div>,

@@ -1,4 +1,3 @@
-# src/aggregation/top_projects.py
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Tuple
@@ -181,10 +180,13 @@ def run(mode: str):
     else:
         raise ValueError("mode must be 'day' or 'week'")
 
+
 def main():
     print(f"[top_projects] DB={DATABASE_URL} -> {WORKER_BASE} ({AI_HEADER})")
     run("day")
+    print("[top_projects] day upsert ok")
     run("week")
+    print("[top_projects] week upsert ok")
     print("[top_projects] done")
 
 if __name__ == "__main__":

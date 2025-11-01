@@ -11,15 +11,19 @@ interface Props {
 
 const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
     return (
-        <aside className="w-full md:w-[320px] border-r border-gray-200 flex flex-col min-h-0">
-            {/* 헤더 높이를 우측과 동일하게 맞춤 */}
-            <div className="px-6 h-[72px] shrink-0 border-b border-gray-200 flex items-center gap-3">
-                <span className="font-semibold">메시지</span>
+        <aside className="w-full flex flex-col min-h-0 h-full">
+            {/* 헤더 */}
+            <div className="px-4 sm:px-6 h-[60px] sm:h-[72px] shrink-0 border-b border-gray-200 dark:border-[var(--border-color)] flex items-center gap-3">
+                <span className="font-semibold text-base sm:text-lg">메시지</span>
             </div>
 
             {/* 리스트 */}
-            <div className="flex-1 overflow-y-auto divide-y">
-                {messages.map((msg) => {
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-[var(--border-color)]">
+                {messages.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500 dark:text-white/60 text-sm">
+                        메시지가 없습니다
+                    </div>
+                ) : messages.map((msg) => {
                     const roomId = (msg as any).roomId ?? msg.id;
                     const name = (msg as any).title ?? msg.sender ?? "사용자";
                     const createdAt = msg.createdAt;
@@ -44,26 +48,26 @@ const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
                             key={roomId}
                             onClick={() => onSelect(roomId)}
                             className={[
-                                "w-full text-left px-4 py-3 hover:bg-gray-50",
-                                selectedId === roomId ? "bg-gray-100" : "",
+                                "w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors",
+                                selectedId === roomId ? "bg-gray-100 dark:bg-white/10" : "",
                             ].join(" ")}
                         >
-                            <div className="flex items-start gap-3">
+                            <div className="flex items-start gap-2 sm:gap-3">
                                 {/* 아바타 */}
-                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm shrink-0">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-xs sm:text-sm shrink-0">
                                     {initial}
                                 </div>
 
                                 {/* 본문 */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium truncate">{name}</span>
-                                        <span className="text-xs text-gray-400 truncate">
+                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                        <span className="font-medium truncate text-sm sm:text-base">{name}</span>
+                                        <span className="text-[10px] sm:text-xs text-gray-400 dark:text-white/50 whitespace-nowrap">
                       {timeAgo(createdAt)}
                     </span>
 
                                         {/* 우측 읽지않음 배지 */}
-                                        <div className="ml-auto flex items-center">
+                                        <div className="ml-auto flex items-center flex-shrink-0">
                                             {unread > 0 && (
                                                 <span
                                                     aria-label={`안읽은 메시지 ${unread}개`}
@@ -79,7 +83,7 @@ const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
                                         </div>
                                     </div>
 
-                                    <p className="text-xs text-gray-500 truncate">{msg.content}</p>
+                                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-white/60 truncate">{msg.content}</p>
                                 </div>
                             </div>
                         </button>

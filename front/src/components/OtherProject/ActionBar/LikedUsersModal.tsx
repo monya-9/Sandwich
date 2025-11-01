@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../../../api/axiosInstance";
 
 interface LikedUser {
@@ -11,7 +12,7 @@ interface LikedUser {
 interface LikedUsersModalProps {
   isOpen: boolean;
   onClose: () => void;
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
+  targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
   targetId: number;
 }
 
@@ -21,6 +22,7 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const navigate = useNavigate();
 
   const fetchLikedUsers = async (page: number = 0) => {
     if (loading) return;
@@ -69,6 +71,11 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
     }
   };
 
+  const handleUserClick = (userId: number) => {
+    onClose();
+    navigate(`/users/${userId}`);
+  };
+
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
@@ -98,8 +105,14 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
           ) : (
             <div className="p-4">
               {users.map((user, index) => (
-                <div key={user.userId} className="flex items-center py-3 border-b last:border-b-0">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 overflow-hidden">
+                <div
+                  key={user.userId}
+                  className="flex items-center py-3 border-b last:border-b-0"
+                >
+                  <div
+                    onClick={() => handleUserClick(user.userId)}
+                    className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                  >
                     {user.profileImageUrl ? (
                       <img
                         src={user.profileImageUrl}
@@ -112,7 +125,12 @@ export default function LikedUsersModal({ isOpen, onClose, targetType, targetId 
                       </svg>
                     )}
                   </div>
-                  <span className="text-gray-900 font-medium">{user.nickname}</span>
+                  <span
+                    onClick={() => handleUserClick(user.userId)}
+                    className="text-gray-900 font-medium cursor-pointer hover:underline"
+                  >
+                    {user.nickname}
+                  </span>
                 </div>
               ))}
               

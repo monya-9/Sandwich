@@ -7,18 +7,19 @@ import { UserApi, UserProfileResponse } from "../../api/userApi";
 import WorkFieldModal from "./WorkFieldModal";
 import InterestFieldModal from "./InterestFieldModal";
 
-import { positionMap, interestMap } from "../../constants/position";
+import { positionMap, FALLBACK_INTERESTS_GENERAL } from "../../constants/position";
 import Toast from "../common/Toast";
+import api from "../../api/axiosInstance";
 
 const MAX20 = 20;
 const MAX_FILE_MB = 10;
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-	<div className="text-[14px] text-[#6B7280] mb-2 tracking-[0.01em] leading-[1.7]">{children}</div>
+    <div className="text-[14px] text-[#6B7280] dark:text-white/70 mb-2 tracking-[0.01em] leading-[1.7]">{children}</div>
 );
 
 const Counter: React.FC<{ value: number; max?: number }> = ({ value, max = MAX20 }) => (
-	<span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9CA3AF]">{value}/{max}</span>
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9CA3AF] dark:text-white/40">{value}/{max}</span>
 );
 
 const MyPageSettingPage: React.FC = () => {
@@ -53,7 +54,10 @@ const MyPageSettingPage: React.FC = () => {
 		try { return localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || ""; } catch { return ""; }
 	};
 	const [userName, setUserName] = useState<string>(() => readStoredNickname());
-	const [userInitialized, setUserInitialized] = useState<boolean>(() => readStoredNickname().length > 0);
+	const [isEditingNickname, setIsEditingNickname] = useState<boolean>(false);
+	const [tempNickname, setTempNickname] = useState<string>("");
+	const [isCheckingNickname, setIsCheckingNickname] = useState<boolean>(false);
+	const [nicknameCheckResult, setNicknameCheckResult] = useState<"available" | "duplicate" | null>(null);
 	const [urlSlug, setUrlSlug] = useState<string>(() => { try { return localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || ""; } catch { return ""; } });
 	// 한줄 프로필은 동기 로컬 초기화 후, 서버 fetch 완료 시 한번 더 동기화
 	const [oneLineProfile, setOneLineProfile] = useState<string>(() => {
@@ -79,6 +83,8 @@ const MyPageSettingPage: React.FC = () => {
 		} catch { return ""; }
 	});
 	const [bio, setBio] = useState("");
+	const [isEditingBio, setIsEditingBio] = useState<boolean>(false);
+	const [tempBio, setTempBio] = useState<string>("");
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -99,8 +105,6 @@ const MyPageSettingPage: React.FC = () => {
 	const slugRef = useRef("");
 	useEffect(() => { slugRef.current = urlSlug; }, [urlSlug]);
 
-	// 필수 항목 입력 상태
-	const isUserNameEmpty = userName.trim().length === 0;
 
 	// 작업/관심/기술 모달 상태
 	const [showWorkModal, setShowWorkModal] = useState(false);
@@ -116,16 +120,6 @@ const MyPageSettingPage: React.FC = () => {
 
 
 
-	// 읽기 전용 사용자 이름 표시값: 서버값 > 스토리지 > 로컬 슬러그
-	const usernameDisplay = useMemo(() => {
-		const server = profile?.username?.trim();
-		if (server) return server;
-		try {
-			const stored = (localStorage.getItem(scopedKey("userUsername")) || sessionStorage.getItem(scopedKey("userUsername")) || "").trim();
-			if (stored) return stored;
-		} catch {}
-		return (urlSlug || "").trim();
-	}, [profile?.username, urlSlug]);
 
 	// 초기 프로필 로드 + 로컬 초기값 세팅
 	useEffect(() => {
@@ -138,7 +132,6 @@ const MyPageSettingPage: React.FC = () => {
 					setUserName(me.nickname || "");
 					try { localStorage.setItem("userNickname", me.nickname || ""); sessionStorage.setItem("userNickname", me.nickname || ""); } catch {}
 				}
-				setUserInitialized(true);
 				setBio(me.bio || "");
 				setAvatarUrl(me.profileImage || null);
 				// 서버 저장값으로 작업/관심/기술 초기화
@@ -164,7 +157,7 @@ const MyPageSettingPage: React.FC = () => {
 					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
 				} catch {}
-			} catch {}
+			} catch (e) {}
 		})();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [email, scopedKey]);
@@ -197,13 +190,23 @@ const MyPageSettingPage: React.FC = () => {
 			// 로컬 미리보기 먼저 표시
 			const preview = URL.createObjectURL(file);
 			setAvatarUrl(preview);
+			
 			// 1) 업로드 → URL 수신
 			const url = await UserApi.uploadImage(file);
+			
 			// 2) 프로필에 이미지 URL 반영 저장
-			await persistProfilePartial({ profileImageUrl: null as any }); // 먼저 비워 flicker 방지
 			await persistProfilePartial({ profileImageUrl: url });
+			
 			setAvatarUrl(url);
 			e.target.value = "";
+			
+			// 헤더와 드롭다운의 프로필 이미지 업데이트를 위한 이벤트 발생
+			window.dispatchEvent(new CustomEvent('profile-image-updated'));
+			
+			setSuccessToast({
+				visible: true,
+				message: "프로필 이미지가 업로드되었습니다."
+			});
 		} catch (err) {
 			setErrorToast({
 				visible: true,
@@ -222,28 +225,103 @@ const MyPageSettingPage: React.FC = () => {
 	};
 
 	// 프로필 부분 업데이트(필드 일부만 변경)
-	const persistProfilePartial = useCallback(async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>) => {
-		const base = profile;
-		if (!base) return false;
-		await UserApi.updateProfile({
+	const persistProfilePartial = useCallback(async (partial: Partial<{ nickname: string; bio: string; skills: string; github: string; linkedin: string; profileImageUrl: string | null; positionId: number; interestIds: number[] }>, showToast: boolean = true) => {
+		// profile 데이터가 없으면 먼저 로드
+		let base = profile;
+		if (!base) {
+			try {
+				base = await UserApi.getMe();
+			} catch (error) {
+				throw error;
+			}
+		}
+		
+		const payload = {
 			nickname: partial.nickname ?? (base.nickname || ""),
 			positionId: partial.positionId ?? (base.position?.id || 0),
-			interestIds: partial.interestIds ?? (base.interests?.map((i) => i.id) || []),
+			interestIds: partial.interestIds !== undefined ? partial.interestIds : (base.interests?.map((i) => i.id) || []),
 			bio: partial.bio ?? (base.bio || ""),
 			skills: partial.skills ?? (base.skills || ""),
 			github: partial.github ?? (base.github || ""),
 			linkedin: partial.linkedin ?? (base.linkedin || ""),
 			profileImageUrl: (partial.profileImageUrl !== undefined) ? partial.profileImageUrl : (base.profileImage || ""),
-		});
-		const refreshed = await UserApi.getMe();
-		setProfile(refreshed);
-		setSuccessToast({
-			visible: true,
-			message: "설정 내용이 저장되었습니다."
-		});
-		return true;
+		};
+		
+		try {
+			await UserApi.updateProfile(payload);
+			
+			// 프로필 이미지 업데이트의 경우 로컬 상태만 업데이트 (새로고침 최소화)
+			if (partial.profileImageUrl !== undefined) {
+				setProfile(prev => prev ? { ...prev, profileImage: partial.profileImageUrl } : null);
+			} else {
+				// 다른 필드 업데이트의 경우 전체 새로고침
+				const refreshed = await UserApi.getMe();
+				setProfile(refreshed);
+			}
+			
+			if (showToast) {
+				setSuccessToast({
+					visible: true,
+					message: "설정 내용이 저장되었습니다."
+				});
+			}
+			return true;
+		} catch (error) {
+			throw error;
+		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// 닉네임 편집 관련 함수들
+	const handleEditNickname = () => {
+		setTempNickname(userName);
+		setIsEditingNickname(true);
+		setUserNameError(null);
+		setNicknameCheckResult(null);
+		setIsCheckingNickname(false);
+	};
+
+	const handleCancelNicknameEdit = () => {
+		setTempNickname("");
+		setIsEditingNickname(false);
+		setUserNameError(null);
+		setNicknameCheckResult(null);
+		setIsCheckingNickname(false);
+	};
+
+	const handleSaveNickname = async () => {
+		if (!tempNickname.trim()) {
+			setUserNameError("닉네임을 입력해주세요.");
+			return;
+		}
+		
+		const success = await checkAndSaveUserName(tempNickname);
+		if (success) {
+			setUserName(tempNickname);
+			setIsEditingNickname(false);
+			setTempNickname("");
+		}
+	};
+
+	// bio 편집 관련 함수들
+	const handleEditBio = () => {
+		setTempBio(bio);
+		setIsEditingBio(true);
+	};
+
+	const handleCancelBioEdit = () => {
+		setTempBio("");
+		setIsEditingBio(false);
+	};
+
+	const handleSaveBio = async () => {
+		const success = await checkAndSaveBio(tempBio);
+		if (success) {
+			setBio(tempBio);
+			setIsEditingBio(false);
+			setTempBio("");
+		}
+	};
 
 	// 사용자 이름(닉네임) 검사 + 저장: 전용 PATCH API 사용
 	const checkAndSaveUserName = useCallback(async (value: string) => {
@@ -283,7 +361,15 @@ const MyPageSettingPage: React.FC = () => {
 			const refreshed = await UserApi.getMe();
 			setProfile(refreshed);
 			setUserNameError(null);
-			try { localStorage.setItem("userNickname", trimmed); sessionStorage.setItem("userNickname", trimmed); } catch {}
+			try { 
+				localStorage.setItem("userNickname", trimmed); 
+				sessionStorage.setItem("userNickname", trimmed);
+				// ✅ profileSlug도 함께 저장
+				if (refreshed.profileSlug) {
+					localStorage.setItem(scopedKey("profileUrlSlug"), refreshed.profileSlug);
+					sessionStorage.setItem(scopedKey("profileUrlSlug"), refreshed.profileSlug);
+				}
+			} catch {}
 			window.dispatchEvent(new Event("user-nickname-updated"));
 			setSuccessToast({
 				visible: true,
@@ -293,148 +379,119 @@ const MyPageSettingPage: React.FC = () => {
 		} catch {
 			return false;
 		}
-	}, [profile]);
+	}, [profile, scopedKey]);
 
-	// bio 저장(값이 달라졌을 때만)
+	// bio 저장(값이 달라졌을 때만) - 전용 PATCH API 사용
 	const checkAndSaveBio = useCallback(async (value: string) => {
 		const trimmed = value.trim();
 		if (!profile) return false;
 		if ((profile.bio || "") === trimmed) return false;
-		return persistProfilePartial({ bio: trimmed });
-	}, [profile, persistProfilePartial]);
+		
+		try {
+			// 전용 PATCH API 사용
+			await UserApi.updateBio(trimmed);
+			const refreshed = await UserApi.getMe();
+			setProfile(refreshed);
+			setSuccessToast({
+				visible: true,
+				message: "소개가 저장되었습니다."
+			});
+			return true;
+		} catch (error) {
+			console.error("Bio 저장 실패:", error);
+			setErrorToast({
+				visible: true,
+				message: "소개 저장에 실패했습니다."
+			});
+			return false;
+		}
+	}, [profile]);
 
 	// 헬퍼: 이름→ID 매핑
 	const mapWorkNameToId = (name: string | undefined): number => {
 		if (!name) return profile?.position?.id || 0;
 		return positionMap[name] ?? profile?.position?.id ?? 0;
 	};
-	const mapInterestNamesToIds = (names: string[]): number[] => {
-		const dynamic: Record<string, number> = {};
-		(profile?.interests || []).forEach((i) => { dynamic[i.name] = i.id; });
-		return names.map((n) => dynamic[n] ?? interestMap[n]).filter((v): v is number => typeof v === "number");
+	const mapInterestNamesToIds = async (names: string[]): Promise<number[]> => {
+		try {
+			// API에서 최신 관심 분야 데이터 로드
+			const res = await api.get<Array<{ id: number; name: string }>>("/meta/interests?type=GENERAL");
+			const apiInterests = Array.isArray(res.data) ? res.data : [];
+			
+			// API 데이터와 폴백 데이터를 결합
+			const allInterests = apiInterests.length > 0 ? apiInterests : FALLBACK_INTERESTS_GENERAL;
+			const interestMap: Record<string, number> = {};
+			allInterests.forEach((item) => {
+				interestMap[item.name] = item.id;
+			});
+			
+			// 현재 프로필의 관심 분야도 추가 (혹시 API에 없는 경우 대비)
+			(profile?.interests || []).forEach((i) => { 
+				interestMap[i.name] = i.id; 
+			});
+			
+			return names.map((n) => interestMap[n]).filter((v): v is number => typeof v === "number");
+		} catch (error) {
+			// API 실패 시 폴백 사용
+			const fallbackMap: Record<string, number> = {};
+			FALLBACK_INTERESTS_GENERAL.forEach((item) => {
+				fallbackMap[item.name] = item.id;
+			});
+			(profile?.interests || []).forEach((i) => { 
+				fallbackMap[i.name] = i.id; 
+			});
+			return names.map((n) => fallbackMap[n]).filter((v): v is number => typeof v === "number");
+		}
 	};
 
 	// 닉네임 실시간(디바운스) 중복 검사
 	useEffect(() => {
-		const current = userName.trim();
-		if (!current) { setUserNameError(null); return; }
+		// 편집 모드가 아니거나 닉네임이 비어있으면 체크하지 않음
+		if (!isEditingNickname || !tempNickname.trim()) { 
+			setUserNameError(null); 
+			setNicknameCheckResult(null);
+			setIsCheckingNickname(false);
+			return; 
+		}
+		
+		// 기존 닉네임과 동일하면 체크하지 않음
+		if (tempNickname.trim() === userName.trim()) {
+			setUserNameError(null);
+			setNicknameCheckResult(null);
+			setIsCheckingNickname(false);
+			return;
+		}
+		
+		setIsCheckingNickname(true);
 		const mySeq = ++userReqSeqRef.current;
 		const handle = window.setTimeout(async () => {
 			try {
-				const isDuplicate = await UserApi.checkNickname(current);
+				const isDuplicate = await UserApi.checkNickname(tempNickname.trim());
 				if (mySeq !== userReqSeqRef.current) return;
-				if (isDuplicate && current !== (profile?.nickname || "")) {
+				
+				if (isDuplicate) {
 					setUserNameError("이미 사용 중인 닉네임입니다.");
+					setNicknameCheckResult("duplicate");
 				} else {
 					setUserNameError(null);
+					setNicknameCheckResult("available");
 				}
-			} catch {}
-		}, 400);
-		return () => window.clearTimeout(handle);
-	}, [userName, profile?.nickname]);
-
-	// 샌드위치 URL 슬러그 실시간(디바운스) 중복/유효성 검사
-	const [slugError, setSlugError] = useState<string | null>(null);
-	const slugReqSeqRef = useRef(0);
-	const [slugInitialized, setSlugInitialized] = useState(false);
-	useEffect(() => {
-		const current = urlSlug.trim();
-		if (!current) { setSlugError("필수 항목입니다."); return; }
-		if (!/^[a-z0-9_]{3,20}$/.test(current)) { setSlugError("소문자/숫자/언더스코어만 사용 (3~20자)"); return; }
-		// 사용자가 이전에 유효성 통과 후 저장한 값이라면(로컬 플래그), 서버 체크를 생략하고 에러를 숨깁니다.
-		try {
-			const verified = localStorage.getItem(scopedKey("profileUrlSlugVerified")) === "1" || sessionStorage.getItem(scopedKey("profileUrlSlugVerified")) === "1";
-			if (verified) { setSlugError(null); setSlugInitialized(true); return; }
-		} catch {}
-		const mySeq = ++slugReqSeqRef.current;
-		const handle = window.setTimeout(async () => {
-			try {
-				const res = await UserApi.checkUsername(current);
-				if (mySeq !== slugReqSeqRef.current) return;
-				// 현재 서버 username 과 동일한 값은 사용 가능
-				if (res.exists && current !== (profile?.username || "")) {
-					setSlugError("이미 사용 중인 주소입니다.");
-					setSlugInitialized(true);
-					return;
-				}
-				setSlugError(null);
-				// 자동 저장: 유효하고 중복 아님 → 로컬 저장
-				const prevSlug = localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "";
-				if (current !== prevSlug) {
-					localStorage.setItem(scopedKey("profileUrlSlug"), current);
-					sessionStorage.setItem(scopedKey("profileUrlSlug"), current);
-					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-					setSuccessToast({
-						visible: true,
-						message: "설정 내용이 저장되었습니다."
-					});
-				}
-				setSlugInitialized(true);
-			} catch {}
-		}, 400);
-		return () => window.clearTimeout(handle);
-	}, [urlSlug, profile?.username]);
-
-	// blur 시 즉시 저장
-	const saveSlugIfValid = () => {
-		const slug = urlSlug.trim();
-		if (!/^[a-z0-9_]{3,20}$/.test(slug)) return;
-		const prev = localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "";
-		if (slug !== prev) {
-			try {
-				localStorage.setItem(scopedKey("profileUrlSlug"), slug);
-				sessionStorage.setItem(scopedKey("profileUrlSlug"), slug);
-				localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-				sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-			} catch {}
-			// 즉시 에러 해제 및 대기 중 검사 무효화
-			setSlugError(null);
-			slugReqSeqRef.current++;
-			setSuccessToast({
-				visible: true,
-				message: "설정 내용이 저장되었습니다."
-			});
-		}
-	};
-
-	// 서버에도 즉시 반영하는 저장 헬퍼 (중복/형식 검증 포함)
-	const saveSlugToServerIfValid = async () => {
-		const slug = urlSlug.trim();
-		if (!/^[a-z0-9_]{3,20}$/.test(slug)) return;
-		try {
-			const res = await UserApi.checkUsername(slug);
-			if (!res.exists || slug === (profile?.username || "")) {
-				await UserApi.updateUsername(slug);
-				const refreshed = await UserApi.getMe();
-				setProfile(refreshed);
-				try {
-					localStorage.setItem(scopedKey("userUsername"), slug);
-					sessionStorage.setItem(scopedKey("userUsername"), slug);
-					localStorage.setItem(scopedKey("profileUrlSlug"), slug);
-					sessionStorage.setItem(scopedKey("profileUrlSlug"), slug);
-					localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-					sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-					// 전역 알림: username(slug) 업데이트됨
-					try { window.dispatchEvent(new Event("user-username-updated")); } catch {}
-				} catch {}
-				setSuccessToast({
-					visible: true,
-					message: "설정 내용이 저장되었습니다."
-				});
-			} else {
-				setSlugError("이미 사용 중인 주소입니다.");
+			} catch {
+				setUserNameError("닉네임 확인 중 오류가 발생했습니다.");
+				setNicknameCheckResult(null);
+			} finally {
+				setIsCheckingNickname(false);
 			}
-		} catch {}
-	};
+		}, 400);
+		return () => window.clearTimeout(handle);
+	}, [isEditingNickname, tempNickname, userName]);
+
+
+
 
 	// 마우스 클릭 시(포커스 유지와 무관) 즉시 저장
 	useEffect(() => {
 		const handleMouseDown = () => {
-			const currentName = userNameRef.current;
-			if (currentName) checkAndSaveUserName(currentName).catch(() => {});
-			// bio 저장
-			checkAndSaveBio(bioRef.current).catch(() => {});
 			// 로컬 저장 변경 시 배너
 			try {
 				let localChanged = false;
@@ -444,21 +501,6 @@ const MyPageSettingPage: React.FC = () => {
 					localStorage.setItem(scopedKey("profileOneLine"), one);
 					sessionStorage.setItem(scopedKey("profileOneLine"), one);
 					localChanged = true;
-				}
-												// URL 슬러그 저장
-					const slug = slugRef.current.trim();
-					const prevSlug = localStorage.getItem(scopedKey("profileUrlSlug")) || sessionStorage.getItem(scopedKey("profileUrlSlug")) || "";
-					if (slug && slug !== prevSlug && /^[a-z0-9_]{3,20}$/.test(slug)) {
-						localStorage.setItem(scopedKey("profileUrlSlug"), slug);
-						sessionStorage.setItem(scopedKey("profileUrlSlug"), slug);
-						// 즉시 에러 해제 및 대기 중 검사 무효화
-						setSlugError(null);
-						slugReqSeqRef.current++;
-						localStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-						sessionStorage.setItem(scopedKey("profileUrlSlugVerified"), "1");
-						localChanged = true;
-						// 클릭 시 서버에도 저장
-						saveSlugToServerIfValid().catch(()=>{});
 					}
 				if (localChanged) {
 					setSuccessToast({
@@ -471,12 +513,10 @@ const MyPageSettingPage: React.FC = () => {
 		};
 		document.addEventListener("mousedown", handleMouseDown, true);
 		return () => document.removeEventListener("mousedown", handleMouseDown, true);
-	}, [profile, email, slugError, checkAndSaveBio, checkAndSaveUserName, scopedKey]);
+	}, [profile, email, checkAndSaveBio, scopedKey]);
 
 	// 입력 변경 핸들러들
 	const onOneLineChange = (e: React.ChangeEvent<HTMLInputElement>) => setOneLineProfile(e.target.value.slice(0, MAX20));
-	const onBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => setBio(e.target.value);
-	const onSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => setUrlSlug(e.target.value);
 
 	const onConfirmWorkFields = async (values: string[]) => {
 		setWorkFields(values);
@@ -484,28 +524,63 @@ const MyPageSettingPage: React.FC = () => {
 			localStorage.setItem("workFields", JSON.stringify(values));
 			sessionStorage.setItem("workFields", JSON.stringify(values));
 		} catch {}
+		
+		try {
 		// 값이 없으면 서버 업데이트 생략
 		if (values.length > 0) {
 			const posId = mapWorkNameToId(values[0]);
-			await persistProfilePartial({ positionId: posId });
+				await persistProfilePartial({ positionId: posId }, false); // 토스트 표시하지 않음
+				
+				// 작업 분야 저장 성공 토스트 표시
+				setSuccessToast({
+					visible: true,
+					message: "작업 분야가 저장되었습니다."
+				});
 		} else {
 			// 로컬만 변경된 경우에도 사용자 피드백 제공
 			setSuccessToast({
 				visible: true,
-				message: "설정 내용이 저장되었습니다."
+					message: "작업 분야가 해제되었습니다."
+				});
+			}
+		} catch (error: any) {
+			const errorMessage = error?.response?.data?.message || error?.message || "작업 분야 저장에 실패했습니다. 다시 시도해주세요.";
+			setErrorToast({
+				visible: true,
+				message: errorMessage
 			});
+			return; // 에러 시 모달 닫지 않음
 		}
+		
 		setShowWorkModal(false);
 	};
 	const onConfirmInterestFields = async (values: string[]) => {
+		// 모달을 먼저 닫기
+		setShowInterestModal(false);
+		
 		setInterestFields(values);
 		try {
 			localStorage.setItem("interestFields", JSON.stringify(values));
 			sessionStorage.setItem("interestFields", JSON.stringify(values));
 		} catch {}
-		const ids = mapInterestNamesToIds(values);
-		await persistProfilePartial({ interestIds: ids });
-		setShowInterestModal(false);
+		
+		try {
+			const ids = await mapInterestNamesToIds(values);
+			await persistProfilePartial({ interestIds: ids }, false); // 토스트 표시하지 않음
+			
+			// 성공 토스트 표시
+			setSuccessToast({
+				visible: true,
+				message: values.length > 0 ? "관심 분야가 저장되었습니다." : "관심 분야가 모두 해제되었습니다."
+			});
+			
+		} catch (error: any) {
+			const errorMessage = error?.response?.data?.message || error?.message || "관심 분야 저장에 실패했습니다. 다시 시도해주세요.";
+			setErrorToast({
+				visible: true,
+				message: errorMessage
+			});
+		}
 	};
 
 
@@ -529,7 +604,7 @@ const MyPageSettingPage: React.FC = () => {
 				closable={true}
 				onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
 			/>
-			<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
+            <div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] dark:bg-[var(--bg)] text-black dark:text-white">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
 				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					{/* 좌측 사이드 카드 */}
@@ -546,14 +621,14 @@ const MyPageSettingPage: React.FC = () => {
 								<span />
 							</div>
 						{/* 기본 정보 카드 */}
-						<section className="bg-white border border-[#E5E7EB] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto">
-							<div className="text-[16px] font-medium text-[#111827] mb-6">기본 정보</div>
+                        <section className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto">
+                            <div className="text-[16px] font-medium text-[#111827] dark:text-white mb-6">기본 정보</div>
 
 							{/* 프로필 + 업로드 */}
 							<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-6">
 								<div className="w-[120px] flex flex-col items-center">
 									<div className="relative w-[100px] h-[100px] group">
-										<div className="w-full h-full rounded-full bg-[#F3F4F6] text-black flex items-center justify-center text-[28px] overflow-hidden">
+                                        <div className="w-full h-full rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[28px] overflow-hidden">
 											{avatarUrl ? (
 												<img src={avatarUrl} alt="프로필 이미지" loading="lazy" decoding="async" className="w-full h-full object-cover" />
 											) : (
@@ -583,78 +658,115 @@ const MyPageSettingPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* 닉네임 (서버 닉네임) */}
+							{/* 닉네임 (편집 모드) */}
 							<div className="mb-7">
 								<FieldLabel>
 									<span className="inline-flex items-center gap-1">
 										닉네임 <span className="text-green-500">*</span>
 									</span>
 								</FieldLabel>
-								<div className="relative">
+								
+								{!isEditingNickname ? (
+									// 읽기 모드
+									<div className="flex items-center justify-between">
+										<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#111827] dark:text-white">
+											{userName || "닉네임을 설정해주세요"}
+										</div>
+										<button
+											type="button"
+											onClick={handleEditNickname}
+											className="ml-3 px-4 h-[48px] md:h-[55px] rounded-[10px] text-[14px] bg-[#21B284] text-white hover:bg-[#1a9a73] transition-colors"
+										>
+											수정
+										</button>
+									</div>
+								) : (
+									// 편집 모드
+									<div>
+                                <div className="relative">
 												<input
 							type="text"
-							value={userName}
-							onChange={(e)=>{ setUserName(e.target.value.slice(0, MAX20)); setUserNameError(null); }}
-							onBlur={() => { const v = userNameRef.current.trim(); if (v) checkAndSaveUserName(v); }}
+												value={tempNickname}
+												onChange={(e) => {
+													const newValue = e.target.value.slice(0, MAX20);
+													setTempNickname(newValue);
+													setUserNameError(null);
+													setNicknameCheckResult(null);
+													setIsCheckingNickname(false);
+												}}
 							aria-label="닉네임"
 							maxLength={MAX20}
-							aria-invalid={userInitialized && (!!userNameError || isUserNameEmpty)}
-							aria-describedby={(userInitialized && (!!userNameError || isUserNameEmpty)) ? 'nickname-error' : undefined}
-							className={`w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 ${(userInitialized && isUserNameEmpty) ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}
-						/>
-									<Counter value={userName.length} />
+												aria-invalid={!!userNameError}
+												aria-describedby={userNameError ? 'nickname-error' : undefined}
+												className={`w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border px-3 outline-none text-[14px] tracking-[0.01em] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white ${userNameError ? "border-[#DB2E2E]" : "border-[#E5E7EB] dark:border-[var(--border-color)]"}`}
+											/>
+											<Counter value={tempNickname.length} />
 								</div>
-										{userInitialized && isUserNameEmpty && (
-											<p id="nickname-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">필수 항목입니다.</p>
-										)}
-										{userInitialized && userNameError ? (
+										{userNameError && (
 											<p id="nickname-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">{userNameError}</p>
+										)}
+										{/* ✅ 닉네임 중복 검사 결과 표시 */}
+										{!userNameError && tempNickname.trim() && tempNickname.trim() !== userName.trim() && (
+											<div className="mt-2 flex items-center gap-2">
+												{isCheckingNickname ? (
+													<>
+														<div className="w-3 h-3 border-2 border-[#068334] border-t-transparent rounded-full animate-spin"></div>
+														<span className="text-[12px] text-[#6B7280] dark:text-white/60">닉네임 확인 중...</span>
+													</>
+												) : nicknameCheckResult === "available" ? (
+													<>
+														<div className="w-3 h-3 bg-green-500 rounded-full"></div>
+														<span className="text-[12px] text-green-600 dark:text-green-400">사용 가능한 닉네임입니다</span>
+													</>
+												) : nicknameCheckResult === "duplicate" ? (
+													<>
+														<div className="w-3 h-3 bg-red-500 rounded-full"></div>
+														<span className="text-[12px] text-red-600 dark:text-red-400">이미 사용 중인 닉네임입니다</span>
+													</>
 										) : null}
 							</div>
-
-							{/* 사용자 이름 (읽기 전용) */}
-							<div className="mb-7">
-								<FieldLabel>사용자 이름</FieldLabel>
-								<div className="relative">
-									<input
-										type="text"
-										value={usernameDisplay}
-										readOnly
-										disabled
-											aria-label="사용자 이름"
-											className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] bg-[#F9FAFB] text-[#6B7280]"
-									/>
+										)}
+										<div className="mt-3 flex justify-end gap-2">
+											<button
+												type="button"
+												onClick={handleCancelNicknameEdit}
+												className="px-4 h-[36px] rounded-[10px] text-[14px] border border-[#E5E7EB] dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-[#111827] dark:text-white hover:bg-[#F9FAFB] dark:hover:bg-[#111111] transition-colors"
+											>
+												취소
+											</button>
+											<button
+												type="button"
+												onClick={handleSaveNickname}
+												disabled={!tempNickname.trim() || nicknameCheckResult === "duplicate" || isCheckingNickname}
+												className={`px-4 h-[36px] rounded-[10px] text-[14px] transition-colors ${
+													tempNickname.trim() && nicknameCheckResult !== "duplicate" && !isCheckingNickname
+														? "bg-[#21B284] text-white hover:bg-[#1a9a73]" 
+														: "bg-[#E5E7EB] text-[#111827] cursor-not-allowed"
+												}`}
+											>
+												저장
+											</button>
+										</div>
 								</div>
+								)}
 							</div>
 
-							{/* 샌드위치 URL (뒷부분 슬러그 편집) */}
+
+							{/* 샌드위치 URL (닉네임 기반 자동 생성) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-									<div className={`flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border min-w-0 ${slugInitialized && slugError ? "border-[#DB2E2E]" : "border-[#E5E7EB]"}`}>
-										<div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] bg-[#F3F4F6] border-r border-[#E5E7EB] whitespace-nowrap">sandwich.com/</div>
-									<input
-										type="text"
-										value={urlSlug}
-										onChange={onSlugChange}
-										// 저장은 마우스 클릭 시 전역 핸들러에서만 수행
-										onBlur={undefined as any}
-										onKeyDown={undefined as any}
-										placeholder="URL 입력란"
-										pattern="^[a-z0-9_]{3,20}$"
-										title="소문자/숫자/언더스코어만 입력 가능합니다 (3~20자)"
-											aria-label="샌드위치 URL 슬러그"
-											spellCheck={false}
-											autoComplete="off"
-											inputMode="text"
-											maxLength={20}
-											aria-invalid={!!(slugInitialized && slugError)}
-											aria-describedby={(slugInitialized && slugError) ? 'slug-error' : undefined}
-											className={`flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 outline-none text-[14px] tracking-[0.01em] bg-white min-w-0`}
-									/>
+								<div className="flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
+                                        <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
+									<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
+										{isEditingNickname 
+											? (tempNickname.trim() ? tempNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')
+											: (profile?.profileSlug || (userName.trim() ? userName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요'))
+										}
+									</div>
 								</div>
-									{slugInitialized && slugError && (
-										<p id="slug-error" role="alert" className="mt-2 text-[12px] text-[#DB2E2E]">{slugError}</p>
-									)}
+								<div className="mt-2 text-[12px] text-[#6B7280] dark:text-white/60">
+									닉네임을 입력하면 자동으로 생성됩니다
+								</div>
 							</div>
 
 							{/* 한 줄 프로필 */}
@@ -668,7 +780,7 @@ const MyPageSettingPage: React.FC = () => {
 										placeholder="띄어쓰기 포함 20자 이내로 입력해주세요."
 											aria-label="한 줄 프로필"
 											maxLength={MAX20}
-											className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+                                        className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 									/>
 									<Counter value={oneLineProfile.length} />
 								</div>
@@ -679,7 +791,7 @@ const MyPageSettingPage: React.FC = () => {
 								<FieldLabel>작업 분야</FieldLabel>
 								<button onClick={onOpenWorkModal} aria-label="작업 분야 설정" className="text-[13px] text-[#068334] hover:underline">작업 분야 설정</button>
 							</div>
-							<div className={`text-[13px] mb-7 ${workFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
+                            <div className={`text-[13px] mb-7 ${workFields.length === 0 ? "text-[#ADADAD]" : "text-black dark:text-white"}`}>
 								{workFields.length === 0 ? "선택된 작업 분야가 없습니다." : workFields.join(", ")}
 							</div>
 
@@ -688,20 +800,64 @@ const MyPageSettingPage: React.FC = () => {
 								<FieldLabel>관심 분야</FieldLabel>
 								<button onClick={onOpenInterestModal} aria-label="관심 분야 설정" className="text-[13px] text-[#068334] hover:underline">관심 분야 설정</button>
 							</div>
-							<div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black"}`}>
+                            <div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black dark:text-white"}`}>
 								{interestFields.length === 0 ? "선택된 관심 분야가 없습니다." : interestFields.join(", ")}
 														</div>
 
 
-							<div className="mt-8 mb-3"><FieldLabel>소개</FieldLabel></div>
-							<textarea
-								value={bio}
-								onChange={onBioChange}
+							{/* 소개 (편집 모드) */}
+							<div className="mt-8 mb-3">
+								<FieldLabel>소개</FieldLabel>
+							</div>
+							
+							{!isEditingBio ? (
+								// 읽기 모드
+								<div className="flex items-start justify-between">
+									<div className="flex-1 min-h-[120px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 text-[14px] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#111827] dark:text-white whitespace-pre-wrap">
+										{bio || "소개를 입력해주세요"}
+									</div>
+									<button
+										type="button"
+										onClick={handleEditBio}
+										className="ml-3 px-4 h-[48px] md:h-[55px] rounded-[10px] text-[14px] bg-[#21B284] text-white hover:bg-[#1a9a73] transition-colors"
+									>
+										수정
+									</button>
+								</div>
+							) : (
+								// 편집 모드
+								<div>
+                            <textarea
+										value={tempBio}
+										onChange={(e) => setTempBio(e.target.value)}
 								rows={5}
 								placeholder="예) 프론트와 백엔드에 관심이 있는 개발자입니다."
 								aria-label="소개"
-								className="w-full rounded-[10px] border border-[#E5E7EB] p-3 outline-none text-[14px] placeholder-[#ADADAD] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+                                className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
 							/>
+									<div className="mt-3 flex justify-end gap-2">
+										<button
+											type="button"
+											onClick={handleCancelBioEdit}
+											className="px-4 h-[36px] rounded-[10px] text-[14px] border border-[#E5E7EB] dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-[#111827] dark:text-white hover:bg-[#F9FAFB] dark:hover:bg-[#111111] transition-colors"
+										>
+											취소
+										</button>
+										<button
+											type="button"
+											onClick={handleSaveBio}
+											disabled={!tempBio.trim() || tempBio.trim() === bio}
+											className={`px-4 h-[36px] rounded-[10px] text-[14px] transition-colors ${
+												tempBio.trim() && tempBio.trim() !== bio
+													? "bg-[#21B284] text-white hover:bg-[#1a9a73]" 
+													: "bg-[#E5E7EB] text-[#111827] cursor-not-allowed"
+											}`}
+										>
+											저장
+										</button>
+									</div>
+								</div>
+							)}
 						</section>
 
 					</main>

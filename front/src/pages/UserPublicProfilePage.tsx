@@ -6,9 +6,12 @@ import PublicLikesGrid from "../components/Profile/PublicLikesGrid";
 import PublicCollectionsGrid from "../components/Profile/PublicCollectionsGrid";
 import SuggestAction from "../components/OtherProject/ActionBar/SuggestAction";
 import Toast from "../components/common/Toast";
+import { RepresentativeCareer } from "../api/userApi";
+import { fetchUserProjects, fetchProjectsMeta } from "../api/projects";
+import FollowListModal from "../components/Profile/FollowListModal";
 
 // 공개 프로필 응답 타입(백엔드에 email 추가됨)
- type PublicProfile = {
+type PublicProfile = {
   id: number;
   nickname: string | null;
   username?: string | null;
@@ -16,7 +19,10 @@ import Toast from "../components/common/Toast";
   position?: string | null;
   interests?: string[] | null;
   profileImage?: string | null;
+  coverImage?: string | null;
   followerCount?: number;
+  followingCount?: number;
+  profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 export default function UserPublicProfilePage() {
@@ -31,6 +37,18 @@ export default function UserPublicProfilePage() {
   const [activeTab, setActiveTab] = useState<"work" | "like" | "collection">("work");
   const [toast, setToast] = useState<{ type: "success" | "info" | "error"; message: string } | null>(null);
   const [followBtnHover, setFollowBtnHover] = useState(false);
+  const [repCareers, setRepCareers] = useState<RepresentativeCareer[]>([]);
+  
+  // 활동 통계
+  const [workCount, setWorkCount] = useState(0);
+  const [likesReceived, setLikesReceived] = useState(0);
+  const [publicCollectionsCount, setPublicCollectionsCount] = useState(0);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  
+  // 팔로우 모달
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers");
 
   const myId = Number((typeof window !== 'undefined' && (localStorage.getItem('userId') || sessionStorage.getItem('userId'))) || '0');
   const isSelf = myId > 0 && myId === userId;
@@ -74,6 +92,93 @@ export default function UserPublicProfilePage() {
     })();
   }, [userId, isSelf]);
 
+  // 대표 커리어 로드
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`);
+        if (mounted) {
+          setRepCareers(response.data);
+        }
+      } catch (error) {
+        console.error("대표 커리어 로드 실패:", error);
+        if (mounted) {
+          setRepCareers([]);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  // 활동 통계 로드
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadStats = async () => {
+      if (!userId) return;
+      
+      try {
+        // 1. 작업 개수 가져오기
+        try {
+          const projectsRes = await fetchUserProjects(userId, 0, 100);
+          if (mounted) {
+            const totalProjects = projectsRes.totalElements || projectsRes.content?.length || 0;
+            setWorkCount(totalProjects);
+            
+            // 2. 좋아요 받은 수 계산
+            const projects = projectsRes.content || [];
+            if (projects.length > 0) {
+              const projectIds = projects.map((p: any) => p.id).filter(Boolean);
+              try {
+                const metaRes = await fetchProjectsMeta(projectIds);
+                const totalLikes = Object.values(metaRes || {}).reduce((sum: number, meta: any) => sum + (meta?.likes || 0), 0);
+                if (mounted) setLikesReceived(totalLikes);
+              } catch {
+                // 메타 정보를 가져올 수 없으면 프로젝트의 likes 필드 합산
+                const totalLikes = projects.reduce((sum: number, p: any) => sum + (p?.likes || 0), 0);
+                if (mounted) setLikesReceived(totalLikes);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("작업 통계 로드 실패:", e);
+        }
+
+        // 3. 해당 사용자의 프로젝트가 컬렉션에 저장된 횟수 가져오기
+        try {
+          const { data } = await api.get(`/profiles/${userId}/collection-count`);
+          if (mounted) {
+            setPublicCollectionsCount(data?.savedCount || 0);
+          }
+        } catch (e) {
+          console.error("컬렉션 저장 횟수 로드 실패:", e);
+        }
+
+        // 4. 팔로워/팔로잉 수 가져오기
+        try {
+          const { data } = await api.get(`/users/${userId}/follow-counts`);
+          if (mounted) {
+            setFollowerCount(data?.followerCount || 0);
+            setFollowingCount(data?.followingCount || 0);
+          }
+        } catch (e) {
+          console.error("팔로우 통계 로드 실패:", e);
+        }
+      } catch (e) {
+        console.error("통계 로드 실패:", e);
+      }
+    };
+
+    loadStats();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
   const toggleFollow = async () => {
     const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
     if (!token) return navigate("/login");
@@ -110,7 +215,15 @@ export default function UserPublicProfilePage() {
   }
 
   const displayName = (data?.nickname || data?.username || "사용자").trim();
-  const profileUrl = data?.username ? `sandwich.com/${data.username}` : `sandwich.com/user/${userId}`;
+  const profileUrl = data?.profileSlug ? `sandwich.com/${data.profileSlug}` : (data?.username ? `sandwich.com/${data.username}` : `sandwich.com/user/${userId}`);
+
+  const iconForType = (t: RepresentativeCareer["type"]) => {
+    if (t === "CAREER") return "💼";
+    if (t === "PROJECT_RESUME") return "🧩";
+    if (t === "PROJECT_PORTFOLIO") return "🎨";
+    if (t === "AWARD") return "🏅";
+    return "🎓";
+  };
 
   return (
     <div className="w-full flex justify-center">
@@ -127,7 +240,14 @@ export default function UserPublicProfilePage() {
           />
         )}
         {/* 배경: 업로드 UI 제거, 읽기 전용 배너 */}
-        <div className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] h-[300px] md:h-[360px] w-auto rounded-none" />
+        <div 
+          className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] h-[300px] md:h-[360px] w-auto rounded-none"
+          style={data?.coverImage && typeof data.coverImage === 'string' && data.coverImage.trim() !== "" ? {
+            backgroundImage: `url(${data.coverImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : {}}
+        />
 
         {/* 본문 레이아웃 */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-[minmax(300px,420px)_1fr] gap-8 items-start">
@@ -190,8 +310,27 @@ export default function UserPublicProfilePage() {
             <div className="mt-20" />
             <div className="mt-2 text-[14px] md:text-[16px]">
               <div className="text-black/90">커리어</div>
-              {/* 공개 API가 없으므로 우선 메시지 표시. 추후 공개 API 연결 시 목록으로 교체 */}
-              <div className="mt-4 text-center text-black/60">설정된 대표 커리어가 없습니다.</div>
+              
+              <div className="mt-4 space-y-4">
+                {repCareers.length > 0 ? (
+                  repCareers.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <span className="text-[18px]" aria-hidden>{iconForType(item.type)}</span>
+                      <div className="flex-1">
+                        <div className="text-[14px] text-black font-medium">{item.title}</div>
+                        {!!item.subtitle && <div className="text-[13px] text-black/60">{item.subtitle}</div>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="mt-4 w-full flex justify-center">
+                    <div className="inline-flex items-center gap-1 text-black/60">
+                      <span>설정된 대표 커리어가 없습니다.</span>
+                      <span className="text-black/40" aria-hidden>ⓘ</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 활동 정보 */}
@@ -200,13 +339,25 @@ export default function UserPublicProfilePage() {
               <div className="text-black/90">활동 정보</div>
               <div className="mt-5" />
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
-                <div className="flex flex-col gap-1"><div className="text-[14px]">0</div><div className="text-[14px] text-black/60">작업 보기</div></div>
-                <div className="flex flex-col gap-1"><div className="text-[14px]">0</div><div className="text-[14px] text-black/60">좋아요 받음</div></div>
-                <div className="flex flex-col gap-1"><div className="text-[14px]">0</div><div className="text-[14px] text-black/60">컬렉션 저장됨</div></div>
+                <div className="flex flex-col gap-1"><div className="text-[14px]">{workCount}</div><div className="text-[14px] text-black/60">작업 보기</div></div>
+                <div className="flex flex-col gap-1"><div className="text-[14px]">{likesReceived}</div><div className="text-[14px] text-black/60">좋아요 받음</div></div>
+                <div className="flex flex-col gap-1"><div className="text-[14px]">{publicCollectionsCount}</div><div className="text-[14px] text-black/60">컬렉션 저장됨</div></div>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
-                <div className="flex flex-col gap-1"><div className="text-[14px]">0</div><div className="text-[14px] text-black/60">팔로잉</div></div>
-                <div className="flex flex-col gap-1"><div className="text-[14px]">{data?.followerCount ?? 0}</div><div className="text-[14px] text-black/60">팔로워</div></div>
+                <button 
+                  onClick={() => { setFollowModalType("following"); setFollowModalOpen(true); }}
+                  className="flex flex-col gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
+                >
+                  <div className="text-[14px]">{followingCount}</div>
+                  <div className="text-[14px] text-black/60">팔로잉</div>
+                </button>
+                <button 
+                  onClick={() => { setFollowModalType("followers"); setFollowModalOpen(true); }}
+                  className="flex flex-col gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
+                >
+                  <div className="text-[14px]">{followerCount}</div>
+                  <div className="text-[14px] text-black/60">팔로워</div>
+                </button>
                 <div />
               </div>
             </div>
@@ -231,6 +382,14 @@ export default function UserPublicProfilePage() {
           </section>
         </div>
       </div>
+
+      {/* 팔로워/팔로잉 목록 모달 */}
+      <FollowListModal
+        isOpen={followModalOpen}
+        onClose={() => setFollowModalOpen(false)}
+        userId={userId}
+        type={followModalType}
+      />
     </div>
   );
 } 

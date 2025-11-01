@@ -28,6 +28,37 @@ public class UserDeviceController {
                 .stream().map(UserDeviceDto::from).toList();
     }
 
+    @GetMapping("/trust-check")
+    public Map<String, Object> trustCheck(
+            HttpServletRequest req,
+            @AuthenticationPrincipal(expression = "id") Long userId
+    ) {
+        boolean trustedForUser    = trust.isTrusted(req, userId);
+        boolean trustedDeviceOnly = trust.isTrusted(req);
+
+        String tdid = null, tdt = null;
+        if (req.getCookies() != null) {
+            for (var c : req.getCookies()) {
+                if ("tdid".equals(c.getName())) tdid = c.getValue();
+                if ("tdt".equals(c.getName()))  tdt  = c.getValue();
+            }
+        }
+
+        Long deviceOwnerId = (tdid == null) ? null :
+                repo.findByDeviceIdAndRevokedAtIsNull(tdid)
+                        .map(UserDevice::getUserId)
+                        .orElse(null);
+
+        return Map.of(
+                "userId", userId,
+                "hasTdidCookie", tdid != null,
+                "hasTdtCookie",  tdt  != null,
+                "deviceOwnerId", deviceOwnerId,
+                "trustedDeviceOnly", trustedDeviceOnly,
+                "trustedForUser",   trustedForUser
+        );
+    }
+
     /** 특정 디바이스 무효화(내 계정 소유) */
     @DeleteMapping("/{deviceRowId}")
     public ResponseEntity<?> revokeOne(@PathVariable Long deviceRowId,

@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { onAccessTokenChange } from "../utils/tokenStorage";
+import api from "../api/axiosInstance";
 
 /** 서버와 동일한 웹앱 설정 */
 const firebaseConfig = {
@@ -18,31 +19,18 @@ const VAPID_KEY =
 
 let cachedFcmToken: string | null = null;
 
-async function registerWebPush(token: string, accessToken: string) {
+async function registerWebPush(token: string) {
     try {
-        const res = await fetch("/api/push/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-            },
-            credentials: "include",
-            body: JSON.stringify({ platform: "WEB", token }),
-        });
-        
-        if (!res.ok) {
-            const errorText = await res.text();
-            
-            // 401 오류인 경우 임시로 성공 처리
-            if (res.status === 401) {
-                console.warn("[FCM] ⚠️ 백엔드 등록 실패 (401) - 토큰은 생성됨");
-                return;
-            }
-            
-            throw new Error(`register failed ${res.status}: ${errorText}`);
+        await api.post("/push/register", { platform: "WEB", token });
+        console.log("[FCM] ✅ FCM 등록 완료");
+    } catch (error: any) {
+        // 401 오류인 경우 임시로 성공 처리
+        if (error.response?.status === 401) {
+            console.warn("[FCM] ⚠️ 백엔드 등록 실패 (401) - 토큰은 생성됨");
+            return;
         }
-    } catch (error) {
-        console.warn("[FCM] ⚠️ 백엔드 등록 실패 - 토큰은 생성됨");
+        
+        console.warn("[FCM] ⚠️ 백엔드 등록 실패 - 토큰은 생성됨:", error.message);
     }
 }
 
@@ -89,21 +77,11 @@ export async function initFCM() {
             localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken") || "";
 
         if (access) {
-            try {
-                await registerWebPush(cachedFcmToken, access);
-                console.log("[FCM] ✅ FCM 등록 완료");
-            } catch (e) {
-                console.warn("[FCM] ❌ FCM 등록 실패:", e);
-            }
+            await registerWebPush(cachedFcmToken);
         } else {
             onAccessTokenChange(async (newAccess) => {
                 if (newAccess && cachedFcmToken) {
-                    try {
-                        await registerWebPush(cachedFcmToken, newAccess);
-                        console.log("[FCM] ✅ FCM 등록 완료");
-                    } catch (e) {
-                        console.warn("[FCM] ❌ FCM 등록 실패:", e);
-                    }
+                    await registerWebPush(cachedFcmToken);
                 }
             });
         }

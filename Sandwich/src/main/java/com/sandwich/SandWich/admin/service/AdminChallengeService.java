@@ -3,22 +3,45 @@ package com.sandwich.SandWich.admin.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sandwich.SandWich.admin.dto.AdminChallengeDtos;
 import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.CreateReq;
 import com.sandwich.SandWich.admin.dto.AdminChallengeDtos.PatchReq;
 import com.sandwich.SandWich.challenge.domain.Challenge;
 import com.sandwich.SandWich.challenge.domain.ChallengeStatus;
+import com.sandwich.SandWich.challenge.domain.ChallengeType;
+import com.sandwich.SandWich.challenge.event.ChallengeLifecycleEvent;
 import com.sandwich.SandWich.challenge.repository.ChallengeRepository;
+import com.sandwich.SandWich.challenge.repository.ChallengeSpecifications;
+import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
+import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLogRepository;
 import com.sandwich.SandWich.common.exception.exceptiontype.BadRequestException;
+import com.sandwich.SandWich.common.exception.exceptiontype.ConflictException;
+import com.sandwich.SandWich.common.exception.exceptiontype.NotFoundException;
+import com.sandwich.SandWich.common.util.RedisUtil;
+import com.sandwich.SandWich.reward.repository.RewardPayoutRepository;
 import com.sandwich.SandWich.reward.service.RewardPayoutService;
 import com.sandwich.SandWich.reward.service.RewardRule;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
 import com.sandwich.SandWich.auth.CurrentUserProvider;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
+import java.util.Map;
+import com.sandwich.SandWich.social.domain.LikeTargetType;
+import com.sandwich.SandWich.challenge.repository.*;
+import com.sandwich.SandWich.social.repository.LikeRepository;
+import com.sandwich.SandWich.comment.repository.CommentRepository;
+import com.sandwich.SandWich.grader.repository.TestResultRepository;
 
 
 @Service
@@ -28,9 +51,24 @@ public class AdminChallengeService {
     private final ObjectMapper om;
     private final ChallengeRepository repo;
     private final RewardPayoutService reward;
-    private final PortfolioLeaderboardCache leaderboard; // 네 구현 클래스
-    private final CurrentUserProvider current;           // 감사로그
+    private final PortfolioLeaderboardCache leaderboard;
+    private final CurrentUserProvider current;
     private final com.sandwich.SandWich.admin.store.AdminAuditLogRepository auditRepo;
+    private final ChallengeSyncLogRepository logs;
+    private final SubmissionRepository submissionRepo;
+
+    private final ChallengeRepository challengeRepo;
+    private final RewardPayoutRepository rewardPayoutRepo;
+    private final EntityManager em;
+    private final PortfolioVoteRepository voteRepo;
+    private final SubmissionAssetRepository assetRepo;
+    private final CodeSubmissionRepository codeRepo;
+    private final LikeRepository likeRepo;
+    private final CommentRepository commentRepo;
+    private final TestResultRepository testResultRepo;
+    private final RedisUtil redisUtil;
+    private final ApplicationEventPublisher publisher;
+
 
     @Transactional
     public Long create(CreateReq req) {
@@ -42,6 +80,7 @@ public class AdminChallengeService {
         c.setEndAt(req.getEndAt());
         c.setVoteStartAt(req.getVoteStartAt());
         c.setVoteEndAt(req.getVoteEndAt());
+        c.setSelectedIdx(req.getSelectedIdx());
         c.setStatus(req.getStatus() == null ? ChallengeStatus.DRAFT : req.getStatus());
 
         validateWindow(c);
@@ -49,6 +88,8 @@ public class AdminChallengeService {
         audit("CREATE_CHALLENGE", "CHALLENGE", c.getId(), req); // no-op
         return c.getId();
     }
+
+
 
     @Transactional
     public void patch(Long id, PatchReq req) {
@@ -63,16 +104,10 @@ public class AdminChallengeService {
         if (req.getVoteStartAt() != null) c.setVoteStartAt(req.getVoteStartAt());
         if (req.getVoteEndAt() != null) c.setVoteEndAt(req.getVoteEndAt());
         if (req.getStatus() != null) c.setStatus(req.getStatus());
+        if (req.getSelectedIdx() != null) c.setSelectedIdx(req.getSelectedIdx());
 
         validateWindow(c);
         audit("PATCH_CHALLENGE", "CHALLENGE", id, req); // no-op
-    }
-
-    @Transactional
-    public int publishResults(Long challengeId, RewardRule rule) {
-        int inserted = reward.publishPortfolioResults(challengeId, rule);
-        audit("PUBLISH_RESULTS", "CHALLENGE", challengeId, rule); // no-op
-        return inserted;
     }
 
     @Transactional
@@ -81,6 +116,13 @@ public class AdminChallengeService {
             leaderboard.rebuild(challengeId); // 네 구현: void
             audit("REBUILD_LEADERBOARD", "CHALLENGE", challengeId, "rebuilt"); // no-op
         }
+    }
+
+    @Transactional
+    public int publishResults(Long challengeId, RewardRule rule) {
+        int inserted = reward.publishPortfolioResults(challengeId, rule);
+        audit("PUBLISH_RESULTS", "CHALLENGE", challengeId, rule); // no-op
+        return inserted;
     }
 
     /** DB CHECK와 동일: start<end && ((vs,ve 둘다 null) || (둘다 not null && end<=vs && vs<ve)) */
@@ -117,6 +159,96 @@ public class AdminChallengeService {
             // 잘못된 JSON이면 400으로
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_RULE_JSON");
         }
+    }
+
+    public Page<AdminChallengeDtos.ListItem> list(
+            ChallengeType type, ChallengeStatus status, String source,
+            String aiMonth, String aiWeek, Pageable pageable) {
+
+        Specification<Challenge> spec = Specification
+                .where(ChallengeSpecifications.hasType(type))
+                .and(ChallengeSpecifications.hasStatus(status))
+                .and((root,q,cb) -> source==null? null : cb.equal(root.get("source"), source))
+                .and((root,q,cb) -> aiMonth==null? null : cb.equal(root.get("aiMonth"), aiMonth))
+                .and((root,q,cb) -> aiWeek==null? null : cb.equal(root.get("aiWeek"), aiWeek));
+
+        return repo.findAll(spec, pageable).map(AdminChallengeDtos.ListItem::from);
+    }
+
+    public AdminChallengeDtos.Detail get(Long id) {
+        Challenge c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // 최신 로그 1건
+        var latest = logs.findAll(
+                (root,q,cb) -> cb.or(
+                        cb.equal(root.get("aiMonth"), c.getAiMonth()),
+                        cb.equal(root.get("aiWeek"),  c.getAiWeek())
+                ),
+                PageRequest.of(0,1, Sort.by(Sort.Direction.DESC, "createdAt"))
+        ).getContent();
+        return AdminChallengeDtos.Detail.builder()
+                .challenge(AdminChallengeDtos.ListItem.from(c))
+                .latestSync(latest.isEmpty()? null : latest.get(0))
+                .build();
+    }
+
+    @Transactional
+    public void delete(Long challengeId, boolean force) {
+        // 0) 존재 확인
+        var c = repo.findById(challengeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+
+        // 1) 보상 지급 챌린지 삭제 금지 (포트폴리오와 동일 정책)
+        if (rewardPayoutRepo.existsByChallengeId(challengeId)) {
+            throw new ConflictException("HAS_PAYOUTS", "보상 지급된 챌린지는 삭제할 수 없습니다.");
+        }
+
+        // 2) force=false면 “의존성 있으면 막기”를 유지하고 싶다면 ↓ (원래 UX 유지)
+        if (!force) {
+            long submissionCount = submissionRepo.countByChallenge_Id(challengeId);
+            long voteCount = 0L;
+            try {
+                voteCount = voteRepo.countByChallengeIds(java.util.List.of(challengeId))
+                        .stream().findFirst().map(r -> r.getCnt()).orElse(0L);
+            } catch (Exception ignore) {}
+            if (submissionCount > 0 || voteCount > 0) {
+                throw new BadRequestException("HAS_DEPENDENCIES",
+                        "제출물/투표가 있어 삭제할 수 없습니다. force=true로 강제 삭제하거나 ENDED로 상태 변경하세요.");
+            }
+        }
+
+
+        // 3) 캐시 정리 + TestResult 명시적 삭제 (CASCADE 미설정)
+        var subIds = submissionRepo.findIdsByChallengeId(challengeId);
+        for (Long sid : subIds) {
+            redisUtil.deleteValue("viewcount:submission:" + sid);
+        }
+        
+        // TestResult는 FK CASCADE가 없어서 명시적으로 삭제 필요
+        if (!subIds.isEmpty()) {
+            try {
+                testResultRepo.deleteBySubmissionIdIn(subIds);
+            } catch (Exception ignore) {}
+        }
+
+        // 4) 부모 한 줄 삭제 → DB FK ON DELETE CASCADE 가 자식 전체 정리
+        int affected = challengeRepo.deleteByIdHard(challengeId);
+        if (affected == 0) throw new NotFoundException("Challenge not found: " + challengeId);
+        em.clear();
+
+        audit("DELETE_CHALLENGE", "CHALLENGE", challengeId, Map.of("force", force));
+    }
+
+    @Transactional
+    public void updateStatusAndPublish(Long id, ChallengeStatus next) {
+        var c = repo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Challenge not found"));
+        var prev = c.getStatus();
+        c.setStatus(next);            // dirty checking으로 flush 예정
+
+        // 트랜잭션 *안에서* 이벤트 발행 → AFTER_COMMIT 리스너가 받는다
+        publisher.publishEvent(new ChallengeLifecycleEvent(c.getId(), c.getType(), prev, next));
+
+        audit("PATCH_CHALLENGE_STATUS", "CHALLENGE", id, Map.of("prev", prev, "next", next));
     }
 
 

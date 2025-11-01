@@ -22,11 +22,15 @@ public class Profile extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String nickname; // 화면 노출용 이름 (수정 가능)
 
+    @Column(nullable = false, unique = true)
+    private String profileSlug; // URL용 slug
+
     private String bio;
     private String skills;
     private String github;
     private String linkedin;
     private String profileImage;
+    private String coverImage;
 
     public void updateFrom(UserProfileRequest dto) {
         this.bio = dto.getBio();
@@ -35,5 +39,6 @@ public class Profile extends BaseEntity {
         this.linkedin = dto.getLinkedin();
         this.profileImage = dto.getProfileImageUrl();
         this.nickname = dto.getNickname();
+        this.coverImage = dto.getCoverImageUrl();
     }
 }

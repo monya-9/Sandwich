@@ -31,6 +31,10 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		visible: false,
 		message: ''
 	});
+	const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+		visible: false,
+		message: ''
+	});
 	const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; commentId: number | null }>({
 		visible: false,
 		commentId: null
@@ -51,11 +55,19 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		if (isPrivate) return; // 비공개 시 비활성화
 		try {
 			await CareerProjectApi.setRepresentative((item as any).id);
+			
+			setSuccessToast({
+				visible: true,
+				message: (item as any).isRepresentative ? "대표 프로젝트가 해제되었습니다." : "대표 프로젝트로 설정되었습니다."
+			});
+			
+			// 데이터 다시 로드
 			onUpdated && onUpdated();
-		} catch (e) {
+		} catch (e: any) {
+			const errorMessage = e?.response?.data?.message || e?.message || "대표 설정에 실패했습니다. 다시 시도해주세요.";
 			setErrorToast({
 				visible: true,
-				message: "대표 설정에 실패했습니다."
+				message: errorMessage
 			});
 		}
 	};
@@ -103,11 +115,11 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 		});
 	};
 
-	const textMuted = "text-[#9CA3AF]"; // 비공개 텍스트 색상
-	const roleCls = `text-[14px] truncate ${isPrivate ? textMuted : "text-[#111827]"}`;
-	const titleCls = `mt-4 text-[18px] font-medium ${isPrivate ? textMuted : "text-[#111827]"}`;
-	const periodCls = `mt-2 text-[14px] ${isPrivate ? textMuted : "text-[#6B7280]"}`;
-	const descCls = `mt-4 text-[16px] whitespace-pre-wrap break-words ${isPrivate ? textMuted : "text-[#111827]"}`;
+    const textMuted = "text-[#9CA3AF] dark:text-white/40"; // 비공개 텍스트 색상
+    const roleCls = `text-[14px] truncate ${isPrivate ? textMuted : "text-[#111827] dark:text-white"}`;
+    const titleCls = `mt-4 text-[18px] font-medium ${isPrivate ? textMuted : "text-[#111827] dark:text-white"}`;
+    const periodCls = `mt-2 text-[14px] ${isPrivate ? textMuted : "text-[#6B7280] dark:text-white/60"}`;
+    const descCls = `mt-4 text-[16px] whitespace-pre-wrap break-words ${isPrivate ? textMuted : "text-[#111827] dark:text-white"}`;
 	const starCls = isPrivate ? textMuted : ((item as any).isRepresentative ? "text-[#21B284] fill-[#21B284]" : "text-[#6B7280]");
 
 	return (
@@ -120,6 +132,15 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 				autoClose={3000}
 				closable={true}
 				onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
+			/>
+			<Toast
+				visible={successToast.visible}
+				message={successToast.message}
+				type="success"
+				size="medium"
+				autoClose={2000}
+				closable={true}
+				onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
 			/>
 			<ConfirmModal
 				visible={deleteConfirm.visible}
@@ -150,12 +171,12 @@ const ProjectCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 							<button type="button" onClick={()=>setMenuOpen(true)} className="p-1 hover:opacity-80">
 								<MoreHorizontal size={22} className={isPrivate ? textMuted : "text-[#6B7280]"} />
 							</button>
-							{menuOpen && (
-								<div className="absolute right-0 top-full mt-0 w-48 bg-white border border-[#E5E7EB] rounded-xl shadow-lg py-1 z-10">
-									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA]" onClick={()=>{ setMenuOpen(false); onEdit && onEdit(item); }}>
-										<Pencil size={16} className="text-[#6B7280]" /> 수정하기
+                            {menuOpen && (
+                                <div className="absolute right-0 top-full mt-0 w-48 bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl shadow-lg py-1 z-10">
+                                    <button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] dark:hover:bg-white/5 text-[#111827] dark:text-white" onClick={()=>{ setMenuOpen(false); onEdit && onEdit(item); }}>
+                                        <Pencil size={16} className="text-[#6B7280] dark:text-white/70" /> 수정하기
 									</button>
-									<button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] text-[#EF4444]" onClick={()=>{ setMenuOpen(false); onDeleteClick(); }}>
+                                    <button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] dark:hover:bg-white/5 text-[#EF4444]" onClick={()=>{ setMenuOpen(false); onDeleteClick(); }}>
 										<X size={16} /> 삭제하기
 									</button>
 								</div>

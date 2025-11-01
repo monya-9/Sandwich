@@ -56,37 +56,40 @@ export default function PublicWorkGrid({ userId }: { userId: number }) {
 
   if (!userId) return null;
 
+  if (loading) {
+    return <div className="min-h-[360px] flex items-center justify-center text-black/60 dark:text-white/60">불러오는 중…</div>;
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="min-h-[360px] flex flex-col items-center justify-center text-center">
+        <div className="text-[16px] md:text-[18px] text-black/80 dark:text-white/80">등록된 작업이 없습니다.</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[360px]">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[15px] font-medium text-black/90">모든 작업 목록</h3>
-      </div>
-      {loading ? (
-        <div className="py-10 text-center text-black/60">불러오는 중…</div>
-      ) : items.length === 0 ? (
-        <div className="py-12 text-center text-black/50">등록된 작업이 없습니다.</div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {items.map((p, idx) => {
-            const cover = (p as any).coverUrl || resolveCover(p as any, { position: idx });
-            const coverUrl = cover ? cover : '';
-            const title = (p as any).title ? (p as any).title : '';
-            const ownerId = (p as any).owner?.id || (p as any).authorId || userId;
-            const goDetail = () => navigate(`/other-project/${ownerId}/${(p as any).id}`);
-            return (
-              <div key={p.id} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={goDetail}>
-                <div className="relative w-full aspect-[4/3] bg-gray-200 group">
-                  <Img src={coverUrl} alt={title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute left-2 bottom-2 text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity line-clamp-1">
-                    {title}
-                  </div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+        {items.map((p, idx) => {
+          const cover = (p as any).coverUrl || resolveCover(p as any, { position: idx });
+          const coverUrl = cover ? cover : '';
+          const title = (p as any).title ? (p as any).title : '';
+          const ownerId = (p as any).owner?.id || (p as any).authorId || userId;
+          const goDetail = () => navigate(`/other-project/${ownerId}/${(p as any).id}`);
+          return (
+            <div key={p.id} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={goDetail}>
+              <div className="relative w-full aspect-[4/3] bg-gray-200 group">
+                <Img src={coverUrl} alt={title} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute left-2 bottom-2 text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity line-clamp-1">
+                  {title}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 } 

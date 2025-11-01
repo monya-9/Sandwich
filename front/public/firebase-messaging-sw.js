@@ -21,7 +21,20 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 /** ====== 환경/리소스 ====== */
-const APP_ORIGIN = 'http://localhost:3000';  // 배포 시 실제 도메인(https)로 교체
+// 환경 자동 감지하여 API 베이스 URL 결정
+const getApiBase = () => {
+  const hostname = self.location.hostname;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // 로컬 개발 환경: 프록시 사용
+    return process.env.REACT_APP_API_BASE_LOCAL || '/api';
+  } else {
+    // 배포 환경: 직접 API 호출
+    return process.env.REACT_APP_API_BASE_PROD || 'https://sd-LB-1117689927.ap-northeast-2.elb.amazonaws.com/api';
+  }
+};
+
+const APP_ORIGIN = getApiBase();  // 배포 시 실제 도메인(https)로 교체
 const DEFAULT_ICON_PATH  = '/icons/logo-192.png'; // 정사각 PNG 권장(192x192)
 const DEFAULT_BADGE_PATH = '/icons/logo-192.png';
 

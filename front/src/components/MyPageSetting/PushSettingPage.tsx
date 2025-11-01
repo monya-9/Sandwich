@@ -47,8 +47,8 @@ const defaults: PushPrefs = {
 const Row: React.FC<{ title: string; desc?: string; value: boolean; onChange?: (v: boolean) => void; disabled?: boolean }> = ({ title, desc, value, onChange, disabled }) => (
 	<div className="flex items-start justify-between py-4">
 		<div>
-			<div className={`text-[14px] ${disabled ? "text-[#9CA3AF]" : "text-[#111827]"}`}>{title}</div>
-			{desc ? <p className={`text-[14px] mt-1 leading-relaxed ${disabled ? "text-[#9CA3AF]" : "text-[#6B7280]"}`}>{desc}</p> : null}
+            <div className={`text-[14px] ${disabled ? "text-[#9CA3AF]" : "text-[#111827] dark:text-white"}`}>{title}</div>
+            {desc ? <p className={`text-[14px] mt-1 leading-relaxed ${disabled ? "text-[#9CA3AF]" : "text-[#6B7280] dark:text-white/60"}`}>{desc}</p> : null}
 		</div>
 		<div className="ml-4 mt-1">
 			<ToggleSwitch checked={value} onChange={onChange} disabled={disabled} />
@@ -57,9 +57,9 @@ const Row: React.FC<{ title: string; desc?: string; value: boolean; onChange?: (
 );
 
 const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-	<section className="bg-white border border-[#E5E7EB] rounded-xl p-6 box-border">
-		<div className="text-[16px] font-medium text-[#111827] mb-2">{title}</div>
-		<hr className="border-[#E5E7EB] mb-2" />
+    <section className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 box-border">
+        <div className="text-[16px] font-medium text-[#111827] dark:text-white mb-2">{title}</div>
+        <hr className="border-[#E5E7EB] dark:border-[var(--border-color)] mb-2" />
 		<div>{children}</div>
 	</section>
 );
@@ -119,8 +119,8 @@ const PushSettingPage: React.FC = () => {
 
 	const setField = (k: keyof PushPrefs) => (v: boolean) => save({ [k]: v } as any);
 
-	return (
-		<div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] text-black">
+    return (
+        <div className="min-h-screen font-gmarket pt-5 bg-[#F5F7FA] dark:bg-[var(--bg)] text-black dark:text-white">
 			<div className="mx-auto max-w-[1400px] px-4 md:px-6">
 				<div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 					<aside className="hidden lg:block w-full lg:w-[320px] shrink-0"><Sidebar /></aside>

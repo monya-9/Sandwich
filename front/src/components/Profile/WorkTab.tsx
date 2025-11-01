@@ -143,18 +143,12 @@ const WorkTab: React.FC = () => {
 	};
 
 	if (loading && projects.length === 0) {
-		return <div className="min-h-[360px] flex items-center justify-center text-black/70">불러오는 중…</div>;
+		return <div className="min-h-[360px] flex items-center justify-center text-black/60 dark:text-white/60">불러오는 중…</div>;
 	}
 	if (projects.length === 0) {
 		return (
 			<div className="min-h-[360px] flex flex-col items-center justify-center text-center">
-				<div className="mt-6 text-[16px] md:text-[18px] text-black/90">아직 등록한 작업이 없습니다.</div>
-				<div className="mt-2 text-[14px] md:text-[15px] text-black/70 leading-relaxed">
-					상단의 업로드 버튼으로 프로젝트를 등록해 보세요!
-				</div>
-				<div className="mt-6 flex items-center gap-3">
-					<Link to="/project/edit" className="h-[44px] px-5 rounded-[22px] bg-[#068334] text-white text-[14px] flex items-center">새로운 작업 업로드</Link>
-				</div>
+				<div className="mt-6 text-[16px] md:text-[18px] text-black/80 dark:text-white/80">등록된 작업이 없습니다.</div>
 			</div>
 		);
 	}
@@ -162,16 +156,15 @@ const WorkTab: React.FC = () => {
 	return (
 		<div className="min-h-[360px]">
 			{/* 헤더 액션 */}
-			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-[15px] font-medium text-black/90">모든 작업 목록</h3>
-				<div className="flex gap-2">
+            <div className="flex items-center justify-end mb-4 mt-6">
+                <div className="flex gap-2">
 					{isReorderMode ? (
 						<>
-							<button className="h-[36px] px-4 rounded-[18px] border border-black/15 bg-white" onClick={handleCancelOrder}>취소</button>
-							<button className="h-[36px] px-4 rounded-[18px] bg-[#11B8A5] text-white" onClick={handleApplyOrder}>변경 완료</button>
+                            <button className="h-[36px] px-4 rounded-[18px] border border-black/15 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-black dark:text-white" onClick={handleCancelOrder}>취소</button>
+                            <button className="h-[36px] px-4 rounded-[18px] bg-[#11B8A5] text-white" onClick={handleApplyOrder}>변경 완료</button>
 						</>
 					) : (
-						<button className="h-[36px] px-4 rounded-[18px] border border-black/15 bg-white" onClick={() => setIsReorderMode(true)}>작업 순서 변경</button>
+                        <button className="h-[36px] px-4 rounded-[18px] border border-black/15 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-black dark:text-white" onClick={() => setIsReorderMode(true)}>작업 순서 변경</button>
 					)}
 				</div>
 			</div>
@@ -253,17 +246,17 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 					{(project as any).title || ''}
 				</div>
 				{/* 좌상단 점3 메뉴 버튼 (호버 시 표시) */}
-				<button type="button" className={`absolute ${isReorderMode ? 'top-2 right-2' : 'top-2 left-2'} w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity`} onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}>
+                <button type="button" className={`absolute ${isReorderMode ? 'top-2 right-2' : 'top-2 left-2'} w-8 h-8 rounded-full bg-white/90 text-black text-xl flex items-center justify-center shadow ring-1 ring-white/80 opacity-0 group-hover:opacity-100 transition-opacity`} onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}>
 					···
 				</button>
-				{menuOpen && (
-					<div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white rounded-md shadow-lg border border-black/10 overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
-						<button className="px-4 py-2 text-sm hover:bg-gray-100 w-full text-left" onClick={goEdit}>수정하기</button>
-						<button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
+                {menuOpen && (
+                    <div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
+                        <button className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left text-black dark:text-white" onClick={goEdit}>수정하기</button>
+                        <button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
 					</div>
 				)}
-				{isReorderMode && (
-					<div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[12px] font-medium text-black/80">
+                {isReorderMode && (
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white dark:bg-[var(--surface)] shadow flex items-center justify-center text-[12px] font-medium text-black/80 dark:text-white">
 						{indexInList + 1}
 					</div>
 				)}

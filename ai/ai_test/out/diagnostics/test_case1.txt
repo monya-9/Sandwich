@@ -1,0 +1,16 @@
+[INPUT]
+12 4 9
+13 2 17 8 11 6 25 9 4 16 7 10
+
+
+[EXPECTED]
+1
+
+[GOT]
+1
+
+[STDERR]
+
+
+[DIAG]
+null

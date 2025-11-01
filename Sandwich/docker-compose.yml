@@ -12,19 +12,23 @@ services:
     env_file: .env
     environment:
       JAVA_TOOL_OPTIONS: "-Duser.timezone=UTC"
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SANDWICH_USER_AWS_ACCESS_KEY_ID: ${SANDWICH_USER_AWS_ACCESS_KEY_ID}
       SANDWICH_USER_AWS_SECRET_ACCESS_KEY: ${SANDWICH_USER_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY:  ${AWS_SECRET_ACCESS_KEY}
       PUSH_FCM_ENABLED: "true"
       FIREBASE_CREDENTIALS_PATH: /app/creds/firebase-service-account.json
       FIREBASE_CREDENTIALS_JSON_B64: ${FIREBASE_CREDENTIALS_JSON_B64}
       APP_WEB_BASE_URL: http://localhost
       MFA_ENABLED: "true"
       MFA_BLOCK_OTP_APIS: "false"
+      WEB_CORS_ALLOWED_ORIGINS: ${WEB_CORS_ALLOWED_ORIGINS}
+      WEB_CORS_ALLOWED_METHODS: ${WEB_CORS_ALLOWED_METHODS}
     entrypoint:
       - /bin/sh
       - -lc
@@ -88,10 +92,11 @@ services:
     restart: always
     volumes:
       - grafana-data:/var/lib/grafana
-    ports:
-      - "3000:3000"
+    #ports: ["3300:3000"]
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: http://localhost/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     networks: [sandwich-net]
 
 volumes:

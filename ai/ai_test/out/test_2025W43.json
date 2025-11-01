@@ -1,0 +1,33 @@
+{
+  "summary": {
+    "submit": "test.py",
+    "cases": 1,
+    "passed": 0,
+    "accuracy": 0.0,
+    "time_med_sec": 0.119119,
+    "time_mean_sec": 0.119119,
+    "time_p95_sec": 0.119119,
+    "mem_med_mb": 6.52,
+    "mem_p95_mb": 6.52,
+    "passed_all": false,
+    "hardcode_penalty": 0.0,
+    "hardcode_flags": [],
+    "score": 0.0
+  },
+  "results": [
+    {
+      "case": 1,
+      "ok": false,
+      "expected": "5",
+      "got": "",
+      "time_sec": 0.119119,
+      "peak_mb": 6.52,
+      "err": "Traceback (most recent call last):\r\n  File \"C:\\Users\\q7750\\AppData\\Local\\Temp\\grade_7avsm8iv\\test.py\", line 44, in <module>\r\n    main()\r\n  File \"C:\\Users\\q7750\\AppData\\Local\\Temp\\grade_7avsm8iv\\test.py\", line 13, in main\r\n    arr = [next(it) for _ in range(n)] if n>0 else []\r\n  File \"C:\\Users\\q7750\\AppData\\Local\\Temp\\grade_7avsm8iv\\test.py\", line 13, in <listcomp>\r\n    arr = [next(it) for _ in range(n)] if n>0 else []\r\nStopIteration",
+      "diagnosis": {
+        "reason": "wrong_value",
+        "hint": "로직/서식 확인",
+        "diff": "--- \n+++ \n@@ -1 +0,0 @@\n-5"
+      }
+    }
+  ]
+}

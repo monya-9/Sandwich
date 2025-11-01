@@ -7,11 +7,12 @@ import { useNavigate } from "react-router-dom";
 import Toast from "../../common/Toast";
 
 interface LikeActionProps {
-  targetType: "PROJECT" | "BOARD" | "COMMENT";
+  targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
   targetId: number;
+  isMobile?: boolean;
 }
 
-export default function LikeAction({ targetType, targetId }: LikeActionProps) {
+export default function LikeAction({ targetType, targetId, isMobile = false }: LikeActionProps) {
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(0);
   const [toast, setToast] = useState<null | "like" | "unlike">(null);
@@ -67,6 +68,11 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
       setLiked(res.data.likedByMe);
       setCount(res.data.likeCount);
       setToast(res.data.likedByMe ? "like" : "unlike");
+      
+      // 프로젝트 통계 갱신 이벤트 발생
+      if (targetType === "PROJECT") {
+        window.dispatchEvent(new CustomEvent("project:stats:refresh"));
+      }
     } catch (e: any) {
       console.error("좋아요 처리 실패:", e);
       if (e.response?.status === 401) {
@@ -140,22 +146,26 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
       <div className="relative">
         <button
           aria-label="좋아요"
-          className="flex flex-col items-center gap-1 group focus:outline-none"
+          className={`flex items-center group focus:outline-none ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
           onClick={handleLike}
           disabled={loading}
         >
           <div
-            className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 transition-all duration-150
-              ${liked ? "bg-[#FF6688]" : "bg-white"}`}
+            className={`rounded-full shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center transition-all duration-150
+              ${liked ? "bg-[#FF6688]" : "bg-white"} ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}
             style={{ position: "relative" }}
           >
             <FaHeart
-              className={`w-7 h-7 transition-colors duration-150
-                  ${liked ? "text-white" : "text-gray-800"}`}
+              className={`transition-colors duration-150
+                  ${liked ? "text-white" : "text-gray-800"} ${isMobile ? 'w-5 h-5' : 'w-7 h-7'}`}
             />
             {count > 0 && (
               <span
-                className={`absolute -top-[10px] -right-[10px] z-10 min-w-[28px] h-[28px] px-1 rounded-full ${liked ? "bg-[#BE185D]" : "bg-[#FF6688]"} text-white text-[13px] leading-[28px] text-center font-bold shadow cursor-pointer`}
+                className={`absolute z-10 px-1 rounded-full ${liked ? "bg-[#BE185D]" : "bg-[#FF6688]"} text-white text-center font-bold shadow cursor-pointer ${
+                  isMobile 
+                    ? 'min-w-[20px] -top-[6px] -right-[6px] h-[20px] text-[10px] leading-[20px]' 
+                    : 'min-w-[28px] -top-[10px] -right-[10px] h-[28px] text-[13px] leading-[28px]'
+                }`}
                 title="좋아요한 사람 보기"
                 onClick={(e) => { e.stopPropagation(); setShowLikedUsers(true); }}
               >
@@ -164,8 +174,8 @@ export default function LikeAction({ targetType, targetId }: LikeActionProps) {
             )}
           </div>
           <span
-            className="text-sm text-white font-semibold text-center"
-            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
+            className={`font-semibold text-center ${isMobile ? 'text-xs text-gray-800' : 'text-sm text-white'}`}
+            style={isMobile ? {} : { textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
           >
             좋아요
           </span>

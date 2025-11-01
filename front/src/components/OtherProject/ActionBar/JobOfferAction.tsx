@@ -234,7 +234,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={fixedModalSize ? { width: fixedModalSize.w, height: fixedModalSize.h } : undefined}
           >
             {/* 헤더 */}
@@ -246,11 +246,11 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
               >
                 ‹
               </button>
-              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800">
+              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
                 {profile?.profileImage ? (
                   <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[12px]">{targetInitial}</div>
+                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[12px]">{targetInitial}</div>
                 )}
                 <div className="text-[14px] font-medium">{targetName}</div>
               </div>
@@ -354,7 +354,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 하단 고정 버튼 바 */}
-            <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3">
+            <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
               <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 text-gray-700">취소</button>
               <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>

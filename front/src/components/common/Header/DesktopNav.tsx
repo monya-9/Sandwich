@@ -2,7 +2,7 @@
 import React, { useContext, useState, useMemo, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
-import logo from "../../../assets/logo.png";
+import { getStaticUrl } from "../../../config/staticBase";
 import { AuthContext } from "../../../context/AuthContext";
 
 import SearchBar from "./SearchBar";
@@ -38,6 +38,9 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         return looksLikeJwt ? "" : email;
     }, [email]);
 
+    // 닉네임 변경 감지를 위한 상태
+    const [nicknameUpdateTrigger, setNicknameUpdateTrigger] = useState(0);
+
     const displayName = useMemo(() => {
         const getItem = (k: string) =>
             (typeof window !== "undefined" &&
@@ -51,7 +54,19 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail]);
+    }, [safeEmail, nicknameUpdateTrigger]);
+
+    // 닉네임 변경 이벤트 리스너
+    useEffect(() => {
+        const handleNicknameUpdate = () => {
+            setNicknameUpdateTrigger(prev => prev + 1);
+        };
+
+        window.addEventListener('user-nickname-updated', handleNicknameUpdate);
+        return () => {
+            window.removeEventListener('user-nickname-updated', handleNicknameUpdate);
+        };
+    }, []);
 
     const myId = Number(
         localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"
@@ -135,13 +150,13 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         : noti.unread;
 
     const navCls = ({ isActive }: { isActive: boolean }) =>
-        `text-black ${isActive ? "font-semibold" : "font-medium"}`;
+        `text-black dark:text-gray-100 ${isActive ? "font-semibold" : "font-medium"}`;
 
     return (
         <div className="flex items-center justify-between w-full relative">
             <div className="flex items-center gap-3 min-w-0">
                 <Link to="/" className="shrink-0">
-                    <img src={logo} alt="Sandwich" className="w-[120px] h-auto" />
+                    <img src={getStaticUrl("assets/logo.png")} alt="Sandwich" className="w-[120px] h-auto" />
                 </Link>
                 <nav className="flex gap-6 text-[18px] ml-6">
                     <NavLink to="/" className={navCls} end>둘러보기</NavLink>
@@ -235,7 +250,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex gap-3 text-[14px] text-black">
+                    <div className="flex gap-3 text-[14px] text-black dark:text-gray-100">
                         <Link to="/login" className="hover:underline">로그인</Link>
                         <Link to="/join" className="hover:underline">회원가입</Link>
                     </div>

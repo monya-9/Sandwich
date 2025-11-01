@@ -1,0 +1,33 @@
+{
+  "summary": {
+    "submit": "TEST2.py",
+    "cases": 1,
+    "passed": 0,
+    "accuracy": 0.0,
+    "time_med_sec": 0.129685,
+    "time_mean_sec": 0.129685,
+    "time_p95_sec": 0.129685,
+    "mem_med_mb": 6.58,
+    "mem_p95_mb": 6.58,
+    "passed_all": false,
+    "hardcode_penalty": 0.0,
+    "hardcode_flags": [],
+    "score": 0.0
+  },
+  "results": [
+    {
+      "case": 1,
+      "ok": false,
+      "expected": "5",
+      "got": "",
+      "time_sec": 0.129685,
+      "peak_mb": 6.58,
+      "err": "Traceback (most recent call last):\r\n  File \"C:\\Users\\q7750\\AppData\\Local\\Temp\\grade_3ycgexl0\\TEST2.py\", line 72, in <module>\r\n    main()\r\n  File \"C:\\Users\\q7750\\AppData\\Local\\Temp\\grade_3ycgexl0\\TEST2.py\", line 12, in main\r\n    arr = [next(it) for _ in range(n)]\r\n  File \"C:\\Users\\q7750\\AppData\\Local\\Temp\\grade_3ycgexl0\\TEST2.py\", line 12, in <listcomp>\r\n    arr = [next(it) for _ in range(n)]\r\nStopIteration",
+      "diagnosis": {
+        "reason": "wrong_value",
+        "hint": "로직/서식 확인",
+        "diff": "--- \n+++ \n@@ -1 +0,0 @@\n-5"
+      }
+    }
+  ]
+}

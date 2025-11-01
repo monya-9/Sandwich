@@ -35,38 +35,48 @@ public class AdminChallengeQueryService {
             com.sandwich.SandWich.challenge.domain.ChallengeStatus status,
             java.time.OffsetDateTime from,
             java.time.OffsetDateTime to,
+            String source, String aiMonth, String aiWeek,
             Pageable pageable) {
-        Page<Challenge> page = challengeQr.search(q, type, status, from, to, pageable);
-        var ids = page.getContent().stream().map(Challenge::getId).toList();
+            Page<Challenge> page = challengeQr.search(
+                    q, type, status, from, to, source, aiMonth, aiWeek, pageable
+            );
 
+            List<Challenge> filtered = page.getContent().stream()
+                    .filter(c -> source  == null || Objects.equals(source,  c.getSource()))
+                    .filter(c -> aiMonth == null || Objects.equals(aiMonth, c.getAiMonth()))
+                    .filter(c -> aiWeek  == null || Objects.equals(aiWeek,  c.getAiWeek()))
+                    .toList();
 
-        Map<Long, Long> subCnt = countSubmissions(ids);
-        Map<Long, Long> voteCnt = countVotes(ids);
+            var ids = filtered.stream().map(Challenge::getId).toList();
 
+            Map<Long, Long> subCnt  = countSubmissions(ids);
+            Map<Long, Long> voteCnt = countVotes(ids);
 
-        var content = page.getContent().stream().map(c -> AdminChallengeDtos.ListItem.builder()
-                        .id(c.getId())
-                        .type(c.getType())
-                        .title(c.getTitle())
-                        .status(c.getStatus())
-                        .startAt(c.getStartAt())
-                        .endAt(c.getEndAt())
-                        .voteStartAt(c.getVoteStartAt())
-                        .voteEndAt(c.getVoteEndAt())
-                        .submissionCount(subCnt.getOrDefault(c.getId(), 0L))
-                        .voteCount(voteCnt.getOrDefault(c.getId(), 0L))
-                        .build())
-                .toList();
-
-
-        return new PageImpl<>(content, pageable, page.getTotalElements());
+            var content = filtered.stream()
+                    .map(c -> AdminChallengeDtos.ListItem.builder()
+                            .id(c.getId())
+                            .selectedIdx(c.getSelectedIdx())
+                            .type(c.getType())
+                            .title(c.getTitle())
+                            .status(c.getStatus())
+                            .startAt(c.getStartAt())
+                            .endAt(c.getEndAt())
+                            .voteStartAt(c.getVoteStartAt())
+                            .voteEndAt(c.getVoteEndAt())
+                            .submissionCount(subCnt.getOrDefault(c.getId(), 0L))
+                            .voteCount(voteCnt.getOrDefault(c.getId(), 0L))
+                            // 출처 메타도 필요하면 여기서 세팅 가능
+                            .source(c.getSource())
+                            .aiMonth(c.getAiMonth())
+                            .aiWeek(c.getAiWeek())
+                            .idempotencyKey(c.getIdempotencyKey())
+                            .build())
+                    .toList();
+        return new PageImpl<>(content, pageable, filtered.size());
     }
     @Transactional(readOnly = true)
     public AdminChallengeDtos.Overview overview(Long id) {
-// 재사용: 단건 조회는 기존 ChallengeRepository를 써도 되지만 의존 줄이려고 QR 사용 안 함
-        var page = searchChallenges(null, null, null, null, null, PageRequest.of(0, 1));
-// 위는 더미 — 실제 구현에서는 ChallengeRepository.findById(id)를 쓰는 편이 간단
-        throw new UnsupportedOperationException("overview(Long) 는 Controller에서 ChallengeRepository.findById 사용으로 대체됨");
+        throw new UnsupportedOperationException("overview(Long)은 Controller에서 ChallengeRepository.findById 사용으로 대체됨");
     }
 
 

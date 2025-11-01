@@ -33,7 +33,7 @@ public class S3Uploader {
         metadata.setContentLength(file.getSize());
         metadata.setContentType(file.getContentType());
 
-        log.info("[S3 업로드] QR 파일 업로드 시작: {}", fileName);
+        log.info("[S3 업로드] 파일 업로드 시작: {}", fileName);
         amazonS3.putObject(bucket, fileName, file.getInputStream(), metadata);
         log.info("[S3 업로드] 완료 - {}", amazonS3.getUrl(bucket, fileName));
 

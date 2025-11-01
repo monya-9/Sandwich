@@ -1,6 +1,6 @@
 // front/src/App.tsx
 import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { AuthProvider } from "./context/AuthContext";
@@ -14,6 +14,7 @@ import LoginPage from "./pages/Auth/LoginPage";
 import OtherProjectPage from "./pages/OtherProjectPage";
 import ProjectMangeSampleForm from "./components/ProjectMangeSample/ProjectMangeSampleForm";
 import MessagesPage from "./pages/Messages/MessagesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // 마이페이지
 import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
@@ -50,6 +51,16 @@ import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
 import PublicCollectionDetailPage from "./pages/PublicCollectionDetailPage";
+import RequireAdmin from "./components/Auth/RequireAdmin";
+import ChallengeFormPage from "./pages/admin/ChallengeFormPage";
+import ChallengeEditSinglePage from "./pages/admin/ChallengeEditSinglePage";
+import ChallengeEditCodePage from "./pages/admin/ChallengeEditCodePage";
+import ChallengeEditPortfolioPage from "./pages/admin/ChallengeEditPortfolioPage";
+import ChallengeManagePage from "./pages/admin/ChallengeManagePage";
+import SecurityOtpHistoryPage from "./pages/admin/SecurityOtpHistoryPage";
+import SecurityDeviceManagePage from "./pages/admin/SecurityDeviceManagePage";
+import DeviceManagePage from "./pages/mypage/DeviceManagePage";
+import AccountDeletionPage from "./pages/mypage/AccountDeletionPage";
 
 // ✅ 추가 2) 모듈 로드 시 1회 활성화 (컴포넌트 바깥)
 enableRecaptchaV3OnPaths({
@@ -72,6 +83,51 @@ function RootProjectToOtherRedirect() {
     return <Navigate to={to} replace />;
 }
 
+/** /projects/:id (기존 알림 호환) -> ownerId 찾아서 리다이렉트 */
+function LegacyProjectRedirect() {
+    const { id: projectId } = useParams();
+    const navigate = useNavigate();
+    const [error, setError] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!projectId) {
+            navigate("/search", { replace: true });
+            return;
+        }
+
+        // 피드에서 프로젝트 찾기
+        import("./api/projects").then(async ({ fetchProjectFeed }) => {
+            try {
+                const feed = await fetchProjectFeed({ page: 0, size: 200, sort: 'latest' });
+                const match = (feed.content || []).find((it: any) => it?.id === Number(projectId));
+                const ownerId = (match as any)?.owner?.id || (match as any)?.authorId;
+                if (ownerId) {
+                    navigate(`/other-project/${ownerId}/${projectId}`, { replace: true });
+                } else {
+                    setError(true);
+                }
+            } catch {
+                setError(true);
+            }
+        });
+    }, [projectId, navigate]);
+
+    if (error) {
+        return <Navigate to="/search" replace />;
+    }
+
+    return <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">프로젝트를 찾는 중...</div>
+    </div>;
+}
+
+/** /profile/:userId (기존 알림 호환) -> /users/:userId 리다이렉트 */
+function LegacyProfileRedirect() {
+    const { userId } = useParams();
+    const to = userId ? `/users/${userId}` : "/search";
+    return <Navigate to={to} replace />;
+}
+
 function App() {
     useEffect(() => {
         initFCM(); // 앱 시작 시 1회
@@ -88,6 +144,9 @@ function App() {
                                 {/* Notefolio 스타일 상세 경로 */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
                                 
+                                {/* 기존 알림 호환 경로 (레거시) */}
+                                <Route path="/projects/:id" element={<LegacyProjectRedirect />} />
+                                <Route path="/profile/:userId" element={<LegacyProfileRedirect />} />
 
                                 {/* 신규/편집 업로드 경로 */}
                                 <Route path="/project/edit" element={<ProjectMangeSampleForm />} />
@@ -102,6 +161,7 @@ function App() {
                                 
                                 <Route path="/messages" element={<MessagesPage />} />
                                 <Route path="/messages/:id" element={<MessagesPage />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
 
                                 <Route path="/rooms/:id" element={<RoomToMessagesRedirect />} />
                                 <Route path="/rooms" element={<Navigate to="/messages" replace />} />
@@ -110,6 +170,8 @@ function App() {
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
                                 <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
+                                <Route path="/mypage/devices" element={<DeviceManagePage />} />
+                                <Route path="/mypage/account-deletion" element={<AccountDeletionPage />} />
 
                                 {/* 프로필 페이지 */}
                                 <Route path="/profile" element={<ProfilePage />} />
@@ -134,6 +196,7 @@ function App() {
                                 <Route path="/challenge/code/:id/submissions" element={<CodeSubmissionListPage />} />
                                 <Route path="/challenge/portfolio/:id/vote" element={<PortfolioVotePage />} />
                                 <Route path="/challenge/portfolio/:id/vote/:projectId" element={<PortfolioProjectDetailPage />} />
+                                <Route path="/challenge/portfolio/:id/projects/:projectId" element={<PortfolioProjectDetailPage />} />
                                 <Route path="/challenge/code/:id/submissions/:submissionId" element={<CodeSubmissionDetailPage />} />
 
                                 {/* (예시) 코드 제출 수정 */}
@@ -141,6 +204,21 @@ function App() {
 
                                 {/* 공개 사용자 프로필 */}
                                 <Route path="/users/:id" element={<UserPublicProfilePage />} />
+
+                                {/* ✅ 어드민 보호 라우트: ROLE_ADMIN 아닐 시 전체 차단 및 리다이렉트 */}
+                                <Route path="/admin/*" element={<RequireAdmin />}> 
+                                    <Route path="challenges" element={<ChallengeManagePage />} />
+                                    <Route path="challenges/new" element={<ChallengeFormPage />} />
+                                    {/* 단일 수정 라우트: /admin/challenges/:id */}
+                                    <Route path="challenges/:id" element={<ChallengeEditSinglePage />} />
+                                    {/* 유형별 수정 경로(각 타입 전용 페이지가 필요하면 아래 두 줄을 별도 페이지로 분리 가능) */}
+                                    <Route path="challenge/code/:id/edit" element={<ChallengeEditCodePage />} />
+                                    <Route path="challenge/portfolio/:id/edit" element={<ChallengeEditPortfolioPage />} />
+                                    {/* 보안 ▸ OTP 이력 */}
+                                    <Route path="security/otp" element={<SecurityOtpHistoryPage />} />
+                                    {/* 보안 ▸ 사용자 관리(관리자 전용: 특정 사용자 전체 무효화) */}
+                                    <Route path="security/devices" element={<SecurityDeviceManagePage />} />
+                                </Route>
                             </Route>
 
                             <Route path="join" element={<JoinPage />} />

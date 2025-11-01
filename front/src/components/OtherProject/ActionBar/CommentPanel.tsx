@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   fetchComments, postComment, updateComment, deleteComment,
   CommentResponse
@@ -24,6 +25,7 @@ type ReplyState = { parentId: number; value: string } | null;
 export default function CommentPanel({
   onClose, username, projectId, projectName, category, width = 440, isLoggedIn
 }: CommentPanelProps) {
+  const navigate = useNavigate();
   const [comments, setComments] = useState<CommentResponse[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,7 @@ export default function CommentPanel({
   });
   const { nickname } = useContext(AuthContext);
   const myNickname = nickname || localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "";
+  const myId = Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0');
 
   // username, projectId 의존성 추가!
   const loadComments = useCallback(async () => {
@@ -79,6 +82,8 @@ export default function CommentPanel({
         visible: true,
         message: "댓글이 작성되었습니다!"
       });
+      // 프로젝트 통계 갱신 이벤트 발생
+      window.dispatchEvent(new CustomEvent("project:stats:refresh"));
     } catch (e: any) {
       setErrorToast({
         visible: true,
@@ -96,6 +101,8 @@ export default function CommentPanel({
         visible: true,
         message: "답글이 작성되었습니다!"
       });
+      // 프로젝트 통계 갱신 이벤트 발생
+      window.dispatchEvent(new CustomEvent("project:stats:refresh"));
     } catch (e: any) {
       setErrorToast({
         visible: true,
@@ -120,6 +127,8 @@ export default function CommentPanel({
         visible: true,
         message: "댓글이 삭제되었습니다."
       });
+      // 프로젝트 통계 갱신 이벤트 발생
+      window.dispatchEvent(new CustomEvent("project:stats:refresh"));
     } catch (e: any) {
       setErrorToast({
         visible: true,
@@ -158,11 +167,25 @@ export default function CommentPanel({
     }
   };
 
+  const handleUserClick = (userId: number) => {
+    if (myId > 0 && myId === userId) {
+      navigate('/profile');
+    } else {
+      navigate(`/users/${userId}`);
+    }
+    onClose();
+  };
+
   // 댓글 렌더링
   const renderComment = (c: CommentResponse) => (
     <li key={c.id} className="mb-3 border-b pb-2">
       <div className="flex items-center gap-2">
-        <b>{c.username}</b>
+        <b 
+          className="cursor-pointer hover:text-blue-600 transition-colors"
+          onClick={() => handleUserClick(c.userId)}
+        >
+          {c.username}
+        </b>
         <span className="text-xs text-gray-400">
           {typeof c.createdAt === "string" ? c.createdAt.slice(0, 16).replace("T", " ") : ""}
         </span>

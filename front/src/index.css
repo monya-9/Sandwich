@@ -22,6 +22,298 @@
 body {
   font-family: 'GmarketSans', sans-serif;
 }
+/* 기본 라이트/다크 배경/글자색 (전역) */
+:root {
+  color-scheme: light dark;
+  /* Notion-like light tokens (라이트는 기존 스타일 유지하므로 의미상 기본값) */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-light: #ffffff; /* 입력 필드용 밝은 배경 */
+  --text-primary: #111111;
+  --text-secondary: #4b5563; /* gray-600 */
+  --border-color: rgba(17, 17, 17, 0.12);
+  --avatar-bg: #e5e7eb; /* gray-200 */
+  --accent-color: #000000; /* 라이트모드 기본 accent 색상 */
+}
+.dark {
+  /* Vercel-like dark tokens */
+  --bg: #000000;                 /* page background: pure black */
+  --surface: #111111;            /* panels/inputs: near-black */
+  --surface-light: #2a2a2a;      /* 입력 필드용 더 밝은 배경 */
+  --text-primary: #ffffff;       /* main text */
+  --text-secondary: #A1A1AA;     /* secondary (zinc-400) */
+  --border-color: #404040;       /* 더 밝은 테두리로 변경 */
+  --avatar-bg: #2F2F31;          /* slightly lighter gray for avatars */
+  --accent-color: #ffffff;       /* 다크모드 accent 색상 */
+}
+.dark body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+}
+
+/* Global dark-mode remap for common Tailwind utility classes (Vercel-like) */
+/* Text color adjustment */
+.dark .text-black { color: var(--text-primary) !important; }
+/* keep white text as white in dark mode */
+.dark .text-white { color: #ffffff !important; }
+/* ensure strongest titles remain bright */
+.dark .text-gray-800, .dark .text-neutral-800, .dark .text-gray-900, .dark .text-neutral-900 { color: var(--text-primary) !important; }
+
+/* Background mapping */
+.dark .bg-white { background-color: var(--surface) !important; }
+.dark .bg-black { background-color: #000000 !important; }
+.dark .bg-gray-50, .dark .bg-neutral-50, .dark .bg-gray-100, .dark .bg-neutral-100 { background-color: var(--surface) !important; }
+
+/* Border inversion/preservation */
+.dark .border-white { border-color: var(--bg) !important; }
+.dark .border-black { border-color: var(--text-primary) !important; }
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-gray-400,
+.dark .border-neutral-100,
+.dark .border-neutral-200,
+.dark .border-neutral-300,
+.dark .border-neutral-400 { border-color: var(--border-color) !important; }
+
+/* Gray text → Vercel-like secondary tone */
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-700 { color: var(--text-secondary) !important; }
+
+/* Hover helpers (escape Tailwind classes) */
+.dark .hover\:bg-gray-50:hover, .dark .hover\:bg-neutral-50:hover { background-color: #1a1a1a !important; }
+
+/* Form controls */
+.dark input, .dark textarea, .dark select { background-color: var(--surface-light) !important; color: var(--text-primary); border-color: var(--border-color); }
+.dark ::placeholder { color: var(--text-secondary); }
+.dark hr { border-color: var(--border-color); }
+
+/* Radio buttons and checkboxes accent color - CSS 변수 사용 */
+input[type="radio"], input[type="checkbox"] { 
+  accent-color: var(--accent-color); 
+}
+.accent-black { 
+  accent-color: var(--accent-color) !important; 
+}
+
+/* 라이트모드에서 체크박스/라디오박스 accent 색상 강제 적용 */
+:root:not(.dark) input[type="radio"], 
+:root:not(.dark) input[type="checkbox"] {
+  accent-color: #22c55e !important; /* 초록색으로 변경 */
+  background-color: #ffffff !important; /* 배경색 강제 설정 */
+  border-color: #d1d5db !important; /* 테두리 색상 설정 */
+}
+:root:not(.dark) .accent-black {
+  accent-color: #22c55e !important;
+}
+
+/* 라이트모드에서 체크박스/라디오박스 배경색 강제 적용 */
+input[type="checkbox"]:not(.dark),
+input[type="radio"]:not(.dark) {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+
+/* 다크모드가 아닐 때 모든 체크박스/라디오박스 스타일 */
+:not(.dark) input[type="checkbox"],
+:not(.dark) input[type="radio"] {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  accent-color: #22c55e !important;
+}
+
+/* ProjectDetailsModal의 체크박스/라디오박스 특별 처리 - 최고 우선순위 */
+input.scale-110 {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  accent-color: #22c55e !important;
+  appearance: auto !important;
+}
+
+/* 모든 체크박스/라디오박스에 대한 강제 스타일 */
+input[type="checkbox"]:not(.dark),
+input[type="radio"]:not(.dark) {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  accent-color: #22c55e !important;
+  appearance: auto !important;
+}
+
+/* 다크모드에서는 다크 스타일 적용 */
+.dark input.scale-110 {
+  background-color: var(--surface-light) !important;
+  border-color: var(--border-color) !important;
+  accent-color: #ffffff !important;
+}
+
+/* 체크박스/라디오박스 기본 스타일 */
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  width: 20px !important;
+  height: 20px !important;
+  border: 2px solid #d1d5db !important;
+  background: #ffffff !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: 0 !important;
+  padding: 0 !important;
+  position: relative !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+input[type="radio"] {
+  border-radius: 50% !important;
+}
+
+/* 체크박스 체크 상태 */
+input[type="checkbox"]:checked {
+  background: #ffffff !important;
+  border-color: #22c55e !important;
+  position: relative !important;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✓" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  color: #22c55e !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+}
+
+/* 라디오박스 체크 상태 */
+input[type="radio"]:checked {
+  background: #ffffff !important;
+  border-color: #22c55e !important;
+  position: relative !important;
+}
+
+input[type="radio"]:checked::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: #22c55e !important;
+  border-radius: 50% !important;
+}
+
+/* 다크모드 */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  background: #2a2a2a !important;
+  border-color: #404040 !important;
+}
+
+.dark input[type="checkbox"]:checked,
+.dark input[type="radio"]:checked {
+  background: #2a2a2a !important;
+  border-color: #22c55e !important;
+}
+
+.dark input[type="checkbox"]:checked::after {
+  color: #22c55e !important;
+}
+
+.dark input[type="radio"]:checked::after {
+  background: #22c55e !important;
+}
+
+/* 특별히 배경색상 입력 필드 스타일 강제 적용 */
+.dark input[type="text"] { 
+  background-color: var(--surface-light) !important; 
+  color: var(--text-primary) !important;
+}
+.dark .bg-white { background-color: var(--surface-light) !important; }
+
+/* 모든 입력 필드에 대한 강제 스타일 적용 */
+.dark input {
+  background-color: var(--surface-light) !important;
+  color: var(--text-primary) !important;
+}
+
+/* SettingsPanel 배경색상 입력 필드 특별 처리 - 라이트모드 우선 */
+.settings-panel-bg-input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+.dark .settings-panel-bg-input {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+/* 라이트모드에서도 확실한 흰색 배경 적용 - 더 구체적인 선택자 */
+:root:not(.dark) .settings-panel-bg-input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+:root:not(.dark) input[type="text"] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* 최고 우선순위로 강제 적용 */
+input.settings-panel-bg-input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* 다크모드에서만 다크 스타일 적용 */
+.dark input.settings-panel-bg-input {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+/* 다크모드에서 모달과 입력 필드 테두리 강화 */
+.dark .border,
+.dark input,
+.dark textarea,
+.dark select,
+.dark button {
+  border-color: var(--border-color) !important;
+}
+
+/* 다크모드에서 체크박스/라디오박스 테두리 */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  border-color: var(--border-color) !important;
+}
+
+/* 모든 CSS 변수 오버라이드 */
+input.settings-panel-bg-input[style] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+.dark input.settings-panel-bg-input[style] {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+/* 모든 가능한 입력 필드 타겟팅 */
+input[type="text"], input[type="color"], input[type="number"] {
+  background-color: var(--surface-light) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Quill 에디터 관련 스타일 오버라이드 - 배경색 제거 */
+.ql-editor, .ql-blank {
+  color: var(--text-primary) !important;
+}
+
+/* Common avatar-style circles (rounded + gray bg) unify to header tone */
+.dark .rounded-full.bg-gray-200, .dark .rounded-full.bg-gray-300, .dark .rounded-full.bg-neutral-200 { background-color: var(--avatar-bg) !important; color: var(--text-primary) !important; }
+.dark .rounded-full.bg-gray-200 *, .dark .rounded-full.bg-gray-300 *, .dark .rounded-full.bg-neutral-200 * { color: var(--text-primary) !important; }
 /* 스크롤은 가능, 바는 숨김 */
 .no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } /* IE/Firefox */

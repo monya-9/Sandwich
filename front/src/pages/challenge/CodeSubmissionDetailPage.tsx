@@ -1,17 +1,14 @@
 // src/pages/challenge/CodeSubmissionDetailPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { SectionCard } from "../../components/challenge/common";
-import { ChevronLeft, Heart, Eye, MessageSquare } from "lucide-react";
-import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
-import {
-    getCodeSubmissions,
-    getCodeComments,
-    addCodeComment,
-    incViewCode,
-    toggleLikeCode,
-} from "../../data/Challenge/submissionsDummy";
-import type { CodeChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
+import { SectionCard, ChallengeCommentSection, CommentResponse } from "../../components/challenge/common";
+import { ChevronLeft, Eye, MessageSquare, Heart, Edit2, Trash2 } from "lucide-react";
+import { fetchChallengeSubmissionDetail, deleteChallengeSubmission, type SubmissionDetailResponse } from "../../api/submissionApi";
+import { fetchChallengeDetail } from "../../api/challengeApi";
+import { getMe } from "../../api/users";
+import api from "../../api/axiosInstance";
+import ConfirmModal from "../../components/common/ConfirmModal";
+import Toast from "../../components/common/Toast";
 
 export default function CodeSubmissionDetailPage() {
     const { id: idStr, submissionId: sidStr } = useParams();
@@ -19,40 +16,216 @@ export default function CodeSubmissionDetailPage() {
     const sid = Number(sidStr);
     const nav = useNavigate();
 
-    const detail = useMemo(() => getChallengeDetail(id) as CodeChallengeDetail, [id]);
-    const [item, setItem] = useState(() => getCodeSubmissions(id).find((x) => x.id === sid));
-    const [comments, setComments] = useState(() => getCodeComments(sid));
-    const [text, setText] = useState("");
+    // 백엔드 챌린지 데이터 상태
+    const [challengeData, setChallengeData] = useState<any>(null);
+    const [challengeLoading, setChallengeLoading] = useState(true);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+    
+    const [item, setItem] = useState<SubmissionDetailResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [comments, setComments] = useState<CommentResponse[]>([]);
     const [liked, setLiked] = useState(false);
-    const [likes, setLikes] = useState(item?.likes ?? 0);
+    const [likeCount, setLikeCount] = useState(0);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [isOwner, setIsOwner] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [toast, setToast] = useState<{
+        visible: boolean;
+        message: string;
+        type: 'success' | 'error' | 'warning' | 'info';
+    }>({
+        visible: false,
+        message: '',
+        type: 'success'
+    });
+
+    // 현재 사용자 정보 로드
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const me = await getMe();
+                setCurrentUserId(me.id);
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+                setCurrentUserId(null);
+            }
+        };
+
+        loadCurrentUser();
+    }, []);
+
+    // 소유자 확인
+    useEffect(() => {
+        if (currentUserId && item?.owner?.userId) {
+            setIsOwner(currentUserId === item.owner.userId);
+        } else {
+            setIsOwner(false);
+        }
+    }, [currentUserId, item]);
+
+    // 백엔드 챌린지 데이터 로드
+    useEffect(() => {
+        const loadChallengeData = async () => {
+            setChallengeLoading(true);
+            try {
+                const backendChallenge = await fetchChallengeDetail(id);
+                setChallengeData(backendChallenge);
+                setChallengeStatus(backendChallenge.status);
+            } catch (error) {
+                setChallengeData(null);
+                setChallengeStatus(null);
+            } finally {
+                setChallengeLoading(false);
+            }
+        };
+
+        loadChallengeData();
+    }, [id]);
 
     useEffect(() => {
-        incViewCode(id, sid);
-        const next = getCodeSubmissions(id).find((x) => x.id === sid);
-        setItem(next);
-        setLikes(next?.likes ?? 0);
+        const fetchSubmissionDetail = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const submissionDetail = await fetchChallengeSubmissionDetail(id, sid);
+                setItem(submissionDetail);
+            } catch (err) {
+                console.error('제출물 상세 로드 실패:', err);
+                setError('제출물을 찾을 수 없습니다.');
+                setItem(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSubmissionDetail();
     }, [id, sid]);
 
-    if (!item) return <div className="p-6 text-[13.5px]">제출물을 찾을 수 없습니다.</div>;
+    // 댓글 로드
+    useEffect(() => {
+        const fetchComments = async () => {
+            try {
+                const response = await api.get('/comments', {
+                    params: {
+                        type: 'CODE_SUBMISSION',
+                        id: sid
+                    }
+                });
+                setComments(response.data || []);
+            } catch (error) {
+                console.error('댓글 로드 실패:', error);
+                setComments([]);
+            }
+        };
 
-    const headerText = `샌드위치 코드 챌린지: 🧮 ${detail.title.replace(/^코드 챌린지:\s*/, "")}`;
+        if (sid) {
+            fetchComments();
+        }
+    }, [sid]);
 
-    const onToggleLike = () => {
-        setLiked((v) => !v);
-        setLikes((n) => (liked ? n - 1 : n + 1));
-        toggleLikeCode(id, sid, !liked);
+    // 좋아요 상태 로드
+    useEffect(() => {
+        const fetchLikeStatus = async () => {
+            try {
+                const response = await api.get('/likes', {
+                    params: {
+                        targetType: 'CODE_SUBMISSION',
+                        targetId: sid
+                    }
+                });
+                setLiked(response.data.likedByMe || false);
+                setLikeCount(response.data.likeCount || 0);
+            } catch (error) {
+                console.error('좋아요 상태 로드 실패:', error);
+                setLiked(false);
+                setLikeCount(0);
+            }
+        };
+
+        if (sid) {
+            fetchLikeStatus();
+        }
+    }, [sid]);
+
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+                <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
+                    <span className="text-lg font-medium">제출물을 불러오는 중...</span>
+                </div>
+            </div>
+        </div>
+    );
+    if (error || !item) return (
+        <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center text-neutral-600">
+                <span className="text-lg">{error || '제출물을 찾을 수 없습니다.'}</span>
+            </div>
+        </div>
+    );
+
+    // 챌린지 제목 결정
+    const getChallengeTitle = () => {
+        if (challengeLoading) {
+            return "챌린지 정보 로딩 중...";
+        }
+        
+        if (challengeData?.title) {
+            return challengeData.title.replace(/^코드 챌린지:\s*/, "");
+        }
+        
+        return `챌린지 #${id}`;
+    };
+    
+    const headerText = `샌드위치 코드 챌린지: 🧮 ${getChallengeTitle()}`;
+
+    // 좋아요 토글
+    const toggleLike = async () => {
+        if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
+        try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
+            const response = await api.post('/likes', {
+                targetType: 'CODE_SUBMISSION',
+                targetId: sid
+            });
+            setLiked(response.data.likedByMe);
+            setLikeCount(response.data.likeCount);
+        } catch (error) {
+            console.error('좋아요 처리 실패:', error);
+        }
     };
 
-    const submitComment = () => {
-        const v = text.trim();
-        if (!v) return;
-        addCodeComment(sid, v);
-        setComments(getCodeComments(sid));
-        // 댓글 수 갱신 포함
-        const next = getCodeSubmissions(id).find((x) => x.id === sid);
-        setItem(next);
-        setText("");
+    // 제출물 삭제
+    const handleDelete = async () => {
+        try {
+            await deleteChallengeSubmission(id, sid);
+            setDeleteModalOpen(false);
+            setToast({
+                visible: true,
+                message: '제출물이 삭제되었습니다.',
+                type: 'success'
+            });
+            setTimeout(() => {
+                nav(`/challenge/code/${id}/submissions`);
+            }, 1000);
+        } catch (error) {
+            console.error('제출물 삭제 실패:', error);
+            setDeleteModalOpen(false);
+            setToast({
+                visible: true,
+                message: '제출물 삭제에 실패했습니다.',
+                type: 'error'
+            });
+        }
     };
+
+    // 제출물 수정
+    const handleEdit = () => {
+        nav(`/challenge/code/${id}/submit?edit=${sid}`);
+    };
+
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
@@ -71,14 +244,71 @@ export default function CodeSubmissionDetailPage() {
 
             <SectionCard className="!px-5 !py-5">
                 {/* 작성자 */}
-                <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold">
-                        {item.authorInitial}
+                <div className="mb-3 flex items-center gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                        {/* 아바타 - 클릭 가능 */}
+                        <div 
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-[13px] font-bold cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+                            onClick={() => {
+                                if (item.owner?.userId) {
+                                    nav(`/users/${item.owner.userId}`);
+                                }
+                            }}
+                        >
+                            {item.owner?.profileImageUrl ? (
+                                <img 
+                                    src={item.owner.profileImageUrl} 
+                                    alt={item.owner.username}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        target.parentElement!.innerHTML = `<span class="text-[13px] font-bold">${item.owner?.username?.charAt(0).toUpperCase() || 'U'}</span>`;
+                                    }}
+                                />
+                            ) : (
+                                <span>{item.owner?.username?.charAt(0).toUpperCase() || 'U'}</span>
+                            )}
+                        </div>
+                        {/* 사용자명 & 직책 */}
+                        <div className="leading-tight">
+                            <div className="text-[13px] font-semibold text-neutral-900">
+                                <span 
+                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => {
+                                        if (item.owner?.userId) {
+                                            nav(`/users/${item.owner.userId}`);
+                                        }
+                                    }}
+                                >
+                                    {item.owner?.username || '익명'}
+                                </span>
+                            </div>
+                            <div className="text-[12.5px] text-neutral-600">{item.owner?.position || '개발자'}</div>
+                        </div>
                     </div>
-                    <div className="leading-tight">
-                        <div className="text-[13px] font-semibold text-neutral-900">{item.authorName}</div>
-                        <div className="text-[12.5px] text-neutral-600">{item.authorRole}</div>
-                    </div>
+                    
+                    {/* 수정/삭제 버튼 (소유자만 표시, 챌린지가 종료되지 않았을 때만) */}
+                    {isOwner && challengeStatus !== "ENDED" && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleEdit}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="수정"
+                            >
+                                <Edit2 className="h-3.5 w-3.5" />
+                                수정
+                            </button>
+                            <button
+                                onClick={() => setDeleteModalOpen(true)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                title="삭제"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                삭제
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 제목 */}
@@ -87,69 +317,95 @@ export default function CodeSubmissionDetailPage() {
                 {/* 본문 */}
                 <p className="whitespace-pre-wrap rounded-xl border border-neutral-200 bg-neutral-50/60 p-5 text-[13.5px] leading-7">
                     {item.desc}
-                    {item.snippet ? `\n\n--- 코드 참고 ---\n${item.snippet}` : ""}
                 </p>
+                
+                {/* 리포지토리 링크 */}
+                {item.repoUrl && (
+                    <div className="mt-3">
+                        <a 
+                            href={item.repoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-[13px] text-blue-600 hover:text-blue-800"
+                        >
+                            🔗 GitHub 리포지토리 보기
+                        </a>
+                    </div>
+                )}
+                
+                {/* 데모 링크 */}
+                {item.demoUrl && (
+                    <div className="mt-2">
+                        <a 
+                            href={item.demoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-[13px] text-green-600 hover:text-green-800"
+                        >
+                            🚀 데모 보기
+                        </a>
+                    </div>
+                )}
 
                 {/* 메트릭 */}
                 <div className="mt-4 flex items-center gap-4 text-[12.5px] text-neutral-700">
                     <button
-                        onClick={onToggleLike}
-                        className={`inline-flex items-center gap-1 ${liked ? "text-rose-600" : "hover:text-neutral-900"}`}
+                        onClick={toggleLike}
+                        disabled={challengeStatus === "ENDED"}
+                        className={`inline-flex items-center gap-1 ${
+                            challengeStatus === "ENDED" 
+                                ? "text-gray-400 cursor-not-allowed" 
+                                : liked 
+                                ? "text-rose-600" 
+                                : "hover:text-neutral-900"
+                        }`}
+                        title={challengeStatus === "ENDED" ? "종료된 챌린지에서는 좋아요를 할 수 없습니다" : ""}
                     >
                         <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
-                        {likes}
+                        {likeCount}
                     </button>
-                    <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> {item.views}</span>
-                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {item.comments}</span>
+                    <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> {item.viewCount}</span>
+                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {comments.length}</span>
                 </div>
             </SectionCard>
 
             {/* 댓글 */}
-            <SectionCard className="!px-5 !py-5 mt-6">
-                <h2 className="mb-3 text-[15px] font-bold">댓글 {comments.length}</h2>
-
-                <div className="space-y-4">
-                    {comments.map((c) => (
-                        <div key={c.id} className="rounded-2xl border p-4">
-                            <div className="mb-1 flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-[12.5px] font-bold">
-                                    {c.authorInitial}
-                                </div>
-                                <div className="leading-tight">
-                                    <div className="text-[13px] font-semibold text-neutral-900">{c.authorName}</div>
-                                    {c.authorRole && <div className="text-[12px] text-neutral-500">{c.authorRole}</div>}
-                                </div>
-                            </div>
-                            <div className="whitespace-pre-wrap text-[13.5px] leading-7 text-neutral-800">{c.content}</div>
-                            <div className="mt-1 text-xs text-neutral-500">{c.createdAt}</div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* 입력 */}
-                <div className="mt-5 rounded-2xl border p-4">
-          <textarea
-              className="h-24 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
-              placeholder="댓글을 작성해보세요."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-          />
-                    <div className="mt-2 flex justify-end">
-                        <button
-                            onClick={submitComment}
-                            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
-                        >
-                            등록하기
-                        </button>
-                    </div>
-                </div>
-            </SectionCard>
+            <ChallengeCommentSection
+                commentableType="CODE_SUBMISSION"
+                commentableId={sid}
+                challengeStatus={challengeStatus}
+                comments={comments}
+                onCommentsChange={setComments}
+            />
 
             <div className="mt-6 flex justify-end">
                 <Link to={`/challenge/code/${id}/submissions`} className="text-[13px] font-semibold underline">
                     목록으로
                 </Link>
             </div>
+
+            {/* 삭제 확인 모달 */}
+            <ConfirmModal
+                visible={deleteModalOpen}
+                title="제출물 삭제"
+                message="정말로 이 제출물을 삭제하시겠습니까?"
+                confirmText="삭제"
+                cancelText="취소"
+                confirmButtonColor="red"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteModalOpen(false)}
+            />
+
+            {/* Toast */}
+            <Toast
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                size="medium"
+                autoClose={2000}
+                closable={true}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
         </div>
     );
 }

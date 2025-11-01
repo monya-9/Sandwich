@@ -11,11 +11,13 @@ export type UserProfileResponse = {
 	github?: string | null;
 	linkedin?: string | null;
 	profileImage?: string | null;
+	coverImage?: string | null;
 	position?: PositionDto | null;
 	interests: InterestDto[];
 	followerCount: number;
 	followingCount: number;
 	profileName?: string | null; // one-line profile
+	profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 export type UserProfileRequest = {
@@ -31,7 +33,7 @@ export type UserProfileRequest = {
 
 // 대표 커리어(경력/학력/수상/프로젝트) 요약 응답
 export type RepresentativeCareer = {
-	type: "CAREER" | "EDUCATION" | "AWARD" | "PROJECT";
+	type: "CAREER" | "EDUCATION" | "AWARD" | "PROJECT" | "PROJECT_RESUME" | "PROJECT_PORTFOLIO";
 	title: string;
 	subtitle: string;
 	description?: string | null;
@@ -51,6 +53,9 @@ export const UserApi = {
 	},
 	async updateUsername(username: string): Promise<void> {
 		await api.patch("/users/username", { username });
+	},
+	async updateBio(bio: string): Promise<void> {
+		await api.patch("/users/profile/bio", { bio });
 	},
 	async getMe(): Promise<UserProfileResponse> {
 		const res = await api.get<UserProfileResponse>("/users/me");

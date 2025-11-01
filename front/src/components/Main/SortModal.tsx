@@ -29,21 +29,21 @@ const SortModal: React.FC<Props> = ({
   const commonButtonStyle = 'px-5 py-2 text-sm rounded-[20px] border transition drop-shadow-md';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-[20px] w-[360px] max-w-full p-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 dark:bg-white/10 px-4">
+      <div className="bg-white rounded-[20px] w-full max-w-[360px] md:w-[360px] p-4 md:p-5">
 
         {/* 상단 타이틀 + 닫기 버튼 */}
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-medium">정렬</h2>
-          <button onClick={onClose} className="text-xl font-semibold">&times;</button>
+          <h2 className="text-base md:text-lg font-medium">정렬</h2>
+          <button onClick={onClose} className="text-xl md:text-2xl font-semibold">&times;</button>
         </div>
 
         {/* 구분선 */}
-        <hr className="w-full border-t border-gray-200 mx-0 mb-4" />
+        <hr className="w-full border-t border-gray-200 mx-0 mb-3 md:mb-4" />
 
         {/* 정렬 방식 */}
-        <div className="mb-4">
-          <p className="font-medium mb-2">정렬 방식</p>
+        <div className="mb-3 md:mb-4">
+          <p className="font-medium mb-2 text-sm md:text-base">정렬 방식</p>
           <div className="flex flex-wrap gap-2">
             {sortOptions.map((option) => (
               <button
@@ -60,11 +60,11 @@ const SortModal: React.FC<Props> = ({
             ))}
           </div>
         </div>
-        <hr className="w-full border-t border-gray-200 mx-0 mb-4" />
+        <hr className="w-full border-t border-gray-200 mx-0 mb-3 md:mb-4" />
 
         {/* 업로드 시간 */}
-        <div className="mb-6">
-          <p className="font-medium mb-2">업로드 시간</p>
+        <div className="mb-4 md:mb-6">
+          <p className="font-medium mb-2 text-sm md:text-base">업로드 시간</p>
           <div className="flex flex-wrap gap-2">
             {timeOptions.map((option) => (
               <button
@@ -82,19 +82,19 @@ const SortModal: React.FC<Props> = ({
           </div>
         </div>
     
-        <hr className="w-full border-t border-gray-200 mx-0 mb-4" />
+        <hr className="w-full border-t border-gray-200 mx-0 mb-3 md:mb-4" />
 
         {/* 적용 버튼 */}
         <div className="flex justify-end gap-2">
         <button
             onClick={onClose}
-            className="text-black border border-green-600 px-4 py-2 rounded-[15px] text-sm font-medium hover:bg-[#ECECEC]"
+            className="text-black border border-green-600 px-3 md:px-4 py-1.5 md:py-2 rounded-[15px] text-xs md:text-sm font-medium hover:bg-[#ECECEC]"
         >
             취소
         </button>
         <button
             onClick={onApply}
-            className="bg-green-600 text-white px-4 py-2 rounded-[15px] text-sm font-medium"
+            className="bg-green-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-[15px] text-xs md:text-sm font-medium"
         >
             적용
         </button>

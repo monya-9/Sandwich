@@ -15,7 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLog;
+import com.sandwich.SandWich.challenge.synclog.ChallengeSyncLogRepository;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
@@ -30,7 +31,7 @@ public class ChallengeBatchService {
     private final RedisUtil redis;
     private final ChallengeRepository challenges;
     private final ObjectMapper om; // 빈 주입 권장 (JavaTimeModule 포함 설정)
-
+    private final ChallengeSyncLogRepository logs;
     private static final Pattern YM = Pattern.compile("^\\d{4}-\\d{2}$");
 
     @Transactional
@@ -52,72 +53,91 @@ public class ChallengeBatchService {
             throw new BadRequestException("BAD_YM", "month는 YYYY-MM 형식이어야 합니다.");
         }
 
-        int ok = 0;
+        int created = 0, updated = 0, skipped = 0, failed = 0;
+
+        // ✅ 단일 루프에서 기간 계산 → 업서트 → 집계
         for (var it : req.getItems()) {
-            ChallengeType type = it.getType();
+            try {
+                ChallengeType type = it.getType();
 
-            // 기간 계산
-            OffsetDateTime start;
-            OffsetDateTime end;
-            OffsetDateTime voteStart = null;
-            OffsetDateTime voteEnd   = null;
+                OffsetDateTime start;
+                OffsetDateTime end;
+                OffsetDateTime voteStart = null;
+                OffsetDateTime voteEnd   = null;
 
-            if (type == ChallengeType.PORTFOLIO) {
-                // month 기반 자동 기간 & 투표기간
-                var w = calcMonthWindow(req.getMonth());
-                start = w.start();
-                end   = w.end();
-                voteStart = w.voteStart();
-                voteEnd   = w.voteEnd();
-            } else if (type == ChallengeType.CODE) {
-                // CODE는 start/end 필수
-                if (it.getStartAt() == null || it.getEndAt() == null) {
-                    throw new BadRequestException("CODE_NEEDS_DATES", "CODE 항목은 startAt/endAt가 필요합니다.");
+                if (type == ChallengeType.PORTFOLIO) {
+                    var w = calcMonthWindow(req.getMonth());
+                    start = w.start();
+                    end   = w.end();
+                    voteStart = w.voteStart();
+                    voteEnd   = w.voteEnd();
+                } else if (type == ChallengeType.CODE) {
+                    if (it.getStartAt() == null || it.getEndAt() == null) {
+                        throw new BadRequestException("CODE_NEEDS_DATES", "CODE 항목은 startAt/endAt가 필요합니다.");
+                    }
+                    try {
+                        start = OffsetDateTime.parse(it.getStartAt());
+                        end   = OffsetDateTime.parse(it.getEndAt());
+                    } catch (DateTimeParseException e) {
+                        throw new BadRequestException("BAD_DATETIME", "startAt/endAt는 ISO8601 이어야 합니다.");
+                    }
+                    if (!start.isBefore(end)) {
+                        throw new BadRequestException("BAD_RANGE", "startAt < endAt 이어야 합니다.");
+                    }
+                } else {
+                    throw new BadRequestException("BAD_TYPE", "지원하지 않는 type: " + type);
                 }
-                try {
-                    start = OffsetDateTime.parse(it.getStartAt());
-                    end   = OffsetDateTime.parse(it.getEndAt());
-                } catch (DateTimeParseException e) {
-                    throw new BadRequestException("BAD_DATETIME", "startAt/endAt는 ISO8601 이어야 합니다.");
-                }
-                if (!start.isBefore(end)) {
-                    throw new BadRequestException("BAD_RANGE", "startAt < endAt 이어야 합니다.");
-                }
-            } else {
-                throw new BadRequestException("BAD_TYPE", "지원하지 않는 type: " + type);
+
+                boolean isCreated = upsertChallenge(
+                        req.getMonth(),
+                        type,
+                        it.getTitle(),
+                        it.getSummary(),
+                        it.getMust(),
+                        it.getMd(),
+                        start, end,
+                        voteStart, voteEnd
+                );
+                if (isCreated) created++; else updated++;
+
+            } catch (Exception e) {
+                failed++;
+                log.warn("[AI-BATCH] item ingest failed: {}", e.getMessage(), e);
             }
-
-            upsertChallenge(
-                    req.getMonth(),
-                    type,
-                    it.getTitle(),
-                    it.getSummary(),
-                    it.getMust(),
-                    it.getMd(),
-                    start, end,
-                    voteStart, voteEnd
-            );
-            ok++;
         }
 
-        log.info("[AI-BATCH] month={} items={} ok={}", req.getMonth(), req.getItems().size(), ok);
-    }
+        var oreq = om.valueToTree(req);
+        var ores = om.createObjectNode()
+                .put("created", created).put("updated", updated)
+                .put("skipped", skipped).put("failed", failed);
 
-    private void upsertChallenge(
+        logs.save(ChallengeSyncLog.builder()
+                .actorType("MACHINE").actorId(null)
+                .method("BATCH")
+                .aiMonth(req.getMonth())
+                .idempotencyKey(idemKey)
+                .requestJson(oreq).resultJson(ores)
+                .status(failed > 0 ? ((updated > 0 || created > 0) ? "PARTIAL" : "FAILED") : "SUCCESS")
+                .message(null)
+                .createdCount(created).updatedCount(updated).skippedCount(skipped).errorCount(failed)
+                .build());
+
+        log.info("[AI-BATCH] month={} items={} created:{} updated:{} failed:{}",
+                req.getMonth(), req.getItems().size(), created, updated, failed);
+    }
+    private boolean upsertChallenge(
             String month, ChallengeType type, String title,
             String summary, java.util.List<String> must, String md,
             OffsetDateTime start, OffsetDateTime end,
             OffsetDateTime voteStart, OffsetDateTime voteEnd
     ) {
-        // rule_json (null-safe)
         ObjectNode rule = om.createObjectNode();
         rule.put("month", month);
         if (summary != null) rule.put("summary", summary); else rule.set("summary", NullNode.getInstance());
         if (md != null)      rule.put("md", md);           else rule.set("md",      NullNode.getInstance());
         rule.set("must", must == null ? om.createArrayNode() : om.valueToTree(must));
 
-        // 자연키로 업서트 (type, title, startAt)
-        Optional<Challenge> existing = challenges.findByTypeAndTitleAndStartAt(type, title, start);
+        var existing = challenges.findByTypeAndTitleAndStartAt(type, title, start);
 
         if (existing.isPresent()) {
             var c = existing.get();
@@ -130,8 +150,11 @@ public class ChallengeBatchService {
                 c.setVoteStartAt(null);
                 c.setVoteEndAt(null);
             }
+            c.setSource("AI_BATCH");
+            c.setAiMonth(month);
+            c.setAiWeek(null); // 배치 포맷엔 주차 없음
             challenges.save(c);
-            return;
+            return false; // updated
         }
 
         var c = Challenge.builder()
@@ -146,8 +169,16 @@ public class ChallengeBatchService {
         if (type == ChallengeType.PORTFOLIO) {
             c.setVoteStartAt(voteStart);
             c.setVoteEndAt(voteEnd);
+        } else {
+            c.setVoteStartAt(null);
+            c.setVoteEndAt(null);
         }
+        c.setSource("AI_BATCH");
+        c.setAiMonth(month);
+        c.setAiWeek(null);
+
         challenges.save(c);
+        return true;
     }
 
     private static record MonthWindow(

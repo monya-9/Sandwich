@@ -8,6 +8,7 @@ import com.sandwich.SandWich.auth.device.DeviceTrustService;
 import com.sandwich.SandWich.auth.security.TrustedDeviceFilter;
 import com.sandwich.SandWich.oauth.handler.CustomAuthorizationRequestResolver;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +26,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.core.annotation.Order;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @EnableMethodSecurity(prePostEnabled = true)
 @Configuration
@@ -65,9 +73,46 @@ public class SecurityConfig {
         return new RestAccessDeniedHandler();
     }
 
+    // CORS 설정 Bean
+    @Value("${management.endpoints.web.cors.allowed-origins}")
+    private String allowedOriginsCsv;
+
+    @Value("${management.endpoints.web.cors.allowed-methods}")
+    private String allowedMethodsCsv;
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        List<String> origins = Arrays.stream(allowedOriginsCsv.split(","))
+                .map(String::trim)
+                .toList();
+
+        List<String> methods = Arrays.stream(allowedMethodsCsv.split(","))
+                .map(String::trim)
+                .toList();
+
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(methods);
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                .requestMatchers(HttpMethod.GET, "/health");
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ObjectProvider<ClientRegistrationRepository> repoProvider) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/internal/**")  // 내부 API는 CSRF 미적용
                         .disable()
@@ -100,7 +145,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/otp/**").permitAll()
                         // 필요시 정적 폴더 패턴도 추가
                         .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/auth/check-email").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
@@ -111,10 +156,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/build/**").permitAll()
                         .requestMatchers("/ws/chat/**", "/topic/**", "/app/**").permitAll()
                         .requestMatchers("/api/emojis/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/discovery/hot-developers").permitAll()
 
                         // ===== 댓글 공개 GET =====
-                        .requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                         // ===== 프로젝트 공개 GET을 '인증필요' 규칙보다 위에 선언 (Ant 패턴 사용) =====
                         .requestMatchers(HttpMethod.GET, "/api/projects").permitAll()            // 리스트
                         .requestMatchers(HttpMethod.GET, "/api/projects/*/*").permitAll()        // 상세 (userId/id 스타일)
@@ -126,12 +171,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()  // 상세(/{id}) 및 확장 대비
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/votes/summary").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/challenges/*/leaderboard").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/internal/discovery/hot-developers/**").hasRole("ADMIN")
                         // .requestMatchers(HttpMethod.POST, "/internal/ai/**").permitAll()
                         .requestMatchers("/internal/**").hasAuthority("SCOPE_CHALLENGE_BATCH_WRITE")
                         // ===== 사용자 공개 정보 =====
                         .requestMatchers("/api/users/*/following").permitAll()
                         .requestMatchers("/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/representative-careers").permitAll()
 
                         // 사용자 보안 세분화 =====
                         // 1) 내 프로필은 반드시 인증
@@ -193,12 +240,14 @@ public class SecurityConfig {
         var failureHandler = oAuth2FailureHandlerProvider.getIfAvailable();
 
         if (repo != null && userService != null && successHandler != null && failureHandler != null) {
-            http
-                    .oauth2Login(oauth -> oauth
-                            .userInfoEndpoint(u -> u.userService(userService))
-                            .successHandler(successHandler)
-                            .failureHandler(failureHandler)
-                    );
+            http.oauth2Login(oauth -> oauth
+                    .authorizationEndpoint(a -> a.authorizationRequestResolver(
+                            new CustomAuthorizationRequestResolver(repo, "/oauth2/authorization")
+                    ))
+                    .userInfoEndpoint(u -> u.userService(userService))
+                    .successHandler(successHandler)
+                    .failureHandler(failureHandler)
+            );
         }
 
         return http.build();

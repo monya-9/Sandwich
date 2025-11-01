@@ -4,7 +4,7 @@ import NameInput from "./NameInput";
 import PositionSelect from "./PositionSelect";
 import InterestSelect from "./InterestSelect";
 import CompleteButton from "../CompleteButton";
-import logo from "../../../../assets/logo.png";
+import { getStaticUrl } from "../../../../config/staticBase";
 import { useNavigate } from "react-router-dom";
 import {
   FALLBACK_POSITIONS,
@@ -108,8 +108,8 @@ const ProfileStep = ({ onPrev }: Props) => {
         closable={true}
         onClose={() => setToast(prev => ({ ...prev, visible: false }))}
       />
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
-        <img src={logo} alt="logo" className="w-36 mb-10" />
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white dark:bg-black">
+        <img src={getStaticUrl("assets/logo.png")} alt="logo" className="w-36 mb-10" />
         <div className="w-full max-w-sm space-y-6">
           <NameInput value={nickname} onChange={setNickname} />
           <PositionSelect selected={position} onChange={setPosition} />

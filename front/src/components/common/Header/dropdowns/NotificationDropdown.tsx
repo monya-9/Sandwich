@@ -19,15 +19,15 @@ type Props = {
 };
 
 const Skeleton: React.FC = () => (
-    <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
+    <ul className="list-none pl-0 space-y-1.5 sm:space-y-2 max-h-56 sm:max-h-64 overflow-y-auto pr-1">
         {Array.from({ length: 4 }).map((_, i) => (
-            <li key={i} className="p-2 rounded-lg">
-                <div className="flex items-start gap-2 animate-pulse">
-                    <div className="w-8 h-8 rounded-full bg-gray-200" />
+            <li key={i} className="p-1.5 sm:p-2 rounded-lg">
+                <div className="flex items-start gap-1.5 sm:gap-2 animate-pulse">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200" />
                     <div className="flex-1 min-w-0">
-                        <div className="h-3 bg-gray-200 rounded w-2/3 mb-2" />
-                        <div className="h-3 bg-gray-100 rounded w-full mb-1" />
-                        <div className="h-3 bg-gray-100 rounded w-5/6" />
+                        <div className="h-2.5 sm:h-3 bg-gray-200 rounded w-2/3 mb-1.5 sm:mb-2" />
+                        <div className="h-2.5 sm:h-3 bg-gray-100 rounded w-full mb-1" />
+                        <div className="h-2.5 sm:h-3 bg-gray-100 rounded w-5/6" />
                     </div>
                 </div>
             </li>
@@ -48,18 +48,18 @@ const NotificationDropdown: React.FC<Props> = ({
     const nav = useNavigate();
 
     return (
-        <DropdownWrapper width="w-96">
-            <div className="flex justify-between items-center mb-2 -mx-2 text-sm font-medium">
-                <span className="text-black">읽지 않은 알림 ({unreadCount})</span>
+        <DropdownWrapper width="w-[calc(100vw-2rem)] sm:w-[360px] md:w-96">
+            <div className="flex justify-between items-center mb-2 -mx-2 text-xs sm:text-sm font-medium">
+                <span className="text-black truncate">읽지 않은 알림 ({unreadCount})</span>
                 <button
                     type="button"
                     onClick={onMarkAllAsRead}
-                    className="text-green-600 hover:underline text-xs"
+                    className="text-green-600 hover:underline text-[10px] sm:text-xs whitespace-nowrap ml-2"
                 >
                     모두 읽음
                 </button>
             </div>
-            <hr className="border-gray-200 mb-3 -mx-6" />
+            <hr className="border-gray-200 mb-3 -mx-4 sm:-mx-6" />
 
             {initializing ? (
                 <Skeleton />
@@ -68,7 +68,7 @@ const NotificationDropdown: React.FC<Props> = ({
                 return items.length === 0 ? (
                     <EmptyState text="새로운 알림이 없어요" />
                 ) : (
-                    <ul className="list-none pl-0 space-y-2 max-h-64 overflow-y-auto pr-1">
+                    <ul className="list-none pl-0 space-y-1.5 sm:space-y-2 max-h-56 sm:max-h-64 overflow-y-auto pr-1">
                         {items.map((n) => {
                         // extra.actorName에 이미 처리된 닉네임이 있음
                         const actorName = n.extra?.actorName;
@@ -89,7 +89,7 @@ const NotificationDropdown: React.FC<Props> = ({
                             <li key={String(n.id)} className="relative">
                                 <button
                                     type="button"
-                                    className="w-full text-left p-2 rounded-lg text-sm hover:bg-gray-50 cursor-pointer focus:outline-none"
+                                    className="w-full text-left p-1.5 sm:p-2 rounded-lg text-xs sm:text-sm hover:bg-gray-50 cursor-pointer focus:outline-none"
                                     onClick={() => {
                                         onClickItem(n.id);
                                         nav(n.deepLink || "/");
@@ -101,30 +101,30 @@ const NotificationDropdown: React.FC<Props> = ({
                                         colorClass="bg-green-500/10"
                                     />
 
-                                    <div className="relative z-[1] flex items-start gap-2">
+                                    <div className="relative z-[1] flex items-start gap-1.5 sm:gap-2">
                                         {/* 배우 정보가 있을 때만 아바타 렌더링 */}
                                         {!unknown && (
                                             profileUrl ? (
                                                 <img
                                                     src={profileUrl}
                                                     alt=""
-                                                    className="w-8 h-8 rounded-full shrink-0 object-cover"
+                                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full shrink-0 object-cover"
                                                 />
                                             ) : (
-                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0 text-xs sm:text-sm">
                                                     {initial}
                                                 </div>
                                             )
                                         )}
 
-                                        <div className="min-w-0">
-                                            <p className="font-medium truncate">{n.title}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-medium truncate text-xs sm:text-sm">{n.title}</p>
                                             {n.body ? (
-                                                <p className="text-gray-500 text-xs line-clamp-2 whitespace-pre-line">
+                                                <p className="text-gray-500 text-[10px] sm:text-xs line-clamp-2 whitespace-pre-line">
                                                     {n.body}
                                                 </p>
                                             ) : null}
-                                            <span className="text-gray-400 text-xs">
+                                            <span className="text-gray-400 text-[10px] sm:text-xs">
                         {toRelativeTime(n.createdAt)}
                       </span>
                                         </div>
@@ -138,7 +138,7 @@ const NotificationDropdown: React.FC<Props> = ({
                         <li className="pt-1">
                             <button
                                 type="button"
-                                className="w-full text-center text-xs text-gray-600 hover:underline py-1 disabled:opacity-60"
+                                className="w-full text-center text-[10px] sm:text-xs text-gray-600 hover:underline py-1 disabled:opacity-60"
                                 onClick={onLoadMore}
                                 disabled={loading}
                             >

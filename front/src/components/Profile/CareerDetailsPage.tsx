@@ -22,7 +22,9 @@ type CareerItem = {
 type EducationItem = {
 	id: number;
 	schoolName: string;
-	degree: string;
+	degree?: string;
+	level?: string;
+	status?: string;
 	startYear: number;
 	startMonth?: number | null;
 	endYear?: number | null;
@@ -121,7 +123,8 @@ function CareerDetailsPage() {
 	const scopedUsernameLocal = (typeof window !== "undefined" && (localStorage.getItem(usernameScopedKey) || sessionStorage.getItem(usernameScopedKey))) || "";
 	const profileUrlScopedKey = userEmailScoped ? `profileUrlSlug:${userEmailScoped}` : "profileUrlSlug";
 	const scopedProfileUrl = (typeof window !== "undefined" && (localStorage.getItem(profileUrlScopedKey) || sessionStorage.getItem(profileUrlScopedKey))) || "";
-	const profileUrlSlug = scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
+	// ✅ profileSlug 우선 사용, 없으면 기존 로직 유지
+	const profileUrlSlug = me?.profileSlug || scopedProfileUrl || scopedUsernameLocal || me?.username || (localStorage.getItem("userUsername") || sessionStorage.getItem("userUsername") || "");
 	const displayName = (me?.nickname && me.nickname.trim()) || (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim() || me?.username || "사용자";
 	const profileImageUrl = me?.profileImage || "";
 	// 한줄 프로필: 현재 로그인 스코프 키에서만 읽고, 없으면 표시하지 않음
@@ -165,56 +168,60 @@ function CareerDetailsPage() {
 	if (loading) {
 		return (
 			<div className="w-full flex justify-center">
-				<div className="w-full min-h-screen bg-[#F5F7FA] font-gmarket px-4 md:px-8 xl:px-14 py-10">로딩중...</div>
+				<div className="w-full min-h-screen bg-[#F5F7FA] dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 py-10 text-black dark:text-white">로딩중...</div>
 			</div>
 		);
 	}
 
 	return (
 		<div className="w-full flex justify-center">
-			<div className="w-full min-h-screen bg-[#F5F7FA] font-gmarket px-4 md:px-8 xl:px-14 py-10">
-				<div className="max-w-[1100px] mx-auto bg-white border border-[#E5E7EB] rounded-[12px] p-6 md:p-10">
+			<div className="w-full min-h-screen bg-[#F5F7FA] dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 py-10">
+				<div className="max-w-[1100px] mx-auto bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-[12px] p-6 md:p-10">
 					{/* 헤더: 닉네임 좌측, 사진 우측 */}
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-[24px] md:text-[28px] text-black font-medium">{displayName}</div>
+							<div className="text-[24px] md:text-[28px] text-black dark:text-white font-medium">{displayName}</div>
 							{oneLiner ? (
-								<div className="mt-1 text-[14px] text-black/80">{oneLiner}</div>
+								<div className="mt-1 text-[14px] text-black/80 dark:text-white/80">{oneLiner}</div>
 							) : null}
-							<div className="mt-1 text-[13px] md:text-[14px] text-black/70 underline break-all">
+							<div className="mt-1 text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">
 								{profileUrlSlug ? `sandwich.com/${profileUrlSlug}` : "sandwich.com"}
 							</div>
 							{bioText ? (
-								<div className="mt-4 text-[14px] text-black/80 whitespace-pre-line">{bioText}</div>
+								<div className="mt-4 text-[14px] text-black/80 dark:text-white/80 whitespace-pre-line">{bioText}</div>
 							) : null}
 						</div>
-						<div className="w-[64px] h-[64px] rounded-full bg-[#F3F4F6] overflow-hidden shrink-0">
+						<div className="w-[80px] h-[80px] rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] overflow-hidden shrink-0 flex items-center justify-center">
 							{profileImageUrl ? (
 								<img src={profileImageUrl} alt="profile" className="w-full h-full object-cover" />
-							) : null}
+							) : (
+								<span className="text-[28px] font-medium text-[#6B7280] dark:text-white">
+									{me?.email?.charAt(0)?.toUpperCase() || 'U'}
+								</span>
+							)}
 						</div>
 					</div>
 
 					{/* 회색 구분선 */}
-					<div className="mt-6 h-px w-full bg-[#E5E7EB]" />
+					<div className="mt-6 h-px w-full bg-[#E5E7EB] dark:bg-[var(--border-color)]" />
 
 					{/* 섹션: 공통 레이아웃 - 좌측 라벨, 우측 리스트 */}
-					<div className="divide-y divide-[#E5E7EB]">
+					<div className="divide-y divide-[#E5E7EB] dark:divide-[var(--border-color)]">
 						{/* 경력 */}
 						<section className="py-10">
 							<div className="grid grid-cols-[110px_1fr] gap-6">
-								<div className="text-[14px] text-black/80">경력</div>
+								<div className="text-[14px] text-black/80 dark:text-white/80">경력</div>
 								<div className="space-y-8">
 									{careers.map((c) => {
 										const start = formatYearMonth(c.startYear, c.startMonth || undefined);
 										const end = c.isWorking ? "현재" : formatYearMonth(c.endYear || undefined, c.endMonth || undefined);
 										return (
 											<div key={c.id}>
-												<div className="text-[12px] text-black/55">{start} ~ {end}</div>
-												<div className="mt-1 text-[16px] text-black font-medium">{c.companyName}</div>
-												<div className="mt-1 text-[14px] text-black/70">{c.role}</div>
+												<div className="text-[12px] text-black/55 dark:text-white/55">{start} ~ {end}</div>
+												<div className="mt-1 text-[16px] text-black dark:text-white font-medium">{c.companyName}</div>
+												<div className="mt-1 text-[14px] text-black/70 dark:text-white/70">{c.role}</div>
 												{c.description ? (
-													<div className="mt-2 text-[14px] text-black/80 whitespace-pre-wrap">{c.description}</div>
+													<div className="mt-2 text-[14px] text-black/80 dark:text-white/80 whitespace-pre-wrap">{c.description}</div>
 												) : null}
 											</div>
 										);
@@ -226,18 +233,18 @@ function CareerDetailsPage() {
 						{/* 프로젝트 */}
 						<section className="py-10">
 							<div className="grid grid-cols-[110px_1fr] gap-6">
-								<div className="text-[14px] text-black/80">프로젝트</div>
+								<div className="text-[14px] text-black/80 dark:text-white/80">프로젝트</div>
 								<div className="space-y-8">
 									{projects.map((p) => {
 										const start = formatYearMonth(p.startYear, p.startMonth || undefined);
 										const end = formatYearMonth(p.endYear || undefined, p.endMonth || undefined);
 										return (
 											<div key={p.id}>
-												<div className="text-[12px] text-black/55">{start} ~ {end}</div>
-												<div className="mt-1 text-[16px] text-black font-medium">{p.title}</div>
-												<div className="mt-1 text-[14px] text-black/70">{p.role}</div>
+												<div className="text-[12px] text-black/55 dark:text-white/55">{start} ~ {end}</div>
+												<div className="mt-1 text-[16px] text-black dark:text-white font-medium">{p.title}</div>
+												<div className="mt-1 text-[14px] text-black/70 dark:text-white/70">{p.role}</div>
 												{p.description ? (
-													<div className="mt-2 text-[14px] text-black/80 whitespace-pre-wrap">{p.description}</div>
+													<div className="mt-2 text-[14px] text-black/80 dark:text-white/80 whitespace-pre-wrap">{p.description}</div>
 												) : null}
 											</div>
 										);
@@ -249,15 +256,15 @@ function CareerDetailsPage() {
 						{/* 수상 */}
 						<section className="py-10">
 							<div className="grid grid-cols-[110px_1fr] gap-6">
-								<div className="text-[14px] text-black/80">수상</div>
+								<div className="text-[14px] text-black/80 dark:text-white/80">수상</div>
 								<div className="space-y-8">
 									{awards.map((a) => (
 										<div key={a.id}>
-											<div className="text-[12px] text-black/55">{a.year}년 {a.month}월 수상</div>
-											<div className="mt-1 text-[16px] text-black font-medium">{a.title}</div>
-											<div className="mt-1 text-[14px] text-black/70">{a.issuer}</div>
+											<div className="text-[12px] text-black/55 dark:text-white/55">{a.year}년 {a.month}월 수상</div>
+											<div className="mt-1 text-[16px] text-black dark:text-white font-medium">{a.title}</div>
+											<div className="mt-1 text-[14px] text-black/70 dark:text-white/70">{a.issuer}</div>
 											{a.description ? (
-												<div className="mt-2 text-[14px] text-black/80 whitespace-pre-wrap">{a.description}</div>
+												<div className="mt-2 text-[14px] text-black/80 dark:text-white/80 whitespace-pre-wrap">{a.description}</div>
 											) : null}
 										</div>
 									))}
@@ -268,20 +275,22 @@ function CareerDetailsPage() {
 						{/* 학력 */}
 						<section className="py-10">
 							<div className="grid grid-cols-[110px_1fr] gap-6">
-								<div className="text-[14px] text-black/80">학력</div>
+								<div className="text-[14px] text-black/80 dark:text-white/80">학력</div>
 								<div className="space-y-8">
 									{parsedEducations.map((e: any) => {
 										const start = formatYearMonth(e.startYear, e.startMonth || undefined);
 										const end = formatYearMonth(e.endYear || undefined, e.endMonth || undefined);
-										const top = e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
+										const top = e.level === "HIGH_SCHOOL" 
+											? "고등학교"
+											: e.degree ? `${e.schoolName}(${e.degree})` : e.schoolName;
 										return (
 											<div key={e.id}>
-												<div className="text-[12px] text-black/55">{start} ~ {end}</div>
-												<div className="mt-1 text-[16px] text-black font-medium">{top}</div>
-												{e.major ? (<div className="mt-1 text-[14px] text-black/70">{e.major}</div>) : null}
-												{e.status ? (<div className="mt-0.5 text-[13px] text-black/55">{e.status}</div>) : null}
+												<div className="text-[12px] text-black/55 dark:text-white/55">{start} ~ {end}</div>
+												<div className="mt-1 text-[16px] text-black dark:text-white font-medium">{top}</div>
+												{e.major ? (<div className="mt-1 text-[14px] text-black/70 dark:text-white/70">{e.major}</div>) : null}
+												{e.status ? (<div className="mt-0.5 text-[13px] text-black/55 dark:text-white/55">{e.status}</div>) : null}
 												{e.description ? (
-													<div className="mt-2 text-[14px] text-black/80 whitespace-pre-wrap">{(e.description as string).split("\n").filter((ln: string)=> !ln.startsWith(MAJOR_PREFIX) && !ln.startsWith(STATUS_PREFIX)).join("\n")}</div>
+													<div className="mt-2 text-[14px] text-black/80 dark:text-white/80 whitespace-pre-wrap">{(e.description as string).split("\n").filter((ln: string)=> !ln.startsWith(MAJOR_PREFIX) && !ln.startsWith(STATUS_PREFIX)).join("\n")}</div>
 												) : null}
 											</div>
 										);
@@ -293,7 +302,7 @@ function CareerDetailsPage() {
 
 					{/* 하단으로 돌아가기 */}
 					<div className="mt-12">
-						<Link to="/profile" className="text-[14px] text-black/60 hover:underline">프로필로 돌아가기</Link>
+						<Link to="/profile" className="text-[14px] text-black/60 dark:text-white/60 hover:underline">프로필로 돌아가기</Link>
 					</div>
 					</div>
 				</div>

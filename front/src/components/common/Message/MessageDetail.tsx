@@ -40,11 +40,12 @@ import {
 type Props = {
     message?: Message;
     onSend?: (messageId: number | string, body: string) => Promise<void> | void;
+    onBack?: () => void; // 모바일에서 뒤로가기
 };
 
 /* ---------- 스타일 ---------- */
-const youBubble = "max-w-[520px] bg-gray-100 rounded-2xl px-4 py-3 shadow-sm";
-const meBubble = "max-w-[520px] bg-green-50 rounded-2xl px-4 py-3 shadow-sm";
+const youBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
+const meBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
 
 /* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
@@ -103,7 +104,7 @@ function parsePayload<T = any>(raw: unknown): T | null {
 const MAX_MB = 10;
 const ALLOWED_EXT = ["jpg", "jpeg", "png", "pdf"];
 
-const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
+const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
     const [text, setText] = React.useState("");
     const [sending, setSending] = React.useState(false);
     const [uploading, setUploading] = React.useState(false);
@@ -425,7 +426,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
     }, []);
 
     if (!message) {
-        return <div className="flex-1 flex items-center justify-center text-gray-400">메시지를 선택하세요.</div>;
+        return <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-white/60 text-sm sm:text-base px-4">메시지를 선택하세요.</div>;
     }
 
     /* 헤더(상대 고정) */
@@ -479,26 +480,39 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 closable={true}
                 onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
             />
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)] h-full">
             {/* 헤더 */}
-            <div className="px-6 py-4 border-b flex items-center gap-3">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-[var(--border-color)] flex items-center gap-2 sm:gap-3 text-black dark:text-white">
+                {/* 모바일 뒤로가기 버튼 */}
+                {onBack && (
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="md:hidden p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded"
+                        aria-label="뒤로가기"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                )}
                 {avatar ? (
-                    <img src={avatar} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
+                    <img src={avatar} alt={displayName} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover" />
                 ) : (
-                    <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] flex items-center justify-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-white">
                         {(displayName?.[0] || "?").toUpperCase()}
                     </div>
                 )}
-                <div className="flex flex-col">
-                    <span className="font-semibold">{displayName}</span>
-                    <span className="text-xs text-gray-400">{timeAgo(headerTime)}</span>
+                <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-sm sm:text-base truncate">{displayName}</span>
+                    <span className="text-[10px] sm:text-xs text-gray-400 dark:text-white/50">{timeAgo(headerTime)}</span>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                     <div className="relative">
                         <button
                             type="button"
                             aria-label="스크린샷"
-                            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                            className="text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white disabled:opacity-50"
                             disabled={!roomId || screenshotLoading}
                             onClick={() => setShowScreenshotMenu(!showScreenshotMenu)}
                         >
@@ -553,7 +567,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                 </div>
             </div>
 
-            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
                 {history.map((m) => {
                     const m2 = hydrated[m.messageId] ?? m;
                     const when = new Date(m2.createdAt || 0);
@@ -604,12 +618,12 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                         <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
                             {/* ⬇️ 시간 + 작은 다운로드 버튼 (오른쪽 정렬 라인) */}
                             <div className="flex items-center gap-1 order-1">
-                                <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                                 {attSrc && (
                                     <button
                                         type="button"
                                         onClick={() => downloadProtected(attSrc!, attName)}
-                                        className="p-0.5 rounded hover:bg-gray-100 text-gray-400"
+                                        className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-white/60"
                                         title="다운로드"
                                         aria-label="다운로드"
                                     >
@@ -628,14 +642,14 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                                     <button
                                         type="button"
                                         onClick={() => downloadProtected(attSrc!, attName)}
-                                        className="p-0.5 rounded hover:bg-gray-100 text-gray-400"
+                                        className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-white/60"
                                         title="다운로드"
-                                        aria-label="डाउन로드"
+                                        aria-label="다운로드"
                                     >
                                         <Download size={14} />
                                     </button>
                                 )}
-                                <span className="text-[11px] text-gray-400 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                             </div>
                         </div>
                     );
@@ -644,12 +658,17 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
             </div>
 
             {/* 입력 */}
-            <div className="px-6 py-3 border-t flex flex-col gap-2">
-                <div className="flex items-end gap-2">
+            <div className="px-3 sm:px-6 py-2 sm:py-3 border-t dark:border-[var(--border-color)] flex flex-col gap-1.5 sm:gap-2 bg-white dark:bg-[var(--surface)]">
+                <div className="flex items-end gap-1.5 sm:gap-2">
           <textarea
               ref={taRef}
               value={text}
-              onChange={(e) => setText(e.currentTarget.value)}
+              onChange={(e) => {
+                  const newText = e.currentTarget.value;
+                  if (newText.length <= 80) {
+                      setText(newText);
+                  }
+              }}
               onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !isComposing) {
                       e.preventDefault();
@@ -658,23 +677,31 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
               }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
-              placeholder="메시지 입력 (Enter: 전송, Shift+Enter: 줄바꿈)"
+              placeholder="메시지 입력 (최대 80자)"
               rows={1}
-              className="flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
+              maxLength={80}
+              className="flex-1 border border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-black rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
           />
                     <button
                         type="button"
                         onClick={handleSendText}
                         disabled={!text.trim() || sending || !targetUserId}
-                        className="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 sm:px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-xl text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                     >
                         {sending ? "전송 중..." : "전송"}
                     </button>
                 </div>
+                
+                {/* 문자 수 표시 */}
+                <div className="flex justify-end">
+                    <span className={`text-xs ${text.length > 70 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
+                        {text.length}/80
+                    </span>
+                </div>
 
                 {/* 이모지/첨부 */}
-                <div className="relative flex items-center gap-3 pl-4">
-                    <button type="button" aria-label="이모지" className="text-gray-500 hover:text-gray-700" onClick={() => setShowEmoji((v) => !v)}>
+                <div className="relative flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4">
+                    <button type="button" aria-label="이모지" className="text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white" onClick={() => setShowEmoji((v) => !v)}>
                         <Smile size={18} />
                     </button>
 
@@ -757,7 +784,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend }) => {
                     <button
                         type="button"
                         aria-label="파일"
-                        className="text-gray-500 hover:text-gray-700 disabled:opacity-40"
+                        className="text-gray-500 dark:text-white/70 hover:text-gray-700 dark:hover:text-white disabled:opacity-40"
                         disabled={!roomId || uploading}
                         onClick={() => fileInputRef.current?.click()}
                     >

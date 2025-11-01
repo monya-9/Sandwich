@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import CollectionPickerModal from "../CollectionPickerModal";
 import { listMyCollectionFolders, getCollectionFolder } from "../../../api/collections";
 
-export default function CollectionAction({ projectId }: { projectId?: number } = {}) {
+export default function CollectionAction({ projectId, isMobile = false }: { projectId?: number; isMobile?: boolean } = {}) {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [openPicker, setOpenPicker] = useState(false);
   const [hasCollected, setHasCollected] = useState(false);
@@ -80,13 +80,13 @@ export default function CollectionAction({ projectId }: { projectId?: number } =
         onAfterChange={(selected) => { const v = selected.length > 0; setInitialSelected(selected); setHasCollected(v); broadcast(v); }}
       />
       <button
-        className="flex flex-col items-center gap-1 group"
+        className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`}
         onClick={handleClick}
       >
-        <div className={`w-14 h-14 rounded-full shadow flex items-center justify-center mb-1 ${hasCollected ? "bg-[#068334] text-white" : "bg-white"}`}>
-          <FaFolderMinus className="w-7 h-7" />
+        <div className={`rounded-full shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${hasCollected ? "bg-[#068334] text-white" : "bg-white"} ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
+          <FaFolderMinus className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />
         </div>
-        <span className={`text-sm font-semibold text-center text-white`} style={{ textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>컬렉션</span>
+        <span className={`font-semibold text-center ${isMobile ? 'text-xs text-gray-800' : 'text-sm text-white'}`} style={isMobile ? {} : { textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>컬렉션</span>
       </button>
     </div>
   );

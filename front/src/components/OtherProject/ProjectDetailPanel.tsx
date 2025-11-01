@@ -5,7 +5,7 @@ import TagList from "./TagList";
 import ProjectStatsBox from "./ProjectStatsBox";
 import UserProfileBox from "./UserProfileBox";
 import ProjectGrid from "./ProjectGrid";
-import QueenImg from "../../assets/images/Queen.jpg";
+import { getStaticUrl } from "../../config/staticBase";
 
 // 샘플 props로 전달
 export default function ProjectDetailPanel({ isShrink }: { isShrink: boolean }) {
@@ -24,7 +24,7 @@ export default function ProjectDetailPanel({ isShrink }: { isShrink: boolean }) 
     >
       <ProjectTopInfo projectName="프로젝트 이름" userName="사용자 이름" intro="프로젝트 한줄 소개" />
       <div className="-mx-4 sm:-mx-6 md:-mx-10 lg:-mx-16 mb-6">
-        <ProjectThumbnail imgUrl={QueenImg} />
+        <ProjectThumbnail imgUrl={getStaticUrl("assets/images/Queen.jpg")} />
       </div>
       <TagList tags={["포트폴리오", "프론트엔드"]} />
       <div className="-mx-4 sm:-mx-6 md:-mx-10 lg:-mx-16 mb-8">

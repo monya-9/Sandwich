@@ -7,6 +7,7 @@ type MeResponse = {
     username?: string | null;
     nickname?: string | null;
     profileName?: string | null;
+    profileSlug?: string | null; // 프로필 URL용 슬러그
 };
 
 /**
@@ -23,7 +24,7 @@ export async function ensureNicknameInStorage(
             headers: { Authorization: `Bearer ${accessToken}` },
         });
 
-        const { id, email, username, nickname, profileName } = data || ({} as MeResponse);
+        const { id, email, username, nickname, profileName, profileSlug } = data || ({} as MeResponse);
 
         // ★ userId 저장 (알림 WS 구독에 필요)
         if (typeof id === "number" && Number.isFinite(id)) {
@@ -36,6 +37,8 @@ export async function ensureNicknameInStorage(
 
         if (username) storage.setItem("userUsername", username);
         if (profileName) storage.setItem("userProfileName", profileName);
+        // ✅ profileSlug 저장
+        if (profileSlug) storage.setItem("profileUrlSlug", profileSlug);
 
         storage.setItem("userEmail", email || fallbackEmail);
     } catch {

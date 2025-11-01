@@ -10,10 +10,6 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * OAuth2 로그인 시 요청에 provider 파라미터를 추가해서
- * 실패 핸들러에서 사용할 수 있게 만들어줌
- */
 @RequiredArgsConstructor
 public class CustomAuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
 
@@ -40,16 +36,24 @@ public class CustomAuthorizationRequestResolver implements OAuth2AuthorizationRe
 
         String provider = extractProviderFromURI(request.getRequestURI());
 
-        Map<String, Object> additionalParams = new HashMap<>(original.getAdditionalParameters());
-        additionalParams.put("provider", provider);
+        Map<String, Object> additional = new HashMap<>(original.getAdditionalParameters());
+
+        Map<String, Object> attrs = new HashMap<>(original.getAttributes());
+        attrs.put("provider", provider);
+
+        String remember = request.getParameter("remember");
+        if (remember != null && !remember.isBlank()) attrs.put("remember", remember);
+
+        String deviceName = request.getParameter("deviceName");
+        if (deviceName != null && !deviceName.isBlank()) attrs.put("deviceName", deviceName);
+
         return OAuth2AuthorizationRequest.from(original)
-                .additionalParameters(additionalParams)
-                .state(provider)
+                .attributes(attrs)
+                .additionalParameters(additional)
                 .build();
     }
 
     private String extractProviderFromURI(String uri) {
-        // 예: /oauth2/authorization/github → github
         String[] parts = uri.split("/");
         return parts[parts.length - 1];
     }

@@ -48,6 +48,20 @@ public class UserController {
 
         return ResponseEntity.ok("회원 탈퇴 완료");
     }
+    @PatchMapping("/profile/image")
+    public ResponseEntity<?> updateProfileImage(@AuthenticationPrincipal UserDetailsImpl userDetails,
+                                                @RequestBody java.util.Map<String, String> body) {
+        userService.updateProfileImage(userDetails.getId(), body.get("url"));
+        return ResponseEntity.ok("프로필 이미지 수정 완료");
+    }
+
+    /** 프로필 배경(커버) 이미지 교체(간편 PATCH) */
+    @PatchMapping("/profile/cover")
+    public ResponseEntity<?> updateProfileCover(@AuthenticationPrincipal UserDetailsImpl userDetails,
+                                                @RequestBody java.util.Map<String, String> body) {
+        userService.updateProfileCover(userDetails.getId(), body.get("url"));
+        return ResponseEntity.ok("프로필 배경 이미지 수정 완료");
+    }
 
 
     @PutMapping("/profile")
@@ -61,14 +75,21 @@ public class UserController {
         userService.upsertUserProfile(user, req);
         return ResponseEntity.ok("프로필 설정 완료");
     }
-
     @PatchMapping("/nickname")
     public ResponseEntity<?> updateNickname(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                            @RequestBody UserProfileRequest request) {
-        userService.updateNickname(userDetails.getId(), request.getNickname());
+                                            @RequestBody @Valid NicknameUpdateRequest request) {
+        userService.updateNickname(userDetails.getId(), request.nickname());
         return ResponseEntity.ok("닉네임 수정 완료");
     }
 
+    @PatchMapping("/profile/bio")
+    public ResponseEntity<?> updateBio(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody @Valid ProfileBioUpdateRequest req
+    ) {
+        userService.updateBio(userDetails.getId(), req.getBio());
+        return ResponseEntity.ok("소개 수정 완료");
+    }
     // 이미 사용 중 : true
     // 사용 가능 : false
     @GetMapping("/check-nickname")
