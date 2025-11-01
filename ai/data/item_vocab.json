@@ -1,1 +1,10 @@
-{"kubernetes": 0, "node": 1, "mongodb": 2, "vue": 3, "spring": 4, "python": 5, "php": 6, "javascript": 7, "java": 8, "cpp": 9, "rust": 10, "redis": 11, "c#": 12, "android": 13, "django": 14, "jenkins": 15, "go": 16, "kotlin": 17, "elasticsearch": 18, "react": 19, "ruby": 20, "aws": 21, "postgresql": 22, "docker": 23}
+{
+  "aws": 0,
+  "c#": 1,
+  "postgresql": 2,
+  "react": 3,
+  "vue": 4,
+  "python": 5,
+  "rust": 6,
+  "java": 7
+}

@@ -1,7 +1,7 @@
 import os
 import json
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -31,43 +31,75 @@ def ensure_outdir(base: Path) -> Path:
     out.mkdir(parents=True, exist_ok=True)
     return out
 
-def detect_project_table(conn) -> str:
-    probe = """
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE table_schema NOT IN ('pg_catalog','information_schema')
-      AND table_name IN ('project','projects')
-    ORDER BY table_name
-    """
-    rows = conn.execute(text(probe)).fetchall()
-    if not rows:
-        # default to 'project'
-        return "project"
-    # prefer 'project' if both exist
-    names = [r[0] for r in rows]
-    return "project" if "project" in names else names[0]
-
+# ---------- DB fetchers ----------
 def fetch_users(engine) -> List[int]:
-    sql = "SELECT id::bigint AS user_id FROM users WHERE COALESCE(is_deleted,false)=false ORDER BY id"
+    # is_deleted이 없으면 필터 없이 조회
     with engine.begin() as conn:
+        has_is_deleted = conn.execute(text("""
+            select 1 from information_schema.columns
+            where table_name='users' and column_name='is_deleted'
+        """)).fetchone() is not None
+
+        if has_is_deleted:
+            sql = "SELECT id::bigint AS user_id FROM users WHERE COALESCE(is_deleted,false)=false ORDER BY id"
+        else:
+            sql = "SELECT id::bigint AS user_id FROM users ORDER BY id"
+
         df = pd.read_sql(text(sql), conn)
+
     return [int(x) for x in df["user_id"].tolist() if pd.notna(x)]
+
+def _project_id_col(conn) -> str:
+    # id 우선, 없으면 project_id 사용
+    cols = conn.execute(text("""
+        select column_name
+        from information_schema.columns
+        where table_name='project' and column_name in ('id','project_id')
+    """)).fetchall()
+    names = {r[0] for r in cols}
+    if 'id' in names:
+        return 'id'
+    if 'project_id' in names:
+        return 'project_id'
+    # 마지막 안전장치: id 가정
+    return 'id'
+
+def _project_optional_filters(conn) -> str:
+    has_deleted_at = conn.execute(text("""
+        select 1 from information_schema.columns
+        where table_name='project' and column_name='deleted_at'
+    """)).fetchone() is not None
+    has_private = conn.execute(text("""
+        select 1 from information_schema.columns
+        where table_name='project' and column_name='is_private'
+    """)).fetchone() is not None
+
+    where = []
+    if has_deleted_at:
+        where.append("deleted_at is null")
+    if has_private:
+        where.append("(is_private = false or is_private is null)")
+    return (" where " + " and ".join(where)) if where else ""
 
 def fetch_projects(engine) -> List[int]:
     with engine.begin() as conn:
-        tname = detect_project_table(conn)
-        sql = f"SELECT id::bigint AS project_id FROM {tname} ORDER BY id"
+        id_col = _project_id_col(conn)
+        where_sql = _project_optional_filters(conn)
+        sql = f'SELECT {id_col}::bigint AS project_id FROM project{where_sql} ORDER BY {id_col}'
         df = pd.read_sql(text(sql), conn)
     return [int(x) for x in df["project_id"].tolist() if pd.notna(x)]
 
+# ---------- IO ----------
 def write_json(obj, path: Path):
-    path.write_text(json.dumps(obj), encoding="utf-8")
+    path.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
 
+# ---------- main ----------
 def main():
     env_path = find_env(HERE)
     if not env_path:
         raise SystemExit("'.env' not found near project root.")
     env = load_env(env_path)
+
     main_db_url = env.get("MAIN_DB_URL") or os.getenv("MAIN_DB_URL")
     if not main_db_url:
         raise SystemExit("MAIN_DB_URL not set in .env or environment")
@@ -81,7 +113,7 @@ def main():
     u2i = {str(u): int(u) for u in users}
     i2u = {str(int(u)): int(u) for u in users}
 
-    # Projects: 0..N-1 preserving ascending id order
+    # Projects: 0..N-1 preserving ascending project id order
     p2i = {str(p): i for i, p in enumerate(projects)}
     i2p = {str(i): p for p, i in p2i.items()}
 
