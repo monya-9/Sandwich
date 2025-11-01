@@ -152,6 +152,7 @@ export default function PortfolioVotePage() {
         e.stopPropagation();
         
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             const response = await api.post('/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
                 targetId: submissionId
@@ -371,7 +372,7 @@ export default function PortfolioVotePage() {
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
-                            derivedStage === "SUBMISSION_OPEN" ? (
+                            derivedStage === "SUBMISSION_OPEN" && !isAdmin() ? (
                                 <CTAButton as="button" onClick={handleSubmitClick}>
                                     프로젝트 제출하기
                                 </CTAButton>
@@ -540,12 +541,21 @@ export default function PortfolioVotePage() {
                                             </div>
                                             
                                             {/* 전체보기 버튼 */}
-                                            <Link 
-                                                to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                            >
-                                                전체보기
-                                            </Link>
+                                            {admin && derivedStage === "VOTING" ? (
+                                                <button
+                                                    disabled
+                                                    className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-neutral-600 border border-gray-200 dark:border-neutral-800 rounded-md cursor-not-allowed opacity-50"
+                                                >
+                                                    전체보기
+                                                </button>
+                                            ) : (
+                                                <Link 
+                                                    to={`/challenge/portfolio/${id}/vote/${submission.id}`}
+                                                    className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                >
+                                                    전체보기
+                                                </Link>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -559,6 +569,7 @@ export default function PortfolioVotePage() {
                                 type="PORTFOLIO" 
                                 onSubmit={handleSubmitClick} 
                                 challengeStatus={challengeStatus}
+                                isAdmin={isAdmin()}
                             />
                         ) : (
                             <div className="flex items-center justify-center py-16 text-center text-neutral-600">

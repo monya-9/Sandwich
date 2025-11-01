@@ -185,6 +185,7 @@ export default function CodeSubmissionDetailPage() {
     const toggleLike = async () => {
         if (challengeStatus === "ENDED") return; // 종료된 챌린지에서는 좋아요 불가
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             const response = await api.post('/likes', {
                 targetType: 'CODE_SUBMISSION',
                 targetId: sid

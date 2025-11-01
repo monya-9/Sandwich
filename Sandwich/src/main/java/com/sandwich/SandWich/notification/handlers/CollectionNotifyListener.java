@@ -3,6 +3,7 @@ package com.sandwich.SandWich.notification.handlers;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.CollectionSavedEvent;
 import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,10 +19,19 @@ import java.util.Map;
 public class CollectionNotifyListener {
 
     private final NotificationFanoutService fanout;
+    private final ProjectRepository projectRepository;
 
     @TransactionalEventListener
     public void onSaved(CollectionSavedEvent ev) {
-        String deepLink = "/projects/" + ev.getProjectId();
+        // 프로젝트 소유자 ID 조회 후 올바른 경로 생성
+        Long ownerId = projectRepository.findAuthorIdById(ev.getProjectId()).orElse(null);
+        String deepLink;
+        if (ownerId != null) {
+            deepLink = "/other-project/" + ownerId + "/" + ev.getProjectId();
+        } else {
+            log.warn("[CollectionNotify] PROJECT ownerId not found for projectId={}", ev.getProjectId());
+            deepLink = "/";
+        }
 
         // Object 로 맞추기 (id는 Long, name은 String 그대로 넣어도 됨)
         Map<String, Object> extra = new LinkedHashMap<>();

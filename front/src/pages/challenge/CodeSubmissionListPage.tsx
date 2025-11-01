@@ -10,6 +10,7 @@ import api from "../../api/axiosInstance";
 import AdminRebuildButton from "../../components/challenge/AdminRebuildButton";
 import Toast from "../../components/common/Toast";
 import { getMe } from "../../api/users";
+import { isAdmin } from "../../utils/authz";
 
 export default function CodeSubmissionListPage() {
     const { id: idStr } = useParams();
@@ -160,6 +161,7 @@ export default function CodeSubmissionListPage() {
         e.stopPropagation();
         
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             const response = await api.post('/likes', {
                 targetType: 'CODE_SUBMISSION',
                 targetId: submissionId
@@ -227,7 +229,7 @@ export default function CodeSubmissionListPage() {
                 onBack={() => nav(`/challenge/code/${id}`)}
                 titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                 actionButton={
-                    challengeStatus === "ENDED" ? undefined : (
+                    challengeStatus === "ENDED" || isAdmin() ? undefined : (
                         <CTAButton as="button" onClick={handleSubmitClick}>
                             코드 제출하기
                         </CTAButton>
@@ -285,6 +287,7 @@ export default function CodeSubmissionListPage() {
                     type="CODE" 
                     onSubmit={handleSubmitClick} 
                     challengeStatus={challengeStatus}
+                    isAdmin={isAdmin()}
                 />
             )}
 

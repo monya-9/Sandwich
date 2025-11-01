@@ -304,6 +304,16 @@ export default function PortfolioProjectDetailPage() {
     const handleVote = async () => {
         if (!item) return;
         
+        // 자기 자신의 작품에는 투표할 수 없음
+        if (isOwner) {
+            setToast({
+                visible: true,
+                message: "자기 작품에는 투표할 수 없습니다.",
+                type: 'error'
+            });
+            return;
+        }
+        
         setVoteLoading(true);
         try {
             const voteData: VoteRequest = {
@@ -478,6 +488,7 @@ export default function PortfolioProjectDetailPage() {
     const toggleLike = async () => {
         if (isChallengeEnded) return; // 종료된 챌린지에서는 좋아요 불가
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             const response = await api.post('/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
                 targetId: pid

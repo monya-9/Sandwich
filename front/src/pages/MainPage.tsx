@@ -1,11 +1,9 @@
 //MainPage.tsx
 import React, { useEffect, useMemo, useState, useContext } from 'react';
 import MainHeroSection from '../components/Main/MainHeroSection';
-import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
 import MainDeveloperHighlight from '../components/Main/MainDeveloperHighlight';
 import SortModal from '../components/Main/SortModal';
-import { dummyProjects } from '../data/dummyProjects';
 import { Project, Category } from '../types/Project';
 import { fetchUserRecommendations } from '../api/reco';
 import { fetchProjectFeed, fetchProjectsMeta } from '../api/projects';
@@ -13,14 +11,7 @@ import { AuthContext } from '../context/AuthContext';
 
 const MainPage = () => {
   // 정렬 옵션을 sessionStorage에서 불러오기 (페이지 이동 시에도 유지)
-  const [selectedCategory, setSelectedCategory] = useState<Category | '전체'>(() => {
-    try {
-      const saved = sessionStorage.getItem('mainPage:selectedCategory');
-      return (saved as Category | '전체') || '전체';
-    } catch {
-      return '전체';
-    }
-  });
+  const selectedCategory: Category | '전체' = '전체'; // 카테고리 필터 제거로 고정
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState(() => {
     try {
@@ -89,6 +80,23 @@ const MainPage = () => {
   useEffect(() => {
     const loadProjects = async () => {
       setLoadingProjects(true);
+      
+      // 캐시 키 생성
+      const cacheKey = `projects:${selectedUploadTime}`;
+      
+      // 캐시에서 먼저 복원 (즉시 표시)
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached && isInitialLoad) {
+          const parsedCache = JSON.parse(cached) as Project[];
+          if (Array.isArray(parsedCache) && parsedCache.length > 0) {
+            setActualProjects(parsedCache);
+          }
+        }
+      } catch (e) {
+        // 캐시 복원 실패 시 무시
+      }
+      
       try {
         // 업로드 시간을 API 파라미터로 변환
         let uploadedWithin: '24h' | '7d' | '1m' | '3m' | undefined;
@@ -102,11 +110,10 @@ const MainPage = () => {
           uploadedWithin = '3m';
         }
 
-        // 초기 로딩: 30개만 빠르게 로드
-        const initialSize = isInitialLoad ? 30 : 500;
+        // 최적화: 필요한 만큼만 로드 (100개로 제한)
         const response = await fetchProjectFeed({
           page: 0,
-          size: initialSize,
+          size: 100,
           uploadedWithin,
         });
 
@@ -126,33 +133,13 @@ const MainPage = () => {
           }));
 
           setActualProjects(projectsWithMeta);
-          setIsInitialLoad(false); // 첫 로딩 완료
-
-          // 백그라운드에서 나머지 프로젝트 로드 (초기 로딩인 경우에만)
-          if (initialSize === 30) {
-            setTimeout(async () => {
-              try {
-                const fullResponse = await fetchProjectFeed({
-                  page: 0,
-                  size: 500,
-                  uploadedWithin,
-                });
-                const fullProjects = fullResponse.content || [];
-                if (fullProjects.length > 0) {
-                  const fullProjectIds = fullProjects.map(p => p.id);
-                  const fullMetaData = await fetchProjectsMeta(fullProjectIds);
-                  const fullProjectsWithMeta = fullProjects.map(project => ({
-                    ...project,
-                    likes: fullMetaData[project.id]?.likes || 0,
-                    comments: fullMetaData[project.id]?.comments || 0,
-                    views: fullMetaData[project.id]?.views || 0,
-                  }));
-                  setActualProjects(fullProjectsWithMeta);
-                }
-              } catch (error) {
-                console.error('추가 프로젝트 로딩 실패:', error);
-              }
-            }, 100);
+          setIsInitialLoad(false);
+          
+          // 캐시에 저장
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithMeta));
+          } catch (e) {
+            // sessionStorage 저장 실패 시 무시
           }
         } else {
           setActualProjects([]);
@@ -171,18 +158,22 @@ const MainPage = () => {
     };
 
     loadProjects();
-  }, [selectedUploadTime]);
+  }, [selectedUploadTime, isInitialLoad]);
 
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
-    setLoadingReco(true);
-    setRecoError(null);
-    setIsNewUser(false);
-    fetchUserRecommendations(userId)
-      .then(async (response) => {
+    
+    const loadRecommendations = async () => {
+      setLoadingReco(true);
+      setRecoError(null);
+      setIsNewUser(false);
+      
+      try {
+        const response = await fetchUserRecommendations(userId);
+        
         // total이 0이면 신규 유저로 판단하여 기본 최신순 프로젝트 사용
         if (response.total === 0) {
-          setIsNewUser(true); // 신규 유저 플래그 설정
+          setIsNewUser(true);
           setRecoProjects(null);
           if (cacheKey) {
             try { sessionStorage.removeItem(cacheKey); } catch {}
@@ -191,35 +182,31 @@ const MainPage = () => {
         }
 
         const sortedByScore = [...response.data].sort((a, b) => b.score - a.score);
-        // 초기에는 50개만 빠르게 로드
-        const feed = await fetchProjectFeed({ page: 0, size: 50, sort: 'latest' });
+        
+        // 최적화: 필요한 만큼만 로드 (100개로 제한)
+        const feed = await fetchProjectFeed({ page: 0, size: 100, sort: 'latest' });
         const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
         const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
+        
         setRecoProjects(mapped);
+        
+        // 캐시에 저장
         if (cacheKey) {
-          try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); } catch {}
-        }
-
-        // 백그라운드에서 전체 데이터 로드
-        setTimeout(async () => {
-          try {
-            const fullFeed = await fetchProjectFeed({ page: 0, size: 500, sort: 'latest' });
-            const fullById = new Map<number, Project>((fullFeed.content || []).map((p: Project) => [p.id, p]));
-            const fullMapped: Project[] = sortedByScore.map(i => fullById.get(i.project_id)).filter((p): p is Project => !!p);
-            setRecoProjects(fullMapped);
-            if (cacheKey) {
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(fullMapped)); } catch {}
-            }
-          } catch (error) {
-            console.error('추가 추천 프로젝트 로딩 실패:', error);
+          try { 
+            sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
+          } catch {
+            // sessionStorage 저장 실패 시 무시
           }
-        }, 100);
-      })
-      .catch(() => {
-        // 실패 시 에러 메시지 표시
+        }
+      } catch (error) {
+        console.error('추천 프로젝트 로딩 실패:', error);
         setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      })
-      .finally(() => setLoadingReco(false));
+      } finally {
+        setLoadingReco(false);
+      }
+    };
+    
+    loadRecommendations();
   }, [userId, isLoggedIn, cacheKey]);
 
   const handleOpenSortModal = () => {
@@ -293,42 +280,30 @@ const MainPage = () => {
   const gridPrimary = hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10);
   const heroProjects = hasReco
     ? filteredRecoProjects.slice(0, 7)
-    : (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
+    : sortedProjects.slice(0, 7);
   const gridMore = hasReco
     ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
     : sortedProjects.slice(10);
 
   // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
-  const gridTitle = useReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+  const gridTitle = useReco ? 'AI 추천 프로젝트' : '전체 프로젝트';
 
   return (
     <div className="min-h-screen">
       <main className="px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
-        <MainHeroSection projects={heroProjects.length > 0 ? heroProjects : dummyProjects.slice(0, 7)} />
-
-        <div className="mb-10">
-          <MainCategoryFilter
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            onOpenSortModal={handleOpenSortModal}
-          />
-        </div>
+        <MainHeroSection projects={heroProjects} />
 
         {/* 메인 그리드 */}
-        {isInitialLoad && loadingProjects ? (
-          <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
-            프로젝트를 불러오는 중입니다…
-          </div>
-        ) : useReco ? (
+        {useReco ? (
           hasReco ? (
-            <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+            <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
           ) : (
             <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
               {recoError ? recoError : 'AI 추천을 불러오는 중입니다…'}
             </div>
           )
         ) : (
-          <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+          <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
         )}
 
         {/* 다른 섹션은 항상 표시 */}

@@ -1,12 +1,12 @@
 // src/components/Auth/Login/SNSLogin.tsx
 import React from "react";
-import { SOCIAL_LOGIN_BASE } from "../../../config/apiBase";
 import { getStaticUrl } from "../../../config/staticBase";
 
 const SNSLogin: React.FC = () => {
+    const API_BASE = process.env.REACT_APP_API_BASE;
     const handleSocialLogin = (provider: "google" | "github") => {
-        // ✅ 소셜 로그인은 직접 백엔드로 이동 (프록시 거치지 않음)
-        window.location.href = `${SOCIAL_LOGIN_BASE}/oauth2/authorization/${provider}`;
+    // ✅ 바로 백엔드 OAuth2 엔드포인트로 이동
+    window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;    
     };
 
     return (

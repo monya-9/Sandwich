@@ -73,6 +73,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "í”„ë
 		ownerId: 0,
 		shareUrl: undefined as string | undefined,
 		coverUrl: coverUrl || undefined as string | undefined,
+		qrCodeEnabled: true,
 	};
 
 	const today = new Date();

@@ -57,10 +57,13 @@ public class ProjectViewSyncScheduler {
         Long redisCount = redisUtil.getViewCount(key);
 
         projectRepository.findById(projectId).ifPresentOrElse(project -> {
-            project.setViewCount(redisCount);
+            Long currentDbCount = project.getViewCount();
+            Long newCount = currentDbCount + redisCount;
+            project.setViewCount(newCount);
             projectRepository.save(project);
             redisTemplate.delete(key);
-            log.info("[view_count synced] projectId={} → viewCount={} (key={})", projectId, redisCount, key);
+            log.info("[view_count synced] projectId={} → DB:{} + Redis:{} = Total:{} (key={})", 
+                    projectId, currentDbCount, redisCount, newCount, key);
         }, () -> {
             log.warn("Project not found for key: {}. Deleting stale Redis key.", key);
             redisTemplate.delete(key);

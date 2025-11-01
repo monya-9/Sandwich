@@ -48,6 +48,20 @@ public class UserController {
 
         return ResponseEntity.ok("회원 탈퇴 완료");
     }
+    @PatchMapping("/profile/image")
+    public ResponseEntity<?> updateProfileImage(@AuthenticationPrincipal UserDetailsImpl userDetails,
+                                                @RequestBody java.util.Map<String, String> body) {
+        userService.updateProfileImage(userDetails.getId(), body.get("url"));
+        return ResponseEntity.ok("프로필 이미지 수정 완료");
+    }
+
+    /** 프로필 배경(커버) 이미지 교체(간편 PATCH) */
+    @PatchMapping("/profile/cover")
+    public ResponseEntity<?> updateProfileCover(@AuthenticationPrincipal UserDetailsImpl userDetails,
+                                                @RequestBody java.util.Map<String, String> body) {
+        userService.updateProfileCover(userDetails.getId(), body.get("url"));
+        return ResponseEntity.ok("프로필 배경 이미지 수정 완료");
+    }
 
 
     @PutMapping("/profile")

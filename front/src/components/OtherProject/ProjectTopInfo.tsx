@@ -160,14 +160,9 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
               </div>
             </div>
           )}
-          {/* 닉네임/팔로우 */}
+          {/* 닉네임 */}
           <div className="flex items-center gap-2 text-gray-600 text-base mt-2">
             <span>{userName}</span>
-            {!isOwner && (
-              <span className="hidden lg:inline font-bold text-green-700 ml-2 cursor-pointer hover:underline" onClick={handleToggleFollow}>
-              {isFollowing ? "팔로잉" : "팔로우"}
-            </span>
-            )}
           </div>
         </div>
       </div>

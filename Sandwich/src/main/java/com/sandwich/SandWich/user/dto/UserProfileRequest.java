@@ -19,4 +19,5 @@ public class UserProfileRequest {
     private String github;
     private String linkedin;
     private String profileImageUrl;
+    private String coverImageUrl;
 }

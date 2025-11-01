@@ -18,6 +18,7 @@ public class UserProfileResponse {
     private String github;
     private String linkedin;
     private String profileImage;
+    private String coverImage;
     private PositionDto position;
     private List<InterestDto> interests;
     private int followerCount;

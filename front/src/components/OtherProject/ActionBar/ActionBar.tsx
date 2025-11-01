@@ -23,6 +23,7 @@ export interface ActionBarProps {
     ownerEmail?: string;
     ownerImageUrl?: string;
     initialIsFollowing?: boolean;
+    qrCodeEnabled?: boolean;
   };
   isMobile?: boolean;
 }
@@ -79,7 +80,7 @@ export default function ActionBar({ onCommentClick, project, isMobile = false }:
       <CollectionAction key="collection-action" projectId={project.id} isMobile={isMobile} />
       <CommentAction key="comment-action" onClick={onCommentClick} isMobile={isMobile} />
       <ShareAction key="share-action" thumbnailUrl={project.coverUrl} title={project.name} isMobile={isMobile} />
-      <QrCodeAction key="qrcode-action" qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} isMobile={isMobile} />
+      <QrCodeAction key="qrcode-action" qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} isMobile={isMobile} qrCodeEnabled={project.qrCodeEnabled} />
       <LiveDemoAction key="livedemo-action" url={liveUrl} isMobile={isMobile} />
     </aside>
   );

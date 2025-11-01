@@ -32,9 +32,6 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
     loadProjects
   } = useProjectFeed({}, initialSearchTerm);
 
-  // 정렬 타입 상태
-  const [sortType, setSortType] = useState<'latest' | 'popular' | 'recommended'>('recommended');
-  
   // 검색어 상태 (초기화를 위해 별도 관리)
   const [currentSearchQuery, setCurrentSearchQuery] = useState(filters.q || initialSearchTerm);
 
@@ -65,8 +62,6 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
             isLoading={isLoading}
             searchType={searchType}
             onSearchTypeChange={onSearchTypeChange}
-            sortType={sortType}
-            onSortChange={setSortType}
             onClearSearch={handleClearSearch}
           />
           <ProjectFilterOptions 

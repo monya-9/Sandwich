@@ -63,6 +63,7 @@ export default function ChallengeCommentSection({
         
         setCommentLoading(true);
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             await api.post('/comments', {
                 commentableType,
                 commentableId,
@@ -97,6 +98,7 @@ export default function ChallengeCommentSection({
     const handleReply = async (parentId: number, value: string) => {
         if (!value.trim() || !isLoggedIn) return;
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             await api.post('/comments', {
                 commentableType,
                 commentableId,
@@ -137,6 +139,7 @@ export default function ChallengeCommentSection({
     const handleDeleteConfirm = async () => {
         if (!deleteConfirm.commentId) return;
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             await api.delete(`/comments/${deleteConfirm.commentId}`);
             
             // 댓글 목록 새로고침
@@ -175,6 +178,7 @@ export default function ChallengeCommentSection({
     const handleEdit = async () => {
         if (edit && edit.value.trim() && isLoggedIn) {
             try {
+                // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
                 await api.put(`/comments/${edit.id}`, {
                     comment: edit.value
                 });

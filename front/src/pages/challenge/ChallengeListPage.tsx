@@ -108,6 +108,9 @@ export default function ChallengeListPage() {
 					console.log(`✅ ${label} 자동 전환 완료!`);
 					setChallenges(freshCurrent);
 					setPastChallenges(freshPast);
+					
+					// Winners 섹션들도 새로고침하도록 커스텀 이벤트 발송
+					window.dispatchEvent(new CustomEvent('challengeStatusChanged'));
 				} catch (e) {
 					console.error('❌ 자동 새로고침 실패:', e);
 				} finally {
@@ -159,6 +162,9 @@ export default function ChallengeListPage() {
 					setChallenges(freshCurrent as any);
 					setPastChallenges(freshPast as any);
 					console.log('✅ 마감된 챌린지 제거 완료!');
+					
+					// Winners 섹션들도 새로고침하도록 커스텀 이벤트 발송
+					window.dispatchEvent(new CustomEvent('challengeStatusChanged'));
 				})
 				.catch((e) => {
 					console.error('❌ 즉시 새로고침 실패:', e);

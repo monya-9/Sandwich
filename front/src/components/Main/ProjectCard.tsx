@@ -1,5 +1,5 @@
 // src/components/project/ProjectCard.tsx
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Project } from '../../types/Project';
 import { dummyUsers } from '../../data/dummyUsers';
@@ -10,7 +10,7 @@ type Props = {
     indexInList?: number; // 중복 방지용
 };
 
-const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
+const ProjectCard: React.FC<Props> = memo(({ project, indexInList }) => {
     const navigate = useNavigate();
     const [isHovered, setIsHovered] = useState(false);
     const [imgErr, setImgErr] = useState(false);
@@ -128,6 +128,14 @@ const ProjectCard: React.FC<Props> = ({ project, indexInList }) => {
             </div>
         </div>
     );
-};
+}, (prevProps, nextProps) => {
+    // props가 동일하면 리렌더링 방지
+    return prevProps.project.id === nextProps.project.id &&
+           prevProps.project.likes === nextProps.project.likes &&
+           prevProps.project.comments === nextProps.project.comments &&
+           prevProps.project.views === nextProps.project.views;
+});
+
+ProjectCard.displayName = 'ProjectCard';
 
 export default ProjectCard;
