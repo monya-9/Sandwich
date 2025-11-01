@@ -39,7 +39,8 @@ export const dummyChallenges: ChallengeCardData[] = [
 export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
     try {
         // 1. 백엔드 챌린지 데이터 가져오기 (우선순위)
-        const backendChallenges = await fetchChallenges(0, 100); // 충분히 많이 가져와서 필터링
+        // ✅ 성능 최적화: 필요한 만큼만 요청 (30개면 충분 - CODE/PORTFOLIO 각 1개씩만 필요)
+        const backendChallenges = await fetchChallenges(0, 30);
         
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
@@ -275,7 +276,8 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
 // 🆕 지난 챌린지 데이터 가져오기 (지난 대결 보기용)
 export async function getPastChallenges(): Promise<ChallengeCardData[]> {
     try {
-        const backendChallenges = await fetchChallenges(0, 100); // 최대 100개까지 가져오기
+        // ✅ 성능 최적화: 필요한 만큼만 요청 (30개면 충분 - 최근 지난 챌린지만 표시)
+        const backendChallenges = await fetchChallenges(0, 30);
         
         if (!backendChallenges.content || backendChallenges.content.length === 0) {
             return [];

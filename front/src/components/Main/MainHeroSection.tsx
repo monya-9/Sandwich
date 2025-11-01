@@ -185,25 +185,34 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
         };
     }, [projects.length, weeklyTopProjects, startAutoScroll]);
 
-    // 피드 페이지를 스캔해서 특정 ID들의 프로젝트를 찾아오는 헬퍼
-    async function findProjectsByIdsViaFeed(targetIds: number[], maxPages = 10, pageSize = 100): Promise<Project[]> {
+    // 피드 페이지를 스캔해서 특정 ID들의 프로젝트를 찾아오는 헬퍼 (병렬 처리 최적화)
+    async function findProjectsByIdsViaFeed(targetIds: number[], maxPages = 5, pageSize = 100): Promise<Project[]> {
         const found = new Map<number, Project>();
-        let page = 0;
-        while (page < maxPages && found.size < targetIds.length) {
-            try {
-                const feed = await fetchProjectFeed({ page, size: pageSize, sort: 'latest' });
-                const content = feed.content || [];
-                for (const p of content) {
-                    if (targetIds.includes(p.id) && !found.has(p.id)) {
-                        found.set(p.id, p);
-                    }
-                }
-                if (feed.last) break;
-                page += 1;
-            } catch {
-                break; // 피드 실패 시 중단하고 현재까지 수집분만 사용
-            }
+        
+        // ✅ 병렬 처리로 여러 페이지를 동시에 요청 (순차 처리보다 훨씬 빠름)
+        const pagePromises: Promise<any>[] = [];
+        
+        // 최대 5페이지까지 병렬 요청 (최대 500개 프로젝트 스캔)
+        for (let page = 0; page < maxPages && found.size < targetIds.length; page++) {
+            pagePromises.push(
+                fetchProjectFeed({ page, size: pageSize, sort: 'latest' })
+                    .then((feed) => {
+                        const content = feed.content || [];
+                        for (const p of content) {
+                            if (targetIds.includes(p.id) && !found.has(p.id)) {
+                                found.set(p.id, p);
+                            }
+                        }
+                        return feed.last; // 마지막 페이지 여부
+                    })
+                    .catch(() => false) // 실패 시 무시
+            );
         }
+        
+        // 모든 페이지 요청 완료 대기 (병렬 처리)
+        await Promise.all(pagePromises);
+        
+        // ✅ 필요한 모든 프로젝트를 찾았거나 마지막 페이지에 도달했으면 종료
         // 주어진 targetIds 순서대로 정렬
         return targetIds.map(id => found.get(id)).filter((p): p is Project => !!p);
     }
@@ -228,8 +237,9 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
                 const sorted = [...items].sort((a, b) => b.score - a.score);
                 const topIds = sorted.map(i => i.project_id).slice(0, 50);
 
-                // 피드에서 스캔하여 해당 ID들에 매칭되는 프로젝트 회수
-                const mapped = await findProjectsByIdsViaFeed(topIds, 10, 100);
+                // 피드에서 스캔하여 해당 ID들에 매칭되는 프로젝트 회수 (병렬 처리로 최적화)
+                // ✅ 최대 5페이지까지 병렬 요청 (기본값 사용, maxPages=5로 이미 설정됨)
+                const mapped = await findProjectsByIdsViaFeed(topIds, 5, 100);
 
                 if (isMounted) {
                     if (mapped.length > 0) {

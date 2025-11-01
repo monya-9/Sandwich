@@ -142,10 +142,19 @@ export default function ChallengeListPage() {
 		
 		// 🔥 이미 완전히 마감된 챌린지가 있으면 즉시 새로고침
 		// ⚠️ 중요: 중간 단계(제출 종료, 투표 시작)는 완전히 마감된 것이 아니므로 제외
-		// 실제로 완전히 마감된 것은 expireAtMs (최종 마감 시간)만 체크
+		// - CODE: expireAtMs (최종 마감)만 체크
+		// - PORTFOLIO: voteEndAtMs 또는 expireAtMs만 체크 (endAtMs는 중간 단계이므로 제외)
 		const hasFullyExpired = challenges.some(c => {
-			const finalExpireTime = c.expireAtMs || c.voteEndAtMs || c.endAtMs;
-			return finalExpireTime && finalExpireTime <= now;
+			if (c.type === 'CODE') {
+				// 코드 챌린지: 최종 마감 시간만 체크
+				return c.expireAtMs && c.expireAtMs <= now;
+			} else if (c.type === 'PORTFOLIO') {
+				// 포트폴리오 챌린지: 최종 마감 시간만 체크 (voteEndAtMs 또는 expireAtMs)
+				// ⚠️ endAtMs는 제출 종료 시간(중간 단계)이므로 제외!
+				const finalExpireTime = c.voteEndAtMs || c.expireAtMs;
+				return finalExpireTime && finalExpireTime <= now;
+			}
+			return false;
 		});
 		
 		if (hasFullyExpired && !rolloverRef.current) {
