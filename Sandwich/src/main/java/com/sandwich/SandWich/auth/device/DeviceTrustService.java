@@ -18,6 +18,8 @@ public class DeviceTrustService {
     private final UserDeviceRepository repo;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final SecureRandom rnd = new SecureRandom();
+    private final String cookieDomain= System.getenv().getOrDefault("TRUST_COOKIE_DOMAIN", ".sandwich-dev.com");
+
 
     public boolean isTrusted(HttpServletRequest req, Long userId) {
         String tdid = readCookie(req,"tdid");
@@ -85,6 +87,7 @@ public class DeviceTrustService {
         c.setHttpOnly(true);
         c.setSecure(secure);
         c.setPath("/");
+        c.setDomain(cookieDomain);
         c.setMaxAge(maxAge);
         c.setAttribute("SameSite", sameSite);
         res.addCookie(c);
@@ -173,10 +176,11 @@ public class DeviceTrustService {
     private void killCookie(HttpServletResponse res, String name) {
         Cookie c = new Cookie(name, "");
         c.setPath("/");
+        c.setDomain(cookieDomain);
         c.setMaxAge(0);
         c.setHttpOnly(true);
-        c.setSecure(true);
-        c.setAttribute("SameSite", "Lax");
+        c.setSecure(secure);
+        c.setAttribute("SameSite", sameSite);
         res.addCookie(c);
     }
 
