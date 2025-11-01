@@ -91,43 +91,20 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
-        // ---- (중요) 토큰을 URL로 보내지 말고, HttpOnly 쿠키로 내려보냄
-        // 쿠키 속성: HttpOnly; Secure; SameSite=None; Domain=.sandwich-dev.com; Path=/
-        ResponseCookie accessCookie = ResponseCookie.from("ACCESS_TOKEN", accessToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .domain(".sandwich-dev.com")
-                .path("/")
-                .maxAge(Duration.ofHours(1))       // 액세스 토큰 만료 시간
-                .build();
-
-        ResponseCookie refreshCookie = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .domain(".sandwich-dev.com")
-                .path("/")
-                .maxAge(Duration.ofDays(14))        // 리프레시 토큰 만료 시간
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
         // ---- 프런트로 리다이렉트 (민감정보 제거)
         boolean needNickname = (user.getProfile() == null)
                 || user.getProfile().getNickname() == null
                 || user.getProfile().getNickname().isBlank();
 
-        String redirectUriBase = System.getenv("FRONTEND_URL") != null
-                ? System.getenv("FRONTEND_URL")
-                : "https://sandwich-dev.com"; // 운영 기본값 권장
+        String redirectUriBase = System.getenv("FRONTEND_URL") != null ?
+                System.getenv("FRONTEND_URL") : "http://localhost:3000";
 
         String redirectPath = needNickname ? "/oauth/profile-step" : "/oauth2/success";
 
-        // 토큰/리프레시토큰은 쿠키로 이미 내려갔으므로 URL에 실지 않음
         String redirectUri = redirectUriBase + redirectPath
-                + "?email=" + user.getEmail()
+                + "?token=" + accessToken
+                + "&refreshToken=" + refreshToken
+                + "&email=" + user.getEmail()
                 + "&provider=" + user.getProvider()
                 + "&isProfileSet=" + Boolean.TRUE.equals(user.getIsProfileSet())
                 + "&needNickname=" + needNickname;
