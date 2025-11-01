@@ -54,6 +54,8 @@ function isPublicApiRequest(config: any): boolean {
             /^\/challenges(\?|$)/,
             /^\/challenges\/\d+(\?|$)/,
             /^\/challenges\/\d+\/leaderboard(\?|$)/,
+            /^\/challenges\/\d+\/submissions(\?|$)/,          // GET /api/challenges/{id}/submissions
+            /^\/challenges\/\d+\/submissions\/\d+(\?|$)/,    // GET /api/challenges/{id}/submissions/{submissionId}
             
             // 사용자 프로필
             /^\/users\/\d+(\?|$)/,

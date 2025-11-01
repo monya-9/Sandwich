@@ -47,49 +47,60 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       // ✅ 필터 상태도 함께 업데이트
       setFilters(params);
       
+      // 1단계: 검색/피드 API 호출
       const response = await fetchProjectFeed(params);
       const projects = response.content || [];
 
-      // ✅ 프로젝트 메타 정보 가져오기 (좋아요, 댓글, 조회수) - 안전하게 처리
-      if (projects.length > 0) {
-        try {
-          const projectIds = projects.map(p => p.id);
-          const metaData = await fetchProjectsMeta(projectIds);
-          
-          // 메타 정보를 프로젝트에 병합
-          const projectsWithMeta = projects.map(project => ({
-            ...project,
-            likes: metaData[project.id]?.likes || 0,
-            comments: metaData[project.id]?.comments || 0,
-            views: metaData[project.id]?.views || 0,
-          }));
-
-          setProjects(projectsWithMeta);
-        } catch (metaError) {
-          // ✅ 메타 API 실패 시 기본값으로 표시
-          console.warn('프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
-          const projectsWithDefaults = projects.map(project => ({
-            ...project,
-            likes: project.likes || 0,
-            comments: project.comments || 0,
-            views: project.views || 0,
-          }));
-          setProjects(projectsWithDefaults);
-        }
-      } else {
-        setProjects([]);
-      }
+      // ✅ 2단계: 검색 결과를 먼저 표시 (메타 정보 없이도 즉시 보여줌)
+      // 기본값으로 메타 정보 초기화 (이미 프로젝트에 포함되어 있을 수 있음)
+      const projectsWithDefaults = projects.map(project => ({
+        ...project,
+        likes: project.likes || 0,
+        comments: project.comments || 0,
+        views: project.views || 0,
+      }));
       
+      setProjects(projectsWithDefaults);
       setTotalElements(response.totalElements || 0);
       setTotalPages(response.totalPages || 0);
       setCurrentPage(response.page || 0);
       
+      // ✅ 로딩 완료 표시 (메타 정보를 기다리지 않음)
+      setIsLoading(false);
+      setIsInitialLoading(false);
+
+      // ✅ 3단계: 백그라운드에서 메타 정보 비동기 로드 (사용자는 이미 결과를 보고 있음)
+      if (projects.length > 0) {
+        const projectIds = projects.map(p => p.id);
+        fetchProjectsMeta(projectIds)
+          .then(metaData => {
+            // ✅ 현재 state의 프로젝트들을 기준으로 업데이트 (owner 정보 유지)
+            setProjects(prevProjects => {
+              // prevProjects와 projects의 순서/개수가 동일하다고 가정
+              return prevProjects.map((prevProject, index) => {
+                const originalProject = projects[index];
+                // 원본 프로젝트의 owner 정보를 유지하면서 메타 정보만 업데이트
+                return {
+                  ...prevProject,
+                  ...originalProject, // 원본의 owner 정보 등 모든 정보 보존
+                  likes: metaData[originalProject.id]?.likes || prevProject.likes || 0,
+                  comments: metaData[originalProject.id]?.comments || prevProject.comments || 0,
+                  views: metaData[originalProject.id]?.views || prevProject.views || 0,
+                };
+              });
+            });
+          })
+          .catch(metaError => {
+            // 메타 API 실패해도 검색 결과는 이미 표시하고 있음
+            console.warn('프로젝트 메타 정보 조회 실패, 기본값 유지:', metaError);
+          });
+      }
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '프로젝트를 불러오는데 실패했습니다.';
       setError(errorMessage);
-    } finally {
       setIsLoading(false);
-      setIsInitialLoading(false); // 초기 로딩 완료
+      setIsInitialLoading(false);
     }
   }, [setFilters]);
 
@@ -108,42 +119,51 @@ export const useProjectFeed = (initialParams: ProjectFeedParams = {}, initialSea
       
       const newProjects = response.content || [];
       
-      // ✅ 새 프로젝트들의 메타 정보 가져오기 - 안전하게 처리
-      if (newProjects.length > 0) {
-        try {
-          const projectIds = newProjects.map(p => p.id);
-          const metaData = await fetchProjectsMeta(projectIds);
-          
-          // 메타 정보를 프로젝트에 병합
-          const newProjectsWithMeta = newProjects.map(project => ({
-            ...project,
-            likes: metaData[project.id]?.likes || 0,
-            comments: metaData[project.id]?.comments || 0,
-            views: metaData[project.id]?.views || 0,
-          }));
-
-          setProjects(prev => [...prev, ...newProjectsWithMeta]);
-        } catch (metaError) {
-          // ✅ 메타 API 실패 시 기본값으로 표시
-          console.warn('추가 프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
-          const newProjectsWithDefaults = newProjects.map(project => ({
-            ...project,
-            likes: project.likes || 0,
-            comments: project.comments || 0,
-            views: project.views || 0,
-          }));
-          setProjects(prev => [...prev, ...newProjectsWithDefaults]);
-        }
-      } else {
-        setProjects(prev => [...prev, ...newProjects]);
-      }
+      // ✅ 새 프로젝트를 먼저 추가 (메타 정보 없이)
+      const newProjectsWithDefaults = newProjects.map(project => ({
+        ...project,
+        likes: project.likes || 0,
+        comments: project.comments || 0,
+        views: project.views || 0,
+      }));
       
+      setProjects(prev => [...prev, ...newProjectsWithDefaults]);
       setCurrentPage(nextPage);
+      setIsLoading(false);
+      
+      // ✅ 백그라운드에서 메타 정보 비동기 로드
+      if (newProjects.length > 0) {
+        const newProjectIds = newProjects.map(p => p.id);
+        fetchProjectsMeta(newProjectIds)
+          .then(metaData => {
+            // ✅ 메타 정보가 도착하면 해당 프로젝트들만 업데이트 (owner 정보 유지)
+            setProjects(prev => {
+              return prev.map(project => {
+                const meta = metaData[project.id];
+                if (meta) {
+                  // 원본 프로젝트 찾기 (owner 정보 보존을 위해)
+                  const originalProject = newProjects.find(p => p.id === project.id);
+                  return {
+                    ...project,
+                    ...originalProject, // 원본의 owner 정보 등 모든 정보 보존
+                    likes: meta.likes || project.likes || 0,
+                    comments: meta.comments || project.comments || 0,
+                    views: meta.views || project.views || 0,
+                  };
+                }
+                return project;
+              });
+            });
+          })
+          .catch(metaError => {
+            // 메타 API 실패해도 이미 프로젝트는 추가되어 있음
+            console.warn('추가 프로젝트 메타 정보 조회 실패, 기본값 유지:', metaError);
+          });
+      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '더 많은 프로젝트를 불러오는데 실패했습니다.';
       setError(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   }, [isLoading, currentPage, totalPages, filters]);
