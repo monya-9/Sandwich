@@ -91,20 +91,45 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
-        // ---- 프런트로 리다이렉트 (민감정보 제거)
+        String tokenSameSite = System.getenv().getOrDefault("TOKEN_COOKIE_SAMESITE", "None");
+        boolean tokenSecure  = Boolean.parseBoolean(System.getenv().getOrDefault("TOKEN_COOKIE_SECURE", "true"));
+        String tokenDomain   = System.getenv().getOrDefault("TOKEN_COOKIE_DOMAIN", "");
+
+        ResponseCookie.ResponseCookieBuilder acb = ResponseCookie.from("ACCESS_TOKEN", accessToken)
+                .httpOnly(true)
+                .secure(tokenSecure)
+                .sameSite(tokenSameSite)
+                .path("/")
+                .maxAge(Duration.ofHours(1));
+
+        ResponseCookie.ResponseCookieBuilder rcb = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
+                .httpOnly(true)
+                .secure(tokenSecure)
+                .sameSite(tokenSameSite)
+                .path("/")
+                .maxAge(Duration.ofDays(14));
+
+        if (tokenDomain != null && !tokenDomain.isBlank()) {
+            acb = acb.domain(tokenDomain);
+            rcb = rcb.domain(tokenDomain);
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, acb.build().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, rcb.build().toString());
+
         boolean needNickname = (user.getProfile() == null)
                 || user.getProfile().getNickname() == null
                 || user.getProfile().getNickname().isBlank();
 
-        String redirectUriBase = System.getenv("FRONTEND_URL") != null ?
-                System.getenv("FRONTEND_URL") : "http://localhost:3000";
+        String redirectUriBase = System.getenv("FRONTEND_URL") != null
+                ? System.getenv("FRONTEND_URL")
+                : "https://sandwich-dev.com"; // 운영 기본값 권장
 
         String redirectPath = needNickname ? "/oauth/profile-step" : "/oauth2/success";
 
+        // 토큰/리프레시토큰은 쿠키로 이미 내려갔으므로 URL에 실지 않음
         String redirectUri = redirectUriBase + redirectPath
-                + "?token=" + accessToken
-                + "&refreshToken=" + refreshToken
-                + "&email=" + user.getEmail()
+                + "?email=" + user.getEmail()
                 + "&provider=" + user.getProvider()
                 + "&isProfileSet=" + Boolean.TRUE.equals(user.getIsProfileSet())
                 + "&needNickname=" + needNickname;
