@@ -47,13 +47,11 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
         if (!window.Kakao.isInitialized()) {
           try {
             window.Kakao.init(kakaoKey);
-            console.log("Kakao SDK 초기화 성공!");
             setKakaoInitialized(true);
           } catch (error) {
             console.error("Kakao SDK 초기화 실패:", error);
           }
         } else {
-          console.log("Kakao SDK 이미 초기화됨");
           setKakaoInitialized(true);
         }
       } else {
