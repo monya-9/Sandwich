@@ -53,6 +53,13 @@ export function useNotifyWS({
         // 이미 활성화된 클라이언트가 있으면 재사용
         if (clientRef.current && clientRef.current.active) return;
 
+        // 최대 재시도 횟수 제한 (무한 재시도 방지)
+        const MAX_RETRIES = 5;
+        if (retry >= MAX_RETRIES) {
+            console.warn("[CHAT][WS] Max retries reached, stopping reconnection attempts");
+            return;
+        }
+
         // 재시도 스케줄러
         const schedule = (r: number) => {
             if (stoppedRef.current || !enabled) return;
@@ -68,7 +75,9 @@ export function useNotifyWS({
                 return;
             }
 
-            const url = `${wsPath}`; // 필요 시 서버가 허용하면 ?token= 로도 가능
+            // SockJS 폴백 요청(xhr_streaming, xhr, eventsource)도 인증되도록 쿼리 파라미터로 토큰 전달
+            // 백엔드 JwtHandshakeInterceptor가 ?token=... 또는 Authorization 헤더 둘 다 지원
+            const url = token ? `${wsPath}?token=${encodeURIComponent(token)}` : wsPath;
             const client = new Client({
                 webSocketFactory: () => new SockJS(url),
                 connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
@@ -80,7 +89,10 @@ export function useNotifyWS({
 
             client.onConnect = () => {
                 const topic = `${topicBase}/${userId}/notifications`;
-                if (debug) console.log("[NOTI][WS] connected → subscribe:", topic);
+                if (debug) console.log("[CHAT][WS] connected → subscribe:", topic);
+                
+                // 연결 성공 시 재연결 카운터 리셋
+                clearTimer();
 
                 client.subscribe(topic, (msg: IMessage) => {
                     try {
@@ -93,8 +105,22 @@ export function useNotifyWS({
             };
 
             // 연결/소켓 종료 시 지연 재시도
-            client.onStompError = () => schedule(retry);
-            client.onWebSocketClose = () => schedule(retry);
+            client.onStompError = (frame) => {
+                // SockJS 내부 폴백 과정의 에러는 무시
+                if (debug && frame?.headers?.["message"]?.includes("Invalid frame header") === false) {
+                    console.warn("[CHAT][WS] STOMP error:", frame);
+                }
+                schedule(retry);
+            };
+            
+            client.onWebSocketClose = () => {
+                // 이미 연결이 성공한 후 종료된 경우에만 재연결
+                // 초기 연결 실패나 SockJS 폴백 과정의 종료는 무시
+                const wasConnected = clientRef.current?.connected;
+                if (wasConnected && !stoppedRef.current && enabled) {
+                    schedule(retry);
+                }
+            };
 
             client.activate();
             clientRef.current = client;
