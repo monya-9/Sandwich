@@ -1,8 +1,8 @@
 // context/AuthContext.tsx
 import React, { createContext, useEffect, useState, ReactNode, useCallback } from "react";
-import { ensureNicknameInStorage } from "../utils/profile"; // 네 함수 경로
 import { clearAllUserData } from "../utils/tokenStorage";
-// 토큰 저장/조회 유틸이 따로 있으면 써도 OK
+import { clearAdminCache } from "../utils/authz";
+import api from "../api/axiosInstance";
 
 type AuthContextType = {
     isLoggedIn: boolean;
@@ -26,53 +26,66 @@ export const AuthContext = createContext<AuthContextType>({
 
 interface Props { children: ReactNode }
 
-const readToken = () =>
-    localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-
-const pickStorage = () =>
-    localStorage.getItem("accessToken") ? localStorage :
-        sessionStorage.getItem("accessToken") ? sessionStorage : localStorage;
-
 export const AuthProvider = ({ children }: Props) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [email, setEmail] = useState<string | null>(null);
     const [nickname, setNickname] = useState<string | null>(null);
 
     const refreshFromStorage = () => {
-        const s = pickStorage();
-        const e = s.getItem("userEmail");
-        const n = s.getItem("userNickname");
+        const e = localStorage.getItem("userEmail");
+        const n = localStorage.getItem("userNickname");
         setEmail(e);
         setNickname(n);
     };
 
     const refreshProfile = useCallback(async () => {
-        const token = readToken();
-        const s = pickStorage();
+        // ✅ httpOnly 쿠키 기반: /users/me API 호출로 로그인 상태 확인
+        try {
+            const { data } = await api.get("/users/me", {
+                headers: { 'X-Skip-Auth-Refresh': '1' }
+            });
+            const { id, email, username, nickname, profileName, profileSlug } = data || {};
 
-        if (!token) {
+            // userId 저장 (알림 WS 구독에 필요)
+            if (typeof id === "number" && Number.isFinite(id)) {
+                localStorage.setItem("userId", String(id));
+            }
+
+            // 닉네임 우선(없으면 username 대체)
+            const finalNick = (nickname ?? "").trim() || (username ?? "").trim();
+            if (finalNick) localStorage.setItem("userNickname", finalNick);
+
+            if (username) localStorage.setItem("userUsername", username);
+            if (profileName) localStorage.setItem("userProfileName", profileName);
+            if (profileSlug) localStorage.setItem("profileUrlSlug", profileSlug);
+            if (email) localStorage.setItem("userEmail", email);
+
+            setIsLoggedIn(true);
+            refreshFromStorage();
+        } catch (error: any) {
+            // ✅ 401 Unauthorized: 로그인하지 않은 상태 (정상)
+            if (error?.response?.status === 401) {
+                setIsLoggedIn(false);
+                setEmail(null);
+                setNickname(null);
+                return;
+            }
+            
+            // ✅ 기타 에러: 콘솔에 경고만 출력하고 로그아웃 상태로 처리
+            console.warn("[AUTH] Failed to fetch user profile:", error?.message || error);
             setIsLoggedIn(false);
             setEmail(null);
             setNickname(null);
-            return;
         }
-
-        // fallbackEmail은 일단 저장된 값이나 빈 문자열
-        const fallbackEmail = s.getItem("userEmail") || "";
-        await ensureNicknameInStorage(token, fallbackEmail, s);
-
-        setIsLoggedIn(true);
-        refreshFromStorage();
     }, []);
 
     // 앱 부팅 시 1회
     useEffect(() => { refreshProfile(); }, [refreshProfile]);
 
     const login = async (hintEmail?: string) => {
-        // OAuthSuccessHandler가 토큰을 이미 저장한 상태라고 가정
+        // ✅ httpOnly 쿠키로 토큰이 자동 설정되므로 별도 저장 불필요
         if (hintEmail) {
-            const s = pickStorage();
-            s.setItem("userEmail", hintEmail);
+            localStorage.setItem("userEmail", hintEmail);
         }
         await refreshProfile();
     };
@@ -85,6 +98,9 @@ export const AuthProvider = ({ children }: Props) => {
 
         // ✅ 모든 사용자 데이터 완전 삭제
         clearAllUserData();
+        
+        // ✅ 관리자 권한 캐시 무효화
+        clearAdminCache();
     };
 
     const clearState = () => {

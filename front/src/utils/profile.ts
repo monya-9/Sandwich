@@ -11,8 +11,9 @@ type MeResponse = {
 };
 
 /**
- * 로그인 직후 또는 앱 부팅 시 1회 호출.
+ * ✅ httpOnly 쿠키 기반: Authorization 헤더 제거
  * /api/users/me 응답에서 id / nickname / username / profileName / email을 스토리지에 싱크.
+ * @deprecated AuthContext에서 직접 /users/me를 호출하므로 이 함수는 더 이상 사용되지 않음
  */
 export async function ensureNicknameInStorage(
     accessToken: string,
@@ -20,9 +21,8 @@ export async function ensureNicknameInStorage(
     storage: Storage
 ) {
     try {
-        const { data } = await api.get<MeResponse>("/users/me", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        // ✅ httpOnly 쿠키로 자동 전송되므로 Authorization 헤더 불필요
+        const { data } = await api.get<MeResponse>("/users/me");
 
         const { id, email, username, nickname, profileName, profileSlug } = data || ({} as MeResponse);
 

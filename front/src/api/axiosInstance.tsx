@@ -157,23 +157,20 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
             }
         }
 
-        // 3) 챌린지 관련 GET 요청에 자동으로 X-Skip-Auth-Refresh 헤더 추가
+        // 3) 일부 GET 요청에 자동으로 X-Skip-Auth-Refresh 헤더 추가
+        // ⚠️ 주의: /users/me는 인증 필요한 API이므로 제외
         const url = String(config.url || "");
         const method = (config.method || 'get').toLowerCase();
-        const isChallengeReadRequest = method === 'get' && (
+        const isSkipAuthRefresh = method === 'get' && (
             url.includes('/challenges') ||
             url.includes('/ext/reco') ||
-            url.includes('/users/me') ||
             url.includes('/me/credits') ||
             url.includes('/me/rewards') ||
             url.includes('/likes') ||
-            url.includes('/comments') ||
-            url.includes('/users/') ||
-            url.includes('/profiles/') ||
-            url.includes('/members/')
+            url.includes('/comments')
         );
         
-        if (isChallengeReadRequest) {
+        if (isSkipAuthRefresh) {
             const headers: any = config.headers || {};
             if (headers instanceof AxiosHeaders || typeof headers.set === "function") {
                 headers.set("X-Skip-Auth-Refresh", "1");
@@ -298,18 +295,20 @@ api.interceptors.response.use(
         } catch (e) {
             resolveQueue(null);
             
-            // ✅ 리프레시 실패 시 자동 로그아웃
+            // ✅ 리프레시 실패 시 자동 로그아웃 (새로고침 제거)
             console.warn('[AUTH] 리프레시 토큰 실패, 자동 로그아웃 처리');
             try {
                 const { clearAllUserData } = await import('../utils/tokenStorage');
                 clearAllUserData();
                 
-                // AuthContext 상태 초기화를 위해 새로고침
-                window.location.reload();
+                // ✅ httpOnly 쿠키 방식: 새로고침 대신 로그인 페이지로 리다이렉트
+                // 현재 페이지가 로그인 필수 페이지가 아니면 그냥 두기
+                const publicPaths = ['/login', '/join', '/'];
+                if (!publicPaths.some(p => window.location.pathname.startsWith(p))) {
+                    window.location.href = '/login';
+                }
             } catch (logoutError) {
                 console.error('[AUTH] 자동 로그아웃 실패:', logoutError);
-                // 실패해도 페이지 새로고침
-                window.location.reload();
             }
             
             return Promise.reject(e);

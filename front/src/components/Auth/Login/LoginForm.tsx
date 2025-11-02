@@ -35,9 +35,9 @@ const LoginForm = () => {
             clearAllUserData();
 
             // ✅ 2. React 상태 즉시 초기화 (깜빡임 방지)
-            clearState(); // React 상태만 즉시 초기화
+            clearState();
 
-            // ✅ public API: 로그인은 인증 없이 호출
+            // ✅ 3. public API: 로그인은 인증 없이 호출
             const res = await api.post("/auth/login", { email, password }, {
                 headers: { 'X-Skip-Auth-Refresh': '1' }
             });
@@ -48,35 +48,17 @@ const LoginForm = () => {
                 setMaskedEmail(res.data.maskedEmail);
                 setShowOtpForm(true);
                 setLoginFailed(false);
-                return; // 여기서 종료
+                return;
             }
 
-            // 기존 성공 로직
-            const {
-                email: serverEmail,
-            } = res.data || {};
+            // ✅ 4. 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
 
-            // ✅ 3. 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
-            // setToken(accessToken, keepLogin);  // 제거
-            // setRefreshToken(refreshToken ?? null, keepLogin);  // 제거
-
-            // ✅ 4. 새 사용자 정보 저장
-            const effectiveEmail = serverEmail || email;
-            localStorage.setItem("userEmail", effectiveEmail);
-            
-            // ✅ 최근 로그인 방법 저장 (이메일 로그인)
+            // ✅ 5. 최근 로그인 방법 저장 (이메일 로그인)
             localStorage.setItem("lastLoginMethod", "local");
 
-            // ✅ 5. 로그인 직후 프로필/닉네임 보강 (쿠키에서 자동으로 토큰 전송됨)
-            await api.get("/users/me").then(me => {
-                const display = me.data.nickname || me.data.profileName || me.data.username || "";
-                if (display) {
-                    localStorage.setItem("userNickname", display);
-                }
-            }).catch(() => {});
-
-            // ✅ 6. 컨텍스트 업데이트
-            login(effectiveEmail);
+            // ✅ 6. 컨텍스트 업데이트 (AuthContext에서 /users/me 호출하여 프로필 정보 자동 저장)
+            const effectiveEmail = res.data?.email || email;
+            await login(effectiveEmail);
 
             setLoginFailed(false);
             navigate("/");
@@ -91,23 +73,11 @@ const LoginForm = () => {
         try {
             // ✅ 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
             
-            // 사용자 정보 저장
-            const effectiveEmail = email;
-            localStorage.setItem("userEmail", effectiveEmail);
-            
             // 최근 로그인 방법 저장 (이메일 로그인)
             localStorage.setItem("lastLoginMethod", "local");
 
-            // 로그인 직후 프로필/닉네임 보강 (쿠키에서 자동으로 토큰 전송됨)
-            await api.get("/users/me").then(me => {
-                const display = me.data.nickname || me.data.profileName || me.data.username || "";
-                if (display) {
-                    localStorage.setItem("userNickname", display);
-                }
-            }).catch(() => {});
-
-            // 컨텍스트 업데이트
-            login(effectiveEmail);
+            // 컨텍스트 업데이트 (AuthContext에서 /users/me 호출하여 프로필 정보 자동 저장)
+            await login(email);
 
             navigate("/");
         } catch (err) {

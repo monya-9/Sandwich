@@ -13,12 +13,8 @@ const NotificationsPage: React.FC = () => {
         localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"
     );
 
-    const accessToken =
-        localStorage.getItem("accessToken") ||
-        sessionStorage.getItem("accessToken") ||
-        "";
-
-    const notiReady = !!accessToken && myId > 0;
+    // ✅ httpOnly 쿠키 기반: 로그인 상태만 체크
+    const notiReady = myId > 0;
 
     // 알림 스트림
     const noti = useNotificationStream({
@@ -27,10 +23,8 @@ const NotificationsPage: React.FC = () => {
         wsUrl: "/stomp",
         topicBase: "/topic/users",
         pageSize: 30,
-        getToken: () =>
-            localStorage.getItem("accessToken") ||
-            sessionStorage.getItem("accessToken") ||
-            null,
+        // ✅ httpOnly 쿠키 기반: getToken 불필요 (쿠키로 자동 인증)
+        getToken: () => null,
         resetOnDisable: false,
         debug: false,
         dropdownOpen: true, // 페이지가 열려있으므로 true
