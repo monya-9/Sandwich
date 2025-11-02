@@ -65,6 +65,7 @@ export const searchAccounts = async (params: AccountSearchParams): Promise<Accou
   
   try {
     const url = `/search/accounts?${searchParams.toString()}`;
+    // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
     const response = await api.get<AccountSearchResponse>(url);
     return response.data;
   } catch (error: any) {

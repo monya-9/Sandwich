@@ -19,7 +19,7 @@ const NameInput = ({ value, onChange }: Props) => {
         const delayDebounce = setTimeout(async () => {
             setChecking(true);
             try {
-                const res = await axios.get(`/api/users/check-nickname?value=${value}`);
+                const res = await axios.get(`${process.env.REACT_APP_API_BASE || "/api"}/users/check-nickname?value=${value}`);
                     setIsDuplicate(res.data); // boolean 값 직접 사용
             } catch (error) {
                 setIsDuplicate(null);

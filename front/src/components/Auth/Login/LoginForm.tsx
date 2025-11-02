@@ -38,7 +38,10 @@ const LoginForm = () => {
             // ✅ 2. React 상태 즉시 초기화 (깜빡임 방지)
             clearState(); // React 상태만 즉시 초기화
 
-            const res = await api.post("/auth/login", { email, password });
+            // ✅ public API: 로그인은 인증 없이 호출
+            const res = await api.post("/auth/login", { email, password }, {
+                headers: { 'X-Skip-Auth-Refresh': '1' }
+            });
             
             // 🆕 MFA_REQUIRED 분기 처리
             if (res.data?.status === "MFA_REQUIRED") {
