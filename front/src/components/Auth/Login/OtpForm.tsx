@@ -8,7 +8,7 @@ import Toast from "../../common/Toast";
 interface Props {
     pendingId: string;
     maskedEmail: string;
-    onSuccess: (accessToken: string, refreshToken: string) => void;
+    onSuccess: () => void;  // ✅ 쿠키 전용: 토큰 파라미터 제거
     onBack: () => void;
 }
 
@@ -82,7 +82,7 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
 
         try {
             // ✅ public API: OTP 인증은 인증 없이 호출
-            const res = await api.post("/auth/otp/verify", {
+            await api.post("/auth/otp/verify", {
                 pendingId,
                 code: otpCode.trim(),
                 rememberDevice,
@@ -91,12 +91,12 @@ const OtpForm = ({ pendingId, maskedEmail, onSuccess, onBack }: Props) => {
                 headers: { 'X-Skip-Auth-Refresh': '1' }
             });
 
-            const { accessToken, refreshToken } = res.data;
+            // ✅ 토큰은 httpOnly 쿠키로 자동 설정됨
             showToast("✅ 인증이 완료되었습니다!", "success");
             
             // 약간의 딜레이 후 성공 콜백 호출 (토스트를 보여주기 위함)
             setTimeout(() => {
-                onSuccess(accessToken, refreshToken);
+                onSuccess();  // ✅ 토큰 파라미터 제거
             }, 1000);
         } catch (err: any) {
             const errorType = err.response?.data?.error;

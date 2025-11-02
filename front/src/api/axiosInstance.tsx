@@ -139,9 +139,10 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
             return config;
         }
 
-        // 1) 토큰 자동 부착(기존 로직 유지)
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (token) config.headers = setAuthHeader(config.headers, token);
+        // 1) ✅ 쿠키 전용: Authorization 헤더 세팅 제거
+        // 쿠키가 자동 전송되므로 별도 헤더 불필요
+        // const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+        // if (token) config.headers = setAuthHeader(config.headers, token);
 
         // 2) FormData면 Content-Type 제거(브라우저가 자동 설정)
         const data = config.data as any;
@@ -228,20 +229,18 @@ function isRefreshable401(error: AxiosError) {
     // 인증/리프레시 자체는 제외
     if (/\/auth\/(login|signin|register|refresh)/.test(url)) return false;
 
-    // ✅ 백엔드는 body refreshToken 필수 → 로컬/세션에 없으면 시도하지 않음
-    const hasRT =
-        !!localStorage.getItem("refreshToken") || !!sessionStorage.getItem("refreshToken");
-    return hasRT;
+    // ✅ 쿠키 기반이므로 항상 리프레시 시도 (백엔드가 쿠키 확인)
+    return true;
 }
 
 /* -------- 401 처리: refresh 단일 진행 + 대기열 -------- */
 let isRefreshing = false;
-let pendingQueue: Array<(token: string | null) => void> = [];
+let pendingQueue: Array<(success: string | null) => void> = [];
 
 const REFRESH_ENDPOINT = "/api/auth/refresh";
 
-function resolveQueue(token: string | null) {
-    pendingQueue.forEach((cb) => cb(token));
+function resolveQueue(success: string | null) {
+    pendingQueue.forEach((cb) => cb(success));
     pendingQueue = [];
 }
 
@@ -270,10 +269,10 @@ api.interceptors.response.use(
 
         if (isRefreshing) {
             return new Promise((resolve, reject) => {
-                pendingQueue.push((newToken) => {
-                    if (!newToken) return reject(error);
+                pendingQueue.push((success) => {
+                    if (!success) return reject(error);
                     try {
-                        original.headers = setAuthHeader(original.headers, newToken);
+                        // ✅ 쿠키로 자동 전송되므로 헤더 세팅 불필요
                         resolve(api(original));
                     } catch (e) {
                         reject(e);
@@ -284,36 +283,17 @@ api.interceptors.response.use(
 
         isRefreshing = true;
         try {
-            const storedRefresh =
-                localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
-            if (!storedRefresh) throw new Error("No refresh token stored");
-
-            // refresh는 전역 axios로(Authorization 인터셉터 회피)
+            // ✅ 쿠키 기반이므로 빈 바디로 호출 (백엔드가 쿠키에서 REFRESH_TOKEN 읽음)
             const r = await axios.post(
                 REFRESH_ENDPOINT,
-                { refreshToken: storedRefresh },
+                {},
                 { withCredentials: true }
             );
 
-            const { accessToken, refreshToken: newRefreshToken } = (r as any).data || {};
-            if (!accessToken) throw new Error("No accessToken from refresh");
+            // 새 ACCESS_TOKEN/REFRESH_TOKEN은 쿠키로 다시 설정됨
+            // localStorage 갱신 불필요, Authorization 헤더 불필요
+            resolveQueue("");  // 빈 문자열로 큐 해결
 
-            const keep = !!localStorage.getItem("refreshToken");
-            if (keep) {
-                localStorage.setItem("accessToken", accessToken);
-                if (newRefreshToken !== undefined && newRefreshToken !== null) {
-                    localStorage.setItem("refreshToken", newRefreshToken);
-                }
-            } else {
-                sessionStorage.setItem("accessToken", accessToken);
-                if (newRefreshToken !== undefined && newRefreshToken !== null) {
-                    sessionStorage.setItem("refreshToken", newRefreshToken);
-                }
-            }
-
-            resolveQueue(accessToken);
-
-            original.headers = setAuthHeader(original.headers, accessToken);
             return api(original);
         } catch (e) {
             resolveQueue(null);

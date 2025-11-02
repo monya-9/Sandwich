@@ -11,8 +11,7 @@ import LoginActions from "./LoginActions";
 import RecentLogin from "../RecentLogin";
 import OtpForm from "./OtpForm";
 import api from "../../../api/axiosInstance";
-import { setToken, setRefreshToken, clearAllUserData } from "../../../utils/tokenStorage";
-import { ensureNicknameInStorage } from "../../../utils/profile";
+import { clearAllUserData } from "../../../utils/tokenStorage";
 
 const LoginForm = () => {
     const navigate = useNavigate();
@@ -54,25 +53,27 @@ const LoginForm = () => {
 
             // 기존 성공 로직
             const {
-                accessToken,
-                refreshToken,          // ⬅️ 응답에 오면 같이 저장
                 email: serverEmail,
             } = res.data || {};
 
-            // ✅ 3. 새 토큰 저장 (keepLogin=true → localStorage, false → sessionStorage)
-            setToken(accessToken, keepLogin);
-            setRefreshToken(refreshToken ?? null, keepLogin); // ⬅️ 중요!
+            // ✅ 3. 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
+            // setToken(accessToken, keepLogin);  // 제거
+            // setRefreshToken(refreshToken ?? null, keepLogin);  // 제거
 
             // ✅ 4. 새 사용자 정보 저장
-            const storage = keepLogin ? localStorage : sessionStorage;
             const effectiveEmail = serverEmail || email;
-            storage.setItem("userEmail", effectiveEmail);
+            localStorage.setItem("userEmail", effectiveEmail);
             
             // ✅ 최근 로그인 방법 저장 (이메일 로그인)
             localStorage.setItem("lastLoginMethod", "local");
 
-            // ✅ 5. 로그인 직후 프로필/닉네임 보강
-            await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
+            // ✅ 5. 로그인 직후 프로필/닉네임 보강 (쿠키에서 자동으로 토큰 전송됨)
+            await api.get("/users/me").then(me => {
+                const display = me.data.nickname || me.data.profileName || me.data.username || "";
+                if (display) {
+                    localStorage.setItem("userNickname", display);
+                }
+            }).catch(() => {});
 
             // ✅ 6. 컨텍스트 업데이트
             login(effectiveEmail);
@@ -85,23 +86,25 @@ const LoginForm = () => {
         }
     };
 
-    // 🆕 OTP 인증 성공 처리
-    const handleOtpSuccess = async (accessToken: string, refreshToken: string) => {
+    // 🆕 OTP 인증 성공 처리 (쿠키 전용)
+    const handleOtpSuccess = async () => {
         try {
-            // 토큰 저장
-            setToken(accessToken, keepLogin);
-            setRefreshToken(refreshToken ?? null, keepLogin);
-
+            // ✅ 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
+            
             // 사용자 정보 저장
-            const storage = keepLogin ? localStorage : sessionStorage;
             const effectiveEmail = email;
-            storage.setItem("userEmail", effectiveEmail);
+            localStorage.setItem("userEmail", effectiveEmail);
             
             // 최근 로그인 방법 저장 (이메일 로그인)
             localStorage.setItem("lastLoginMethod", "local");
 
-            // 로그인 직후 프로필/닉네임 보강
-            await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
+            // 로그인 직후 프로필/닉네임 보강 (쿠키에서 자동으로 토큰 전송됨)
+            await api.get("/users/me").then(me => {
+                const display = me.data.nickname || me.data.profileName || me.data.username || "";
+                if (display) {
+                    localStorage.setItem("userNickname", display);
+                }
+            }).catch(() => {});
 
             // 컨텍스트 업데이트
             login(effectiveEmail);

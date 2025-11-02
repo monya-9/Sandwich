@@ -18,7 +18,7 @@ public class DeviceTrustService {
     private final UserDeviceRepository repo;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final SecureRandom rnd = new SecureRandom();
-    private final String cookieDomain= System.getenv().getOrDefault("TRUST_COOKIE_DOMAIN", ".sandwich-dev.com");
+    private final String cookieDomain = System.getenv().getOrDefault("TRUST_COOKIE_DOMAIN", "");
 
 
     public boolean isTrusted(HttpServletRequest req, Long userId) {

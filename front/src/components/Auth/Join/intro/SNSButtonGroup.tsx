@@ -8,7 +8,7 @@ const SNSButtonGroup = () => {
     const [rememberDevice, setRememberDevice] = useState(true);
 
     const handleSocialLogin = (provider: "google" | "github") => {
-        // ✅ 디바이스 기억 옵션과 함께 백엔드 OAuth2 엔드포인트로 이동
+        // ✅ 체크박스 상태에 따라 remember 파라미터 전달 (SNSLogin과 동일)
         const params = new URLSearchParams();
         if (rememberDevice) {
             params.append("remember", "1");
@@ -27,7 +27,7 @@ const SNSButtonGroup = () => {
                 <SNSButton icon={getStaticUrl("assets/icons/Google.png")} text="구글" onClick={() => handleSocialLogin("google")} />
             </div>
             
-            {/* 디바이스 기억 체크박스 */}
+            {/* 디바이스 기억 체크박스 (SNSLogin과 동일) */}
             <div className="flex items-center">
                 <input
                     type="checkbox"

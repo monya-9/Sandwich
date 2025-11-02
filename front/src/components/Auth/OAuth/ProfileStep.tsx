@@ -8,7 +8,6 @@ import NameInput from "../Join/Profile/NameInput";
 import { getStaticUrl } from "../../../config/staticBase";
 import { positionMap, interestMap } from "../../../constants/position";
 import Toast from "../../common/Toast";
-import { setToken } from "../../../utils/tokenStorage";
 
 const ProfileStep = () => {
     const [nickname, setNickname] = useState("");
@@ -22,23 +21,10 @@ const ProfileStep = () => {
     });
     const navigate = useNavigate();
 
-    // ✅ URL 파라미터에서 토큰 처리
+    // ✅ httpOnly 쿠키는 JavaScript에서 읽을 수 없음 (보안상 정상)
+    // axios가 자동으로 쿠키를 전송하므로 문제없음
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get("token");
-        const refreshToken = urlParams.get("refreshToken");
-        
-        if (token) {
-            // 토큰 저장
-            setToken(token, true);
-            if (refreshToken) {
-                localStorage.setItem("refreshToken", refreshToken);
-            }
-            
-            // URL 정리 (토큰 정보 제거)
-            const cleanUrl = window.location.pathname;
-            window.history.replaceState(null, "", cleanUrl);
-        }
+        console.log("🔍 ProfileStep - httpOnly 쿠키 방식으로 작동 중");
     }, []);
 
     const handleSubmit = async () => {
@@ -51,17 +37,8 @@ const ProfileStep = () => {
             return;
         }
 
-        // ✅ 토큰 체크
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-            setToast({
-                visible: true,
-                message: "로그인이 필요합니다.",
-                type: 'error'
-            });
-            setTimeout(() => navigate("/login"), 2000);
-            return;
-        }
+        // ✅ httpOnly 쿠키는 JavaScript로 확인 불가
+        // API 호출이 401을 반환하면 자동으로 리프레시 시도함
 
         setLoading(true);
         try {
