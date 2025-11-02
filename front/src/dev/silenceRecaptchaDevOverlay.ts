@@ -63,23 +63,73 @@ if (process.env.NODE_ENV !== "production") {
         return onAuthPath() && /timeout/i.test(String(msg ?? ""));
     };
 
+    // SockJS WebSocket 연결 과정의 노이즈 에러 무시
+    const isWebSocketNoise = (msg?: unknown, src?: unknown) => {
+        const text = String(msg ?? "");
+        const source = String(src ?? "");
+        const combined = text + source;
+        // SockJS가 폴백 전송 방식을 시도할 때 발생하는 정상적인 에러들
+        const wsNoisePatterns = [
+            /Invalid frame header/i,
+            /WebSocket is closed before the connection is established/i,
+            /WebSocket connection to 'ws:\/\/localhost:3000/i,
+            /WebSocket connection to.*localhost:3000.*stomp/i,  // SockJS 세션 경로 (/stomp/342/.../websocket)
+            /WebSocketClient\.js/i,
+            /websocket\.js/i,
+            /socket\.js/i,  // SockJS 내부 소켓 파일
+            /WebSocket connection.*failed/i,
+            /ws:\/\/localhost:3000\/ws/i,  // 직접 ws://localhost:3000/ws 시도
+            /WebSocketTransport/i,  // SockJS WebSocketTransport 관련
+        ];
+        return wsNoisePatterns.some(pattern => pattern.test(combined));
+    };
+
+    // 원본 console.error/warn 백업
+    const originalConsoleError = console.error.bind(console);
+    const originalConsoleWarn = console.warn.bind(console);
+
+    // console.error/warn 오버라이드하여 WebSocket 노이즈 필터링
+    console.error = (...args: any[]) => {
+        const msg = args.map(a => String(a)).join(" ");
+        const src = args.map(a => a?.stack || String(a)).join(" ");
+        if (!isWebSocketNoise(msg, src)) {
+            originalConsoleError(...args);
+        }
+        // WebSocket 노이즈는 완전히 무시
+    };
+
+    console.warn = (...args: any[]) => {
+        const msg = args.map(a => String(a)).join(" ");
+        const src = args.map(a => a?.stack || String(a)).join(" ");
+        if (!isWebSocketNoise(msg, src)) {
+            originalConsoleWarn(...args);
+        }
+        // WebSocket 노이즈는 완전히 무시
+    };
+
     window.addEventListener("unhandledrejection", (ev) => {
         const reason: any = ev.reason;
         const msg = reason?.message ?? reason;
         const src = reason?.stack ?? "";
-        if (isRecaptchaNoise(msg, src) || isAuthTimeoutNoise(msg)) {
+        if (isRecaptchaNoise(msg, src) || isAuthTimeoutNoise(msg) || isWebSocketNoise(msg, src)) {
             ev.preventDefault();
             // 개발 중 콘솔 로그만 남김(오버레이는 차단)
-            console.warn("[silenced dev error]", msg);
+            // WebSocket 에러는 완전히 무시 (로그도 출력하지 않음)
+            if (!isWebSocketNoise(msg, src)) {
+                originalConsoleWarn("[silenced dev error]", msg);
+            }
         }
     });
 
     window.addEventListener("error", (ev) => {
         const msg = ev.message;
         const src = (ev as any).filename ?? ev?.error?.stack ?? "";
-        if (isRecaptchaNoise(msg, src) || isAuthTimeoutNoise(msg)) {
+        if (isRecaptchaNoise(msg, src) || isAuthTimeoutNoise(msg) || isWebSocketNoise(msg, src)) {
             ev.preventDefault();
-            console.warn("[silenced dev error]", msg);
+            // WebSocket 에러는 완전히 무시 (로그도 출력하지 않음)
+            if (!isWebSocketNoise(msg, src)) {
+                originalConsoleWarn("[silenced dev error]", msg);
+            }
         }
     });
 }
