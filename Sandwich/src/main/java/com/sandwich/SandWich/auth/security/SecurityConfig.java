@@ -212,6 +212,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,   "/api/search/recent").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/search/recent/**").authenticated()
 
+                        .requestMatchers(HttpMethod.GET, "/api/reco/**").permitAll()
                         // 이 라인이 '프로젝트 공개 GET'들보다 반드시 아래에 와야 함
                         .requestMatchers("/api/projects/**").authenticated()
 
