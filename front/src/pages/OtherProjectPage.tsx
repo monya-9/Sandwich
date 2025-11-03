@@ -162,11 +162,11 @@ export default function OtherProjectPage() {
 
         async function loadOwnerAndMe(id?: number) {
             try {
-                const token = (typeof window !== 'undefined') ? (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) : null;
+                // ✅ httpOnly 쿠키 기반: Authorization 헤더 불필요
                 // 2) owner, me, follow-status를 병렬로 조회 (가능한 경우)
                 const ownerReq = id ? api.get<{ id: number; nickname?: string; email?: string; profileImage?: string }>(`/users/${id}`) : Promise.resolve({ data: undefined } as any);
-                const meReq = api.get<{ id: number }>(`/users/me`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
-                const followReq = (token && id) ? api.get<{ isFollowing: boolean }>(`/users/${id}/follow-status`) : Promise.resolve({ data: { isFollowing: false } } as any);
+                const meReq = api.get<{ id: number }>(`/users/me`);
+                const followReq = id ? api.get<{ isFollowing: boolean }>(`/users/${id}/follow-status`) : Promise.resolve({ data: { isFollowing: false } } as any);
 
                 const [ownerRes, meRes, followRes] = await Promise.allSettled([ownerReq, meReq, followReq]);
 

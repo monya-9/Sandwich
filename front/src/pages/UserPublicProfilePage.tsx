@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/axiosInstance";
 import PublicWorkGrid from "../components/Profile/PublicWorkGrid";
@@ -9,6 +9,7 @@ import Toast from "../components/common/Toast";
 import { RepresentativeCareer } from "../api/userApi";
 import { fetchUserProjects, fetchProjectsMeta } from "../api/projects";
 import FollowListModal from "../components/Profile/FollowListModal";
+import { AuthContext } from "../context/AuthContext";
 
 // 공개 프로필 응답 타입(백엔드에 email 추가됨)
 type PublicProfile = {
@@ -29,6 +30,9 @@ export default function UserPublicProfilePage() {
   const { id } = useParams<{ id: string }>();
   const userId = id ? Number(id) : 0;
   const navigate = useNavigate();
+
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   const [data, setData] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,15 +86,18 @@ export default function UserPublicProfilePage() {
   useEffect(() => {
     (async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (!token || !userId || isSelf) return setIsFollowing(false);
+        // 인증 확인 중이거나 로그인하지 않았으면 스킵
+        if (isAuthChecking || !isLoggedIn || !userId || isSelf) {
+          setIsFollowing(false);
+          return;
+        }
         const r = await api.get<{ isFollowing: boolean }>(`/users/${userId}/follow-status`);
         setIsFollowing(Boolean((r as any).data?.isFollowing));
       } catch {
         setIsFollowing(false);
       }
     })();
-  }, [userId, isSelf]);
+  }, [userId, isSelf, isLoggedIn, isAuthChecking]);
 
   // 대표 커리어 로드
   useEffect(() => {
@@ -197,8 +204,8 @@ export default function UserPublicProfilePage() {
   }, [userId]);
 
   const toggleFollow = async () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) return navigate("/login");
+    if (isAuthChecking) return;
+    if (!isLoggedIn) return navigate("/login");
     if (!userId || isSelf) return;
     try {
       if (isFollowing) {
@@ -216,8 +223,8 @@ export default function UserPublicProfilePage() {
   };
 
   const suggest = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) return navigate("/login");
+    if (isAuthChecking) return;
+    if (!isLoggedIn) return navigate("/login");
     // other-project의 SuggestAction 모달을 열도록 이벤트 발행
     window.dispatchEvent(new Event("suggest:open"));
   };

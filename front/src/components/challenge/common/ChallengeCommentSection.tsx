@@ -37,7 +37,7 @@ export default function ChallengeCommentSection({
     onCommentsChange
 }: ChallengeCommentSectionProps) {
     const navigate = useNavigate();
-    const { nickname } = useContext(AuthContext);
+    const { nickname, isLoggedIn, isAuthChecking } = useContext(AuthContext);
     const [commentText, setCommentText] = useState("");
     const [commentLoading, setCommentLoading] = useState(false);
     const [edit, setEdit] = useState<EditState>(null);
@@ -55,8 +55,7 @@ export default function ChallengeCommentSection({
         message: ''
     });
 
-    // 로그인 상태 판단
-    const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
+    // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 및 사용자 정보 확인
     const myNickname = nickname || localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "";
     const myId = Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0');
 

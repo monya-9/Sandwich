@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { FaHeart } from "react-icons/fa";
 import api from "../../../api/axiosInstance";
 import LikedUsersModal from "./LikedUsersModal";
 import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
 import Toast from "../../common/Toast";
+import { AuthContext } from "../../../context/AuthContext";
 
 interface LikeActionProps {
   targetType: "PROJECT" | "POST" | "COMMENT" | "CODE_SUBMISSION" | "PORTFOLIO_SUBMISSION";
@@ -25,8 +26,8 @@ export default function LikeAction({ targetType, targetId, isMobile = false }: L
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ 로그인 상태 판단 (localStorage || sessionStorage 둘 다 확인)
-  const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   // 좋아요 상태 불러오기
   useEffect(() => {
@@ -47,6 +48,9 @@ export default function LikeAction({ targetType, targetId, isMobile = false }: L
   }, [targetType, targetId]);
 
   const handleLike = async () => {
+    // 인증 확인 중이면 대기
+    if (isAuthChecking) return;
+    
     if (!isLoggedIn) {
       setShowLoginPrompt(true);
       return;
@@ -55,12 +59,6 @@ export default function LikeAction({ targetType, targetId, isMobile = false }: L
     setLoading(true);
     
     try {
-      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-      if (!token) {
-        setShowLoginPrompt(true);
-        return;
-      }
-
       const res = await api.post(
         "/likes",
         { targetType, targetId }
@@ -102,7 +100,7 @@ export default function LikeAction({ targetType, targetId, isMobile = false }: L
     };
     window.addEventListener("like:toggle", onToggle as any);
     return () => window.removeEventListener("like:toggle", onToggle as any);
-  }, [targetType, targetId, isLoggedIn, loading]);
+  }, [targetType, targetId, isLoggedIn, isAuthChecking, loading]);
 
   return (
     <>

@@ -409,10 +409,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 document.body.appendChild(a); a.click(); a.remove();
                 return;
             }
-            const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-            const headers: Record<string, string> = {};
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(src, { headers });
+            // ✅ httpOnly 쿠키 기반: credentials로 자동 전송
+            const res = await fetch(src, { credentials: "include" });
             if (!res.ok) throw new Error(String(res.status));
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);

@@ -47,14 +47,17 @@ export default function CodeSubmitPage() {
     const [loadingWeekly, setLoadingWeekly] = useState(false);
     const [weeklyError, setWeeklyError] = useState<string | null>(null);
 
-    const { isLoggedIn } = useContext(AuthContext);
+    const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
     // const userInfo = useUserInfo(); // 백엔드에서 자동으로 사용자 정보 처리
 
     useEffect(() => {
-        if (!isLoggedIn) setLoginOpen(true);
-    }, [isLoggedIn]);
+        // 인증 확인이 완료된 후에만 로그인 모달 상태 업데이트
+        if (!isAuthChecking) {
+            setLoginOpen(!isLoggedIn);
+        }
+    }, [isLoggedIn, isAuthChecking]);
 
     // 백엔드 챌린지 데이터 로드
     useEffect(() => {

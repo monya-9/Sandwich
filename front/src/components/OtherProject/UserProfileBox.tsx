@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useContext } from "react";
 import api from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import LoginPrompt from "./LoginPrompt";
 import Toast from "../common/Toast";
-
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
+import { AuthContext } from "../../context/AuthContext";
 
 
 type Props = {
@@ -37,6 +37,9 @@ export default function UserProfileBox({
   const followBtnRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   useEffect(() => {
     if (typeof initialIsFollowing === "boolean") {
@@ -46,15 +49,20 @@ export default function UserProfileBox({
 
   useEffect(() => {
     if (typeof initialIsFollowing === "boolean") return;
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token || !ownerId || ownerId <= 0) { setIsFollowing(false); return; }
+    
+    // 인증 확인 중이거나 로그인하지 않았으면 스킵
+    if (isAuthChecking || !isLoggedIn || !ownerId || ownerId <= 0) { 
+      setIsFollowing(false); 
+      return; 
+    }
+    
     (async () => {
       try {
         const res = await api.get(`/users/${ownerId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     })();
-  }, [ownerId, initialIsFollowing]);
+  }, [ownerId, initialIsFollowing, isLoggedIn, isAuthChecking]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -70,8 +78,13 @@ export default function UserProfileBox({
   }, [ownerId]);
 
   const ensureLogin = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) { setShowLoginPrompt(true); return false; }
+    // 인증 확인 중이면 대기
+    if (isAuthChecking) return false;
+    
+    if (!isLoggedIn) { 
+      setShowLoginPrompt(true); 
+      return false; 
+    }
     return true;
   };
 

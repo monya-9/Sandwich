@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactDOM from "react-dom";
 import { FaHandshake } from "react-icons/fa";
 import { FaCommentDots, FaRegCommentDots } from "react-icons/fa6";
@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import ProposalAction from "./ProposalAction";
 import JobOfferAction from "./JobOfferAction";
 import api from "../../../api/axiosInstance";
+import { AuthContext } from "../../../context/AuthContext";
 
  type Props = {
   targetUserId?: number;
@@ -36,6 +37,9 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
   const popupRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   // 타겟 사용자 공개 프로필 가져오기(이메일/닉네임/프로필이미지)
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -130,8 +134,10 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
   const tooltipVisible = hover || tooltipHover;
 
   const ensureLogin = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) {
+    // 인증 확인 중이면 대기
+    if (isAuthChecking) return false;
+    
+    if (!isLoggedIn) {
       setShowLoginPrompt(true);
       return false;
     }

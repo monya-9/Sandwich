@@ -6,6 +6,7 @@ import api from "../api/axiosInstance";
 
 type AuthContextType = {
     isLoggedIn: boolean;
+    isAuthChecking: boolean; // 초기 인증 확인 중 여부
     email: string | null;
     nickname: string | null;
     login: (hintEmail?: string) => Promise<void>; // 로그인 직후 호출
@@ -16,6 +17,7 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({
     isLoggedIn: false,
+    isAuthChecking: true,
     email: null,
     nickname: null,
     login: async () => {},
@@ -28,6 +30,7 @@ interface Props { children: ReactNode }
 
 export const AuthProvider = ({ children }: Props) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAuthChecking, setIsAuthChecking] = useState(true); // 초기 인증 확인 중
     const [email, setEmail] = useState<string | null>(null);
     const [nickname, setNickname] = useState<string | null>(null);
 
@@ -40,6 +43,7 @@ export const AuthProvider = ({ children }: Props) => {
 
     const refreshProfile = useCallback(async () => {
         // ✅ httpOnly 쿠키 기반: /users/me API 호출로 로그인 상태 확인
+        setIsAuthChecking(true);
         try {
             const { data } = await api.get("/users/me", {
                 headers: { 'X-Skip-Auth-Refresh': '1' }
@@ -76,6 +80,8 @@ export const AuthProvider = ({ children }: Props) => {
             setIsLoggedIn(false);
             setEmail(null);
             setNickname(null);
+        } finally {
+            setIsAuthChecking(false);
         }
     }, []);
 
@@ -88,6 +94,9 @@ export const AuthProvider = ({ children }: Props) => {
             localStorage.setItem("userEmail", hintEmail);
         }
         await refreshProfile();
+        
+        // ✅ 로그인 성공 이벤트 발생 (FCM 등록 등에 사용)
+        window.dispatchEvent(new Event("auth:login:success"));
     };
 
     const logout = () => {
@@ -111,7 +120,7 @@ export const AuthProvider = ({ children }: Props) => {
     };
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, email, nickname, login, logout, refreshProfile, clearState }}>
+        <AuthContext.Provider value={{ isLoggedIn, isAuthChecking, email, nickname, login, logout, refreshProfile, clearState }}>
             {children}
         </AuthContext.Provider>
     );
