@@ -69,11 +69,21 @@ export const fetchProjectFeed = async (params: ProjectFeedParams = {}): Promise<
   }
 
   const url = `/projects?${searchParams.toString()}`;
-  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
-  const response = await api.get(url, {
-    headers: { 'X-Skip-Auth-Refresh': '1' }
-  });
-  return response.data;
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요 - 핫 개발자처럼!)
+  try {
+    const response = await api.get(url, {
+      timeout: 20000 // 20초 타임아웃 (서버가 느릴 때도 적절한 대기)
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('[fetchProjectFeed] API 호출 실패:', {
+      url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+    throw error;
+  }
 };
 
 /** 사용자별 프로젝트 목록 (우선 /projects?authorId=, 실패 시 /projects/user/) */
@@ -81,10 +91,8 @@ export const fetchUserProjects = async (userId: number, page = 0, size = 20): Pr
   try {
     return await fetchProjectFeed({ authorId: userId, page, size, sort: 'latest' });
   } catch {
-    // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
-    const response = await api.get(`/projects/user/${userId}?page=${page}&size=${size}`, {
-      headers: { 'X-Skip-Auth-Refresh': '1' }
-    });
+    // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+    const response = await api.get(`/projects/user/${userId}?page=${page}&size=${size}`);
     return response.data;
   }
 };
@@ -93,10 +101,8 @@ export const fetchUserProjects = async (userId: number, page = 0, size = 20): Pr
  * 프로젝트 상세 조회
  */
 export const fetchProjectDetail = async (projectId: number): Promise<Project> => {
-  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
-  const response = await api.get(`/projects/${projectId}`, {
-    headers: { 'X-Skip-Auth-Refresh': '1' }
-  });
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+  const response = await api.get(`/projects/${projectId}`);
   return response.data;
 };
 
@@ -133,10 +139,17 @@ export interface ProjectMetaSummary {
 
 export const fetchProjectsMeta = async (projectIds: number[]): Promise<Record<number, ProjectMetaSummary>> => {
   if (projectIds.length === 0) return {};
+  
+  // ✅ JHJ 브랜치처럼 단순하게 한 번에 모든 ID 요청 (빠르고 안정적)
   const idsParam = projectIds.join(',');
-  // ✅ public API: 401 에러 시 자동 리프레시/로그아웃 방지
-  const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
-    headers: { 'X-Skip-Auth-Refresh': '1' }
-  });
-  return response.data;
+  try {
+    const response = await api.get(`/projects/meta/summary?ids=${idsParam}`, {
+      timeout: 20000 // 20초 타임아웃 (전역 15초보다 약간 길게 설정)
+    });
+    return response.data || {};
+  } catch (error: any) {
+    // 에러 발생 시 빈 객체 반환 (컴포넌트에서 기본값으로 처리)
+    console.warn('[fetchProjectsMeta] 메타 정보 조회 실패:', error);
+    return {};
+  }
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { SectionCard } from "./index";
 import CommentLikeAction from "../../OtherProject/ActionBar/CommentLikeAction";
 import Toast from "../../common/Toast";
@@ -10,6 +11,7 @@ import api from "../../../api/axiosInstance";
 export type CommentResponse = {
     id: number;
     comment: string;
+    userId: number;
     username: string;
     profileImageUrl?: string;
     createdAt: string;
@@ -34,6 +36,7 @@ export default function ChallengeCommentSection({
     comments,
     onCommentsChange
 }: ChallengeCommentSectionProps) {
+    const navigate = useNavigate();
     const { nickname } = useContext(AuthContext);
     const [commentText, setCommentText] = useState("");
     const [commentLoading, setCommentLoading] = useState(false);
@@ -55,6 +58,7 @@ export default function ChallengeCommentSection({
     // 로그인 상태 판단
     const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
     const myNickname = nickname || localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "";
+    const myId = Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0');
 
     // 댓글 작성
     const submitComment = async () => {
@@ -63,6 +67,7 @@ export default function ChallengeCommentSection({
         
         setCommentLoading(true);
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             await api.post('/comments', {
                 commentableType,
                 commentableId,
@@ -97,6 +102,7 @@ export default function ChallengeCommentSection({
     const handleReply = async (parentId: number, value: string) => {
         if (!value.trim() || !isLoggedIn) return;
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             await api.post('/comments', {
                 commentableType,
                 commentableId,
@@ -137,6 +143,7 @@ export default function ChallengeCommentSection({
     const handleDeleteConfirm = async () => {
         if (!deleteConfirm.commentId) return;
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             await api.delete(`/comments/${deleteConfirm.commentId}`);
             
             // 댓글 목록 새로고침
@@ -175,6 +182,7 @@ export default function ChallengeCommentSection({
     const handleEdit = async () => {
         if (edit && edit.value.trim() && isLoggedIn) {
             try {
+                // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
                 await api.put(`/comments/${edit.id}`, {
                     comment: edit.value
                 });
@@ -201,11 +209,24 @@ export default function ChallengeCommentSection({
         }
     };
 
+    const handleUserClick = (userId: number) => {
+        if (myId > 0 && myId === userId) {
+            navigate('/profile');
+        } else {
+            navigate(`/users/${userId}`);
+        }
+    };
+
     // 댓글 렌더링 함수
     const renderComment = (c: CommentResponse) => (
         <li key={c.id} className="mb-3 border-b pb-2">
             <div className="flex items-center gap-2">
-                <b>{c.username}</b>
+                <b 
+                    className="cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={() => handleUserClick(c.userId)}
+                >
+                    {c.username}
+                </b>
                 <span className="text-xs text-gray-400">
                     {typeof c.createdAt === "string" ? c.createdAt.slice(0, 16).replace("T", " ") : ""}
                 </span>

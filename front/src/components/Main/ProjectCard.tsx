@@ -15,6 +15,7 @@ const ProjectCard: React.FC<Props> = memo(({ project, indexInList }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [imgErr, setImgErr] = useState(false);
     const [triedAltExt, setTriedAltExt] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
     const [src, setSrc] = useState(() => project.coverUrl || resolveCover(project, { position: indexInList }));
 
     // 이메일에서 사용자명 부분만 추출하는 함수
@@ -115,9 +116,35 @@ const ProjectCard: React.FC<Props> = memo(({ project, indexInList }) => {
             {/* 작성자 + 정보 영역 */}
             <div className="w-full mt-1 md:mt-1.5 flex justify-between items-center gap-2 px-0.5 md:px-1">
                 <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
-                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] md:text-xs font-semibold flex items-center justify-center text-gray-700 dark:text-gray-100 flex-shrink-0">
-                        {initial}
-                    </div>
+                    {(() => {
+                        // ✅ 더 안전한 avatarUrl 체크 (배포 환경 대응)
+                        const avatarUrl = project.owner?.avatarUrl;
+                        const hasValidAvatar = avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim().length > 0;
+                        
+                        if (hasValidAvatar && !avatarError) {
+                            return (
+                                <img 
+                                    src={avatarUrl} 
+                                    alt={username}
+                                    className="w-5 h-5 md:w-6 md:h-6 rounded-full object-cover flex-shrink-0"
+                                    onError={(e) => {
+                                        // 이미지 로딩 실패 시 이니셜로 전환
+                                        setAvatarError(true);
+                                        console.warn('[ProjectCard] 아바타 이미지 로딩 실패:', avatarUrl, e);
+                                    }}
+                                    onLoad={() => {
+                                        // 성공적으로 로드되면 에러 상태 초기화
+                                        if (avatarError) setAvatarError(false);
+                                    }}
+                                />
+                            );
+                        }
+                        return (
+                            <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] md:text-xs font-semibold flex items-center justify-center text-gray-700 dark:text-gray-100 flex-shrink-0">
+                                {initial}
+                            </div>
+                        );
+                    })()}
                     <span className="text-xs md:text-sm text-black dark:text-gray-100 truncate overflow-hidden">{username}</span>
                 </div>
                 <div className="text-[10px] md:text-xs text-gray-600 dark:text-gray-300 flex gap-1.5 md:gap-2 lg:gap-3 flex-shrink-0 whitespace-nowrap">
@@ -133,7 +160,8 @@ const ProjectCard: React.FC<Props> = memo(({ project, indexInList }) => {
     return prevProps.project.id === nextProps.project.id &&
            prevProps.project.likes === nextProps.project.likes &&
            prevProps.project.comments === nextProps.project.comments &&
-           prevProps.project.views === nextProps.project.views;
+           prevProps.project.views === nextProps.project.views &&
+           prevProps.project.owner?.avatarUrl === nextProps.project.owner?.avatarUrl;
 });
 
 ProjectCard.displayName = 'ProjectCard';

@@ -64,14 +64,31 @@ def _load_hist() -> List[Dict[str, Any]]:
         return json.loads(HIST.read_text("utf-8") or "[]") or []
     except Exception:
         return []
+
 def _save_hist_item(item: Dict[str, Any]) -> None:
     arr = _load_hist(); arr.append(item)
     if len(arr) > 300: arr = arr[-300:]
     HIST.write_text(json.dumps(arr, ensure_ascii=False, indent=2), "utf-8")
+
 def recent_titles(limit=60) -> List[str]:
-    return [x.get("title","") for x in _load_hist()][-limit:]
+    titles: List[str] = []
+    for x in _load_hist()[-limit:]:
+        if isinstance(x.get("problems"), list):
+            titles.extend([p.get("title","") for p in x["problems"] if p.get("title")])
+        else:
+            t = x.get("title");
+            if t: titles.append(t)
+    return titles
+
 def recent_areas(limit=30) -> List[str]:
-    return [x.get("area","") for x in _load_hist()][-limit:]
+    areas: List[str] = []
+    for x in _load_hist()[-limit:]:
+        if isinstance(x.get("problems"), list):
+            areas.extend([p.get("area","") for p in x["problems"] if p.get("area")])
+        else:
+            a = x.get("area")
+            if a: areas.append(a)
+    return areas
 
 # ===== 모델 호출 =====
 CODE_BLOCK_RE = re.compile(r"```(?P<lang>[a-zA-Z0-9_-]*)\s*(?P<code>[\s\S]*?)```", re.M)
@@ -243,6 +260,8 @@ def upsert_weekly_multi(week: str, idx: int, title: str, summary: str, must: Lis
 # ===== main =====
 def main():
     week = _week_str()
+    problems: List[Dict[str, Any]] = []
+
     for i in range(1, COUNT+1):
         obj = call_model(week)
         area, title, summary, must, answer = (
@@ -260,8 +279,30 @@ def main():
         except Exception as e:
             print(f"[upsert-error] idx={i}: {e}")
 
-        _save_hist_item({"ts": datetime.datetime.now().isoformat(), "week": week, "idx": i,
-                         "area": area, "title": title})
+        # 개별 호환 엔트리 기록(요청: idx 포함 + summary 포함)
+        _save_hist_item({
+            "ts": datetime.datetime.now().isoformat(),
+            "week": week,
+            "idx": i,
+            "area": area,
+            "title": title,
+            "summary": summary
+        })
+
+        # problems 배열 구성(grade_latest가 우선 참조)
+        problems.append({
+            "idx": i,
+            "area": area,
+            "title": title,
+            "summary": summary
+        })
+
+    # 한 주차 묶음 엔트리 기록: {week, problems:[{idx,area,title,summary}]}
+    _save_hist_item({
+        "ts": datetime.datetime.now().isoformat(),
+        "week": week,
+        "problems": problems
+    })
 
     print(f"[done] week={week} generated={COUNT}")
 

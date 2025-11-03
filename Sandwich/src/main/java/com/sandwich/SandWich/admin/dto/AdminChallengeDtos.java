@@ -16,6 +16,7 @@ public class AdminChallengeDtos {
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class CreateReq {
+        private Integer selectedIdx;
         @NotNull private ChallengeType type;           // PORTFOLIO | CODE
         @NotBlank private String title;
         private String ruleJson;                       // JSON 텍스트 (jsonb)
@@ -29,6 +30,7 @@ public class AdminChallengeDtos {
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class PatchReq {
+        private Integer selectedIdx;
         private ChallengeType type;
         private String title;
         private String ruleJson;
@@ -59,6 +61,7 @@ public class AdminChallengeDtos {
     @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
     public static class Overview {
         private Long id;
+        private Integer selectedIdx;
         private ChallengeType type;
         private String title;
         private ChallengeStatus status;
@@ -106,6 +109,7 @@ public class AdminChallengeDtos {
         String source, aiMonth, aiWeek, idempotencyKey;
         long submissionCount;
         long voteCount;
+        Integer selectedIdx;
         public static ListItem from(Challenge c) {
             return ListItem.builder()
                     .id(c.getId()).type(c.getType()).title(c.getTitle())
@@ -114,6 +118,7 @@ public class AdminChallengeDtos {
                     .status(c.getStatus())
                     .source(c.getSource()).aiMonth(c.getAiMonth()).aiWeek(c.getAiWeek())
                     .idempotencyKey(c.getIdempotencyKey())
+                    .selectedIdx(c.getSelectedIdx())
                     .build();
         }
     }

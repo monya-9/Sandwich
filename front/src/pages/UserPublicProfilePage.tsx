@@ -97,7 +97,10 @@ export default function UserPublicProfilePage() {
     let mounted = true;
     (async () => {
       try {
-        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`);
+        // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`, {
+          timeout: 30000
+        });
         if (mounted) {
           setRepCareers(response.data);
         }
@@ -149,17 +152,31 @@ export default function UserPublicProfilePage() {
 
         // 3. 해당 사용자의 프로젝트가 컬렉션에 저장된 횟수 가져오기
         try {
-          const { data } = await api.get(`/profiles/${userId}/collection-count`);
+          // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+          const { data } = await api.get(`/profiles/${userId}/collection-count`, {
+            timeout: 30000
+          });
           if (mounted) {
             setPublicCollectionsCount(data?.savedCount || 0);
           }
-        } catch (e) {
-          console.error("컬렉션 저장 횟수 로드 실패:", e);
+        } catch (e: any) {
+          // ✅ 401 에러는 백엔드 설정 문제일 수 있음 (로그인 필요할 수도)
+          if (e.response?.status === 401) {
+            console.warn("컬렉션 저장 횟수 조회 실패 (401): 로그인이 필요할 수 있습니다.");
+          } else {
+            console.error("컬렉션 저장 횟수 로드 실패:", e);
+          }
+          if (mounted) {
+            setPublicCollectionsCount(0); // 기본값 설정
+          }
         }
 
         // 4. 팔로워/팔로잉 수 가져오기
         try {
-          const { data } = await api.get(`/users/${userId}/follow-counts`);
+          // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+          const { data } = await api.get(`/users/${userId}/follow-counts`, {
+            timeout: 30000
+          });
           if (mounted) {
             setFollowerCount(data?.followerCount || 0);
             setFollowingCount(data?.followingCount || 0);

@@ -12,3 +12,7 @@ nginx
 .dev.vars
 logs
 node_modules
+ai_test/case
+ai_test/out
+ai_test/tests
+data

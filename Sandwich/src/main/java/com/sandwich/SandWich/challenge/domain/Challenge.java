@@ -34,6 +34,9 @@ public class Challenge extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "selected_idx")
+    private Integer selectedIdx;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ChallengeType type;

@@ -37,6 +37,23 @@ public class DeviceTrustService {
 
     /** 컨트롤러가 호출하는 버전 (deviceName 추가) */
     public void remember(HttpServletRequest req, HttpServletResponse res, Long userId, String deviceName) {
+        String existingTdid = readCookie(req,"tdid");
+        if (existingTdid != null) {
+            var opt = repo.findByDeviceIdAndRevokedAtIsNull(existingTdid);
+            if (opt.isPresent() && opt.get().getUserId().equals(userId)) {
+                String newSecret = random(32);
+                UserDevice d = opt.get();
+                d.setDeviceSecretHash(encoder.encode(newSecret));
+                d.setDeviceName(deviceName);
+                d.setLastIp(clientIp(req));
+                d.setTrustUntil(OffsetDateTime.now().plus(30, ChronoUnit.DAYS));
+                repo.save(d);
+                addCookie(res,"tdt", newSecret, 30*24*3600);
+                return;
+            }
+        }
+
+
         String deviceId = random(24);
         String secret   = random(32);
         String uaHash = Integer.toHexString(String.valueOf(req.getHeader("User-Agent")).hashCode());
@@ -60,15 +77,31 @@ public class DeviceTrustService {
         addCookie(res,"tdt", secret, 30*24*3600);
         System.out.println("### [TRUST] cookies set tdid/tdt");
     }
-    private void addCookie(HttpServletResponse res,String n,String v,int maxAge){
+    private final String sameSite = System.getenv().getOrDefault("TRUST_COOKIE_SAMESITE", "None");
+    private final boolean secure  = Boolean.parseBoolean(System.getenv().getOrDefault("TRUST_COOKIE_SECURE", "true"));
+
+    private void addCookie(HttpServletResponse res, String n, String v, int maxAge) {
         Cookie c = new Cookie(n, v);
         c.setHttpOnly(true);
-        c.setSecure(true);
+        c.setSecure(secure);
         c.setPath("/");
         c.setMaxAge(maxAge);
-        c.setAttribute("SameSite","Lax");
+        c.setAttribute("SameSite", sameSite);
         res.addCookie(c);
     }
+
+    @Transactional
+    public void extendCurrentDevice(HttpServletRequest req, Long userId, int days) {
+        String tdid = readCookie(req, "tdid");
+        if (tdid == null) return;
+        repo.findByDeviceIdAndRevokedAtIsNull(tdid).ifPresent(d -> {
+            if (d.getUserId().equals(userId)) {
+                d.setTrustUntil(OffsetDateTime.now().plus(days, ChronoUnit.DAYS));
+                repo.save(d);
+            }
+        });
+    }
+
     private String readCookie(HttpServletRequest req, String k){
         if (req.getCookies()==null) return null;
         for (Cookie c: req.getCookies()) if (k.equals(c.getName())) return c.getValue();

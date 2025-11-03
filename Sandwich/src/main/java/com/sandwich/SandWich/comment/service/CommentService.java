@@ -105,6 +105,7 @@ public class CommentService {
         return CommentResponse.builder()
                 .id(comment.getId())
                 .comment(comment.getComment())
+                .userId(comment.getUser().getId())
                 .username(comment.getUser().getNickname())
                 .profileImageUrl(comment.getUser().getProfileImageUrl())
                 .createdAt(comment.getCreatedAt())

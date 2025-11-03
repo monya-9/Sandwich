@@ -1,1 +1,1 @@
-rootProject.name = "SandWich"
+rootProject.name = "SandWichApplication"

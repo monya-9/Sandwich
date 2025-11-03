@@ -9,6 +9,8 @@ import com.sandwich.SandWich.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
@@ -16,6 +18,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Map;
 
 @Component
@@ -49,6 +52,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         User user = userRepository.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new IllegalStateException("OAuth2UserService에서 유저 생성/연동 실패"));
 
+        // ---- optional attributes from authorization request (remember / deviceName)
         OAuth2AuthorizationRequest authReq = authReqRepo.removeAuthorizationRequest(request, response);
         String remember = null;
         String deviceName = "Web Browser";
@@ -70,38 +74,31 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         boolean trustedNow = deviceTrustService.isTrusted(request);
         System.out.println("### [OAUTH2] isTrusted=" + trustedNow);
 
-        if (rememberFlag && !trustedNow) {
-            deviceTrustService.remember(request, response, user.getId(), deviceName);
-            System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
-        } else if (rememberFlag) {
-            System.out.println("### [OAUTH2] remember skipped (already trusted)");
-        } else {
-            System.out.println("### [OAUTH2] remember skipped (flag=false)");
-        }
-
-
-        // ===== 임시 강제 호출(문제 분리용): 아래 한 줄이 DB insert를 만든다면 파이프라인은 정상 ====
-        deviceTrustService.remember(request, response, user.getId(), "Temp-Force"); // <-- 테스트 후 제거
-        System.out.println("### [OAUTH2] forced remember() called");
-
-        // 정상 경로(플래그 기반)
         if (rememberFlag) {
-            deviceTrustService.remember(request, response, user.getId(), deviceName);
-            System.out.println("### [OAUTH2] remember() called with deviceName=" + deviceName);
+            if (trustedNow) {
+                deviceTrustService.extendCurrentDevice(request, user.getId(), 30); // 기존 신뢰기기 연장(30일)
+                System.out.println("### [OAUTH2] extend trust 30d");
+            } else {
+                deviceTrustService.remember(request, response, user.getId(), deviceName);
+                System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
+            }
         } else {
             System.out.println("### [OAUTH2] remember skipped (flag=false)");
         }
 
+        // ---- create tokens
         String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
+        // ---- 프런트로 리다이렉트 (민감정보 제거)
         boolean needNickname = (user.getProfile() == null)
                 || user.getProfile().getNickname() == null
                 || user.getProfile().getNickname().isBlank();
 
-        String redirectUriBase = System.getenv("FRONTEND_URL") != null ? 
-        System.getenv("FRONTEND_URL") : "http://localhost:3000";
+        String redirectUriBase = System.getenv("FRONTEND_URL") != null ?
+                System.getenv("FRONTEND_URL") : "http://localhost:3000";
+
         String redirectPath = needNickname ? "/oauth/profile-step" : "/oauth2/success";
 
         String redirectUri = redirectUriBase + redirectPath

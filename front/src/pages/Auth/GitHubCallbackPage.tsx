@@ -16,10 +16,14 @@ const GitHubCallback = () => {
         const code = new URL(window.location.href).searchParams.get("code");
 
         if (code) {
+            // ✅ public API: 소셜 로그인은 인증 없이 호출
             axios
                 .post(`${process.env.REACT_APP_API_BASE || "/api"}/auth/signup`, {
                     provider: "github",
                     code,
+                }, {
+                    headers: { 'X-Skip-Auth-Refresh': '1' },
+                    withCredentials: true
                 })
                 .then((res) => {
                     const { accessToken, refreshToken } = res.data;

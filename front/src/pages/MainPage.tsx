@@ -120,27 +120,45 @@ const MainPage = () => {
         const projects = response.content || [];
 
         // 프로젝트 메타 정보 가져오기 (좋아요, 댓글, 조회수)
+        // ✅ 메타 API 실패해도 프로젝트는 정상 표시
         if (projects.length > 0) {
-          const projectIds = projects.map(p => p.id);
-          const metaData = await fetchProjectsMeta(projectIds);
-          
-          // 메타 정보를 프로젝트에 병합
-          const projectsWithMeta = projects.map(project => ({
-            ...project,
-            likes: metaData[project.id]?.likes || 0,
-            comments: metaData[project.id]?.comments || 0,
-            views: metaData[project.id]?.views || 0,
-          }));
-
-          setActualProjects(projectsWithMeta);
-          setIsInitialLoad(false);
-          
-          // 캐시에 저장
           try {
-            sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithMeta));
-          } catch (e) {
-            // sessionStorage 저장 실패 시 무시
+            const projectIds = projects.map(p => p.id);
+            const metaData = await fetchProjectsMeta(projectIds);
+            
+            // 메타 정보를 프로젝트에 병합
+            const projectsWithMeta = projects.map(project => ({
+              ...project,
+              likes: metaData[project.id]?.likes || 0,
+              comments: metaData[project.id]?.comments || 0,
+              views: metaData[project.id]?.views || 0,
+            }));
+
+            setActualProjects(projectsWithMeta);
+            
+            // 캐시에 저장
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithMeta));
+            } catch (e) {
+              // sessionStorage 저장 실패 시 무시
+            }
+          } catch (metaError) {
+            // ✅ 메타 API 실패 시 기본값으로 표시
+            console.warn('프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
+            const projectsWithDefaults = projects.map(project => ({
+              ...project,
+              likes: project.likes || 0,
+              comments: project.comments || 0,
+              views: project.views || 0,
+            }));
+            setActualProjects(projectsWithDefaults);
+            
+            // 캐시에 기본값 저장
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithDefaults));
+            } catch (e) {}
           }
+          setIsInitialLoad(false);
         } else {
           setActualProjects([]);
           setIsInitialLoad(false);
@@ -183,24 +201,76 @@ const MainPage = () => {
 
         const sortedByScore = [...response.data].sort((a, b) => b.score - a.score);
         
-        // 최적화: 필요한 만큼만 로드 (100개로 제한)
-        const feed = await fetchProjectFeed({ page: 0, size: 100, sort: 'latest' });
-        const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
-        const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
-        
-        setRecoProjects(mapped);
-        
-        // 캐시에 저장
-        if (cacheKey) {
-          try { 
-            sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
-          } catch {
-            // sessionStorage 저장 실패 시 무시
+        try {
+          // 최적화: 필요한 만큼만 로드 (100개로 제한)
+          const feed = await fetchProjectFeed({ page: 0, size: 100, sort: 'latest' });
+          const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
+          const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
+          
+          // ✅ AI 추천 프로젝트에도 메타 정보 가져오기 (좋아요, 댓글, 조회수)
+          if (mapped.length > 0) {
+            try {
+              const projectIds = mapped.map(p => p.id);
+              const metaData = await fetchProjectsMeta(projectIds);
+              
+              // 메타 정보를 프로젝트에 병합
+              const mappedWithMeta = mapped.map(project => ({
+                ...project,
+                likes: metaData[project.id]?.likes || 0,
+                comments: metaData[project.id]?.comments || 0,
+                views: metaData[project.id]?.views || 0,
+              }));
+              
+              setRecoProjects(mappedWithMeta);
+              
+              // 캐시에 메타 정보 포함된 데이터 저장
+              if (cacheKey) {
+                try { 
+                  sessionStorage.setItem(cacheKey, JSON.stringify(mappedWithMeta)); 
+                } catch {
+                  // sessionStorage 저장 실패 시 무시
+                }
+              }
+            } catch (metaError) {
+              // ✅ 메타 API 실패 시 기본값으로 표시
+              console.warn('AI 추천 프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
+              const mappedWithDefaults = mapped.map(project => ({
+                ...project,
+                likes: project.likes || 0,
+                comments: project.comments || 0,
+                views: project.views || 0,
+              }));
+              setRecoProjects(mappedWithDefaults);
+              
+              // 캐시에 기본값 저장
+              if (cacheKey) {
+                try { 
+                  sessionStorage.setItem(cacheKey, JSON.stringify(mappedWithDefaults)); 
+                } catch {}
+              }
+            }
+          } else {
+            setRecoProjects(mapped);
+            
+            // 캐시에 저장
+            if (cacheKey) {
+              try { 
+                sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
+              } catch {
+                // sessionStorage 저장 실패 시 무시
+              }
+            }
           }
+        } catch (feedError) {
+          // ✅ 추천 API는 성공했지만 프로젝트 피드 조회 실패 시
+          console.warn('추천 피드 조회 실패:', feedError);
+          setRecoProjects(null);
         }
       } catch (error) {
+        // ✅ 추천 API 전체 실패 시 일반 프로젝트는 정상 표시
         console.error('추천 프로젝트 로딩 실패:', error);
-        setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다.');
+        setRecoProjects(null); // 추천 프로젝트는 null로, 일반 프로젝트는 계속 표시
       } finally {
         setLoadingReco(false);
       }

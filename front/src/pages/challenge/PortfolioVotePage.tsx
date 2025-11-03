@@ -152,6 +152,7 @@ export default function PortfolioVotePage() {
         e.stopPropagation();
         
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             const response = await api.post('/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
                 targetId: submissionId
@@ -445,8 +446,16 @@ export default function PortfolioVotePage() {
                                     {/* 1. 프로필 정보 */}
                                     <div className="p-4 pb-3">
                                         <div className="flex items-center gap-3">
-                                            {/* 프로필 이미지 */}
-                                            <div className="flex-shrink-0">
+                                            {/* 프로필 이미지 - 클릭 가능 */}
+                                            <div 
+                                                className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (submission.owner?.userId) {
+                                                        nav(`/users/${submission.owner.userId}`);
+                                                    }
+                                                }}
+                                            >
                                                 {submission.owner?.profileImageUrl ? (
                                                     <img 
                                                         src={submission.owner.profileImageUrl} 
@@ -474,7 +483,17 @@ export default function PortfolioVotePage() {
                                             {/* 사용자명 & 직책 */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="text-sm font-semibold text-gray-900 dark:text-neutral-100 truncate">
-                                                    {submission.owner?.username || '익명'}
+                                                    <span 
+                                                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            if (submission.owner?.userId) {
+                                                                nav(`/users/${submission.owner.userId}`);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {submission.owner?.username || '익명'}
+                                                    </span>
                                                 </div>
                                                 <div className="text-xs text-gray-500 dark:text-neutral-400">개발자</div>
                                             </div>
