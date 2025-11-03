@@ -268,7 +268,9 @@ export function useNotificationStream(opt: Options) {
         onNotify: (payload: any) => {
             if (!payload) return;
             const id = Number(payload?.id);
-            if (!id || idSet.current!.has(id)) return;
+            if (!id || idSet.current!.has(id)) {
+                return; // 중복 또는 ID 없음 - 조용히 무시
+            }
             idSet.current!.add(id);
             cleanupIdSet(); // ID Set 크기 제한
             
