@@ -84,4 +84,12 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpec
         where rn <= 3
         """, nativeQuery = true)
     List<UserProjectCardRow> findTop3CardsByUserIds(@Param("userIds") List<Long> userIds);
+
+    @Query("""
+    select distinct p
+    from Project p
+    join fetch p.user
+    where p.id in :ids
+    """)
+    List<Project> findAllByIdInWithUser(@Param("ids") List<Long> ids);
 }

@@ -77,4 +77,20 @@ public class AiRecoClient {
                 String md
         ) {}
     }
+
+    public record TopWeekResp(String week, Integer total, java.util.List<Item> data) {
+        public record Item(
+                @com.fasterxml.jackson.annotation.JsonAlias({"project_id","projectId"})
+                Long projectId,
+                Double score
+        ) {}
+    }
+
+    public TopWeekResp getTopWeekRanking() {
+        return client().get()
+                .uri("/api/reco/top/week")
+                .retrieve()
+                .bodyToMono(TopWeekResp.class)
+                .block();
+    }
 }
