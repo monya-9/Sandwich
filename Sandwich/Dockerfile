@@ -13,11 +13,9 @@ FROM mcr.microsoft.com/playwright/java:v1.46.0
 WORKDIR /app
 
 # libsodium (기존 Alpine에서 쓰던 라이브러리의 Debian/Ubuntu 대응 패키지)
-# Hash Sum mismatch 에러 방지를 위해 재시도 로직 추가
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    (apt-get update || (sleep 5 && apt-get update) || (sleep 10 && apt-get update)) && \
-    apt-get install -y --no-install-recommends libsodium23 && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsodium23 \
+ && rm -rf /var/lib/apt/lists/*
 
 # (선택) 한글/이모지 폰트 - 스크린샷 품질 향상
 # RUN apt-get update && apt-get install -y --no-install-recommends \
