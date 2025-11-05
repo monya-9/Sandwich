@@ -23,5 +23,6 @@ public class UserProfileResponse {
     private List<InterestDto> interests;
     private int followerCount;
     private int followingCount;
+    private List<String> roles;
 
 }

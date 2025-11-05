@@ -61,6 +61,7 @@ function isPublicApiRequest(config: any): boolean {
             /^\/users\/\d+(\?|$)/,
             /^\/users\/\d+\/representative-careers(\?|$)/,
             /^\/users\/\d+\/follow-counts(\?|$)/,
+            /^\/users\/check-nickname(\?|$)/,  // 닉네임 중복 체크 (회원가입 단계)
             
             // 프로필
             /^\/profiles\/\d+\/collection-count(\?|$)/,
