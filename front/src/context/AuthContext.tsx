@@ -45,9 +45,7 @@ export const AuthProvider = ({ children }: Props) => {
         // ✅ httpOnly 쿠키 기반: /users/me API 호출로 로그인 상태 확인
         setIsAuthChecking(true);
         try {
-            const { data } = await api.get("/users/me", {
-                headers: { 'X-Skip-Auth-Refresh': '1' }
-            });
+            const { data } = await api.get("/users/me");
             const { id, email, username, nickname, profileName, profileSlug } = data || {};
 
             // userId 저장 (알림 WS 구독에 필요)

@@ -89,13 +89,11 @@ export function useNotificationStream(opt: Options) {
         }
     }, [enabled, resetOnDisable]);
 
-    /* ---------------- 배지(미읽음 수): enabled && token ---------------- */
+    /* ---------------- 배지(미읽음 수): enabled (httpOnly 쿠키로 자동 인증) ---------------- */
     useEffect(() => {
         let alive = true;
         (async () => {
             if (!enabled) return;
-            const token = await resolveToken(getToken);
-            if (!token) return;
             try {
                 const x = await fetchUnreadCount();
                 if (alive) {
@@ -109,15 +107,13 @@ export function useNotificationStream(opt: Options) {
         return () => {
             alive = false;
         };
-    }, [enabled]); // getToken 의존성 제거
+    }, [enabled]); // getToken 제거 - httpOnly 쿠키로 자동 인증
 
     /* ---------------- 첫 페이지 로드 함수는 인라인으로 처리됨 ---------------- */
 
-    /* ---------------- 더 불러오기 ---------------- */
+    /* ---------------- 더 불러오기 (httpOnly 쿠키로 자동 인증) ---------------- */
     const loadMore = useCallback(async () => {
         if (!enabled || !hasMore || !cursor) return;
-        const token = await resolveToken(getToken);
-        if (!token) return;
 
         setLoading(true);
         try {
@@ -133,14 +129,12 @@ export function useNotificationStream(opt: Options) {
         } finally {
             setLoading(false);
         }
-    }, [enabled, getToken, cursor, hasMore, pageSize]);
+    }, [enabled, cursor, hasMore, pageSize]); // getToken 제거
 
-    /* ---------------- 개별 읽음/전체 읽음 ---------------- */
+    /* ---------------- 개별 읽음/전체 읽음 (httpOnly 쿠키로 자동 인증) ---------------- */
     const markOneRead = useCallback(
         async (id: number) => {
             if (!enabled) return;
-            const token = await resolveToken(getToken);
-            if (!token) return;
 
             // 낙관적 업데이트: 즉시 UI 업데이트
             const previousItems = items;
@@ -159,13 +153,11 @@ export function useNotificationStream(opt: Options) {
                 setUnread(previousUnread);
             }
         },
-        [enabled, getToken, items, unread]
+        [enabled, items, unread] // getToken 제거
     );
 
     const markAll = useCallback(async () => {
         if (!enabled) return;
-        const token = await resolveToken(getToken);
-        if (!token) return;
 
         // 낙관적 업데이트: 즉시 UI 업데이트
         const previousItems = items;
@@ -183,16 +175,14 @@ export function useNotificationStream(opt: Options) {
             setItems(previousItems);
             setUnread(previousUnread);
         }
-    }, [enabled, getToken, items, unread]);
+    }, [enabled, items, unread]); // getToken 제거
 
-    /* ---------------- 드롭다운 열릴 때 첫 페이지 로드 ---------------- */
+    /* ---------------- 드롭다운 열릴 때 첫 페이지 로드 (httpOnly 쿠키로 자동 인증) ---------------- */
     useEffect(() => {
         if (dropdownOpen && !initialized) {
             // loadFirst 함수를 직접 호출하지 않고 인라인으로 처리
             (async () => {
                 if (!enabled || !dropdownOpen) return;
-                const token = await resolveToken(getToken);
-                if (!token) return;
 
                 setLoading(true);
                 try {
@@ -255,7 +245,7 @@ export function useNotificationStream(opt: Options) {
                 }
             })();
         }
-    }, [dropdownOpen, initialized, enabled, getToken, pageSize]);
+    }, [dropdownOpen, initialized, enabled, pageSize]); // getToken 제거
 
     /* ---------------- WS 구독: enabled && userId ---------------- */
     useNotifyWS({
