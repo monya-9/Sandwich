@@ -25,6 +25,8 @@ public class AdminChallengeDtos {
         private OffsetDateTime voteStartAt;            // 포트폴리오만
         private OffsetDateTime voteEndAt;
         private ChallengeStatus status;                // 생략시 DRAFT
+        private String aiMonth;                        // AI 월간 식별자 (YYYY-MM)
+        private String aiWeek;                         // AI 주간 식별자 (YYYYWww)
     }
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -39,6 +41,8 @@ public class AdminChallengeDtos {
         private OffsetDateTime voteStartAt;
         private OffsetDateTime voteEndAt;
         private ChallengeStatus status;
+        private String aiMonth;                        // AI 월간 식별자 (YYYY-MM)
+        private String aiWeek;                         // AI 주간 식별자 (YYYYWww)
     }
 
     public record PublishReq(List<Long> top, Long participant) {}

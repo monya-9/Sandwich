@@ -112,15 +112,17 @@ export async function fetchChallenges(
   size: number = 20,
   type?: ChallengeType,
   status?: ChallengeStatus,
-  config?: { signal?: AbortSignal }
+  config?: { signal?: AbortSignal; sort?: string }
 ): Promise<ChallengeListResponse> {
   const params: any = { page, size };
   if (type) params.type = type;
   if (status) params.status = status;
+  if (config?.sort) params.sort = config.sort;
   
   // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   const response = await api.get('/challenges', {
     params,
+    signal: config?.signal,
     withCredentials: true,
     timeout: 8000,
   });
@@ -204,6 +206,9 @@ export type ChallengeUpsertRequest = {
   voteStartAt?: string; // ISO8601
   voteEndAt?: string;   // ISO8601
   ruleJson?: ChallengeRuleJson; // type-specific keys (ym/week) and content (must/md), summary는 여기 안에
+  selectedIdx?: number; // 선택된 인덱스
+  aiMonth?: string;     // AI 월간 식별자 (YYYY-MM)
+  aiWeek?: string;      // AI 주간 식별자 (YYYYWww)
 };
 
 export async function createChallenge(payload: ChallengeUpsertRequest): Promise<{ id: number }> {
@@ -213,7 +218,8 @@ export async function createChallenge(payload: ChallengeUpsertRequest): Promise<
     ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
   });
 
-  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body), { withCredentials: true, baseURL: path.startsWith('/admin/') ? (process.env.REACT_APP_API_BASE || '') : undefined })).data;  try {
+  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body), { baseURL: '' })).data;
+  try {
     return await post('/admin/challenges', payload);
   } catch (e: any) {
     const status = e?.response?.status;
@@ -256,7 +262,8 @@ export async function updateChallenge(challengeId: number, payload: ChallengeUps
     ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
   });
 
-  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body), { withCredentials: true, baseURL: path.startsWith('/admin/') ? '' : undefined });  try {
+  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body), { baseURL: '' });
+  try {
     await patch(`/admin/challenges/${challengeId}`, payload);
   } catch (e: any) {
     const status = e?.response?.status;
@@ -290,14 +297,14 @@ export async function changeChallengeStatus(
   challengeId: number,
   status: ChallengeStatus
 ): Promise<void> {
-  await api.patch(`/admin/challenges/${challengeId}/status`, { status }, { withCredentials: true, baseURL: process.env.REACT_APP_API_BASE || '' });
+  await api.patch(`/admin/challenges/${challengeId}/status`, { status }, { baseURL: '' });
 }
 
 // 관리자: 챌린지 삭제
 export async function deleteChallenge(challengeId: number, opts?: { force?: boolean }): Promise<void> {
   const params: any = {};
   if (opts?.force) params.force = true;
-  await api.delete(`/admin/challenges/${challengeId}`, { params, withCredentials: true, baseURL: process.env.REACT_APP_API_BASE || '' });
+  await api.delete(`/admin/challenges/${challengeId}`, { params, baseURL: '' });
 }
 
 // 관리자: 챌린지 목록 조회 (admin 전용)
@@ -314,7 +321,7 @@ export async function adminFetchChallenges(params?: {
   const p: any = { page: 0, size: 20, sort: '-startAt', ...(params || {}) };
   if (params?.ym) p.aiMonth = params.ym;
   if (params?.week) p.aiWeek = params.week;
-  const res = await api.get('/admin/challenges', { params: p, withCredentials: true, timeout: 10000, baseURL: process.env.REACT_APP_API_BASE || '' });
+  const res = await api.get('/admin/challenges', { params: p, timeout: 10000, baseURL: '' });
     return res.data as ChallengeListResponse;
 }
 
@@ -322,7 +329,7 @@ export async function adminFetchChallenges(params?: {
 
 /** 관리자: 리더보드 재집계 트리거 */
 export async function rebuildLeaderboard(challengeId: number): Promise<void> {
-  await api.post(`/admin/challenges/${challengeId}/rebuild-leaderboard`, {}, { withCredentials: true, baseURL: process.env.REACT_APP_API_BASE || '' });
+  await api.post(`/admin/challenges/${challengeId}/rebuild-leaderboard`, {}, { baseURL: '' });
 }
 export type LeaderboardEntry = {
   rank: number;

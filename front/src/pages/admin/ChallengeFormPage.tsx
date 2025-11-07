@@ -109,6 +109,7 @@ export default function ChallengeFormPage() {
     const [aiLoading, setAiLoading] = React.useState(false);
     const [showAiList, setShowAiList] = React.useState<boolean>(true);
     const [aiWeek, setAiWeek] = React.useState<string>("");
+    const [selectedIdx, setSelectedIdx] = React.useState<number | null>(null);
 
     const clearForm = React.useCallback(() => {
         setEditingId(null);
@@ -124,6 +125,7 @@ export default function ChallengeFormPage() {
         setVoteStartAt("");
         setVoteEndAt("");
         setCurrentStatus("DRAFT");
+        setSelectedIdx(null);
     }, []);
 
     // 유형별 수정 경로에서는 네비게이션 없이 동일 페이지에서 선택 항목의 상세를 로딩하여
@@ -377,7 +379,10 @@ export default function ChallengeFormPage() {
                 must: mustArray,
                 md: md,
                 summary: summaryKeep,
-            }
+            },
+            selectedIdx: selectedIdx !== null ? selectedIdx : undefined,
+            aiMonth: type === "PORTFOLIO" && ym ? ym : undefined,
+            aiWeek: type === "CODE" && week ? week : undefined,
         };
         // 편집 시에도 status를 함께 전송하여 내용 저장만 했을 때도 상태가 일관되게 반영되도록 함
         const payload: ChallengeUpsertRequest = (editingId !== null)
@@ -587,6 +592,7 @@ export default function ChallengeFormPage() {
                                                         setMust(ai.must_have.join("\n"));
                                                         setMd("");
                                                         setSelectedTitle(ai.title);
+                                                        setSelectedIdx(ai.idx);
                                                         setShowAiList(false);
                                                         (window as any).scrollTo?.(0, 0);
                                                     }}

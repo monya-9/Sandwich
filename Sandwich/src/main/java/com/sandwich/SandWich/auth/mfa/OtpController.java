@@ -16,8 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.sandwich.SandWich.auth.mfa.metrics.OtpMetrics;
 import lombok.extern.slf4j.Slf4j;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -67,6 +67,9 @@ public class OtpController {
                 String accessToken  = jwt.createAccessToken(user.getEmail(), user.getRole().name());
                 String refreshToken = jwt.createRefreshToken(user.getEmail());
                 redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
+
+                // ✅ 쿠키로 토큰 전달
+                setTokenCookies(httpRes, accessToken, refreshToken);
 
                 if (Boolean.TRUE.equals(req.getRememberDevice())) {
                     String deviceName = (req.getDeviceName() == null || req.getDeviceName().isBlank())
@@ -166,6 +169,29 @@ public class OtpController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.NOT_FOUND, "Not Found");
         }
+    }
+
+    // ✅ 쿠키 헬퍼 메서드
+    private void setTokenCookies(HttpServletResponse res, String accessToken, String refreshToken) {
+        String sameSite = System.getenv().getOrDefault("TOKEN_COOKIE_SAMESITE", "None");
+        boolean secure  = Boolean.parseBoolean(System.getenv().getOrDefault("TOKEN_COOKIE_SECURE", "true"));
+        String domain   = System.getenv().getOrDefault("TOKEN_COOKIE_DOMAIN", "");
+
+        addTokenCookie(res, "ACCESS_TOKEN", accessToken, 60 * 60, sameSite, secure, domain);
+        addTokenCookie(res, "REFRESH_TOKEN", refreshToken, 14 * 24 * 60 * 60, sameSite, secure, domain);
+    }
+
+    private void addTokenCookie(HttpServletResponse res,
+                                String name, String value, int maxAgeSeconds,
+                                String sameSite, boolean secure, String domain) {
+        var builder = org.springframework.http.ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(secure)
+                .sameSite(sameSite)
+                .path("/")
+                .maxAge(Duration.ofSeconds(maxAgeSeconds));
+        if (domain != null && !domain.isBlank()) builder = builder.domain(domain);
+        res.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, builder.build().toString());
     }
 
     /* === DTOs === */

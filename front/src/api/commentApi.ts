@@ -18,10 +18,10 @@ export interface CommentPostPayload {
   parentCommentId?: number;
 }
 
-// LikeAction과 동일한 방식으로 토큰을 헤더에 추가하는 함수
+// ✅ httpOnly 쿠키 기반: Authorization 헤더 불필요 (deprecated)
+// api.js에서 credentials: 'include'로 쿠키 자동 전송됨
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {}; // 빈 객체 반환 (쿠키 자동 전송)
 };
 
 // 댓글 목록 조회

@@ -163,8 +163,8 @@ export default function WinnersSection() {
         try {
             setLoading(true);
             
-            // 1. 종료된 포트폴리오 챌린지 목록 가져오기
-            const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED");
+            // 1. 종료된 포트폴리오 챌린지 목록 가져오기 (종료일 기준 최신순)
+            const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED", { sort: "endAt,desc" });
             const endedPortfolioChallenges = challengesResponse.content;
             
             if (endedPortfolioChallenges.length === 0) {

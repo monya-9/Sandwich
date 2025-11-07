@@ -139,6 +139,9 @@ public class UserService {
                 ? "탈퇴한 사용자"
                 : (profile != null ? profile.getNickname() : null);
 
+        // 권한 정보 추가
+        List<String> roles = List.of(user.getRole().name());
+
         return new UserProfileResponse(
                 user.getId(),
                 user.getUsername(),
@@ -154,7 +157,8 @@ public class UserService {
                 position != null ? new PositionDto(position) : null,
                 interests,
                 followerCount,
-                followingCount
+                followingCount,
+                roles
         );
     }
     public User findByEmail(String email) {

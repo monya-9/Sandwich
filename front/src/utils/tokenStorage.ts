@@ -1,8 +1,12 @@
 // src/utils/tokenStorage.ts
+// ✅ httpOnly 쿠키 기반: 이 파일의 대부분 함수는 deprecated
+// 토큰은 더 이상 localStorage에 저장되지 않고 httpOnly 쿠키로 관리됨
+
 const ACCESS_KEY = "accessToken";
 const REFRESH_KEY = "refreshToken";
 
 /* ---------- 토큰 변경 이벤트 (WS 재연결 등에 사용) ---------- */
+// ⚠️ deprecated: httpOnly 쿠키는 JS에서 접근 불가하므로 이벤트가 발생하지 않음
 export type TokenListener = (accessToken: string | null) => void;
 const listeners = new Set<TokenListener>();
 
@@ -15,34 +19,28 @@ function emitAccessTokenChange(token: string | null) {
 }
 
 /* ---------- Access Token ---------- */
-export const getToken = (): string | null =>
-    localStorage.getItem(ACCESS_KEY) || sessionStorage.getItem(ACCESS_KEY);
+// ⚠️ deprecated: httpOnly 쿠키로 관리되므로 항상 null 반환
+export const getToken = (): string | null => null;
 
+// ⚠️ deprecated: httpOnly 쿠키로 관리되므로 사용하지 않음
 export const setToken = (accessToken: string | null, keep: boolean) => {
-    // ✅ 기존 토큰 삭제
+    // ✅ 기존 토큰 삭제만 수행 (마이그레이션용)
     localStorage.removeItem(ACCESS_KEY);
     sessionStorage.removeItem(ACCESS_KEY);
-
-    if (accessToken) {
-        const storage = keep ? localStorage : sessionStorage;
-        storage.setItem(ACCESS_KEY, accessToken);
-    }
-    emitAccessTokenChange(accessToken ?? null);
+    
+    // httpOnly 쿠키로 관리되므로 저장하지 않음
+    emitAccessTokenChange(null);
 };
 
 /* ---------- Refresh Token ---------- */
-export const getRefreshToken = (): string | null =>
-    localStorage.getItem(REFRESH_KEY) || sessionStorage.getItem(REFRESH_KEY);
+// ⚠️ deprecated: httpOnly 쿠키로 관리되므로 항상 null 반환
+export const getRefreshToken = (): string | null => null;
 
+// ⚠️ deprecated: httpOnly 쿠키로 관리되므로 사용하지 않음
 export const setRefreshToken = (refreshToken: string | null, keep: boolean) => {
-    // ✅ 기존 리프레시 토큰 삭제
+    // ✅ 기존 리프레시 토큰 삭제만 수행 (마이그레이션용)
     localStorage.removeItem(REFRESH_KEY);
     sessionStorage.removeItem(REFRESH_KEY);
-
-    if (refreshToken) {
-        const storage = keep ? localStorage : sessionStorage;
-        storage.setItem(REFRESH_KEY, refreshToken);
-    }
 };
 
 /* ---------- 모든 사용자 데이터 삭제 ---------- */

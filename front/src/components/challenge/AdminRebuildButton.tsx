@@ -1,16 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { isAdmin } from "../../utils/authz";
 import { rebuildLeaderboard } from "../../api/challengeApi";
 import Toast from "../common/Toast";
 
 export default function AdminRebuildButton({ challengeId, onAfterRebuild, className }: { challengeId: number; onAfterRebuild?: () => void; className?: string }) {
-    const admin = isAdmin();
+    const [admin, setAdmin] = useState(false);
     const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'info' }>({
         visible: false,
         message: '',
         type: 'info'
     });
     const [loading, setLoading] = useState(false);
+
+    // ✅ 관리자 권한 확인 (비동기)
+    useEffect(() => {
+        isAdmin().then(setAdmin).catch(() => setAdmin(false));
+    }, []);
 
     if (!admin) return null;
 

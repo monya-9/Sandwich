@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { FaUser } from "react-icons/fa";
 import api from "../../../api/axiosInstance";
 import { useNavigate, useParams } from "react-router-dom";
 import LoginPrompt from "../LoginPrompt";
 import Toast from "../../common/Toast";
+import { AuthContext } from "../../../context/AuthContext";
 
 interface ProfileActionProps {
   targetUserId?: number;
@@ -39,7 +40,8 @@ export default function ProfileAction({
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardTopPx, setCardTopPx] = useState<number | null>(null);
 
-  const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
   const navigate = useNavigate();
   const { ownerId: ownerIdParam } = useParams<{ ownerId?: string }>();
   const targetUserId = targetUserIdProp ?? (ownerIdParam ? Number(ownerIdParam) : undefined);
@@ -60,14 +62,17 @@ export default function ProfileAction({
     if (typeof initialIsFollowing === "boolean") return;
     const fetchFollowStatus = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (!token || !targetUserId || targetUserId <= 0) { setIsFollowing(false); return; }
+        // 인증 확인 중이거나 로그인하지 않았으면 스킵
+        if (isAuthChecking || !isLoggedIn || !targetUserId || targetUserId <= 0) { 
+          setIsFollowing(false); 
+          return; 
+        }
         const res = await api.get(`/users/${targetUserId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     };
     fetchFollowStatus();
-  }, [targetUserId, initialIsFollowing]);
+  }, [targetUserId, initialIsFollowing, isLoggedIn, isAuthChecking]);
 
   useEffect(() => {
     if (!hover && !tooltipHover) return;
@@ -106,11 +111,10 @@ export default function ProfileAction({
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isAuthChecking) return;
     if (!isLoggedIn) return requireLogin();
     if (!targetUserId || targetUserId <= 0) return requireTarget();
     try {
-      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-      if (!token) return requireLogin();
       await api.post(`/users/${targetUserId}/follow`, null);
       setIsFollowing(true);
       setToast("follow");
@@ -124,11 +128,10 @@ export default function ProfileAction({
   };
   const handleUnfollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isAuthChecking) return;
     if (!isLoggedIn) return requireLogin();
     if (!targetUserId || targetUserId <= 0) return requireTarget();
     try {
-      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-      if (!token) return requireLogin();
       await api.delete(`/users/${targetUserId}/unfollow`);
       setIsFollowing(false);
       setToast("unfollow");

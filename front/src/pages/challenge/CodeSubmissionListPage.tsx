@@ -45,6 +45,12 @@ export default function CodeSubmissionListPage() {
         message: '',
         type: 'info'
     });
+    const [admin, setAdmin] = useState(false);
+
+    // ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+    useEffect(() => {
+        isAdmin().then(setAdmin);
+    }, []);
 
     // 현재 사용자 정보 로드
     useEffect(() => {
@@ -229,7 +235,7 @@ export default function CodeSubmissionListPage() {
                 onBack={() => nav(`/challenge/code/${id}`)}
                 titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                 actionButton={
-                    challengeStatus === "ENDED" || isAdmin() ? undefined : (
+                    challengeStatus === "ENDED" || admin ? undefined : (
                         <CTAButton as="button" onClick={handleSubmitClick}>
                             코드 제출하기
                         </CTAButton>
@@ -289,7 +295,7 @@ export default function CodeSubmissionListPage() {
                     type="CODE" 
                     onSubmit={handleSubmitClick} 
                     challengeStatus={challengeStatus}
-                    isAdmin={isAdmin()}
+                    isAdmin={admin}
                 />
             )}
 

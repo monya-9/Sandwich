@@ -19,8 +19,13 @@ export default function ChallengeListPage() {
 	const [loading, setLoading] = useState(false);
 	const [pastLoading, setPastLoading] = useState(false);
 	const [autoRefreshing, setAutoRefreshing] = useState(false); // 🔥 자동 새로고침 상태
-	const admin = isAdmin();
+	const [admin, setAdmin] = useState(false);
 	const rolloverRef = useRef(false);
+	
+	// ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+	useEffect(() => {
+		isAdmin().then(setAdmin);
+	}, []);
 	
 	// 지난 챌린지 캐러셀 상태
 	const [pastChallengeIndex, setPastChallengeIndex] = useState(0);
