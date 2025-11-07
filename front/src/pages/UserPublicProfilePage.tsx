@@ -333,7 +333,17 @@ export default function UserPublicProfilePage() {
             {/* 소개/커리어 */}
             <div className="mt-20" />
             <div className="mt-2 text-[14px] md:text-[16px]">
-              <div className="text-black/90">커리어</div>
+              <div className="flex items-center justify-between">
+                <div className="text-black/90">커리어</div>
+                {repCareers.length > 0 && (
+                  <button
+                    onClick={() => navigate(`/profile/${userId}/careers`)}
+                    className="text-[14px] text-black/60 hover:text-black/80 transition-colors"
+                  >
+                    자세히 보기 &gt;
+                  </button>
+                )}
+              </div>
               
               <div className="mt-4 space-y-4">
                 {repCareers.length > 0 ? (

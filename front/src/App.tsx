@@ -47,6 +47,7 @@ import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetail
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
+import PublicCareerDetailsPage from "./pages/PublicCareerDetailsPage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
 import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
@@ -205,6 +206,7 @@ function App() {
 
                                 {/* 공개 사용자 프로필 */}
                                 <Route path="/users/:id" element={<UserPublicProfilePage />} />
+                                <Route path="/profile/:userId/careers" element={<PublicCareerDetailsPage />} />
 
                                 {/* ✅ 어드민 보호 라우트: ROLE_ADMIN 아닐 시 전체 차단 및 리다이렉트 */}
                                 <Route path="/admin/*" element={<RequireAdmin />}> 
