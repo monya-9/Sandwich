@@ -356,8 +356,13 @@ export default function ChallengeDetailPage() {
     const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     // 보상 수령 기능 제거됨
-    const admin = isAdmin();
+    const [admin, setAdmin] = useState(false);
     const [voteSummary, setVoteSummary] = useState<VoteSummaryResponse>([]);
+    
+    // ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+    useEffect(() => {
+        isAdmin().then(setAdmin);
+    }, []);
     
     // Toast 및 사용자 정보 상태
     const [toast, setToast] = useState<{

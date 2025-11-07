@@ -22,6 +22,7 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	const [enterYear, setEnterYear] = useState("");
 	const [graduateYear, setGraduateYear] = useState("");
 	const [majors, setMajors] = useState<MajorItem[]>([]);
+	const [pendingMajors, setPendingMajors] = useState<string[]>([]); // 신규 생성 시 임시 전공 목록
 	const [newMajorName, setNewMajorName] = useState("");
 	const [desc, setDesc] = useState("");
 	const [isMain, setIsMain] = useState(false);
@@ -60,6 +61,10 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 		// 전공 데이터 로드 (수정 모드일 때만)
 		if (editingId) {
 			loadMajors(editingId);
+		} else {
+			// 신규 생성 시 임시 전공 목록 초기화
+			setPendingMajors([]);
+			setMajors([]);
 		}
 		
 		// description에서 상태 추출 (전공은 API에서 관리하므로 제거)
@@ -95,9 +100,10 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 
 	// 폼 유효성
 	// 고등학교는 degree와 전공이 선택사항이므로 조건 수정
+	const totalMajorsCount = editingId ? majors.length : pendingMajors.length;
 	const requiredFilled = school.trim().length > 0 && 
 		(level !== "HIGH_SCHOOL" && level !== "BOOTCAMP" ? degree.trim().length > 0 : true) && 
-		(level !== "HIGH_SCHOOL" ? majors.length > 0 : true);
+		(level !== "HIGH_SCHOOL" ? totalMajorsCount > 0 : true);
 	const enterValid = !!enterYear && !enterYearError && enterYear.length === 4;
 	const graduateValid = !!graduateYear && !graduateYearError && graduateYear.length === 4;
 	const isValid = requiredFilled && enterValid && graduateValid;
@@ -129,7 +135,36 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 			if (editingId) {
 				await EducationApi.update(editingId, payload as any);
 			} else {
+				// 새 학력 생성
 				await EducationApi.create(payload as any);
+				
+				// 학력 생성 후 목록을 다시 불러와서 가장 최근 항목의 ID를 찾아 전공 추가
+				if (pendingMajors.length > 0) {
+					try {
+						const listResponse = await EducationApi.list();
+						const list: any[] = listResponse.data?.data || listResponse.data || [];
+						// 같은 학교명, 학위, 시작년도로 가장 최근 항목 찾기
+						const newEducation = list.find((edu: any) => 
+							edu.schoolName === school.trim() &&
+							edu.degree === (level === "HIGH_SCHOOL" || level === "BOOTCAMP" ? null : degree) &&
+							edu.startYear === toNumber(enterYear)
+						);
+						
+						if (newEducation && newEducation.id) {
+							await Promise.all(
+								pendingMajors.map(majorName => 
+									EducationApi.addMajor(newEducation.id, majorName)
+								)
+							);
+						}
+					} catch (majorError) {
+						console.error("전공 추가 실패:", majorError);
+						setErrorToast({
+							visible: true,
+							message: "학력은 저장되었지만 전공 추가에 실패했습니다."
+						});
+					}
+				}
 			}
 			onDone();
 		} catch (e) {
@@ -143,17 +178,26 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	};
 
 	const addMajor = async () => {
-		if (!newMajorName.trim() || !editingId) return;
+		if (!newMajorName.trim()) return;
 		
-		try {
-			const response = await EducationApi.addMajor(editingId, newMajorName.trim());
-			setMajors(prev => [...prev, response.data]);
+		const trimmedName = newMajorName.trim();
+		
+		// 수정 모드: 서버에 즉시 추가
+		if (editingId) {
+			try {
+				const response = await EducationApi.addMajor(editingId, trimmedName);
+				setMajors(prev => [...prev, response.data]);
+				setNewMajorName("");
+			} catch (error) {
+				setErrorToast({
+					visible: true,
+					message: "전공 추가에 실패했습니다."
+				});
+			}
+		} else {
+			// 신규 생성 모드: 임시 목록에 추가
+			setPendingMajors(prev => [...prev, trimmedName]);
 			setNewMajorName("");
-		} catch (error) {
-			setErrorToast({
-				visible: true,
-				message: "전공 추가에 실패했습니다."
-			});
 		}
 	};
 
@@ -167,6 +211,10 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 				message: "전공 삭제에 실패했습니다."
 			});
 		}
+	};
+
+	const removePendingMajor = (index: number) => {
+		setPendingMajors(prev => prev.filter((_, i) => i !== index));
 	};
 
 	const loadMajors = async (educationId: number) => {
@@ -277,7 +325,7 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 						{level === "BOOTCAMP" ? "과정명" : "전공"} <span className="text-green-500">*</span>
 					</label>
 					
-					{/* 기존 전공 칩들 */}
+					{/* 기존 전공 칩들 (수정 모드) */}
 					{majors.length > 0 && (
 						<div className="flex flex-wrap gap-2 mb-3">
 							{majors.map((major) => (
@@ -295,36 +343,52 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 						</div>
 					)}
 					
-					{/* 새 전공 추가 (수정 모드일 때만) */}
-					{editingId && (
-						<div className="flex gap-2">
-							<input
-								type="text"
-								value={newMajorName}
-								onChange={(e) => setNewMajorName(e.target.value)}
-								className="flex-1 h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"
-								placeholder={level === "BOOTCAMP" ? "새 과정명을 입력하세요" : "새 전공을 입력하세요"}
-								onKeyPress={(e) => {
-									if (e.key === 'Enter') {
-										e.preventDefault();
-										addMajor();
-									}
-								}}
-							/>
-							<button
-								type="button"
-								onClick={addMajor}
-								disabled={!newMajorName.trim()}
-								className={`h-[55px] px-4 rounded-[10px] border ${
-									newMajorName.trim() 
-										? "border-[#21B284] text-[#21B284] hover:bg-[#21B284] hover:text-white" 
-										: "border-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
-								} transition-colors`}
-							>
-								+ 추가
-							</button>
+					{/* 임시 전공 칩들 (신규 생성 모드) */}
+					{pendingMajors.length > 0 && (
+						<div className="flex flex-wrap gap-2 mb-3">
+							{pendingMajors.map((majorName, index) => (
+								<div key={index} className="inline-flex items-center gap-2 px-3 py-2 bg-[#F3F4F6] dark:bg-[#374151] rounded-lg text-[14px]">
+									<span>{majorName}</span>
+									<button
+										type="button"
+										onClick={() => removePendingMajor(index)}
+										className="text-[#6B7280] hover:text-[#EF4444] transition-colors"
+									>
+										×
+									</button>
+								</div>
+							))}
 						</div>
 					)}
+					
+					{/* 새 전공 추가 입력 필드 (신규 생성 및 수정 모드 모두 표시) */}
+					<div className="flex gap-2">
+						<input
+							type="text"
+							value={newMajorName}
+							onChange={(e) => setNewMajorName(e.target.value)}
+							className="flex-1 h-[55px] py-0 leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"
+							placeholder={level === "BOOTCAMP" ? "새 과정명을 입력하세요" : "새 전공을 입력하세요"}
+							onKeyPress={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									addMajor();
+								}
+							}}
+						/>
+						<button
+							type="button"
+							onClick={addMajor}
+							disabled={!newMajorName.trim()}
+							className={`h-[55px] px-4 rounded-[10px] border ${
+								newMajorName.trim() 
+									? "border-[#21B284] text-[#21B284] hover:bg-[#21B284] hover:text-white" 
+									: "border-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
+							} transition-colors`}
+						>
+							+ 추가
+						</button>
+					</div>
 				</div>
 			)}
 

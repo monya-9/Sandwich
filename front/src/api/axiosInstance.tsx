@@ -61,6 +61,7 @@ function isPublicApiRequest(config: any): boolean {
             /^\/users\/\d+(\?|$)/,
             /^\/users\/\d+\/representative-careers(\?|$)/,
             /^\/users\/\d+\/follow-counts(\?|$)/,
+            /^\/users\/check-nickname(\?|$)/,  // 닉네임 중복 체크 (회원가입 단계)
             
             // 프로필
             /^\/profiles\/\d+\/collection-count(\?|$)/,
@@ -140,9 +141,10 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
 
         }
 
-        // 1) 토큰 자동 부착(기존 로직 유지)
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (token) config.headers = setAuthHeader(config.headers, token);
+        // 1) ✅ 쿠키 전용: Authorization 헤더 세팅 제거
+        // 쿠키가 자동 전송되므로 별도 헤더 불필요
+        // const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+        // if (token) config.headers = setAuthHeader(config.headers, token);
 
         // 2) FormData면 Content-Type 제거(브라우저가 자동 설정)
         const data = config.data as any;
@@ -157,23 +159,20 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
             }
         }
 
-        // 3) 챌린지 관련 GET 요청에 자동으로 X-Skip-Auth-Refresh 헤더 추가
+        // 3) 일부 GET 요청에 자동으로 X-Skip-Auth-Refresh 헤더 추가
+        // ⚠️ 주의: /users/me는 인증 필요한 API이므로 제외
         const url = String(config.url || "");
         const method = (config.method || 'get').toLowerCase();
-        const isChallengeReadRequest = method === 'get' && (
+        const isSkipAuthRefresh = method === 'get' && (
             url.includes('/challenges') ||
             url.includes('/ext/reco') ||
-            url.includes('/users/me') ||
             url.includes('/me/credits') ||
             url.includes('/me/rewards') ||
             url.includes('/likes') ||
-            url.includes('/comments') ||
-            url.includes('/users/') ||
-            url.includes('/profiles/') ||
-            url.includes('/members/')
+            url.includes('/comments')
         );
         
-        if (isChallengeReadRequest) {
+        if (isSkipAuthRefresh) {
             const headers: any = config.headers || {};
             if (headers instanceof AxiosHeaders || typeof headers.set === "function") {
                 headers.set("X-Skip-Auth-Refresh", "1");
@@ -229,20 +228,18 @@ function isRefreshable401(error: AxiosError) {
     // 인증/리프레시 자체는 제외
     if (/\/auth\/(login|signin|register|refresh)/.test(url)) return false;
 
-    // ✅ 백엔드는 body refreshToken 필수 → 로컬/세션에 없으면 시도하지 않음
-    const hasRT =
-        !!localStorage.getItem("refreshToken") || !!sessionStorage.getItem("refreshToken");
-    return hasRT;
+    // ✅ 쿠키 기반이므로 항상 리프레시 시도 (백엔드가 쿠키 확인)
+    return true;
 }
 
 /* -------- 401 처리: refresh 단일 진행 + 대기열 -------- */
 let isRefreshing = false;
-let pendingQueue: Array<(token: string | null) => void> = [];
+let pendingQueue: Array<(success: string | null) => void> = [];
 
 const REFRESH_ENDPOINT = "/api/auth/refresh";
 
-function resolveQueue(token: string | null) {
-    pendingQueue.forEach((cb) => cb(token));
+function resolveQueue(success: string | null) {
+    pendingQueue.forEach((cb) => cb(success));
     pendingQueue = [];
 }
 
@@ -271,10 +268,10 @@ api.interceptors.response.use(
 
         if (isRefreshing) {
             return new Promise((resolve, reject) => {
-                pendingQueue.push((newToken) => {
-                    if (!newToken) return reject(error);
+                pendingQueue.push((success) => {
+                    if (!success) return reject(error);
                     try {
-                        original.headers = setAuthHeader(original.headers, newToken);
+                        // ✅ 쿠키로 자동 전송되므로 헤더 세팅 불필요
                         resolve(api(original));
                     } catch (e) {
                         reject(e);
@@ -285,52 +282,35 @@ api.interceptors.response.use(
 
         isRefreshing = true;
         try {
-            const storedRefresh =
-                localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
-            if (!storedRefresh) throw new Error("No refresh token stored");
-
-            // refresh는 전역 axios로(Authorization 인터셉터 회피)
+            // ✅ 쿠키 기반이므로 빈 바디로 호출 (백엔드가 쿠키에서 REFRESH_TOKEN 읽음)
             const r = await axios.post(
                 REFRESH_ENDPOINT,
-                { refreshToken: storedRefresh },
+                {},
                 { withCredentials: true }
             );
 
-            const { accessToken, refreshToken: newRefreshToken } = (r as any).data || {};
-            if (!accessToken) throw new Error("No accessToken from refresh");
+            // 새 ACCESS_TOKEN/REFRESH_TOKEN은 쿠키로 다시 설정됨
+            // localStorage 갱신 불필요, Authorization 헤더 불필요
+            resolveQueue("");  // 빈 문자열로 큐 해결
 
-            const keep = !!localStorage.getItem("refreshToken");
-            if (keep) {
-                localStorage.setItem("accessToken", accessToken);
-                if (newRefreshToken !== undefined && newRefreshToken !== null) {
-                    localStorage.setItem("refreshToken", newRefreshToken);
-                }
-            } else {
-                sessionStorage.setItem("accessToken", accessToken);
-                if (newRefreshToken !== undefined && newRefreshToken !== null) {
-                    sessionStorage.setItem("refreshToken", newRefreshToken);
-                }
-            }
-
-            resolveQueue(accessToken);
-
-            original.headers = setAuthHeader(original.headers, accessToken);
             return api(original);
         } catch (e) {
             resolveQueue(null);
             
-            // ✅ 리프레시 실패 시 자동 로그아웃
+            // ✅ 리프레시 실패 시 자동 로그아웃 (새로고침 제거)
             console.warn('[AUTH] 리프레시 토큰 실패, 자동 로그아웃 처리');
             try {
                 const { clearAllUserData } = await import('../utils/tokenStorage');
                 clearAllUserData();
                 
-                // AuthContext 상태 초기화를 위해 새로고침
-                window.location.reload();
+                // ✅ httpOnly 쿠키 방식: 새로고침 대신 로그인 페이지로 리다이렉트
+                // 현재 페이지가 로그인 필수 페이지가 아니면 그냥 두기
+                const publicPaths = ['/login', '/join', '/'];
+                if (!publicPaths.some(p => window.location.pathname.startsWith(p))) {
+                    window.location.href = '/login';
+                }
             } catch (logoutError) {
                 console.error('[AUTH] 자동 로그아웃 실패:', logoutError);
-                // 실패해도 페이지 새로고침
-                window.location.reload();
             }
             
             return Promise.reject(e);

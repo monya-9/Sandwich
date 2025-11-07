@@ -52,7 +52,12 @@ export default function PortfolioVotePage() {
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     
     const nav = useNavigate();
-    const admin = isAdmin();
+    const [admin, setAdmin] = useState(false);
+    
+    // ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+    useEffect(() => {
+        isAdmin().then(setAdmin);
+    }, []);
 
     // 현재 사용자 정보 로드
     useEffect(() => {
@@ -372,7 +377,7 @@ export default function PortfolioVotePage() {
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
-                            derivedStage === "SUBMISSION_OPEN" && !isAdmin() ? (
+                            derivedStage === "SUBMISSION_OPEN" && !admin ? (
                                 <CTAButton as="button" onClick={handleSubmitClick}>
                                     프로젝트 제출하기
                                 </CTAButton>
@@ -587,7 +592,7 @@ export default function PortfolioVotePage() {
                                 type="PORTFOLIO" 
                                 onSubmit={handleSubmitClick} 
                                 challengeStatus={challengeStatus}
-                                isAdmin={isAdmin()}
+                                isAdmin={admin}
                             />
                         ) : (
                             <div className="flex items-center justify-center py-16 text-center text-neutral-600">

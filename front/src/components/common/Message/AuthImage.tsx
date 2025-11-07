@@ -36,12 +36,11 @@ const AuthImage: React.FC<Props> = ({ src, alt, className, fileName }) => {
                 setErr(null);
                 setLoading(true);
 
-                const token =
-                    localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-                const headers: Record<string, string> = {};
-                if (token) headers.Authorization = `Bearer ${token}`;
-
-                const res = await fetch(src, { headers, signal: ac.signal });
+                // ✅ httpOnly 쿠키 기반: credentials로 자동 전송
+                const res = await fetch(src, { 
+                    credentials: "include",
+                    signal: ac.signal 
+                });
                 if (!res.ok) throw new Error(String(res.status));
 
                 const blob = await res.blob();
@@ -68,11 +67,8 @@ const AuthImage: React.FC<Props> = ({ src, alt, className, fileName }) => {
                 window.open(blobUrl, "_blank", "noopener,noreferrer");
                 return;
             }
-            const token =
-                localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-            const headers: Record<string, string> = {};
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(src, { headers });
+            // ✅ httpOnly 쿠키 기반: credentials로 자동 전송
+            const res = await fetch(src, { credentials: "include" });
             if (!res.ok) throw new Error(String(res.status));
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);

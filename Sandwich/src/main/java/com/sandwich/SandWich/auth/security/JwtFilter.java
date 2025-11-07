@@ -57,36 +57,48 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = null;
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader != null
-                && authHeader.startsWith("Bearer ")
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            String token = authHeader.substring(7);
-            try {
-                Claims claims = jwtUtil.parseClaims(token);
-                String email = claims.getSubject();
-
-                User user = userRepository.findByEmailAndIsDeletedFalse(email)
-                        .orElseThrow(() -> new UsernameNotFoundException("유저를 찾을 수 없습니다."));
-
-                UserDetailsImpl userDetails = new UserDetailsImpl(user);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (Exception e) {
-                log.warn("JWT 인증 실패: {}", e.getMessage());
-                // 실패 시 SecurityContext 비워둠 → 이후 EntryPoint에서 401
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        } else if (request.getCookies() != null) {
+            for (Cookie c : request.getCookies()) {
+                if ("ACCESS_TOKEN".equals(c.getName())) {
+                    token = c.getValue();
+                    break;
+                }
             }
+        }
+
+        if (token == null || token.isBlank()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
+            Claims claims = jwtUtil.parseClaims(token);
+            String email = claims.getSubject();
+
+            User user = userRepository.findByEmailAndIsDeletedFalse(email)
+                    .orElseThrow(() -> new UsernameNotFoundException("유저를 찾을 수 없습니다."));
+
+            UserDetailsImpl userDetails = new UserDetailsImpl(user);
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (Exception e) {
+            log.warn("JWT 인증 실패: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
     }
+
 }

@@ -47,11 +47,9 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
     // 초기 로드: 로그인 상태 확인 후에만 호출 (401 방지)
     React.useEffect(() => {
-        // ✅ 토큰이 있을 때만 호출 (로그인 전 401 방지)
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (token) {
-            loadRooms().catch(() => void 0);
-        }
+        // ✅ httpOnly 쿠키 기반: AuthContext의 isLoggedIn 사용 권장
+        // 여기서는 일단 항상 시도하고, 401이면 무시
+        loadRooms().catch(() => void 0);
     }, [loadRooms]);
 
     // 전역 이벤트: 읽음 → 로컬 즉시 패치

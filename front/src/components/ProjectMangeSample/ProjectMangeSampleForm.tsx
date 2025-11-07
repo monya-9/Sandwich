@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import Header from "../common/Header/Header";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -18,6 +18,7 @@ import SettingsPanel from "./SettingsPanel";
 import RightPanelActions from "./RightPanelActions";
 import VideoUrlModal from "./VideoUrlModal";
 import api from "../../api/axiosInstance";
+import { AuthContext } from "../../context/AuthContext";
 
 // Quill size whitelist to show pt values like 16pt
 const SizeAttributor = Quill.import("attributors/style/size");
@@ -27,10 +28,9 @@ SizeAttributor.whitelist = ["10pt", "12pt", "14pt", "16pt", "18pt", "24pt", "32p
 Quill.register(SizeAttributor, true);
 
 // 토큰 유효성 검사 유틸
+// ✅ httpOnly 쿠키 기반: 토큰 체크 불필요 (deprecated)
 function getAccessToken(): string | null {
-	try {
-		return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-	} catch { return null; }
+	return null; // httpOnly 쿠키로 자동 전송
 }
 function isJwtExpired(token: string): boolean {
 	try {
@@ -62,6 +62,9 @@ export default function ProjectMangeSampleForm() {
    const editOwnerId = ownerIdParam ? Number(ownerIdParam) : undefined;
    const editProjectId = projectIdParam ? Number(projectIdParam) : undefined;
    const [editDetail, setEditDetail] = useState<any>(null);
+   
+   // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+   const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
 	const mainQuillRef = useRef<ReactQuill | null>(null);
 	const [previewHtml, setPreviewHtml] = useState<string>("");
@@ -1143,19 +1146,14 @@ export default function ProjectMangeSampleForm() {
 
 	const handleSubmit = async () => {
 		if (!hasContent) return;
-		const token = getAccessToken();
-		if (!token) {
+		
+		// ✅ httpOnly 쿠키 기반: AuthContext로 로그인 상태 확인
+		if (isAuthChecking) return; // 인증 확인 중에는 대기
+		if (!isLoggedIn) {
 			navigate('/login');
 			return;
 		}
-		if (isJwtExpired(token)) {
-			setErrorToast({
-				visible: true,
-				message: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.'
-			});
-			navigate('/login');
-			return;
-		}
+		
 		setDetailLibraryImages(collectImageUrls());
 		setIsDetailsOpen(true);
 	};

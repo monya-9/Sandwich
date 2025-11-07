@@ -128,18 +128,27 @@ export async function initFCM() {
         }
         (window as any).__FCM_TOKEN__ = cachedFcmToken;
 
-        // 현재 AccessToken 있으면 즉시 등록, 없으면 로그인되면 등록
-        const access =
-            localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken") || "";
-
-        if (access) {
+        // ✅ httpOnly 쿠키 기반: 항상 등록 시도 (쿠키가 있으면 성공, 없으면 실패)
+        // 로그인 후 자동으로 쿠키가 설정되므로, 이후 페이지 새로고침 시 자동 등록됨
+        try {
             await registerWebPush(cachedFcmToken);
-        } else {
-            onAccessTokenChange(async (newAccess) => {
-                if (newAccess && cachedFcmToken) {
-                    await registerWebPush(cachedFcmToken);
-                }
-            });
+            console.log("[FCM] 푸시 알림 등록 성공");
+        } catch (error: any) {
+            console.log("[FCM] 푸시 등록 실패 (로그인 필요):", error?.message || error);
+            
+            // ✅ 로그인 후 다시 시도: AuthContext의 로그인 이벤트 감지
+            const handleAuthChange = () => {
+                if (!cachedFcmToken) return;
+                console.log("[FCM] 로그인 감지, 푸시 등록 재시도");
+                registerWebPush(cachedFcmToken).then(() => {
+                    console.log("[FCM] 푸시 알림 등록 성공 (재시도)");
+                }).catch((err) => {
+                    console.error("[FCM] 푸시 등록 재시도 실패:", err);
+                });
+            };
+            
+            // 페이지 새로고침 없이 로그인 시 자동 등록
+            window.addEventListener("auth:login:success", handleAuthChange, { once: true });
         }
 
         // 포그라운드 => OS 토스트 (중복 방지)

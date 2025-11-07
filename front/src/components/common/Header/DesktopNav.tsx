@@ -69,17 +69,12 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     }, []);
 
     const myId = Number(
-        localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"
+        localStorage.getItem("userId") || "0"
     );
 
-    const accessToken =
-        localStorage.getItem("accessToken") ||
-        sessionStorage.getItem("accessToken") ||
-        "";
-
-    // 버튼/드롭다운 표시 여부(로그인 & 토큰)
-    const notiReady = isLoggedIn && !!accessToken;
-    // WS 연결은 useNotificationStream 훅 내부에서 처리됨
+    // ✅ httpOnly 쿠키 기반: 버튼/드롭다운 표시 여부(로그인만 체크)
+    const notiReady = isLoggedIn;
+    // WS 연결은 useNotificationStream 훅 내부에서 처리됨 (쿠키로 인증)
 
     // ▼ 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);
@@ -130,10 +125,8 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         wsUrl: "/stomp",
         topicBase: "/topic/users",
         pageSize: 20,
-        getToken: () =>
-            localStorage.getItem("accessToken") ||
-            sessionStorage.getItem("accessToken") ||
-            null,
+        // ✅ httpOnly 쿠키 기반: getToken 불필요 (쿠키로 자동 인증)
+        getToken: () => null,
         resetOnDisable: false,
         debug: false,
         dropdownOpen: showNotification, // ★ 드롭다운 열림 상태 전달

@@ -69,12 +69,12 @@ export default function CodeWinnersSection() {
       setLoading(true);
       setError(null);
 
-      // 1) 최근 ENDED CODE 챌린지 조회
-      const list = await fetchChallenges(0, 20, "CODE", "ENDED");
+      // 1) 최근 ENDED CODE 챌린지 조회 (종료일 기준 최신순)
+      const list = await fetchChallenges(0, 20, "CODE", "ENDED", { sort: "endAt,desc" });
       const content = list?.content || [];
       if (!content.length) { setWinners([]); return; }
-      // 종료일 기준 내림차순으로 가장 최근 종료 선택
-      const latest = content.slice().sort((a: any, b: any) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime())[0];
+      // 이미 정렬되어 있으므로 첫 번째가 가장 최근 종료
+      const latest = content[0];
 
       // 2) week 추출 (ruleJson.week)
       let week: string | null = null;

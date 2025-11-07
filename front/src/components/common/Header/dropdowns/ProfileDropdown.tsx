@@ -12,26 +12,18 @@ interface Props {
 
 type ThemeMode = 'system' | 'light' | 'dark';
 
-function isAdminFromStoredToken(): boolean {
-    try {
-        const token =
-            (typeof window !== 'undefined' && (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken'))) || '';
-        if (!token) return false;
-        const parts = token.split('.');
-        if (parts.length !== 3) return false;
-        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const json = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf-8');
-        const payload = JSON.parse(decodeURIComponent(Array.prototype.map.call(json, (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
-        const candidates = [payload.roles, payload.authorities, payload.auth, payload.scope, payload.scopes, payload.role];
-        const toStr = (v: any) => (typeof v === 'string' ? v : Array.isArray(v) ? v.join(' ') : '');
-        const txt = toStr(candidates.find(Boolean)).toUpperCase();
-        return txt.includes('ROLE_ADMIN') || txt.split(/[ ,]/).includes('ADMIN');
-    } catch {
-        return false;
-    }
-}
+// ✅ httpOnly 쿠키 기반: JWT 디코딩 대신 서버 API로 권한 확인 (deprecated)
 
 const ProfileDropdown = ({ email, username, onLogout }: Props) => {
+    const [isAdmin, setIsAdmin] = React.useState(false);
+    
+    // ✅ httpOnly 쿠키 기반: 서버 API로 관리자 권한 확인
+    React.useEffect(() => {
+        import('../../../../utils/authz').then(({ isAdmin: checkAdmin }) => {
+            checkAdmin().then(setIsAdmin);
+        });
+    }, []);
+    
     // 저장값이 없으면 system
     const initialMode: ThemeMode = useMemo(() => {
         const saved = (localStorage.getItem('theme') || '').toLowerCase();
@@ -39,7 +31,6 @@ const ProfileDropdown = ({ email, username, onLogout }: Props) => {
     }, []);
 
     const [mode, setMode] = useState<ThemeMode>(initialMode);
-    const isAdmin = isAdminFromStoredToken();
 
     const resolveAndApply = useCallback((m: ThemeMode) => {
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
