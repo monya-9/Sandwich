@@ -104,7 +104,7 @@ const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
                                         }
                                     }}
                                     className="relative z-[1] w-full flex items-start gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg text-left text-xs sm:text-sm
-                             hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                             hover:bg-gray-50 focus:outline-none"
                                 >
                                     {/* 아바타 */}
                                     {avatarUrl ? (
