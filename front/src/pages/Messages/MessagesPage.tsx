@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import MessageList from "../../components/common/Message/MessageList";
 import MessageDetail from "../../components/common/Message/MessageDetail";
-import { fetchRooms, markRoomRead } from "../../api/messages";
+import { fetchRooms, markRoomRead, fetchRoomMeta } from "../../api/messages";
 import type { Message } from "../../types/Message";
 import { onMessagesRefresh, emitMessageRead } from "../../lib/messageEvents";
 
@@ -116,7 +116,35 @@ const MessagesPage: React.FC = () => {
     React.useEffect(() => { loadFirstPage(); }, [loadFirstPage]);
 
     React.useEffect(() => {
-        const handler = () => {
+        const handler = async (detail?: { roomId?: number; reason?: string }) => {
+            // 디테일 창이 열려있고 특정 방의 메시지가 업데이트된 경우, 해당 방의 메타만 즉시 업데이트
+            if (detail?.roomId && selectedRoomId === detail.roomId) {
+                try {
+                    const meta = await fetchRoomMeta(detail.roomId);
+                    setItems((prev) => {
+                        const updated = prev.map((m) => {
+                            if (m.roomId === detail.roomId) {
+                                return {
+                                    ...m,
+                                    content: meta.lastMessagePreview || m.content,
+                                    createdAt: meta.lastMessageAt || m.createdAt,
+                                    isRead: meta.unreadCount === 0,
+                                    unreadCount: meta.unreadCount,
+                                };
+                            }
+                            return m;
+                        });
+                        // 최신순으로 재정렬
+                        return updated.sort(
+                            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        );
+                    });
+                } catch (e) {
+                    console.warn("[refresh] fetchRoomMeta failed:", e);
+                }
+            }
+            
+            // 전체 리스트는 디바운스 후 업데이트
             if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
             refreshTimerRef.current = window.setTimeout(() => {
                 loadFirstPage();
@@ -129,7 +157,7 @@ const MessagesPage: React.FC = () => {
             unsubscribe?.();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [selectedRoomId]);
 
     React.useEffect(() => { 
         setSelectedRoomId(routeRoomId);
@@ -198,7 +226,55 @@ const MessagesPage: React.FC = () => {
                 <div className={`flex-1 ${!selectedRoomId && 'hidden md:flex'}`}>
                     <MessageDetail
                         message={selectedMessage}
-                        onSend={async () => { await loadFirstPage(); }}
+                        onSend={async (messageId, body) => {
+                            // 메시지 전송 후 서버에서 최신 메타 정보 가져와서 리스트 업데이트
+                            if (selectedRoomId) {
+                                try {
+                                    const meta = await fetchRoomMeta(selectedRoomId);
+                                    setItems((prev) => {
+                                        const updated = prev.map((m) => {
+                                            if (m.roomId === selectedRoomId) {
+                                                return {
+                                                    ...m,
+                                                    content: meta.lastMessagePreview || m.content,
+                                                    createdAt: meta.lastMessageAt || m.createdAt,
+                                                    isRead: meta.unreadCount === 0,
+                                                    unreadCount: meta.unreadCount,
+                                                };
+                                            }
+                                            return m;
+                                        });
+                                        // 최신순으로 재정렬
+                                        return updated.sort(
+                                            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                                        );
+                                    });
+                                } catch (e) {
+                                    console.warn("[onSend] fetchRoomMeta failed:", e);
+                                    // 실패 시 임시로 로컬 업데이트
+                                    const now = new Date().toISOString();
+                                    setItems((prev) => {
+                                        const updated = prev.map((m) => {
+                                            if (m.roomId === selectedRoomId) {
+                                                return {
+                                                    ...m,
+                                                    content: body,
+                                                    createdAt: now,
+                                                    isRead: true,
+                                                    unreadCount: 0,
+                                                };
+                                            }
+                                            return m;
+                                        });
+                                        return updated.sort(
+                                            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                                        );
+                                    });
+                                }
+                            }
+                            // 백그라운드에서 전체 리스트 갱신
+                            loadFirstPage().catch(() => {});
+                        }}
                         onBack={() => {
                             setSelectedRoomId(undefined);
                             navigate('/messages');
