@@ -99,6 +99,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 createdAt: r.lastAt,
                 isRead: r.unreadCount === 0,
                 unreadCount: r.unreadCount,
+                avatarUrl: r.partnerAvatarUrl || undefined,
             }));
             setMessages(mapped);
         } catch {

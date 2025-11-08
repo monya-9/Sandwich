@@ -38,6 +38,7 @@ const MessagesPage: React.FC = () => {
                     isRead: r.unreadCount === 0,
                     unreadCount: r.unreadCount,
                     receiverId: r.peerId ?? null,
+                    avatarUrl: r.partnerAvatarUrl || undefined,
                 }))
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         [],

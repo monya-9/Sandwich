@@ -60,6 +60,7 @@ const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
                 createdAt: r.lastAt,
                 isRead: r.unreadCount === 0,
                 unreadCount: r.unreadCount,
+                avatarUrl: r.partnerAvatarUrl || undefined,
             }));
             setMessages(mapped);
         } catch {
