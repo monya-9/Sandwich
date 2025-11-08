@@ -6,6 +6,8 @@ import DropdownWrapper, { emitHideDropdowns } from "./DropdownWrapper";
 import EmptyState from "./EmptyState";
 import UnreadBadge from "../../UnreadBadge";
 import type { Message } from "../../../../types/Message";
+import { markRoomRead } from "../../../../api/messages";
+import { emitMessageRead } from "../../../../lib/messageEvents";
 
 /** 아바타에 넣을 글자: email 1글자 > title(sender) 1글자 */
 function avatarLetter(name?: string, email?: string) {
@@ -25,12 +27,25 @@ const MAX_ITEMS = 5;
 const MessageDropdown: React.FC<Props> = ({ messages, onRead }) => {
     const navigate = useNavigate();
 
-    const goDetail = (id: number | string) => {
+    const goDetail = async (id: number | string) => {
+        const roomId = typeof id === 'number' ? id : Number(id);
+        if (!roomId || isNaN(roomId)) return;
+        
         // 먼저 읽음 처리 → 하이라이트 즉시 제거
         onRead?.(id);
+        
+        // 실제 API 호출로 읽음 처리
+        try {
+            await markRoomRead(roomId);
+            // 읽음 이벤트 발행 (다른 컴포넌트들도 업데이트되도록)
+            emitMessageRead(roomId);
+        } catch (error) {
+            console.warn('[MessageDropdown] 읽음 처리 실패:', error);
+        }
+        
         // 드롭다운 닫고 상세 이동
         emitHideDropdowns();
-        navigate(`/messages/${id}`);
+        navigate(`/messages/${roomId}`);
     };
 
     // 최신순 상위 N개

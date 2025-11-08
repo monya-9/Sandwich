@@ -16,7 +16,7 @@ import NotificationIcon from "./icons/NotificationIcon";
 import type { Message } from "../../../types/Message";
 import type { NotifyItem } from "../../../types/Notification";
 import { fetchRooms } from "../../../api/messages";
-import { onMessagesRefresh } from "../../../lib/messageEvents";
+import { onMessagesRefresh, onMessageRead } from "../../../lib/messageEvents";
 import { useNotificationStream } from "../../../hooks/useNotificationStream";
 
 // (옵션) 더미 확인용
@@ -111,6 +111,19 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     }, [notiReady, loadHeaderMessages]);
 
     useEffect(() => onMessagesRefresh(loadHeaderMessages), [loadHeaderMessages]);
+
+    // 읽음 이벤트 구독: 특정 방이 읽음 처리되었을 때 즉시 UI 업데이트
+    useEffect(() => {
+        const unsubscribe = onMessageRead((roomId) => {
+            setMessages((prev) =>
+                prev.map((m) => {
+                    const mRoomId = typeof (m as any).roomId === 'number' ? (m as any).roomId : m.id;
+                    return (mRoomId === roomId ? { ...m, isRead: true, unreadCount: 0 } : m);
+                })
+            );
+        });
+        return unsubscribe;
+    }, []);
 
     const markMessageRead = (id: number | string) => {
         setMessages((prev) =>

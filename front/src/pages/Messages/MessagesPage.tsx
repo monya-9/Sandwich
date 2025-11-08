@@ -131,7 +131,22 @@ const MessagesPage: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    React.useEffect(() => { setSelectedRoomId(routeRoomId); }, [routeRoomId]);
+    React.useEffect(() => { 
+        setSelectedRoomId(routeRoomId);
+        
+        // URL로 직접 들어왔을 때도 읽음 처리
+        if (routeRoomId && !callReadOnce.current[routeRoomId]) {
+            callReadOnce.current[routeRoomId] = true;
+            markRoomRead(routeRoomId).then(() => {
+                emitMessageRead(routeRoomId);
+                setItems((prev) =>
+                    prev.map((m) => (m.roomId === routeRoomId ? { ...m, isRead: true, unreadCount: 0 } : m)),
+                );
+            }).catch((e) => {
+                console.warn("[read] markRoomRead failed (URL direct):", e);
+            });
+        }
+    }, [routeRoomId]);
 
     const handleSelect = async (roomId: number) => {
         setSelectedRoomId(roomId);
