@@ -117,8 +117,8 @@ const MessagesPage: React.FC = () => {
 
     React.useEffect(() => {
         const handler = async (detail?: { roomId?: number; reason?: string }) => {
-            // 디테일 창이 열려있고 특정 방의 메시지가 업데이트된 경우, 해당 방의 메타만 즉시 업데이트
-            if (detail?.roomId && selectedRoomId === detail.roomId) {
+            // 특정 방의 메시지가 업데이트된 경우, 해당 방의 메타만 즉시 업데이트 (디테일 창 열림 여부와 무관)
+            if (detail?.roomId) {
                 try {
                     const meta = await fetchRoomMeta(detail.roomId);
                     setItems((prev) => {
@@ -144,7 +144,7 @@ const MessagesPage: React.FC = () => {
                 }
             }
             
-            // 전체 리스트는 디바운스 후 업데이트
+            // 전체 리스트는 디바운스 후 업데이트 (다른 방의 변경사항 반영)
             if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
             refreshTimerRef.current = window.setTimeout(() => {
                 loadFirstPage();
@@ -157,7 +157,7 @@ const MessagesPage: React.FC = () => {
             unsubscribe?.();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRoomId]);
+    }, []);
 
     React.useEffect(() => { 
         setSelectedRoomId(routeRoomId);
