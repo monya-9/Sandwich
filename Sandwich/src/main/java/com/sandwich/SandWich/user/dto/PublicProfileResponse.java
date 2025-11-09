@@ -11,5 +11,6 @@ public record PublicProfileResponse(
         String position,
         List<String> interests,
         String profileImage,
-        String coverImage
+        String coverImage,
+        String bio
 ) {}
