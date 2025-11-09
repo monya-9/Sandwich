@@ -1,5 +1,6 @@
 // src/api/reco.ts
 // 외부 AI 추천 API 호출 유틸
+import api from './axiosInstance';
 
 export type RecoItem = {
 	project_id: number;
@@ -52,26 +53,41 @@ export async function fetchUserRecommendations(userId: number, baseUrl?: string)
 }
 
 /**
- * 주간 TOP 프로젝트 목록(ID+score)
- * 로그인 여부와 무관하게 공개 API 사용
+ * 주간 TOP 프로젝트 응답 타입 (백엔드 API 응답)
  */
-export async function fetchWeeklyTop(baseUrl?: string): Promise<RecoItem[]> {
-	const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+export type WeeklyTopResponse = {
+	week: string | null;
+	total: number;
+	content: WeeklyTopProject[];
+};
 
-	if (isLocalDev) {
-		// 로컬 개발에서는 프록시만 사용 (외부 직접 호출 금지: CORS 방지)
-		const res = await fetch(`/ext/reco/top/week`, { credentials: "omit" });
-		if (!res.ok) throw new Error(`주간 TOP 프록시 조회 실패: ${res.status}`);
-		const json = await res.json();
-		return parseReco(json);
-	}
+export type WeeklyTopProject = {
+	id: number;
+	title: string;
+	description: string | null;
+	coverUrl: string | null;
+	isTeam: boolean | null;
+	username: string | null;
+	shareUrl: string | null;
+	qrImageUrl: string | null;
+	owner: {
+		id: number;
+		nickname: string;
+		avatarUrl: string | null;
+		username: string;
+	} | null;
+};
 
-	// 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용; 기본값 없음)
-	const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
-	if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
-	const directUrl = `${AI_BASE}/api/reco/top/week`;
-	const res = await fetch(directUrl, { credentials: "omit" });
-	if (!res.ok) throw new Error(`주간 TOP 조회 실패: ${res.status}`);
-	const json = await res.json();
-	return parseReco(json);
+/**
+ * 주간 TOP 프로젝트 목록 (백엔드 API 호출)
+ * 백엔드가 AI API를 호출하고 DB에서 프로젝트 데이터를 가져와서 반환
+ */
+export async function fetchWeeklyTop(): Promise<WeeklyTopResponse> {
+	const response = await api.get('/reco/top/week');
+	const json = response.data;
+	return {
+		week: json.week || null,
+		total: json.total || 0,
+		content: Array.isArray(json.content) ? json.content : [],
+	};
 } 

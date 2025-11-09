@@ -81,6 +81,7 @@ export type RoomSummary = {
     lastContent: string;
     lastAt: string;
     unreadCount: number;
+    partnerAvatarUrl?: string | null;
 };
 
 export type RoomParticipant = {
@@ -214,6 +215,7 @@ export async function fetchRooms(page = 0, size = 20) {
         lastContent: r.lastMessagePreview,
         lastAt: r.lastMessageAt,
         unreadCount: r.unreadCount,
+        partnerAvatarUrl: r.partnerAvatarUrl,
     }));
     return list;
 }

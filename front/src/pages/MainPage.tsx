@@ -301,6 +301,17 @@ const MainPage = () => {
     }
   };
 
+  const handleQuickSortToSandwichPick = () => {
+    setSelectedSort('샌드위치 픽');
+    setSelectedUploadTime('전체기간');
+    try {
+      sessionStorage.setItem('mainPage:selectedSort', '샌드위치 픽');
+      sessionStorage.setItem('mainPage:selectedUploadTime', '전체기간');
+    } catch {
+      // sessionStorage 사용 불가 시 무시
+    }
+  };
+
   // 카테고리 필터 적용 (실제 데이터 사용)
   // TODO: 백엔드에서 categories 데이터가 추가되면 필터링 활성화
   // 현재는 categories 데이터가 없어서 '전체'와 동일하게 모든 프로젝트 표시
@@ -366,14 +377,70 @@ const MainPage = () => {
         {/* 메인 그리드 */}
         {useReco ? (
           hasReco ? (
-            <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
+            gridPrimary.length > 0 ? (
+              <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
+            ) : (
+              <div className="px-3 py-8 md:py-12 lg:py-[50px]">
+                <div className="flex justify-between items-center mb-3 md:mb-4">
+                  <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black dark:text-gray-100">{gridTitle}</h2>
+                  <button
+                    onClick={handleOpenSortModal}
+                    className="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 lg:px-4 py-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 whitespace-nowrap flex-shrink-0"
+                  >
+                    ↕ 정렬
+                  </button>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 md:py-16 lg:py-20 text-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base lg:text-lg mb-4">
+                    선택한 조건에 맞는 프로젝트가 없습니다.
+                  </p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs md:text-sm mb-6">
+                    다른 정렬 방식으로 변경해보세요.
+                  </p>
+                  <button
+                    onClick={handleQuickSortToSandwichPick}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-medium transition-colors"
+                  >
+                    샌드위치 픽으로 보기
+                  </button>
+                </div>
+              </div>
+            )
           ) : (
             <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
               {recoError ? recoError : 'AI 추천을 불러오는 중입니다…'}
             </div>
           )
         ) : (
-          <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
+          gridPrimary.length > 0 ? (
+            <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
+          ) : (
+            <div className="px-3 py-8 md:py-12 lg:py-[50px]">
+              <div className="flex justify-between items-center mb-3 md:mb-4">
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black dark:text-gray-100">{gridTitle}</h2>
+                <button
+                  onClick={handleOpenSortModal}
+                  className="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 lg:px-4 py-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 whitespace-nowrap flex-shrink-0"
+                >
+                  ↕ 정렬
+                </button>
+              </div>
+              <div className="flex flex-col items-center justify-center py-12 md:py-16 lg:py-20 text-center">
+                <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base lg:text-lg mb-4">
+                  선택한 조건에 맞는 프로젝트가 없습니다.
+                </p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs md:text-sm mb-6">
+                  다른 정렬 방식으로 변경해보세요.
+                </p>
+                <button
+                  onClick={handleQuickSortToSandwichPick}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-medium transition-colors"
+                >
+                  샌드위치 픽으로 보기
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {/* 다른 섹션은 항상 표시 */}

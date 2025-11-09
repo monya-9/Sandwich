@@ -72,6 +72,9 @@ function isPublicApiRequest(config: any): boolean {
             // Discovery
             /^\/discovery\/hot-developers(\?|$)/,
             
+            // 추천 (Reco)
+            /^\/reco\/top\/week(\?|$)/,
+            
             // 메타 정보
             /^\/meta\//,
         ];

@@ -60,27 +60,31 @@ const SortModal: React.FC<Props> = ({
             ))}
           </div>
         </div>
-        <hr className="w-full border-t border-gray-200 mx-0 mb-3 md:mb-4" />
-
-        {/* 업로드 시간 */}
-        <div className="mb-4 md:mb-6">
-          <p className="font-medium mb-2 text-sm md:text-base">업로드 시간</p>
-          <div className="flex flex-wrap gap-2">
-            {timeOptions.map((option) => (
-              <button
-                key={option}
-                onClick={() => setSelectedUploadTime(option)}
-                className={`${commonButtonStyle} ${
-                    selectedUploadTime === option
-                      ? 'bg-green-600 text-white border-green-600'
-                      : 'bg-white text-black border-green-600 hover:bg-[#F2F2F2]'
-                  }`}                  
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
+        
+        {/* 업로드 시간 - 최신순 또는 추천순일 때만 표시 */}
+        {selectedSort !== '샌드위치 픽' && (
+          <>
+            <hr className="w-full border-t border-gray-200 mx-0 mb-3 md:mb-4" />
+            <div className="mb-4 md:mb-6">
+              <p className="font-medium mb-2 text-sm md:text-base">업로드 시간</p>
+              <div className="flex flex-wrap gap-2">
+                {timeOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => setSelectedUploadTime(option)}
+                    className={`${commonButtonStyle} ${
+                        selectedUploadTime === option
+                          ? 'bg-green-600 text-white border-green-600'
+                          : 'bg-white text-black border-green-600 hover:bg-[#F2F2F2]'
+                      }`}                  
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
     
         <hr className="w-full border-t border-gray-200 mx-0 mb-3 md:mb-4" />
 
