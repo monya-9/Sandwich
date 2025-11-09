@@ -171,7 +171,7 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
     useEffect(() => {
         const currentProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
             ? weeklyTopProjects.slice(0, 15)
-            : projects.slice(0, 15);
+            : [];
             
         if (currentProjects.length > 1) {
             startAutoScroll();
@@ -182,7 +182,7 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
                 clearInterval(autoScrollRef.current);
             }
         };
-    }, [projects.length, weeklyTopProjects, startAutoScroll]);
+    }, [weeklyTopProjects, startAutoScroll]);
 
     // WeeklyTopProject를 Project 타입으로 변환
     function convertWeeklyTopToProject(wp: WeeklyTopProject): Project {
@@ -283,10 +283,10 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
         });
     }, []);
 
-    // 표시 소스 선택: 주간 TOP 데이터가 준비되면 그것을 우선 사용
+    // 표시 소스 선택: 주간 TOP API에서만 데이터 가져오기
     const displayProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
         ? weeklyTopProjects.slice(0, 15)
-        : projects.slice(0, 15);
+        : [];
 
     // 버튼 위치 계산 (카드 컨테이너 중앙)
     const buttonTop = '50%';
@@ -383,10 +383,9 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
             </div>
         </section>
     );
-}, (prevProps, nextProps) => {
-    // projects 배열이 동일하면 리렌더링 방지
-    return prevProps.projects.length === nextProps.projects.length &&
-           prevProps.projects.every((p, i) => p.id === nextProps.projects[i]?.id);
+}, () => {
+    // 주간 TOP API만 사용하므로 props 비교 불필요 (항상 true 반환하여 리렌더링 허용)
+    return false;
 });
 
 MainHeroSection.displayName = 'MainHeroSection';

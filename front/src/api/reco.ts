@@ -1,5 +1,6 @@
 // src/api/reco.ts
 // 외부 AI 추천 API 호출 유틸
+import api from './axiosInstance';
 
 export type RecoItem = {
 	project_id: number;
@@ -82,11 +83,8 @@ export type WeeklyTopProject = {
  * 백엔드가 AI API를 호출하고 DB에서 프로젝트 데이터를 가져와서 반환
  */
 export async function fetchWeeklyTop(): Promise<WeeklyTopResponse> {
-	const res = await fetch('/api/reco/top/week', { credentials: 'include' });
-	if (!res.ok) {
-		throw new Error(`주간 TOP 조회 실패: ${res.status}`);
-	}
-	const json = await res.json();
+	const response = await api.get('/reco/top/week');
+	const json = response.data;
 	return {
 		week: json.week || null,
 		total: json.total || 0,
