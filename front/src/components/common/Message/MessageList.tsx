@@ -26,6 +26,8 @@ const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
                 ) : messages.map((msg) => {
                     const roomId = (msg as any).roomId ?? msg.id;
                     const name = (msg as any).title ?? msg.sender ?? "사용자";
+                    const email = (msg as any).email as string | undefined;
+                    const avatarUrl = (msg as any).avatarUrl as string | undefined;
                     const createdAt = msg.createdAt;
 
                     // unread 계산: 우선순위 unreadCount → isRead
@@ -41,7 +43,7 @@ const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
                             ? "min-w-[18px] h-4 px-1.5 text-[10px]"
                             : "min-w-[16px] h-4 px-1 text-[11px]";
 
-                    const initial = (name?.[0] || "?").toUpperCase();
+                    const initial = (name?.[0] || email?.[0] || "?").toUpperCase();
 
                     return (
                         <button
@@ -54,7 +56,20 @@ const MessageList: React.FC<Props> = ({ messages, selectedId, onSelect }) => {
                         >
                             <div className="flex items-start gap-2 sm:gap-3">
                                 {/* 아바타 */}
-                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-xs sm:text-sm shrink-0">
+                                {avatarUrl ? (
+                                    <img
+                                        src={avatarUrl}
+                                        alt={name}
+                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                            const fallback = target.nextElementSibling as HTMLElement;
+                                            if (fallback) fallback.style.display = 'flex';
+                                        }}
+                                    />
+                                ) : null}
+                                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-xs sm:text-sm shrink-0 ${avatarUrl ? 'hidden' : ''}`}>
                                     {initial}
                                 </div>
 

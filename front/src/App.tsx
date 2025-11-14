@@ -30,6 +30,7 @@ import ChallengeDetailPage from "./pages/challenge/ChallengeDetailPage";
 // OAuth 콜백/스텝
 import OAuthSuccessHandler from "./components/Auth/OAuth/OAuthSuccessHandler";
 import OAuthErrorHandler from "./components/Auth/OAuth/OAuthErrorHandler";
+import OAuthCallbackHandler from "./components/Auth/OAuth/OAuthCallbackHandler";
 import ProfileStep from "./components/Auth/OAuth/ProfileStep";
 
 // ✅ 모든 import를 최상단으로
@@ -46,6 +47,7 @@ import PortfolioProjectDetailPage from "./pages/challenge/PortfolioProjectDetail
 import CodeSubmissionDetailPage from "./pages/challenge/CodeSubmissionDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import UserPublicProfilePage from "./pages/UserPublicProfilePage";
+import PublicCareerDetailsPage from "./pages/PublicCareerDetailsPage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
 import AccountSearchPage from "./pages/AccountSearchPage";
 import ProjectDetailLightboxPage from "./pages/ProjectDetailLightboxPage";
@@ -204,6 +206,7 @@ function App() {
 
                                 {/* 공개 사용자 프로필 */}
                                 <Route path="/users/:id" element={<UserPublicProfilePage />} />
+                                <Route path="/profile/:userId/careers" element={<PublicCareerDetailsPage />} />
 
                                 {/* ✅ 어드민 보호 라우트: ROLE_ADMIN 아닐 시 전체 차단 및 리다이렉트 */}
                                 <Route path="/admin/*" element={<RequireAdmin />}> 
@@ -223,6 +226,8 @@ function App() {
 
                             <Route path="join" element={<JoinPage />} />
                             <Route path="login" element={<LoginPage />} />
+                            {/* Spring Security OAuth2 기본 콜백 경로 */}
+                            <Route path="/login/oauth2/code/:provider" element={<OAuthCallbackHandler />} />
                             <Route path="/oauth2/success" element={<OAuthSuccessHandler />} />
                             <Route path="/oauth2/error" element={<OAuthErrorHandler />} />
                             <Route path="/oauth/profile-step" element={<ProfileStep />} />

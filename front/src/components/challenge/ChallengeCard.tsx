@@ -1,5 +1,5 @@
 // src/components/challenge/ChallengeCard.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { isAdmin } from "../../utils/authz";
 import { deleteChallenge } from "../../api/challengeApi";
@@ -39,10 +39,15 @@ const detailHref = (type: "CODE" | "PORTFOLIO", id: number) =>
 
 export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
     const href = item.ctaHref ?? detailHref(item.type, item.id);
-    const admin = isAdmin();
     const navigate = useNavigate();
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false);
+    const [admin, setAdmin] = useState(false);
+
+    // ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+    useEffect(() => {
+        isAdmin().then(setAdmin);
+    }, []);
 
     return (
         <section className="mb-8">

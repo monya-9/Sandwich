@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import api from "../../../api/axiosInstance";
 import LikedUsersModal from "./LikedUsersModal";
 import Toast from "../../common/Toast";
+import { AuthContext } from "../../../context/AuthContext";
 
 interface CommentLikeActionProps {
   commentId: number;
@@ -18,8 +19,8 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
   const [loading, setLoading] = useState(false);
   const [showLikedUsers, setShowLikedUsers] = useState(false);
 
-  // 로그인 상태 판단
-  const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   // 좋아요 상태 불러오기
   useEffect(() => {
@@ -48,6 +49,9 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
   }, [toast]);
 
   const handleLike = async () => {
+    // 인증 확인 중이면 대기
+    if (isAuthChecking) return;
+    
     if (!isLoggedIn) {
       setErrorToast({
         visible: true,
@@ -59,15 +63,6 @@ export default function CommentLikeAction({ commentId }: CommentLikeActionProps)
     setLoading(true);
     
     try {
-      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-      if (!token) {
-        setErrorToast({
-          visible: true,
-          message: "로그인이 필요합니다."
-        });
-        return;
-      }
-
       const res = await api.post(
         "/likes",
         { targetType: "COMMENT", targetId: commentId }

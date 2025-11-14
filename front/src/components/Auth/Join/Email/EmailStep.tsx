@@ -59,7 +59,10 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
 
     const handleVerifyCode = async () => {
         try {
-            const res = await api.post("/email/verify", { email, code });
+            // ✅ public API: 이메일 인증은 인증 없이 호출
+            const res = await api.post("/email/verify", { email, code }, {
+                headers: { 'X-Skip-Auth-Refresh': '1' }
+            });
             if (res.data?.success === true) {
                 setIsVerified(true);
                 setVerifyStatus("success");
@@ -92,10 +95,16 @@ const EmailStep = ({ onNext, onPrev }: Props) => {
         }
         try {
             setSending(true);
+            // ✅ public API: 이메일 전송은 인증 없이 호출 (recaptcha 토큰 포함)
             await api.post(
                 "/email/send",
                 { email },
-                { headers: { "X-Recaptcha-Token": captcha } }
+                { 
+                    headers: { 
+                        "X-Recaptcha-Token": captcha,
+                        'X-Skip-Auth-Refresh': '1'
+                    } 
+                }
             );
 
             setEmailSent(true);

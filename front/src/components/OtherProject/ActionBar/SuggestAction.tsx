@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactDOM from "react-dom";
 import { FaHandshake } from "react-icons/fa";
 import { FaCommentDots, FaRegCommentDots } from "react-icons/fa6";
@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import ProposalAction from "./ProposalAction";
 import JobOfferAction from "./JobOfferAction";
 import api from "../../../api/axiosInstance";
+import { AuthContext } from "../../../context/AuthContext";
 
  type Props = {
   targetUserId?: number;
@@ -36,6 +37,9 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
   const popupRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   // 타겟 사용자 공개 프로필 가져오기(이메일/닉네임/프로필이미지)
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -130,8 +134,10 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
   const tooltipVisible = hover || tooltipHover;
 
   const ensureLogin = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) {
+    // 인증 확인 중이면 대기
+    if (isAuthChecking) return false;
+    
+    if (!isLoggedIn) {
       setShowLoginPrompt(true);
       return false;
     }
@@ -188,20 +194,40 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
             onClick={e => e.stopPropagation()}
           >
             <div className="absolute -right-2 top-5 w-4 h-4 bg-white rotate-45 rounded-[2px]" />
-            <div className="grid grid-cols-[24px_1fr_auto] items-center w-full gap-x-3">
+            <button
+              className="grid grid-cols-[24px_1fr_auto] items-center w-full gap-x-3 hover:bg-gray-50 rounded px-2 py-2 transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!ensureLogin()) return;
+                setHover(false);
+                setTooltipHover(false);
+                setIsModalOpen(true);
+                setProposalOpen(true);
+              }}
+            >
               <FaHandshake className="text-[20px]" />
-              <span className="font-gmarket font-normal text-[16px] text-black leading-tight">프로젝트 의뢰 및 프리랜서</span>
+              <span className="font-gmarket font-normal text-[16px] text-black leading-tight text-left">프로젝트 의뢰 및 프리랜서</span>
               <span className="w-6 h-6 flex items-center justify-center rounded-full justify-self-end" style={{ backgroundColor: "#10b981" }}>
                 <svg width="14" height="14" viewBox="0 0 12 12"><polyline points="3,6.5 5,8.5 9,3.5" fill="none" stroke="#fff" strokeWidth="2.4" /></svg>
               </span>
-            </div>
-            <div className="grid grid-cols-[24px_1fr_auto] items-center w-full gap-x-3">
+            </button>
+            <button
+              className="grid grid-cols-[24px_1fr_auto] items-center w-full gap-x-3 hover:bg-gray-50 rounded px-2 py-2 transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!ensureLogin()) return;
+                setHover(false);
+                setTooltipHover(false);
+                setIsModalOpen(true);
+                setJobOfferOpen(true);
+              }}
+            >
               <BiBriefcase className="text-[20px]" />
-              <span className="font-gmarket font-normal text-[16px] text-black leading-tight">구직</span>
+              <span className="font-gmarket font-normal text-[16px] text-black leading-tight text-left">구직</span>
               <span className="w-6 h-6 flex items-center justify-center rounded-full justify-self-end" style={{ backgroundColor: "#10b981" }}>
                 <svg width="14" height="14" viewBox="0 0 12 12"><polyline points="3,6.5 5,8.5 9,3.5" fill="none" stroke="#fff" strokeWidth="2.4" /></svg>
               </span>
-            </div>
+            </button>
           </div>
         </>
       )}

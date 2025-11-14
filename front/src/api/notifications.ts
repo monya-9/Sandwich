@@ -118,8 +118,6 @@ const toStr = (v: unknown) => (v == null ? undefined : String(v));
 /** 알림 목록 페이징 조회 (+ 행위자 정보 수화) */
 export async function fetchNotifications(opt: { size?: number; cursor?: string } = {}) {
     const { size = 20, cursor } = opt;
-
-    console.log("[API] Fetching notifications with params:", { size, cursor });
     
     // baseURL이 "/api"이므로 선행 슬래시 없이!
     const { data } = await api.get<NotificationPageDTO>("notifications", {

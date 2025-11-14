@@ -1,15 +1,16 @@
 package com.sandwich.SandWich.oauth.service;
 
-import com.sandwich.SandWich.common.exception.exceptiontype.EmailAlreadyExistsException;
 import com.sandwich.SandWich.oauth.model.CustomOAuth2User;
 import com.sandwich.SandWich.user.domain.User;
 import com.sandwich.SandWich.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -65,16 +66,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // 3) 이메일 중복 + provider 불일치 차단
         Optional<User> byEmail = userRepository.findByEmailAndIsDeletedFalse(email);
         if (byEmail.isPresent() && !byEmail.get().getProvider().equals(provider)) {
-            log.warn("중복 이메일 시도: email={}, 기존 provider={}, 시도 provider={}", email, byEmail.get().getProvider(), provider);
-            throw new EmailAlreadyExistsException();
+            log.warn("중복 이메일 시도: email={}, 기존 provider={}, 시도 provider={}",
+                    email, byEmail.get().getProvider(), provider);
+
+            OAuth2Error error = new OAuth2Error(
+                    "email_already_exists",
+                    "이미 다른 로그인 방식으로 가입된 이메일입니다.",
+                    null
+            );
+            throw new OAuth2AuthenticationException(error);
         }
 
         // 4) provider+email로 기존 계정 조회
-        Optional<User> existingUser = userRepository.findByEmailAndProviderAndIsDeletedFalse(email, provider);
+        Optional<User> existingUser =
+                userRepository.findByEmailAndProviderAndIsDeletedFalse(email, provider);
+
+        // 없으면 새로 생성 (소셜 회원가입)
         if (existingUser.isEmpty()) {
             log.info("소셜 회원가입됨: {} ({})", email, provider);
 
-            // username 유니크 보장
             String baseUsername = (username != null && !username.isBlank())
                     ? username
                     : email.split("@")[0];
@@ -88,7 +98,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .isVerified(true)
                     .build();
 
-            userRepository.save(newUser);
+            try {
+                userRepository.save(newUser);
+            } catch (DataIntegrityViolationException e) {
+                log.error("소셜 회원가입 중 DB 제약 위반 발생 email={}, provider={}", email, provider, e);
+                OAuth2Error error = new OAuth2Error(
+                        "social_signup_failed",
+                        "소셜 계정 연동 중 오류가 발생했습니다.",
+                        null
+                );
+                throw new OAuth2AuthenticationException(error, e);
+            }
         }
 
         // 5) nameAttributeKey 결정 (email 선호, 없으면 login)

@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.challenge.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.Valid;
 import com.sandwich.SandWich.challenge.domain.*;
 import jakarta.validation.constraints.*;
@@ -132,6 +133,7 @@ public class SubmissionDtos {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder(toBuilder = true)
     public static class Item {
         private Long id;
@@ -152,6 +154,15 @@ public class SubmissionDtos {
         private Double totalScore;
         private CodeInfo code;   // ← 코드 챌린지용 상세 정보
         private PortfolioInfo portfolio; // ← 포트폴리오 메타
+
+        @lombok.Singular("asset")
+        private java.util.List<Asset> assets;
+
+        @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class Asset {
+            private String url;
+            private String mime;
+        }
 
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class CodeInfo {

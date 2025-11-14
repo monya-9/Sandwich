@@ -1,43 +1,43 @@
-function base64UrlDecode(input: string): string {
+import api from "../api/axiosInstance";
+
+// ✅ httpOnly 쿠키 기반: localStorage 토큰 체크 제거
+// 대신 서버 API로 권한 확인 (캐시 사용)
+
+let adminCheckCache: { isAdmin: boolean; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5분
+
+/**
+ * ✅ httpOnly 쿠키 기반: 서버 API로 관리자 권한 확인
+ * @returns Promise<boolean> - 관리자 권한 여부
+ */
+export async function isAdmin(): Promise<boolean> {
+    // 캐시 확인
+    if (adminCheckCache && Date.now() - adminCheckCache.timestamp < CACHE_DURATION) {
+        return adminCheckCache.isAdmin;
+    }
+
     try {
-        const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
-        const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, "=");
-        if (typeof window === "undefined") return Buffer.from(padded, "base64").toString("utf-8");
-        return decodeURIComponent(
-            Array.prototype.map
-                .call(atob(padded), (c: string) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-                .join("")
-        );
+        const { data } = await api.get("/users/me");
+        const roles = data.roles || [];
+        const isAdminUser = roles.includes("ROLE_ADMIN") || roles.includes("ADMIN");
+        
+        // 캐시 저장
+        adminCheckCache = { isAdmin: isAdminUser, timestamp: Date.now() };
+        
+        return isAdminUser;
     } catch {
-        return "";
+        // API 실패 시 false 반환
+        adminCheckCache = { isAdmin: false, timestamp: Date.now() };
+        return false;
     }
 }
 
-function decodeJwtPayload(token: string): any | null {
-    try {
-        const parts = token.split(".");
-        if (parts.length !== 3) return null;
-        const json = base64UrlDecode(parts[1]);
-        return JSON.parse(json);
-    } catch {
-        return null;
-    }
+/**
+ * 관리자 권한 캐시 무효화 (로그아웃 시 호출)
+ */
+export function clearAdminCache(): void {
+    adminCheckCache = null;
 }
 
-function includesAdmin(value: unknown): boolean {
-    if (!value) return false;
-    const asString = (v: unknown) => (typeof v === "string" ? v : Array.isArray(v) ? v.join(" ") : "");
-    const text = asString(value).toUpperCase();
-    return text.includes("ROLE_ADMIN") || text === "ADMIN" || text.split(/[ ,]/).includes("ADMIN");
-}
-
-export function isAdmin(): boolean {
-    const token = (typeof window !== "undefined" && (localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"))) || null;
-    if (!token) return false;
-    const payload = decodeJwtPayload(token);
-    if (!payload) return false;
-    const candidates = [payload.roles, payload.authorities, payload.auth, payload.scope, payload.scopes, payload.role];
-    return candidates.some(includesAdmin);
-}
 
 

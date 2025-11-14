@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
-import { StatusBadge, Countdown, SectionCard } from "../../components/challenge/common";
+import { SectionCard } from "../../components/challenge/common";
 import WinnersSection from "../../components/challenge/WinnersSection";
 import CodeWinnersSection from "../../components/challenge/CodeWinnersSection";
 import { isAdmin } from "../../utils/authz";
@@ -19,8 +19,13 @@ export default function ChallengeListPage() {
 	const [loading, setLoading] = useState(false);
 	const [pastLoading, setPastLoading] = useState(false);
 	const [autoRefreshing, setAutoRefreshing] = useState(false); // 🔥 자동 새로고침 상태
-	const admin = isAdmin();
+	const [admin, setAdmin] = useState(false);
 	const rolloverRef = useRef(false);
+	
+	// ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+	useEffect(() => {
+		isAdmin().then(setAdmin);
+	}, []);
 	
 	// 지난 챌린지 캐러셀 상태
 	const [pastChallengeIndex, setPastChallengeIndex] = useState(0);
@@ -33,7 +38,12 @@ export default function ChallengeListPage() {
 			.then((dynamicChallenges) => {
 				setChallenges(dynamicChallenges);
 			})
-			.catch((error) => {
+			.catch((error: any) => {
+				// ✅ AbortError는 정상 취소이므로 무시
+				if (error.name === 'AbortError' || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
+					console.log('🔄 챌린지 요청이 취소되었습니다 (새 요청으로 대체됨)');
+					return; // 에러 처리하지 않음
+				}
 				console.error('챌린지 데이터 로딩 실패:', error);
 				// 에러 시 기본 더미 데이터 유지
 			})
@@ -67,30 +77,19 @@ export default function ChallengeListPage() {
 	useEffect(() => {
 		const timers: number[] = [];
 		const now = Date.now();
-		let hasExpiredChallenge = false;
 		
 		// 타이머를 설정하는 헬퍼 함수
 		const setupTimer = (timeMs: number | undefined, label: string, challengeId: number, challengeType: string) => {
 			if (!timeMs) return;
 			
 			const delay = timeMs - now;
-			const timeDate = new Date(timeMs);
 			
 			if (delay <= 0) {
-				console.log(`⏰ [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 시간이 이미 지났습니다! (${timeDate.toLocaleString('ko-KR')})`);
-				hasExpiredChallenge = true;
 				return;
 			}
 			
-			console.log(`⏱️ [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 타이머 설정`);
-			console.log(`   → ${label} 시간: ${timeDate.toLocaleString('ko-KR')}`);
-			console.log(`   → 남은 시간: ${Math.floor(delay / 1000)}초 (${Math.floor(delay / 60000)}분)`);
-			
 			const t = window.setTimeout(async () => {
-				console.log(`🔔 [TIMER] ${challengeType} 챌린지 ID ${challengeId} - ${label} 도달! 자동으로 새로고침합니다.`);
-				
 				if (rolloverRef.current) {
-					console.log('⚠️ 이미 업데이트 중... 스킵');
 					return;
 				}
 				
@@ -105,13 +104,16 @@ export default function ChallengeListPage() {
 						getDynamicChallenges(),
 						getPastChallenges(),
 					]);
-					console.log(`✅ ${label} 자동 전환 완료!`);
 					setChallenges(freshCurrent);
 					setPastChallenges(freshPast);
 					
 					// Winners 섹션들도 새로고침하도록 커스텀 이벤트 발송
 					window.dispatchEvent(new CustomEvent('challengeStatusChanged'));
-				} catch (e) {
+				} catch (e: any) {
+					// ✅ AbortError는 정상 취소이므로 무시
+					if (e.name === 'AbortError' || e.code === 'ERR_CANCELED' || e.code === 'ECONNABORTED') {
+						return; // 에러 처리하지 않음
+					}
 					console.error('❌ 자동 새로고침 실패:', e);
 				} finally {
 					// 부드러운 전환을 위해 약간의 딜레이 후 로딩 해제
@@ -130,25 +132,37 @@ export default function ChallengeListPage() {
 				// 코드 챌린지: 마감 시간만 체크
 				setupTimer(c.expireAtMs, '진행 종료 (마감)', c.id, 'CODE');
 			} else if (c.type === 'PORTFOLIO') {
-				// 포트폴리오 챌린지: 3단계 모두 체크
-				console.log(`\n📋 [PORTFOLIO] 챌린지 ID ${c.id} 단계별 타이머 설정 중...`);
-				
+				// 포트폴리오 챌린지: 3단계 모두 타이머 설정
 				// 1단계: 제출 종료 → 투표대기
 				setupTimer(c.endAtMs, '제출 종료 (→ 투표대기)', c.id, 'PORTFOLIO');
 				
 				// 2단계: 투표 시작 → 투표중
 				setupTimer(c.voteStartAtMs, '투표 시작 (→ 투표중)', c.id, 'PORTFOLIO');
 				
-				// 3단계: 투표 종료 → 지난 챌린지
-				setupTimer(c.voteEndAtMs, '투표 종료 (→ 지난 챌린지)', c.id, 'PORTFOLIO');
-				
-				console.log(`✅ [PORTFOLIO] 챌린지 ID ${c.id} 모든 단계 타이머 설정 완료\n`);
+				// 3단계: 투표 종료 → 지난 챌린지 (최종 마감 시간만 타이머 설정)
+				// 중간 단계는 무시하고 최종 마감 시간만 체크 (무한 루프 방지)
+				setupTimer(c.voteEndAtMs || c.expireAtMs, '투표 종료 (→ 지난 챌린지)', c.id, 'PORTFOLIO');
 			}
 		});
 		
-		// 🔥 이미 마감된 챌린지가 있으면 즉시 새로고침
-		if (hasExpiredChallenge && !rolloverRef.current) {
-			console.log('🔄 이미 마감된 챌린지 발견! 즉시 새로고침합니다.');
+		// 🔥 이미 완전히 마감된 챌린지가 있으면 즉시 새로고침
+		// ⚠️ 중요: 중간 단계(제출 종료, 투표 시작)는 완전히 마감된 것이 아니므로 제외
+		// - CODE: expireAtMs (최종 마감)만 체크
+		// - PORTFOLIO: voteEndAtMs 또는 expireAtMs만 체크 (endAtMs는 중간 단계이므로 제외)
+		const hasFullyExpired = challenges.some(c => {
+			if (c.type === 'CODE') {
+				// 코드 챌린지: 최종 마감 시간만 체크
+				return c.expireAtMs && c.expireAtMs <= now;
+			} else if (c.type === 'PORTFOLIO') {
+				// 포트폴리오 챌린지: 최종 마감 시간만 체크 (voteEndAtMs 또는 expireAtMs)
+				// ⚠️ endAtMs는 제출 종료 시간(중간 단계)이므로 제외!
+				const finalExpireTime = c.voteEndAtMs || c.expireAtMs;
+				return finalExpireTime && finalExpireTime <= now;
+			}
+			return false;
+		});
+		
+		if (hasFullyExpired && !rolloverRef.current) {
 			rolloverRef.current = true;
 			setAutoRefreshing(true); // 🔥 로딩 상태 표시
 			
@@ -159,14 +173,23 @@ export default function ChallengeListPage() {
 				getPastChallenges()
 			])
 				.then(([_, freshCurrent, freshPast]) => {
-					setChallenges(freshCurrent as any);
-					setPastChallenges(freshPast as any);
-					console.log('✅ 마감된 챌린지 제거 완료!');
+					// ✅ 실제로 챌린지가 변경되었는지 확인 (무한 루프 방지)
+					const currentIds = challenges.map(c => c.id).sort().join(',');
+					const freshIds = (freshCurrent as any[]).map(c => c.id).sort().join(',');
 					
-					// Winners 섹션들도 새로고침하도록 커스텀 이벤트 발송
-					window.dispatchEvent(new CustomEvent('challengeStatusChanged'));
+					if (currentIds !== freshIds) {
+						setChallenges(freshCurrent as any);
+						setPastChallenges(freshPast as any);
+						
+						// Winners 섹션들도 새로고침하도록 커스텀 이벤트 발송
+						window.dispatchEvent(new CustomEvent('challengeStatusChanged'));
+					}
 				})
-				.catch((e) => {
+				.catch((e: any) => {
+					// ✅ AbortError는 정상 취소이므로 무시
+					if (e.name === 'AbortError' || e.code === 'ERR_CANCELED' || e.code === 'ECONNABORTED') {
+						return; // 에러 처리하지 않음
+					}
 					console.error('❌ 즉시 새로고침 실패:', e);
 				})
 				.finally(() => {
@@ -193,7 +216,12 @@ export default function ChallengeListPage() {
 				setPastChallenges(pastData);
 				setPastChallengeIndex(0); // 데이터 로드 시 인덱스 초기화
 			})
-			.catch((error) => {
+			.catch((error: any) => {
+				// ✅ AbortError는 정상 취소이므로 무시
+				if (error.name === 'AbortError' || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
+					console.log('🔄 지난 챌린지 요청 취소됨 (새 요청으로 대체)');
+					return; // 에러 처리하지 않음
+				}
 				console.error('지난 챌린지 데이터 로딩 실패:', error);
 			})
 			.finally(() => {
@@ -422,3 +450,4 @@ export default function ChallengeListPage() {
 		</div>
 	);
 }
+

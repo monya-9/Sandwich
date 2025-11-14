@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/axiosInstance";
 import PublicWorkGrid from "../components/Profile/PublicWorkGrid";
@@ -9,6 +9,7 @@ import Toast from "../components/common/Toast";
 import { RepresentativeCareer } from "../api/userApi";
 import { fetchUserProjects, fetchProjectsMeta } from "../api/projects";
 import FollowListModal from "../components/Profile/FollowListModal";
+import { AuthContext } from "../context/AuthContext";
 
 // 공개 프로필 응답 타입(백엔드에 email 추가됨)
 type PublicProfile = {
@@ -16,6 +17,7 @@ type PublicProfile = {
   nickname: string | null;
   username?: string | null;
   email?: string | null;
+  bio?: string | null;
   position?: string | null;
   interests?: string[] | null;
   profileImage?: string | null;
@@ -29,6 +31,9 @@ export default function UserPublicProfilePage() {
   const { id } = useParams<{ id: string }>();
   const userId = id ? Number(id) : 0;
   const navigate = useNavigate();
+
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   const [data, setData] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,22 +87,28 @@ export default function UserPublicProfilePage() {
   useEffect(() => {
     (async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (!token || !userId || isSelf) return setIsFollowing(false);
+        // 인증 확인 중이거나 로그인하지 않았으면 스킵
+        if (isAuthChecking || !isLoggedIn || !userId || isSelf) {
+          setIsFollowing(false);
+          return;
+        }
         const r = await api.get<{ isFollowing: boolean }>(`/users/${userId}/follow-status`);
         setIsFollowing(Boolean((r as any).data?.isFollowing));
       } catch {
         setIsFollowing(false);
       }
     })();
-  }, [userId, isSelf]);
+  }, [userId, isSelf, isLoggedIn, isAuthChecking]);
 
   // 대표 커리어 로드
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`);
+        // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`, {
+          timeout: 30000
+        });
         if (mounted) {
           setRepCareers(response.data);
         }
@@ -149,17 +160,31 @@ export default function UserPublicProfilePage() {
 
         // 3. 해당 사용자의 프로젝트가 컬렉션에 저장된 횟수 가져오기
         try {
-          const { data } = await api.get(`/profiles/${userId}/collection-count`);
+          // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+          const { data } = await api.get(`/profiles/${userId}/collection-count`, {
+            timeout: 30000
+          });
           if (mounted) {
             setPublicCollectionsCount(data?.savedCount || 0);
           }
-        } catch (e) {
-          console.error("컬렉션 저장 횟수 로드 실패:", e);
+        } catch (e: any) {
+          // ✅ 401 에러는 백엔드 설정 문제일 수 있음 (로그인 필요할 수도)
+          if (e.response?.status === 401) {
+            console.warn("컬렉션 저장 횟수 조회 실패 (401): 로그인이 필요할 수 있습니다.");
+          } else {
+            console.error("컬렉션 저장 횟수 로드 실패:", e);
+          }
+          if (mounted) {
+            setPublicCollectionsCount(0); // 기본값 설정
+          }
         }
 
         // 4. 팔로워/팔로잉 수 가져오기
         try {
-          const { data } = await api.get(`/users/${userId}/follow-counts`);
+          // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
+          const { data } = await api.get(`/users/${userId}/follow-counts`, {
+            timeout: 30000
+          });
           if (mounted) {
             setFollowerCount(data?.followerCount || 0);
             setFollowingCount(data?.followingCount || 0);
@@ -180,8 +205,8 @@ export default function UserPublicProfilePage() {
   }, [userId]);
 
   const toggleFollow = async () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) return navigate("/login");
+    if (isAuthChecking) return;
+    if (!isLoggedIn) return navigate("/login");
     if (!userId || isSelf) return;
     try {
       if (isFollowing) {
@@ -199,8 +224,8 @@ export default function UserPublicProfilePage() {
   };
 
   const suggest = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) return navigate("/login");
+    if (isAuthChecking) return;
+    if (!isLoggedIn) return navigate("/login");
     // other-project의 SuggestAction 모달을 열도록 이벤트 발행
     window.dispatchEvent(new Event("suggest:open"));
   };
@@ -307,9 +332,28 @@ export default function UserPublicProfilePage() {
             </div>
 
             {/* 소개/커리어 */}
-            <div className="mt-20" />
+            <div className="mt-6" />
+            
+            {/* 소개 */}
+            {data?.bio && (
+              <div className="mt-4 mb-6 text-[14px] md:text-[16px]">
+                <div className="text-black/90 dark:text-white/90 mb-2">소개</div>
+                <div className="text-black/80 dark:text-white/80 whitespace-pre-line">{data.bio}</div>
+              </div>
+            )}
+            
             <div className="mt-2 text-[14px] md:text-[16px]">
-              <div className="text-black/90">커리어</div>
+              <div className="flex items-center justify-between">
+                <div className="text-black/90 dark:text-white/90">커리어</div>
+                {repCareers.length > 0 && (
+                  <button
+                    onClick={() => navigate(`/profile/${userId}/careers`)}
+                    className="text-[14px] text-black/60 hover:text-black/80 transition-colors"
+                  >
+                    자세히 보기 &gt;
+                  </button>
+                )}
+              </div>
               
               <div className="mt-4 space-y-4">
                 {repCareers.length > 0 ? (

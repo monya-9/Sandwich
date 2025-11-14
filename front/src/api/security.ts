@@ -98,5 +98,3 @@ export async function adminRevokeAllDevicesByUser(userId: number): Promise<{ rev
     );
     return res.data;
 }
-
-

@@ -223,7 +223,8 @@ public class SubmissionService {
                 s,
                 grouped.getOrDefault(s.getId(), List.of()),
                 ownerById.get(s.getOwnerId()),
-                toCodeInfo(codeBySubId.get(s.getId()))
+                toCodeInfo(codeBySubId.get(s.getId())),
+                false
         ));
     }
 
@@ -243,14 +244,15 @@ public class SubmissionService {
         var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(List.of(submissionId));
         var owner = userRepo.findById(s.getOwnerId()).orElse(null);
         var code = codeRepo.findBySubmission_Id(submissionId).orElse(null);
-        return mapItem(s, assets, owner, toCodeInfo(code));
+        return mapItem(s, assets, owner, toCodeInfo(code), true);
     }
 
     // mapItem 시그니처 변경: language(String) 대신 codeInfo를 넣고, 하위호환 위해 Item.language도 채워줌
     private SubmissionDtos.Item mapItem(Submission s,
                                         List<SubmissionAsset> assets,
                                         User owner,
-                                        SubmissionDtos.Item.CodeInfo codeInfo) {
+                                        SubmissionDtos.Item.CodeInfo codeInfo,
+                                        boolean includeAssets) {
 
         String cover = (s.getCoverUrl() != null && !s.getCoverUrl().isBlank())
                 ? s.getCoverUrl()
@@ -290,18 +292,23 @@ public class SubmissionService {
             } catch (Exception ignore) {}
         }
 
-        return SubmissionDtos.Item.from(s).toBuilder()
+        var builder = SubmissionDtos.Item.from(s).toBuilder()
                 .coverUrl(cover)
                 .assetCount(count)
                 .viewCount(viewCnt)
                 .likeCount(likeCnt)
                 .commentCount(cmtCnt)
                 .owner(ownerDto)
-                .language(codeInfo == null ? null : codeInfo.getLanguage()) // 하위호환
-                .code(codeInfo)            // ← 코드 챌린지 세부정보(엔트리포인트 포함)
-                .portfolio(pinfo)          // ← 포트폴리오 메타(언어/스택)
-                .totalScore(0.0)
-                .build();
+                .language(codeInfo == null ? null : codeInfo.getLanguage())
+                .code(codeInfo)
+                .portfolio(pinfo)
+                .totalScore(0.0);
+
+        if (includeAssets) {
+            builder.assets(toAssetDtos(assets)); // ★ 상세일 때만 채움
+        }
+
+        return builder.build();
     }
 
     private Long currentSafeUserId() {
@@ -450,5 +457,17 @@ public class SubmissionService {
         try { assetRepo.deleteBySubmission_IdIn(ids); } catch (Exception ignore) {}
 
         submissionRepo.delete(s);
+    }
+
+    private java.util.List<SubmissionDtos.Item.Asset> toAssetDtos(
+            java.util.List<SubmissionAsset> assets
+    ) {
+        if (assets == null || assets.isEmpty()) return java.util.List.of();
+        return assets.stream()
+                .map(a -> SubmissionDtos.Item.Asset.builder()
+                        .url(a.getUrl())
+                        .mime(a.getMime())
+                        .build())
+                .toList();
     }
 }

@@ -3,8 +3,7 @@ import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import type { Project } from '../../types/Project';
 import { resolveCover, swapJpgPng } from '../../utils/getProjectCover';
 import { Link } from 'react-router-dom';
-import { fetchWeeklyTop } from '../../api/reco';
-import { fetchProjectFeed } from '../../api/projects';
+import { fetchWeeklyTop, type WeeklyTopProject } from '../../api/reco';
 import { fetchProjectDetail } from '../../api/projectApi';
 
 /** 이미지 컴포넌트: jpg 실패 시 png로 한번 더 시도 */
@@ -172,7 +171,7 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
     useEffect(() => {
         const currentProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
             ? weeklyTopProjects.slice(0, 15)
-            : projects.slice(0, 15);
+            : [];
             
         if (currentProjects.length > 1) {
             startAutoScroll();
@@ -183,39 +182,38 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
                 clearInterval(autoScrollRef.current);
             }
         };
-    }, [projects.length, weeklyTopProjects, startAutoScroll]);
+    }, [weeklyTopProjects, startAutoScroll]);
 
-    // 피드 페이지를 스캔해서 특정 ID들의 프로젝트를 찾아오는 헬퍼
-    async function findProjectsByIdsViaFeed(targetIds: number[], maxPages = 10, pageSize = 100): Promise<Project[]> {
-        const found = new Map<number, Project>();
-        let page = 0;
-        while (page < maxPages && found.size < targetIds.length) {
-            try {
-                const feed = await fetchProjectFeed({ page, size: pageSize, sort: 'latest' });
-                const content = feed.content || [];
-                for (const p of content) {
-                    if (targetIds.includes(p.id) && !found.has(p.id)) {
-                        found.set(p.id, p);
-                    }
-                }
-                if (feed.last) break;
-                page += 1;
-            } catch {
-                break; // 피드 실패 시 중단하고 현재까지 수집분만 사용
-            }
-        }
-        // 주어진 targetIds 순서대로 정렬
-        return targetIds.map(id => found.get(id)).filter((p): p is Project => !!p);
+    // WeeklyTopProject를 Project 타입으로 변환
+    function convertWeeklyTopToProject(wp: WeeklyTopProject): Project {
+        return {
+            id: wp.id,
+            title: wp.title,
+            description: wp.description || null,
+            coverUrl: wp.coverUrl || null,
+            isTeam: wp.isTeam || null,
+            username: wp.username || undefined,
+            shareUrl: wp.shareUrl || undefined,
+            qrImageUrl: wp.qrImageUrl || null,
+            owner: wp.owner ? {
+                id: wp.owner.id,
+                nickname: wp.owner.nickname,
+                email: '', // 백엔드에서 email 제외
+                avatarUrl: wp.owner.avatarUrl || null,
+                username: wp.owner.username,
+            } : undefined,
+            authorId: wp.owner?.id,
+        };
     }
 
-    // 주간 TOP 불러와서 실제 프로젝트로 매핑 (결과는 세션 캐시에 저장)
+    // 주간 TOP 불러오기 (백엔드에서 이미 프로젝트 데이터를 제공)
     useEffect(() => {
         let isMounted = true;
         (async () => {
             try {
                 setIsLoadingWeeklyTop(true);
-                const items = await fetchWeeklyTop();
-                if (!items || items.length === 0) {
+                const response = await fetchWeeklyTop();
+                if (!response || !response.content || response.content.length === 0) {
                     // 데이터가 없으면 캐시도 삭제
                     if (isMounted) {
                         setWeeklyTopProjects(null);
@@ -224,12 +222,8 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
                     return;
                 }
 
-                // 점수 높은 순으로 정렬 후 상단 N개만 선택
-                const sorted = [...items].sort((a, b) => b.score - a.score);
-                const topIds = sorted.map(i => i.project_id).slice(0, 50);
-
-                // 피드에서 스캔하여 해당 ID들에 매칭되는 프로젝트 회수
-                const mapped = await findProjectsByIdsViaFeed(topIds, 10, 100);
+                // 백엔드에서 이미 score 기준으로 정렬되어 있으므로 바로 변환
+                const mapped = response.content.map(convertWeeklyTopToProject);
 
                 if (isMounted) {
                     if (mapped.length > 0) {
@@ -241,7 +235,8 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
                         try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
                     }
                 }
-            } catch {
+            } catch (error) {
+                console.error('주간 TOP 프로젝트 로드 실패:', error);
                 // 실패 시 캐시 삭제하고 일반 프로젝트 사용
                 if (isMounted) {
                     setWeeklyTopProjects(null);
@@ -288,10 +283,10 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
         });
     }, []);
 
-    // 표시 소스 선택: 주간 TOP 데이터가 준비되면 그것을 우선 사용
+    // 표시 소스 선택: 주간 TOP API에서만 데이터 가져오기
     const displayProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
         ? weeklyTopProjects.slice(0, 15)
-        : projects.slice(0, 15);
+        : [];
 
     // 버튼 위치 계산 (카드 컨테이너 중앙)
     const buttonTop = '50%';
@@ -388,10 +383,9 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
             </div>
         </section>
     );
-}, (prevProps, nextProps) => {
-    // projects 배열이 동일하면 리렌더링 방지
-    return prevProps.projects.length === nextProps.projects.length &&
-           prevProps.projects.every((p, i) => p.id === nextProps.projects[i]?.id);
+}, () => {
+    // 주간 TOP API만 사용하므로 props 비교 불필요 (항상 true 반환하여 리렌더링 허용)
+    return false;
 });
 
 MainHeroSection.displayName = 'MainHeroSection';
