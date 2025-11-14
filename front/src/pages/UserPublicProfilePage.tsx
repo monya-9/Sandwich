@@ -17,6 +17,7 @@ type PublicProfile = {
   nickname: string | null;
   username?: string | null;
   email?: string | null;
+  bio?: string | null;
   position?: string | null;
   interests?: string[] | null;
   profileImage?: string | null;
@@ -331,10 +332,19 @@ export default function UserPublicProfilePage() {
             </div>
 
             {/* 소개/커리어 */}
-            <div className="mt-20" />
+            <div className="mt-6" />
+            
+            {/* 소개 */}
+            {data?.bio && (
+              <div className="mt-4 mb-6 text-[14px] md:text-[16px]">
+                <div className="text-black/90 dark:text-white/90 mb-2">소개</div>
+                <div className="text-black/80 dark:text-white/80 whitespace-pre-line">{data.bio}</div>
+              </div>
+            )}
+            
             <div className="mt-2 text-[14px] md:text-[16px]">
               <div className="flex items-center justify-between">
-                <div className="text-black/90">커리어</div>
+                <div className="text-black/90 dark:text-white/90">커리어</div>
                 {repCareers.length > 0 && (
                   <button
                     onClick={() => navigate(`/profile/${userId}/careers`)}

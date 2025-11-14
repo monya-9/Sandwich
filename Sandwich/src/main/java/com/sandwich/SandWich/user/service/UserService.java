@@ -470,6 +470,9 @@ public class UserService {
                 : (user.getProfile() != null ? user.getProfile().getNickname() : null);
         String profileImage = (user.getProfile() != null) ? user.getProfile().getProfileImage() : null;
         String coverImage   = (user.getProfile() != null) ? user.getProfile().getCoverImage()   : null;
+        String bio          = (!user.isDeleted() && user.getProfile() != null)
+                ? user.getProfile().getBio()
+                : null;
         return new PublicProfileResponse(
                 user.getId(),
                 nicknameOut,
@@ -479,7 +482,8 @@ public class UserService {
                 posName,
                 interestNames,
                 profileImage,
-                coverImage
+                coverImage,
+                bio
         );
     }
     private void ensureWallet(long userId) {

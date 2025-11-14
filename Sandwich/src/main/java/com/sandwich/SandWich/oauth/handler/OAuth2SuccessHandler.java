@@ -16,7 +16,9 @@ import org.springframework.security.oauth2.client.web.HttpSessionOAuth2Authoriza
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
@@ -49,9 +51,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             email = username + "@" + provider + ".local";
         }
 
-        User user = userRepository.findByEmailAndIsDeletedFalse(email)
-                .orElseThrow(() -> new IllegalStateException("OAuth2UserService에서 유저 생성/연동 실패"));
-
+        User user = userRepository.findByEmailAndIsDeletedFalse(email).orElse(null);
+        if (user == null) {
+            // 여기까지 왔는데 유저가 없으면 에러 페이지로 리다이렉트
+            String frontendUrl = Optional.ofNullable(System.getenv("FRONTEND_URL"))
+                    .orElse("https://sandwich-dev.com");
+            String msg = URLEncoder.encode(
+                    "계정 정보를 찾을 수 없습니다. 다시 로그인해 주세요.",
+                    StandardCharsets.UTF_8
+            );
+            response.sendRedirect(frontendUrl + "/oauth2/error?message=" + msg);
+            return;
+        }
         // ---- optional attributes from authorization request (remember / deviceName)
         OAuth2AuthorizationRequest authReq = authReqRepo.removeAuthorizationRequest(request, response);
         String remember = null;
