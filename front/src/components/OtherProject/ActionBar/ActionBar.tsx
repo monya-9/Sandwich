@@ -58,7 +58,7 @@ export default function ActionBar({ onCommentClick, project, isMobile = false }:
   return (
     <aside 
       className={isMobile 
-        ? "flex flex-row items-center justify-around gap-2 py-3 px-4 overflow-x-auto"
+        ? "flex flex-row flex-nowrap items-center justify-around gap-2 py-3 px-4 overflow-x-auto"
         : "flex flex-col items-center gap-4"
       }
       style={isMobile ? {
@@ -74,14 +74,32 @@ export default function ActionBar({ onCommentClick, project, isMobile = false }:
           }
         `}</style>
       )}
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <ProfileAction key="profile-action" targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} initialIsFollowing={project.initialIsFollowing} isMobile={isMobile} />
-      {!isOwner && <SuggestAction key="suggest-action" targetUserId={project.ownerId} isMobile={isMobile} />}
+      </div>
+      {!isOwner && (
+        <div className={isMobile ? "flex-shrink-0" : ""}>
+          <SuggestAction key="suggest-action" targetUserId={project.ownerId} isMobile={isMobile} />
+        </div>
+      )}
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <LikeAction key="like-action" targetType="PROJECT" targetId={project.id} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <CollectionAction key="collection-action" projectId={project.id} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <CommentAction key="comment-action" onClick={onCommentClick} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <ShareAction key="share-action" thumbnailUrl={project.coverUrl} title={project.name} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <QrCodeAction key="qrcode-action" qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} isMobile={isMobile} qrCodeEnabled={project.qrCodeEnabled} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <LiveDemoAction key="livedemo-action" url={liveUrl} isMobile={isMobile} />
+      </div>
     </aside>
   );
 }
