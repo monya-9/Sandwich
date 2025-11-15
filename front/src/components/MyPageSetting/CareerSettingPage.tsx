@@ -125,7 +125,7 @@ const CareerSettingPage: React.FC = () => {
 						</div>
 						<div className="space-y-6">
 						{/* 경력 */}
-						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showCareerForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto overflow-visible`} style={{minHeight: showCareerForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>💼</EmojiBadge>
@@ -141,7 +141,7 @@ const CareerSettingPage: React.FC = () => {
 								careers.length === 0 ? (
 									<div className="text-[14px] text-[#6B7280]">작성된 경력정보가 없습니다.</div>
 								) : (
-									<div className="divide-y divide-[#E5E7EB]">
+									<div className="divide-y divide-[#E5E7EB] overflow-visible">
 										{careers.map(c => (
 											<CareerCard key={c.id} item={c} onUpdated={loadCareers} onEdit={(it)=>{ setEditingCareer(it); setShowCareerForm(true); }} />
 										))}
@@ -151,7 +151,7 @@ const CareerSettingPage: React.FC = () => {
 						</section>
 
 						{/* 프로젝트 */}
-						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showProjectForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto overflow-visible`} style={{minHeight: showProjectForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>🧩</EmojiBadge>
@@ -167,7 +167,7 @@ const CareerSettingPage: React.FC = () => {
 								projects.length === 0 ? (
 									<div className="text-[14px] text-[#6B7280]">등록된 프로젝트가 없습니다.</div>
 								) : (
-									<div className="divide-y divide-[#E5E7EB]">
+									<div className="divide-y divide-[#E5E7EB] overflow-visible">
 										{projects.map(p => (
 											<ProjectCard key={p.id} item={p} onUpdated={loadProjects} onEdit={(it)=>{ setEditingProject(it); setShowProjectForm(true); }} />
 										))}
@@ -177,7 +177,7 @@ const CareerSettingPage: React.FC = () => {
 						</section>
 
 						{/* 수상 */}
-						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showAwardForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto overflow-visible`} style={{minHeight: showAwardForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>🏆</EmojiBadge>
@@ -193,7 +193,7 @@ const CareerSettingPage: React.FC = () => {
 								awards.length === 0 ? (
 									<div className="text-[14px] text-[#6B7280] dark:text-white/60">작성된 수상 내역이 없습니다.</div>
 								) : (
-									<div className="divide-y divide-[#E5E7EB] space-y-6">
+									<div className="divide-y divide-[#E5E7EB] space-y-6 overflow-visible">
 										{awards.map(a => (
 											<AwardCard key={a.id} item={a} onUpdated={loadAwards} onEdit={(it)=>{ setEditingAward(it); setShowAwardForm(true); }} />
 										))}
@@ -203,7 +203,7 @@ const CareerSettingPage: React.FC = () => {
 						</section>
 
 						{/* 학력 (맨 아래) */}
-						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto`} style={{minHeight: showEducationForm ? undefined : closedMinHeightPx}}>
+						<section className={`bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl p-6 pb-20 box-border w-full max-w-[1400px] mx-auto overflow-visible`} style={{minHeight: showEducationForm ? undefined : closedMinHeightPx}}>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center">
 									<EmojiBadge>🎓</EmojiBadge>
@@ -219,7 +219,7 @@ const CareerSettingPage: React.FC = () => {
 								educations.length === 0 ? (
 									<div className="text-[14px] text-[#6B7280]">작성된 학력 정보가 없습니다.</div>
 								) : (
-									<div className="divide-y divide-[#E5E7EB] space-y-6">
+									<div className="divide-y divide-[#E5E7EB] space-y-6 overflow-visible">
 										{educations.map(e => (
 											<EducationCard key={e.id} item={e} onUpdated={loadEducations} onEdit={(it)=>{ setEditingEducation(it); setShowEducationForm(true); }} />
 										))}

@@ -253,7 +253,7 @@ export default function CodeSubmissionListPage() {
                     </div>
                 </div>
             ) : submissions.length > 0 ? (
-                <div className="grid gap-5 md:grid-cols-3">
+                <div className="grid gap-5 md:grid-cols-3 items-stretch">
                     {submissions.filter(submission => submission != null).map((submission, index) => {
                         // 안전한 ID 추출 (실제 API는 id 필드 사용)
                         const submissionId = submission?.id || (index + 1);
@@ -286,6 +286,7 @@ export default function CodeSubmissionListPage() {
                                 onLike={handleLike}
                                 href={`/challenge/code/${id}/submissions/${submissionId}`}
                                 actionText="전체보기"
+                                challengeType="code"
                             />
                         );
                     })}
