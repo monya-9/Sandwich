@@ -58,15 +58,28 @@ public class RoomHistoryService {
     private MessageItemResponse toItem(User me, Message m) {
         boolean mine = m.getSender().getId().equals(me.getId());
 
+        String content;
+        if (m.isDeleted()) {
+            // deleteMessage() 에서도 content 를 "삭제된 메시지입니다"로 바꾸지만,
+            // 혹시 모를 케이스를 위해 한 번 더 방어.
+            content = "삭제된 메시지입니다";
+        } else if (m.getType() == MessageType.GENERAL || m.getType() == MessageType.EMOJI) {
+            // 일반 텍스트/이모지는 전체 내용을 그대로 내려줌
+            content = m.getContent();
+        } else {
+            // 카드/첨부 타입은 여전히 프리뷰 텍스트 사용 (필요 시 확장)
+            content = MessagePreviewer.preview(m);
+        }
+
         return MessageItemResponse.builder()
                 .id(m.getId())
                 .type(m.getType().name())
-                .content(MessagePreviewer.preview(m))    // ← 히스토리에서는 프리뷰 텍스트로 내려줌
+                .content(content)
                 .mine(mine)
                 .read(m.isRead())
                 .senderId(m.getSender().getId())
                 .receiverId(m.getReceiver().getId())
-                .createdAt(m.getCreatedAt()) // DTO가 OffsetDateTime이면 그대로 OK
+                .createdAt(m.getCreatedAt())
                 .deleted(m.isDeleted())
                 .build();
     }
