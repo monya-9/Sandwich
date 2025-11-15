@@ -222,6 +222,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,  "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT,  "/api/users/message-preferences/me").authenticated()
 
+                        // 마이페이지 계열
+                        .requestMatchers("/api/me/**").authenticated()
+
                         // 그 외 전부 인증
                         .anyRequest().authenticated()
                 )
