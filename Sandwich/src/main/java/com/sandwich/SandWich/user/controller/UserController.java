@@ -40,6 +40,11 @@ public class UserController {
         return ResponseEntity.ok(userService.getMe(user));
     }
 
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<PublicProfileResponse> getPublicProfileBySlug(@PathVariable String slug) {
+        return ResponseEntity.ok(userService.getPublicProfileBySlug(slug));
+    }
+
     // 회원 탈퇴
     @DeleteMapping("/me")
     public ResponseEntity<?> deleteMyAccount(@AuthenticationPrincipal UserDetailsImpl userDetails) {
