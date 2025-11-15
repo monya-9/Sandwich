@@ -51,6 +51,9 @@ public class SubmissionDtos {
         @Valid
         @Nullable
         private CreateReq.Code code;
+
+        @Nullable
+        private Boolean isPublic;
     }
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -103,6 +106,9 @@ public class SubmissionDtos {
 
         @Valid @Nullable
         private PortfolioMeta portfolio;
+
+        @Builder.Default
+        private Boolean isPublic = Boolean.TRUE;
 
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class PortfolioMeta {
@@ -158,6 +164,8 @@ public class SubmissionDtos {
         @lombok.Singular("asset")
         private java.util.List<Asset> assets;
 
+        private Boolean isPublic;
+
         @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class Asset {
             private String url;
@@ -197,6 +205,7 @@ public class SubmissionDtos {
                     .status(s.getStatus())
                     .createdAt(s.getCreatedAt())
                     .coverUrl(s.getCoverUrl())
+                    .isPublic(s.getIsPublic())
                     .build();
         }
 
