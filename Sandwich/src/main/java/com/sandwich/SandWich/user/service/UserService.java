@@ -314,7 +314,7 @@ public class UserService {
         if (trimmed.length() < 2 || trimmed.length() > 20) {
             throw new IllegalArgumentException("닉네임은 2~20자 사이여야 합니다.");
         }
-        if (!trimmed.matches("^[0-9A-Za-z가-힣._-]+$")) {
+        if (!trimmed.matches("^[0-9A-Za-z가-힣._\\- ]+$")) {
             throw new IllegalArgumentException("닉네임은 한글/영문/숫자/._-만 사용할 수 있습니다.");
         }
         if (profileRepository.existsByNickname(trimmed)) {
@@ -349,6 +349,20 @@ public class UserService {
         profile.setProfileSlug(slug);
         userRepository.save(user);
         ensureWallet(user.getId()); // 기존 지갑 보장 로직 유지
+    }
+
+    @Transactional(readOnly = true)
+    public PublicProfileResponse getPublicProfileBySlug(String slug) {
+        Profile profile = profileRepository.findByProfileSlug(slug)
+                .orElseThrow(UserNotFoundException::new);
+
+        User user = profile.getUser();
+        if (user == null || user.isDeleted()) {
+            throw new UserNotFoundException();
+        }
+
+        // 기존 userId 기반 로직 재사용
+        return getPublicProfile(user.getId());
     }
 
 
