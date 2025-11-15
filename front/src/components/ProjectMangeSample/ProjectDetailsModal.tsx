@@ -118,6 +118,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [teamSize, setTeamSize] = useState<number | "">("");
 
   const [repositoryUrl, setRepositoryUrl] = useState("");
+  const [demoUrl, setDemoUrl] = useState("");
   const [frontendBuildCommand, setFrontendBuildCommand] = useState("");
   const [backendBuildCommand, setBackendBuildCommand] = useState("");
   const [portNumber, setPortNumber] = useState<number | "">("");
@@ -199,10 +200,12 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       }
       setDetailDescription(initialDetail.description || " ");
       setRepositoryUrl(initialDetail.repositoryUrl || "");
+      setDemoUrl(initialDetail.demoUrl || "");
       setFrontendBuildCommand(initialDetail.frontendBuildCommand || "");
       setBackendBuildCommand(initialDetail.backendBuildCommand || "");
       setPortNumber(initialDetail.portNumber || "");
       if (typeof initialDetail.qrCodeEnabled === 'boolean') setQrCodeEnabled(initialDetail.qrCodeEnabled);
+      if (typeof initialDetail.deployEnabled === 'boolean') setDeployEnabled(initialDetail.deployEnabled);
 
       // Prefill GitHub information from existing fields
       // GitHub 정보는 별도 필드가 없으므로 기존 필드들을 활용하거나 빈 값으로 설정
@@ -210,14 +213,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       setGhRepo(initialDetail.extraRepoUrl || "");
       setGhBase("main"); // 기본값으로 설정 (프로젝트 상세에는 브랜치 정보가 없음)
       setGhToken(""); // 토큰은 보안상 저장되지 않으므로 빈 값
-      
-      // 배포 설정 여부 확인: 빌드 명령어가 빈 문자열("")이거나 실제 값이 있으면 배포 설정이 체크된 것으로 간주
-      // null, undefined만 배포 설정이 체크되지 않은 것으로 간주
-      const hasDeployInfo = (
-        (initialDetail.frontendBuildCommand !== undefined && initialDetail.frontendBuildCommand !== null) ||
-        (initialDetail.backendBuildCommand !== undefined && initialDetail.backendBuildCommand !== null)
-      );
-      setDeployEnabled(hasDeployInfo);
       
       // 콜백 함수들은 별도 useEffect에서 호출
       setTimeout(() => {
@@ -541,12 +536,14 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         description: summary || detailDescription,
         tools: tools.join(","),
         repositoryUrl,
+        demoUrl: deployEnabled ? (demoUrl.trim() || undefined) : undefined,
         startYear: startYear === "" ? undefined : Number(startYear),
         endYear: endYear === "" ? undefined : Number(endYear),
         isTeam,
         teamSize: teamSize === "" ? undefined : Number(teamSize),
         coverUrl: String(resolvedCover),
         image: String(resolvedCover),
+        deployEnabled,
         qrCodeEnabled,
         // 배포 설정이 체크되었을 때 빌드 명령어를 저장 (빈 문자열이어도 저장하여 배포 설정이 체크되었음을 표시)
         // 체크되지 않았으면 undefined로 저장하여 배포 설정이 해제되었음을 표시
@@ -892,6 +889,25 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                   </div>
                 )}
               </div>
+              
+              {/* 배포 URL 입력 */}
+              <div className={`pt-4 ${!deployEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">
+                  배포 URL (Demo URL)
+                  {deployEnabled && <span className="text-orange-500 ml-1">*</span>}
+                </div>
+                <input 
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'cursor-not-allowed' : ''}`}
+                  placeholder="예: https://d11ngnf9bl79gb.cloudfront.net/57/197/index.html"
+                  value={demoUrl} 
+                  onChange={e=>setDemoUrl(e.target.value)}
+                  disabled={!deployEnabled}
+                />
+                <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
+                  CloudFront 배포 URL을 입력하세요. 라이브 데모 링크와 QR 코드에 사용됩니다.
+                </div>
+              </div>
+              
               <div className="pt-4">
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 이름</div>
                 <input 

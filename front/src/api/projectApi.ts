@@ -14,6 +14,7 @@ export type ProjectDetailResponse = {
   teamSize?: number;
   coverUrl?: string;
   shareUrl?: string;
+  deployEnabled?: boolean;
   qrCodeEnabled?: boolean;
   qrImageUrl?: string;
   frontendBuildCommand?: string;
@@ -46,6 +47,7 @@ export type ProjectRequest = {
   teamSize?: number;
   coverUrl?: string;
   shareUrl?: string;
+  deployEnabled?: boolean;
   qrCodeEnabled?: boolean;
   frontendBuildCommand?: string;
   backendBuildCommand?: string;

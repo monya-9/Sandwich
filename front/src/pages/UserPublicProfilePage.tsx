@@ -6,7 +6,7 @@ import PublicLikesGrid from "../components/Profile/PublicLikesGrid";
 import PublicCollectionsGrid from "../components/Profile/PublicCollectionsGrid";
 import SuggestAction from "../components/OtherProject/ActionBar/SuggestAction";
 import Toast from "../components/common/Toast";
-import { RepresentativeCareer } from "../api/userApi";
+import { RepresentativeCareer, UserApi } from "../api/userApi";
 import { fetchUserProjects, fetchProjectsMeta } from "../api/projects";
 import FollowListModal from "../components/Profile/FollowListModal";
 import { AuthContext } from "../context/AuthContext";
@@ -28,8 +28,11 @@ type PublicProfile = {
 };
 
 export default function UserPublicProfilePage() {
-  const { id } = useParams<{ id: string }>();
-  const userId = id ? Number(id) : 0;
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
+  // slug가 있으면 slug를 사용, 없으면 id를 숫자로 파싱
+  const isSlugMode = !!slug;
+  const identifier = slug || id || '';
+  const userId = !isSlugMode && id ? Number(id) : 0;
   const navigate = useNavigate();
 
   // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
@@ -56,24 +59,35 @@ export default function UserPublicProfilePage() {
   const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers");
 
   const myId = Number((typeof window !== 'undefined' && (localStorage.getItem('userId') || sessionStorage.getItem('userId'))) || '0');
-  const isSelf = myId > 0 && myId === userId;
+  const resolvedUserId = data?.id || userId;
+  const isSelf = myId > 0 && myId === resolvedUserId;
 
   // 자신 프로필의 공개 경로로 들어오면 내 프로필로 리다이렉트
   useEffect(() => {
-    if (isSelf) {
+    if (isSelf && resolvedUserId > 0) {
       navigate('/profile', { replace: true });
     }
-  }, [isSelf, navigate]);
+  }, [isSelf, resolvedUserId, navigate]);
 
+  // 프로필 데이터 로드
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const { data } = await api.get<PublicProfile>(`/users/${userId}`);
+        let profileData: PublicProfile;
+        if (isSlugMode) {
+          // slug로 프로필 조회
+          const profile = await UserApi.getProfileBySlug(identifier);
+          profileData = profile as any; // UserProfileResponse를 PublicProfile로 변환
+        } else {
+          // id로 프로필 조회
+          const { data } = await api.get<PublicProfile>(`/users/${userId}`);
+          profileData = data;
+        }
         if (!alive) return;
-        setData(data);
+        setData(profileData);
       } catch (e) {
         if (!alive) return;
         setError("프로필을 불러오지 못했습니다.");
@@ -82,31 +96,32 @@ export default function UserPublicProfilePage() {
       }
     })();
     return () => { alive = false; };
-  }, [userId]);
+  }, [identifier, isSlugMode, userId]);
 
   useEffect(() => {
     (async () => {
       try {
         // 인증 확인 중이거나 로그인하지 않았으면 스킵
-        if (isAuthChecking || !isLoggedIn || !userId || isSelf) {
+        if (isAuthChecking || !isLoggedIn || !resolvedUserId || isSelf) {
           setIsFollowing(false);
           return;
         }
-        const r = await api.get<{ isFollowing: boolean }>(`/users/${userId}/follow-status`);
+        const r = await api.get<{ isFollowing: boolean }>(`/users/${resolvedUserId}/follow-status`);
         setIsFollowing(Boolean((r as any).data?.isFollowing));
       } catch {
         setIsFollowing(false);
       }
     })();
-  }, [userId, isSelf, isLoggedIn, isAuthChecking]);
+  }, [resolvedUserId, isSelf, isLoggedIn, isAuthChecking]);
 
   // 대표 커리어 로드
   useEffect(() => {
     let mounted = true;
     (async () => {
+      if (!resolvedUserId) return;
       try {
         // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
-        const response = await api.get<RepresentativeCareer[]>(`/users/${userId}/representative-careers`, {
+        const response = await api.get<RepresentativeCareer[]>(`/users/${resolvedUserId}/representative-careers`, {
           timeout: 30000
         });
         if (mounted) {
@@ -122,19 +137,19 @@ export default function UserPublicProfilePage() {
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [resolvedUserId]);
 
   // 활동 통계 로드
   useEffect(() => {
     let mounted = true;
     
     const loadStats = async () => {
-      if (!userId) return;
+      if (!resolvedUserId) return;
       
       try {
         // 1. 작업 개수 가져오기
         try {
-          const projectsRes = await fetchUserProjects(userId, 0, 100);
+          const projectsRes = await fetchUserProjects(resolvedUserId, 0, 100);
           if (mounted) {
             const totalProjects = projectsRes.totalElements || projectsRes.content?.length || 0;
             setWorkCount(totalProjects);
@@ -161,7 +176,7 @@ export default function UserPublicProfilePage() {
         // 3. 해당 사용자의 프로젝트가 컬렉션에 저장된 횟수 가져오기
         try {
           // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
-          const { data } = await api.get(`/profiles/${userId}/collection-count`, {
+          const { data } = await api.get(`/profiles/${resolvedUserId}/collection-count`, {
             timeout: 30000
           });
           if (mounted) {
@@ -182,7 +197,7 @@ export default function UserPublicProfilePage() {
         // 4. 팔로워/팔로잉 수 가져오기
         try {
           // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
-          const { data } = await api.get(`/users/${userId}/follow-counts`, {
+          const { data } = await api.get(`/users/${resolvedUserId}/follow-counts`, {
             timeout: 30000
           });
           if (mounted) {
@@ -202,19 +217,19 @@ export default function UserPublicProfilePage() {
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [resolvedUserId]);
 
   const toggleFollow = async () => {
     if (isAuthChecking) return;
     if (!isLoggedIn) return navigate("/login");
-    if (!userId || isSelf) return;
+    if (!resolvedUserId || isSelf) return;
     try {
       if (isFollowing) {
-        await api.delete(`/users/${userId}/unfollow`);
+        await api.delete(`/users/${resolvedUserId}/unfollow`);
         setIsFollowing(false);
         setToast({ type: "info", message: "팔로우를 취소했습니다." });
       } else {
-        await api.post(`/users/${userId}/follow`);
+        await api.post(`/users/${resolvedUserId}/follow`);
         setIsFollowing(true);
         setToast({ type: "success", message: "사용자를 팔로우했습니다." });
       }
@@ -230,17 +245,33 @@ export default function UserPublicProfilePage() {
     window.dispatchEvent(new Event("suggest:open"));
   };
 
-  if (!id || userId <= 0) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">프로필을 불러오는 중...</div>
+      </div>
+    );
+  }
+
+  if (error || (!identifier && !resolvedUserId)) {
     return (
       <div className="p-8 text-center">
-        <div className="text-lg">잘못된 사용자입니다.</div>
+        <div className="text-lg">{error || "잘못된 사용자입니다."}</div>
         <button className="mt-4 underline" onClick={() => navigate(-1)}>뒤로가기</button>
       </div>
     );
   }
 
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">프로필을 불러오는 중...</div>
+      </div>
+    );
+  }
+
   const displayName = (data?.nickname || data?.username || "사용자").trim();
-  const profileUrl = data?.profileSlug ? `sandwich-dev.com/${data.profileSlug}` : (data?.username ? `sandwich-dev.com/${data.username}` : `sandwich-dev.com/user/${userId}`);
+  const profileUrl = data?.profileSlug ? `sandwich-dev.com/${data.profileSlug}` : (data?.username ? `sandwich-dev.com/${data.username}` : `sandwich-dev.com/user/${resolvedUserId}`);
 
   const iconForType = (t: RepresentativeCareer["type"]) => {
     if (t === "CAREER") return "💼";
@@ -347,7 +378,7 @@ export default function UserPublicProfilePage() {
                 <div className="text-black/90 dark:text-white/90">커리어</div>
                 {repCareers.length > 0 && (
                   <button
-                    onClick={() => navigate(`/profile/${userId}/careers`)}
+                    onClick={() => navigate(`/profile/${resolvedUserId}/careers`)}
                     className="text-[14px] text-black/60 hover:text-black/80 transition-colors"
                   >
                     자세히 보기 &gt;
@@ -417,12 +448,12 @@ export default function UserPublicProfilePage() {
               </div>
             </div>
 
-            {activeTab === "work" && <PublicWorkGrid userId={userId} />}
+            {activeTab === "work" && <PublicWorkGrid userId={resolvedUserId} />}
             {activeTab === "like" && <PublicLikesGrid />}
             {activeTab === "collection" && <PublicCollectionsGrid />}
 
             {/* 모달 이벤트 수신 전용: 화면에 표시하지 않음 */}
-            <div className="hidden"><SuggestAction targetUserId={userId} /></div>
+            <div className="hidden"><SuggestAction targetUserId={resolvedUserId} /></div>
           </section>
         </div>
       </div>
@@ -431,7 +462,7 @@ export default function UserPublicProfilePage() {
       <FollowListModal
         isOpen={followModalOpen}
         onClose={() => setFollowModalOpen(false)}
-        userId={userId}
+        userId={resolvedUserId}
         type={followModalType}
       />
     </div>
