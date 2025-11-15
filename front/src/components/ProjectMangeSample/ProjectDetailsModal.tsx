@@ -118,7 +118,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [teamSize, setTeamSize] = useState<number | "">("");
 
   const [repositoryUrl, setRepositoryUrl] = useState("");
-  const [demoUrl, setDemoUrl] = useState("");
   const [frontendBuildCommand, setFrontendBuildCommand] = useState("");
   const [backendBuildCommand, setBackendBuildCommand] = useState("");
   const [portNumber, setPortNumber] = useState<number | "">("");
@@ -200,7 +199,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       }
       setDetailDescription(initialDetail.description || " ");
       setRepositoryUrl(initialDetail.repositoryUrl || "");
-      setDemoUrl(initialDetail.demoUrl || "");
       setFrontendBuildCommand(initialDetail.frontendBuildCommand || "");
       setBackendBuildCommand(initialDetail.backendBuildCommand || "");
       setPortNumber(initialDetail.portNumber || "");
@@ -536,7 +534,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         description: summary || detailDescription,
         tools: tools.join(","),
         repositoryUrl,
-        demoUrl: deployEnabled ? (demoUrl.trim() || undefined) : undefined,
+        // demoUrl은 배포 시스템/백엔드가 채우는 값이므로 프론트에서 전송하지 않음
         startYear: startYear === "" ? undefined : Number(startYear),
         endYear: endYear === "" ? undefined : Number(endYear),
         isTeam,
@@ -888,24 +886,11 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                     배포 설정을 활성화해야 QR 코드를 생성할 수 있습니다.
                   </div>
                 )}
-              </div>
-              
-              {/* 배포 URL 입력 */}
-              <div className={`pt-4 ${!deployEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
-                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">
-                  배포 URL (Demo URL)
-                  {deployEnabled && <span className="text-orange-500 ml-1">*</span>}
-                </div>
-                <input 
-                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'cursor-not-allowed' : ''}`}
-                  placeholder="예: https://d11ngnf9bl79gb.cloudfront.net/57/197/index.html"
-                  value={demoUrl} 
-                  onChange={e=>setDemoUrl(e.target.value)}
-                  disabled={!deployEnabled}
-                />
-                <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
-                  CloudFront 배포 URL을 입력하세요. 라이브 데모 링크와 QR 코드에 사용됩니다.
-                </div>
+                {deployEnabled && (
+                  <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
+                    QR 코드는 배포가 완료되어 URL이 생성된 후 자동으로 생성됩니다.
+                  </div>
+                )}
               </div>
               
               <div className="pt-4">
