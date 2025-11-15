@@ -44,10 +44,10 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
     };
     
     return (
-        <div className="block">
-            <SectionCard bordered className="!p-0 hover:shadow-md transition-shadow bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700">
+        <div className="block h-full">
+            <SectionCard bordered className="!p-0 hover:shadow-md transition-shadow bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700 h-full flex flex-col">
                 {/* 작성자 정보 - 썸네일 위에 */}
-                <div className="p-4 pb-2">
+                <div className="p-4 pb-2 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         {/* 아바타 - 클릭 가능 */}
                         <div 
@@ -84,34 +84,40 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
                     </div>
                 </div>
 
-                {/* 썸네일 이미지 - 직각 모서리, 크기 축소 */}
-                {submission.coverUrl && (
-                    <div className="aspect-[4/3] overflow-hidden mx-4 mb-3 rounded-lg">
+                {/* 썸네일 이미지 - 항상 동일한 공간 차지 */}
+                <div className="aspect-[4/3] overflow-hidden mx-4 mb-3 rounded-lg flex-shrink-0 bg-neutral-100 dark:bg-neutral-800">
+                    {submission.coverUrl ? (
                         <img 
                             src={submission.coverUrl} 
                             alt={submission.title}
                             className="w-full h-full object-cover"
                         />
-                    </div>
-                )}
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
+                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                    )}
+                </div>
                 
-                <div className="px-4 pb-4">
-                    <div className="mb-1 text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{submission.title}</div>
+                <div className="px-4 pb-4 flex-1 flex flex-col">
+                    <div className="mb-1 text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 line-clamp-2 min-h-[2.6em]">{submission.title}</div>
                     
-                    {/* 기술 스택 표시 */}
+                    {/* 기술 스택 표시 - 공간 고정 */}
+                    <div className="mb-1 min-h-[20px]">
                     {submission.language && (
-                        <div className="mb-1">
                             <span className="inline-block px-2 py-0.5 text-[10px] bg-emerald-50 text-emerald-700 rounded-full">
                                 {submission.language}
                             </span>
+                        )}
                         </div>
-                    )}
                     
-                    <p className="mb-3 text-[12px] leading-5 text-neutral-800 dark:text-neutral-200 line-clamp-3">
+                    <p className="mb-3 text-[12px] leading-5 text-neutral-800 dark:text-neutral-200 line-clamp-3 min-h-[3.75em]">
                         {submission.summary || submission.desc}
                     </p>
 
-                    <div className="flex items-center justify-between text-[11px] text-neutral-700 dark:text-neutral-300">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-700 dark:text-neutral-300 mt-auto">
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={(e) => onLike(e, submission.id)}
