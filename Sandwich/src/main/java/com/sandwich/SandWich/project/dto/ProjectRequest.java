@@ -24,6 +24,6 @@ public class ProjectRequest {
     private String backendBuildCommand;
     private Integer portNumber;
     private String extraRepoUrl;
-
+    private Boolean deployEnabled;
 
 }
