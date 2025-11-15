@@ -24,6 +24,8 @@ export interface ActionBarProps {
     ownerImageUrl?: string;
     initialIsFollowing?: boolean;
     qrCodeEnabled?: boolean;
+    frontendBuildCommand?: string;
+    backendBuildCommand?: string;
   };
   isMobile?: boolean;
 }
@@ -52,7 +54,17 @@ export default function ActionBar({ onCommentClick, project, isMobile = false }:
   // 예전 우선순위: 서버가 CF/숫자 경로를 주면 그걸 사용, 아니면 우리가 구성한 숫자 경로 사용
   const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
   const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
-  const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl);
+  
+  // 배포 설정이 체크되었는지 확인
+  // 빌드 명령어가 빈 문자열("")이거나 실제 값이 있으면 배포 설정이 체크된 것으로 간주
+  // null, undefined만 배포 설정이 체크되지 않은 것으로 간주
+  const hasDeployConfig = (
+    (project.frontendBuildCommand !== undefined && project.frontendBuildCommand !== null) ||
+    (project.backendBuildCommand !== undefined && project.backendBuildCommand !== null)
+  );
+  
+  // 배포 설정이 있을 때만 라이브 데모 링크 활성화
+  const liveUrl = hasDeployConfig ? ensureIndexHtml(shareUrlFinal || cfUrl) : undefined;
 
   // 단일 컴포넌트로 유지하되 레이아웃만 변경
   return (

@@ -131,6 +131,9 @@ export default function ProjectDetailLightboxPage() {
                 shareUrl: projectDetail.shareUrl,
                 coverUrl: projectDetail.coverUrl,
                 isOwner: false,
+                qrCodeEnabled: projectDetail.qrCodeEnabled,
+                frontendBuildCommand: projectDetail.frontendBuildCommand,
+                backendBuildCommand: projectDetail.backendBuildCommand,
               }} onCommentClick={() => {}} />
             )}
           </div>

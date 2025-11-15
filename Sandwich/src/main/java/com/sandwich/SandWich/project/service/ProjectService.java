@@ -10,7 +10,6 @@ import com.sandwich.SandWich.project.dto.ProjectResponse;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.project.repository.ProjectSpecs;
 import com.sandwich.SandWich.project.support.UploadWindow;
-import com.sandwich.SandWich.reward.service.CreditUseService;
 import com.sandwich.SandWich.social.repository.FollowRepository;
 import com.sandwich.SandWich.upload.util.S3Uploader;
 import com.sandwich.SandWich.user.domain.User;
@@ -37,10 +36,8 @@ public class ProjectService {
     private final S3Uploader s3Uploader;
     private final FollowRepository followRepository;
     private final Clock clock;
-    private final CreditUseService creditUseService;
+
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
-    private static final long PROJECT_DEPLOY_COST = 10_000L;
-    private static final String REASON_SPEND_PROJECT_DEPLOY = "SPEND_PROJECT_DEPLOY";
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request, User user) {
@@ -62,15 +59,12 @@ public class ProjectService {
         project.setBackendBuildCommand(request.getBackendBuildCommand());
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
-        project.setDeployEnabled(
-                request.getDeployEnabled() != null && request.getDeployEnabled()
-        );
 
         // 1차 저장
         Project saved = projectRepository.save(project);
 
         // 서버에서 공유 URL 생성 및 저장
-        String previewUrl = "https://sandwich-dev.com/" + user.getUsername() + "/" + saved.getId();
+        String previewUrl = "https://sandwich.com/" + user.getUsername() + "/" + saved.getId();
         saved.setShareUrl(previewUrl);
 
         // QR 코드 생성 및 업로드 조건 체크
@@ -81,18 +75,6 @@ public class ProjectService {
             String qrImageUrl = s3Uploader.uploadQrImage(qrImage);  // ⚠️ S3Uploader 주입 필요
             saved.setQrImageUrl(qrImageUrl);
             log.info("[QR 업로드] 완료 - S3 URL: {}", qrImageUrl);
-        }
-
-        // 여기서 배포 기능 ON이면 크레딧 10,000 차감
-        if (Boolean.TRUE.equals(request.getDeployEnabled())) {
-            long remaining = creditUseService.useCredits(
-                    user.getId(),
-                    PROJECT_DEPLOY_COST,
-                    REASON_SPEND_PROJECT_DEPLOY,
-                    saved.getId() // refId → 프로젝트 ID 연결
-            );
-            log.info("[CREDIT] user={} project={} 배포 비용 {} 사용 후 잔액 = {}",
-                    user.getId(), saved.getId(), PROJECT_DEPLOY_COST, remaining);
         }
 
         // 다시 저장 (공유 URL + QR 이미지 포함)
@@ -203,8 +185,6 @@ public class ProjectService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
 
-        Boolean beforeDeployEnabled = project.getDeployEnabled();
-
         project.setTitle(request.getTitle());
         project.setDescription(request.getDescription());
         project.setImage(request.getImage());
@@ -222,28 +202,9 @@ public class ProjectService {
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
 
-        // 새 배포 여부
-        Boolean afterDeployEnabled =
-                request.getDeployEnabled() != null && request.getDeployEnabled();
-        project.setDeployEnabled(afterDeployEnabled);
-
         projectRepository.save(project);
-
-        // 배포가 처음으로 켜지는 순간에만 10,000 차감
-        boolean wasDisabled = (beforeDeployEnabled == null || !beforeDeployEnabled);
-        boolean nowEnabled = Boolean.TRUE.equals(afterDeployEnabled);
-
-        if (wasDisabled && nowEnabled) {
-            long remaining = creditUseService.useCredits(
-                    actor.getId(),
-                    PROJECT_DEPLOY_COST,
-                    REASON_SPEND_PROJECT_DEPLOY,
-                    project.getId()
-            );
-            log.info("[CREDIT][UPDATE] user={} project={} 배포 ON 비용 {} 사용 후 잔액={}",
-                    actor.getId(), project.getId(), PROJECT_DEPLOY_COST, remaining);
-        }
     }
+
     @Transactional
     public void deleteProject(Long userId, Long id, User actor) {
         Project project = projectRepository.findByIdAndUserId(id, userId)

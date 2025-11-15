@@ -240,7 +240,7 @@ export default function UserPublicProfilePage() {
   }
 
   const displayName = (data?.nickname || data?.username || "사용자").trim();
-  const profileUrl = data?.profileSlug ? `sandwich.com/${data.profileSlug}` : (data?.username ? `sandwich.com/${data.username}` : `sandwich.com/user/${userId}`);
+  const profileUrl = data?.profileSlug ? `sandwich-dev.com/${data.profileSlug}` : (data?.username ? `sandwich-dev.com/${data.username}` : `sandwich-dev.com/user/${userId}`);
 
   const iconForType = (t: RepresentativeCareer["type"]) => {
     if (t === "CAREER") return "💼";

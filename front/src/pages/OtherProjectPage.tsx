@@ -294,6 +294,8 @@ export default function OtherProjectPage() {
         isOwner,
         initialIsFollowing: initialFollow,
         qrCodeEnabled: projectDetail?.qrCodeEnabled,
+        frontendBuildCommand: projectDetail?.frontendBuildCommand,
+        backendBuildCommand: projectDetail?.backendBuildCommand,
     } as const;
 
     // 사용자 설정 메타: 배경/간격

@@ -20,6 +20,8 @@ interface PreviewActionBarProps {
 		shareUrl?: string;
 		coverUrl?: string;
 		qrCodeEnabled?: boolean;
+		frontendBuildCommand?: string;
+		backendBuildCommand?: string;
 	};
 }
 
@@ -44,7 +46,19 @@ export default function PreviewActionBar({ onCommentClick, project }: PreviewAct
 
 	const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
 	const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
-	const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl) || (typeof window !== "undefined" ? window.location.href : "#");
+	
+	// 배포 설정이 체크되었는지 확인
+	// 빌드 명령어가 빈 문자열("")이거나 실제 값이 있으면 배포 설정이 체크된 것으로 간주
+	// null, undefined만 배포 설정이 체크되지 않은 것으로 간주
+	const hasDeployConfig = (
+		(project.frontendBuildCommand !== undefined && project.frontendBuildCommand !== null) ||
+		(project.backendBuildCommand !== undefined && project.backendBuildCommand !== null)
+	);
+	
+	// 배포 설정이 있을 때만 라이브 데모 링크 활성화
+	const liveUrl = hasDeployConfig 
+		? (ensureIndexHtml(shareUrlFinal || cfUrl) || (typeof window !== "undefined" ? window.location.href : "#"))
+		: undefined;
 
 	return (
 		<aside className="flex flex-col items-center gap-4">
