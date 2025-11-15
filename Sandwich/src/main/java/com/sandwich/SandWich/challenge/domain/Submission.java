@@ -66,5 +66,9 @@ public class Submission extends BaseEntity {
     @Builder.Default
     private SubmissionStatus status = SubmissionStatus.SUBMITTED;
 
+    @Column(name = "is_public", nullable = false)
+    @Builder.Default
+    private Boolean isPublic = Boolean.TRUE;
+
     public enum ParticipationType { SOLO, TEAM }
 }

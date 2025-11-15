@@ -15,6 +15,17 @@ import java.util.List;
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     boolean existsByChallenge_IdAndOwnerId(Long challengeId, Long ownerId);
     Page<Submission> findByChallenge_Id(Long challengeId, Pageable pageable);
+    Page<Submission> findByChallenge_IdAndIsPublicTrue(Long challengeId, Pageable pageable);
+
+    // 공개 + 내 비공개 (코드 챌린지에서만 사용할 예정)
+    @Query("""
+    select s from Submission s
+    where s.challenge.id = :challengeId
+      and (s.isPublic = true or s.ownerId = :viewerId)
+""")
+    Page<Submission> findVisibleForViewer(@Param("challengeId") Long challengeId,
+                                          @Param("viewerId") Long viewerId,
+                                          Pageable pageable);
     // 챌린지별 제출 수
     @Query("select s.challenge.id as chId, count(s.id) as cnt " +
             "from Submission s where s.challenge.id in :ids group by s.challenge.id")
