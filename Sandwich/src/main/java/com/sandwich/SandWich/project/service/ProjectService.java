@@ -19,14 +19,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.time.Clock;
 import java.util.Set;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +37,16 @@ public class ProjectService {
     private final S3Uploader s3Uploader;
     private final FollowRepository followRepository;
     private final Clock clock;
+    private final CreditUseService creditUseService;
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
+
+    // 배포 기능 1회 ON 시 차감 크레딧
+    private static final long PROJECT_DEPLOY_COST = 10_000L;
+    private static final String REASON_SPEND_PROJECT_DEPLOY = "SPEND_PROJECT_DEPLOY";
+
+    // 공유 URL 도메인 (dev / prod 환경에 따라 변경 가능)
+    private static final String SHARE_BASE_URL = "https://sandwich-dev.com";
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request, User user) {
@@ -60,24 +69,58 @@ public class ProjectService {
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
 
+        // 배포 여부 플래그
+        Boolean deployEnabled = (request.getDeployEnabled() != null && request.getDeployEnabled());
+        project.setDeployEnabled(deployEnabled);
+
         // 1차 저장
         Project saved = projectRepository.save(project);
 
-        // 서버에서 공유 URL 생성 및 저장
-        String previewUrl = "https://sandwich.com/" + user.getUsername() + "/" + saved.getId();
+        // 공유 URL (SandWich 상세 페이지) 생성
+        String previewUrl = SHARE_BASE_URL + "/" + user.getUsername() + "/" + saved.getId();
         saved.setShareUrl(previewUrl);
 
-        // QR 코드 생성 및 업로드 조건 체크
-        if (request.getQrCodeEnabled() != null && request.getQrCodeEnabled()) {
-            log.info("[QR 생성] 시작 - previewUrl: {}", previewUrl);
-            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(previewUrl, 300, 300);
-            log.info("[QR 생성] 완료 - {} 바이트", qrImage.length);
-            String qrImageUrl = s3Uploader.uploadQrImage(qrImage);  // ⚠️ S3Uploader 주입 필요
-            saved.setQrImageUrl(qrImageUrl);
-            log.info("[QR 업로드] 완료 - S3 URL: {}", qrImageUrl);
+        // --- 정책 검증 1: deployEnabled=false 인데 qrCodeEnabled=true 이면 금지 ---
+        if (Boolean.TRUE.equals(request.getQrCodeEnabled()) && !Boolean.TRUE.equals(deployEnabled)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "qrCodeEnabled=true requires deployEnabled=true"
+            );
         }
 
-        // 다시 저장 (공유 URL + QR 이미지 포함)
+        // --- QR 생성 정책 ---
+        // QR은 "배포 ON + qrCodeEnabled=true + demoUrl 존재"일 때만 생성
+        if (Boolean.TRUE.equals(deployEnabled) && Boolean.TRUE.equals(request.getQrCodeEnabled())) {
+
+            String demoUrl = saved.getDemoUrl();
+            if (demoUrl == null || demoUrl.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "qrCodeEnabled=true requires demoUrl to be present"
+                );
+            }
+
+            log.info("[QR 생성][CREATE] demoUrl 기반 - {}", demoUrl);
+            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(demoUrl, 300, 300);
+            String qrImageUrl = s3Uploader.uploadQrImage(qrImage);
+            saved.setQrImageUrl(qrImageUrl);
+            log.info("[QR 업로드][CREATE] projectId={} S3 URL={}", saved.getId(), qrImageUrl);
+        }
+
+        // --- 크레딧 차감 정책 ---
+        // 배포가 켜진 상태로 생성되면, 이 시점에서 10,000 크레딧 사용
+        if (Boolean.TRUE.equals(deployEnabled)) {
+            long remaining = creditUseService.useCredits(
+                    user.getId(),
+                    PROJECT_DEPLOY_COST,
+                    REASON_SPEND_PROJECT_DEPLOY,
+                    saved.getId() // refId → 프로젝트 ID로 연결
+            );
+            log.info("[CREDIT][CREATE] user={} project={} 배포 비용 {} 사용 후 잔액={}",
+                    user.getId(), saved.getId(), PROJECT_DEPLOY_COST, remaining);
+        }
+
+        // 다시 저장 (shareUrl + qrImageUrl 포함)
         projectRepository.save(saved);
 
         return new ProjectResponse(saved.getId(), previewUrl);
@@ -103,6 +146,7 @@ public class ProjectService {
                 .coverUrl(project.getCoverUrl())
                 .shareUrl(project.getShareUrl())
                 .qrCodeEnabled(project.getQrCodeEnabled())
+                .deployEnabled(project.getDeployEnabled())
                 .qrImageUrl(project.getQrImageUrl())
                 .frontendBuildCommand(project.getFrontendBuildCommand())
                 .backendBuildCommand(project.getBackendBuildCommand())
@@ -115,11 +159,11 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public PageResponse<ProjectListItemResponse> findAllProjects(Pageable pageable) {
         Page<Project> page = projectRepository.findAllByOrderByCreatedAtDesc(pageable);
-        Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
+        Page<ProjectListItemResponse> mapped = page.map(ProjectListItemResponse::new);
         return PageResponse.of(mapped);
     }
 
-    // 신규: 필터/팔로우/검색 대응 (정렬 최신순 고정)
+    // 필터/팔로우/검색 대응 (정렬 최신순 고정)
     @Transactional(readOnly = true)
     public PageResponse<ProjectListItemResponse> findAllProjects(
             String q,
@@ -143,8 +187,7 @@ public class ProjectService {
             Set<Long> followingIds = followRepository.findFollowingUserIds(currentUserId);
             if (followingIds.isEmpty()) {
                 Page<Project> empty = Page.empty(pageable);
-                Page<ProjectListItemResponse> mappedEmpty =
-                        empty.map((Project p) -> new ProjectListItemResponse(p));
+                Page<ProjectListItemResponse> mappedEmpty = empty.map(ProjectListItemResponse::new);
                 return PageResponse.of(mappedEmpty);
             }
             spec = spec.and(ProjectSpecs.authorIn(followingIds));
@@ -157,7 +200,7 @@ public class ProjectService {
         );
 
         Page<Project> page = projectRepository.findAll(spec, byLatest);
-        Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
+        Page<ProjectListItemResponse> mapped = page.map(ProjectListItemResponse::new);
         return PageResponse.of(mapped);
     }
 
@@ -173,7 +216,7 @@ public class ProjectService {
         );
 
         Page<Project> page = projectRepository.findAll(spec, byLatest);
-        Page<ProjectListItemResponse> mapped = page.map((Project p) -> new ProjectListItemResponse(p));
+        Page<ProjectListItemResponse> mapped = page.map(ProjectListItemResponse::new);
         return PageResponse.of(mapped);
     }
 
@@ -185,6 +228,10 @@ public class ProjectService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
 
+        // 배포 ON/OFF 토글 감지용
+        Boolean beforeDeployEnabled = project.getDeployEnabled();
+
+        // 필드 업데이트
         project.setTitle(request.getTitle());
         project.setDescription(request.getDescription());
         project.setImage(request.getImage());
@@ -202,7 +249,57 @@ public class ProjectService {
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
 
+        Boolean afterDeployEnabled =
+                request.getDeployEnabled() != null && request.getDeployEnabled();
+        project.setDeployEnabled(afterDeployEnabled);
+
+        // --- 정책 검증 1: deployEnabled=false 인데 qrCodeEnabled=true 인 경우 방지 ---
+        if (Boolean.TRUE.equals(project.getQrCodeEnabled()) && !Boolean.TRUE.equals(project.getDeployEnabled())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "qrCodeEnabled=true requires deployEnabled=true"
+            );
+        }
+
+        // --- QR 생성/갱신 정책 ---
+        // 조건: 배포 ON + qrCodeEnabled = true + demoUrl 존재
+        if (Boolean.TRUE.equals(project.getDeployEnabled()) && Boolean.TRUE.equals(project.getQrCodeEnabled())) {
+
+            String demoUrl = project.getDemoUrl();
+            if (demoUrl == null || demoUrl.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "qrCodeEnabled=true requires demoUrl to be present"
+                );
+            }
+
+            log.info("[QR 생성][UPDATE] projectId={} demoUrl={}", project.getId(), demoUrl);
+            byte[] qrImage = QRCodeGenerator.generateQRCodeImage(demoUrl, 300, 300);
+            String qrImageUrl = s3Uploader.uploadQrImage(qrImage);
+            project.setQrImageUrl(qrImageUrl);
+            log.info("[QR 업로드][UPDATE] projectId={} S3 URL={}", project.getId(), qrImageUrl);
+        } else {
+            // 선택: qrCodeEnabled=false 로 바꾼 경우 QR 이미지 제거하고 싶으면 사용
+            // project.setQrImageUrl(null);
+        }
+
         projectRepository.save(project);
+
+        // --- 크레딧 차감 정책 ---
+        // before=false/null → after=true 인 시점에만 10,000 차감
+        boolean wasDisabled = (beforeDeployEnabled == null || !beforeDeployEnabled);
+        boolean nowEnabled = Boolean.TRUE.equals(afterDeployEnabled);
+
+        if (wasDisabled && nowEnabled) {
+            long remaining = creditUseService.useCredits(
+                    actor.getId(),
+                    PROJECT_DEPLOY_COST,
+                    REASON_SPEND_PROJECT_DEPLOY,
+                    project.getId()
+            );
+            log.info("[CREDIT][UPDATE] user={} project={} 배포 ON 비용 {} 사용 후 잔액={}",
+                    actor.getId(), project.getId(), PROJECT_DEPLOY_COST, remaining);
+        }
     }
 
     @Transactional
