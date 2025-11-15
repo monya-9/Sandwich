@@ -286,6 +286,7 @@ export default function CodeSubmissionListPage() {
                                 onLike={handleLike}
                                 href={`/challenge/code/${id}/submissions/${submissionId}`}
                                 actionText="전체보기"
+                                challengeType="code"
                             />
                         );
                     })}

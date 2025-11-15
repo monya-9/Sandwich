@@ -29,9 +29,10 @@ interface SubmissionCardProps {
     onLike: (e: React.MouseEvent, id: number) => void;
     href: string;
     actionText?: string;
+    challengeType?: 'portfolio' | 'code'; // 챌린지 타입 추가
 }
 
-export function SubmissionCard({ submission, onLike, href, actionText = "평가하러 가기 →" }: SubmissionCardProps) {
+export function SubmissionCard({ submission, onLike, href, actionText = "평가하러 가기 →", challengeType = 'portfolio' }: SubmissionCardProps) {
     const navigate = useNavigate();
     
     // 사용자 프로필로 이동하는 핸들러
@@ -84,22 +85,24 @@ export function SubmissionCard({ submission, onLike, href, actionText = "평가�
                     </div>
                 </div>
 
-                {/* 썸네일 이미지 - 항상 동일한 공간 차지 */}
-                <div className="aspect-[4/3] overflow-hidden mx-4 mb-3 rounded-lg flex-shrink-0 bg-neutral-100 dark:bg-neutral-800">
-                    {submission.coverUrl ? (
-                        <img 
-                            src={submission.coverUrl} 
-                            alt={submission.title}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
-                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                    )}
-                </div>
+                {/* 썸네일 이미지 - 포트폴리오는 항상 표시, 코드는 이미지 있을 때만 */}
+                {(challengeType === 'portfolio' || submission.coverUrl) && (
+                    <div className="aspect-[4/3] overflow-hidden mx-4 mb-3 rounded-lg flex-shrink-0 bg-neutral-100 dark:bg-neutral-800">
+                        {submission.coverUrl ? (
+                            <img 
+                                src={submission.coverUrl} 
+                                alt={submission.title}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
+                                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+                )}
                 
                 <div className="px-4 pb-4 flex-1 flex flex-col">
                     <div className="mb-1 text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 line-clamp-2 min-h-[2.6em]">{submission.title}</div>
