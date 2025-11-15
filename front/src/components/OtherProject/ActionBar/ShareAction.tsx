@@ -1,8 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { FaShareAlt, FaTwitter, FaFacebook, FaPinterest, FaBlogger } from "react-icons/fa";
+import { FaShareAlt } from "react-icons/fa";
+import { FaLinkedin, FaPinterest, FaXTwitter } from "react-icons/fa6";
+import { RiKakaoTalkFill } from "react-icons/ri";
+import { SiNaver } from "react-icons/si";
 import Toast from "../../common/Toast";
 import { getStaticUrl } from "../../../config/staticBase";
+
+// Kakao SDK 타입 선언
+declare global {
+  interface Window {
+    Kakao: any;
+  }
+}
 
 type ShareActionProps = {
   shareUrl?: string;
@@ -11,34 +21,48 @@ type ShareActionProps = {
   isMobile?: boolean;
 };
 
-const KakaoIcon = () => (
-  <svg
-    width="44"
-    height="44"
-    viewBox="0 0 40 40"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="block"
-    style={{ transform: "translateY(-4px)" }}
-  >
-    <circle cx="20" cy="20" r="20" fill="#FEE500" />
-    <path
-      d="M20 12C13.9 12 9 15.95 9 20.32c0 2.46 1.46 4.62 3.79 6.11L11 32l5.02-2.75c1.1.15 2.23.24 3.38.24 6.09 0 11-3.95 11-8.32S26.09 12 20 12z"
-      fill="#391B1B"
-    />
-  </svg>
-);
-
 export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = false }: ShareActionProps) {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
     message: ''
   });
+  const [kakaoInitialized, setKakaoInitialized] = useState(false);
 
   const finalShareUrl = shareUrl || (typeof window !== "undefined" ? window.location.href : "");
   const finalTitle = title || "프로젝트 이름";
   const finalThumb = thumbnailUrl || getStaticUrl("assets/images/default-thumbnail.png");
+
+  // Kakao SDK 초기화
+  useEffect(() => {
+    const initKakao = () => {
+      const kakaoKey = process.env.REACT_APP_KAKAO_JAVASCRIPT_KEY;
+      
+      if (!kakaoKey) {
+        console.warn("REACT_APP_KAKAO_JAVASCRIPT_KEY 환경변수가 설정되지 않았습니다.");
+        return;
+      }
+
+      if (typeof window !== "undefined" && window.Kakao) {
+        if (!window.Kakao.isInitialized()) {
+          try {
+            window.Kakao.init(kakaoKey);
+            setKakaoInitialized(true);
+          } catch (error) {
+            console.error("Kakao SDK 초기화 실패:", error);
+          }
+        } else {
+          setKakaoInitialized(true);
+        }
+      } else {
+        console.warn("Kakao SDK가 로드되지 않았습니다. 재시도 중...");
+        // SDK 로드 대기
+        setTimeout(initKakao, 500);
+      }
+    };
+
+    initKakao();
+  }, []);
 
   const handleCopy = () => {
     if (!finalShareUrl) return;
@@ -47,6 +71,100 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
       visible: true,
       message: "URL이 복사되었습니다!"
     });
+  };
+
+  const handleLinkedInShare = () => {
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(finalShareUrl)}`;
+    window.open(linkedInUrl, '_blank', 'width=600,height=600');
+    setToast({
+      visible: true,
+      message: "LinkedIn 공유 창을 열었습니다!"
+    });
+  };
+
+  const handlePinterestShare = () => {
+    const pinterestUrl = `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(finalShareUrl)}&media=${encodeURIComponent(finalThumb)}&description=${encodeURIComponent(finalTitle)}`;
+    window.open(pinterestUrl, '_blank', 'width=750,height=550');
+    setToast({
+      visible: true,
+      message: "Pinterest 공유 창을 열었습니다!"
+    });
+  };
+
+  const handleXShare = () => {
+    const tweetText = `${finalTitle} - Sandwich에서 확인하세요!`;
+    const xUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(finalShareUrl)}&text=${encodeURIComponent(tweetText)}`;
+    window.open(xUrl, '_blank', 'width=600,height=600');
+    setToast({
+      visible: true,
+      message: "X(Twitter) 공유 창을 열었습니다!"
+    });
+  };
+
+  const handleNaverBlogShare = () => {
+    const naverBlogUrl = `https://blog.naver.com/openapi/share?url=${encodeURIComponent(finalShareUrl)}&title=${encodeURIComponent(finalTitle)}`;
+    window.open(naverBlogUrl, '_blank', 'width=600,height=600');
+    setToast({
+      visible: true,
+      message: "네이버 블로그 공유 창을 열었습니다!"
+    });
+  };
+
+  const handleKakaoShare = () => {
+    console.log("카카오 공유 시도:", {
+      kakaoInitialized,
+      hasKakao: !!window.Kakao,
+      finalTitle,
+      finalShareUrl,
+      finalThumb
+    });
+
+    if (!kakaoInitialized || !window.Kakao) {
+      console.warn("Kakao SDK가 초기화되지 않았습니다.");
+      navigator.clipboard.writeText(finalShareUrl);
+      setToast({
+        visible: true,
+        message: "Kakao SDK 로딩 중입니다. URL이 복사되었습니다!"
+      });
+      return;
+    }
+
+    try {
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: finalTitle,
+          description: 'Sandwich에서 확인하세요!',
+          imageUrl: finalThumb,
+          link: {
+            mobileWebUrl: finalShareUrl,
+            webUrl: finalShareUrl,
+          },
+        },
+        buttons: [
+          {
+            title: '웹으로 보기',
+            link: {
+              mobileWebUrl: finalShareUrl,
+              webUrl: finalShareUrl,
+            },
+          },
+        ],
+      });
+      console.log("카카오 공유 API 호출 성공!");
+      setToast({
+        visible: true,
+        message: "카카오톡 공유 창을 열었습니다!"
+      });
+    } catch (error) {
+      console.error('Kakao 공유 실패:', error);
+      // 대체: URL 복사
+      navigator.clipboard.writeText(finalShareUrl);
+      setToast({
+        visible: true,
+        message: "공유에 실패했습니다. URL이 복사되었습니다!"
+      });
+    }
   };
 
   return (
@@ -119,61 +237,63 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
               {/* divider */}
               <div className="w-full h-px bg-gray-200 mb-6" />
 
-              {/* SNS 리스트 - 중앙정렬, gap, 클릭 전체, 크기 맞춤 */}
-              <div className="flex flex-row gap-9 w-full justify-center mb-8">
-                <a
-                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="트위터"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
+              {/* SNS 공유 아이콘 */}
+              <div className="flex justify-center gap-5 mb-8">
+                <button
+                  onClick={handleLinkedInShare}
+                  className="flex flex-col items-center gap-2 group"
+                  aria-label="LinkedIn에 공유"
                 >
-                  <FaTwitter className="text-[2.1rem] text-sky-500" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">트위터</span>
-                </a>
-                <a
-                  href={`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="페이스북"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
+                  <div className="w-14 h-14 rounded-full bg-[#0A66C2] flex items-center justify-center transition-transform hover:scale-110">
+                    <FaLinkedin className="w-7 h-7 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">LinkedIn</span>
+                </button>
+
+                <button
+                  onClick={handlePinterestShare}
+                  className="flex flex-col items-center gap-2 group"
+                  aria-label="Pinterest에 공유"
                 >
-                  <FaFacebook className="text-[2.1rem] text-blue-600" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">페이스북</span>
-                </a>
-                <a
-                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="핀터레스트"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
+                  <div className="w-14 h-14 rounded-full bg-[#E60023] flex items-center justify-center transition-transform hover:scale-110">
+                    <FaPinterest className="w-7 h-7 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">Pinterest</span>
+                </button>
+
+                <button
+                  onClick={handleXShare}
+                  className="flex flex-col items-center gap-2 group"
+                  aria-label="X에 공유"
                 >
-                  <FaPinterest className="text-[2.1rem] text-red-500" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">핀터레스트</span>
-                </a>
-                <a
-                  href={`https://blog.naver.com/openapi/share?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="블로그"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
+                  <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center transition-transform hover:scale-110">
+                    <FaXTwitter className="w-7 h-7 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">X</span>
+                </button>
+
+                <button
+                  onClick={handleNaverBlogShare}
+                  className="flex flex-col items-center gap-2 group"
+                  aria-label="네이버 블로그에 공유"
                 >
-                  <FaBlogger className="text-[2.1rem] text-green-500" />
-                  <span className="text-[15px] mt-3 text-gray-800 group-hover:underline">블로그</span>
-                </a>
-                <a
-                  href={`https://sharer.kakao.com/talk?url=${encodeURIComponent(finalShareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="카카오톡"
-                  className="flex flex-col items-center group hover:opacity-80 transition"
+                  <div className="w-14 h-14 rounded-full bg-[#03C75A] flex items-center justify-center transition-transform hover:scale-110">
+                    <SiNaver className="w-7 h-7 text-white" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">네이버</span>
+                </button>
+
+                <button
+                  onClick={handleKakaoShare}
+                  className="flex flex-col items-center gap-2 group"
+                  aria-label="카카오톡에 공유"
                 >
-                  <KakaoIcon />
-                  <span className="text-[15px] mt-0.8 text-gray-800 group-hover:underline">카카오</span>
-                </a>
+                  <div className="w-14 h-14 rounded-full bg-[#FEE500] flex items-center justify-center transition-transform hover:scale-110">
+                    <RiKakaoTalkFill className="w-8 h-8 text-[#3C1E1E]" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">카카오톡</span>
+                </button>
               </div>
-              {/* divider */}
-              <div className="w-full h-px bg-gray-200 mb-6" />
 
               <div className="flex w-full mt-1">
                 <input

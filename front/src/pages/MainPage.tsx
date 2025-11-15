@@ -1,11 +1,9 @@
 //MainPage.tsx
 import React, { useEffect, useMemo, useState, useContext } from 'react';
 import MainHeroSection from '../components/Main/MainHeroSection';
-import MainCategoryFilter from '../components/Main/MainCategoryFilter';
 import MainProjectGrid from '../components/Main/MainProjectGrid';
 import MainDeveloperHighlight from '../components/Main/MainDeveloperHighlight';
 import SortModal from '../components/Main/SortModal';
-import { dummyProjects } from '../data/dummyProjects';
 import { Project, Category } from '../types/Project';
 import { fetchUserRecommendations } from '../api/reco';
 import { fetchProjectFeed, fetchProjectsMeta } from '../api/projects';
@@ -13,14 +11,7 @@ import { AuthContext } from '../context/AuthContext';
 
 const MainPage = () => {
   // 정렬 옵션을 sessionStorage에서 불러오기 (페이지 이동 시에도 유지)
-  const [selectedCategory, setSelectedCategory] = useState<Category | '전체'>(() => {
-    try {
-      const saved = sessionStorage.getItem('mainPage:selectedCategory');
-      return (saved as Category | '전체') || '전체';
-    } catch {
-      return '전체';
-    }
-  });
+  const selectedCategory: Category | '전체' = '전체'; // 카테고리 필터 제거로 고정
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState(() => {
     try {
@@ -89,6 +80,23 @@ const MainPage = () => {
   useEffect(() => {
     const loadProjects = async () => {
       setLoadingProjects(true);
+      
+      // 캐시 키 생성
+      const cacheKey = `projects:${selectedUploadTime}`;
+      
+      // 캐시에서 먼저 복원 (즉시 표시)
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached && isInitialLoad) {
+          const parsedCache = JSON.parse(cached) as Project[];
+          if (Array.isArray(parsedCache) && parsedCache.length > 0) {
+            setActualProjects(parsedCache);
+          }
+        }
+      } catch (e) {
+        // 캐시 복원 실패 시 무시
+      }
+      
       try {
         // 업로드 시간을 API 파라미터로 변환
         let uploadedWithin: '24h' | '7d' | '1m' | '3m' | undefined;
@@ -102,58 +110,55 @@ const MainPage = () => {
           uploadedWithin = '3m';
         }
 
-        // 초기 로딩: 30개만 빠르게 로드
-        const initialSize = isInitialLoad ? 30 : 500;
+        // 최적화: 필요한 만큼만 로드 (100개로 제한)
         const response = await fetchProjectFeed({
           page: 0,
-          size: initialSize,
+          size: 100,
           uploadedWithin,
         });
 
         const projects = response.content || [];
 
         // 프로젝트 메타 정보 가져오기 (좋아요, 댓글, 조회수)
+        // ✅ 메타 API 실패해도 프로젝트는 정상 표시
         if (projects.length > 0) {
-          const projectIds = projects.map(p => p.id);
-          const metaData = await fetchProjectsMeta(projectIds);
-          
-          // 메타 정보를 프로젝트에 병합
-          const projectsWithMeta = projects.map(project => ({
-            ...project,
-            likes: metaData[project.id]?.likes || 0,
-            comments: metaData[project.id]?.comments || 0,
-            views: metaData[project.id]?.views || 0,
-          }));
+          try {
+            const projectIds = projects.map(p => p.id);
+            const metaData = await fetchProjectsMeta(projectIds);
+            
+            // 메타 정보를 프로젝트에 병합
+            const projectsWithMeta = projects.map(project => ({
+              ...project,
+              likes: metaData[project.id]?.likes || 0,
+              comments: metaData[project.id]?.comments || 0,
+              views: metaData[project.id]?.views || 0,
+            }));
 
-          setActualProjects(projectsWithMeta);
-          setIsInitialLoad(false); // 첫 로딩 완료
-
-          // 백그라운드에서 나머지 프로젝트 로드 (초기 로딩인 경우에만)
-          if (initialSize === 30) {
-            setTimeout(async () => {
-              try {
-                const fullResponse = await fetchProjectFeed({
-                  page: 0,
-                  size: 500,
-                  uploadedWithin,
-                });
-                const fullProjects = fullResponse.content || [];
-                if (fullProjects.length > 0) {
-                  const fullProjectIds = fullProjects.map(p => p.id);
-                  const fullMetaData = await fetchProjectsMeta(fullProjectIds);
-                  const fullProjectsWithMeta = fullProjects.map(project => ({
-                    ...project,
-                    likes: fullMetaData[project.id]?.likes || 0,
-                    comments: fullMetaData[project.id]?.comments || 0,
-                    views: fullMetaData[project.id]?.views || 0,
-                  }));
-                  setActualProjects(fullProjectsWithMeta);
-                }
-              } catch (error) {
-                console.error('추가 프로젝트 로딩 실패:', error);
-              }
-            }, 100);
+            setActualProjects(projectsWithMeta);
+            
+            // 캐시에 저장
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithMeta));
+            } catch (e) {
+              // sessionStorage 저장 실패 시 무시
+            }
+          } catch (metaError) {
+            // ✅ 메타 API 실패 시 기본값으로 표시
+            console.warn('프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
+            const projectsWithDefaults = projects.map(project => ({
+              ...project,
+              likes: project.likes || 0,
+              comments: project.comments || 0,
+              views: project.views || 0,
+            }));
+            setActualProjects(projectsWithDefaults);
+            
+            // 캐시에 기본값 저장
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(projectsWithDefaults));
+            } catch (e) {}
           }
+          setIsInitialLoad(false);
         } else {
           setActualProjects([]);
           setIsInitialLoad(false);
@@ -171,18 +176,22 @@ const MainPage = () => {
     };
 
     loadProjects();
-  }, [selectedUploadTime]);
+  }, [selectedUploadTime, isInitialLoad]);
 
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
-    setLoadingReco(true);
-    setRecoError(null);
-    setIsNewUser(false);
-    fetchUserRecommendations(userId)
-      .then(async (response) => {
+    
+    const loadRecommendations = async () => {
+      setLoadingReco(true);
+      setRecoError(null);
+      setIsNewUser(false);
+      
+      try {
+        const response = await fetchUserRecommendations(userId);
+        
         // total이 0이면 신규 유저로 판단하여 기본 최신순 프로젝트 사용
         if (response.total === 0) {
-          setIsNewUser(true); // 신규 유저 플래그 설정
+          setIsNewUser(true);
           setRecoProjects(null);
           if (cacheKey) {
             try { sessionStorage.removeItem(cacheKey); } catch {}
@@ -191,35 +200,83 @@ const MainPage = () => {
         }
 
         const sortedByScore = [...response.data].sort((a, b) => b.score - a.score);
-        // 초기에는 50개만 빠르게 로드
-        const feed = await fetchProjectFeed({ page: 0, size: 50, sort: 'latest' });
-        const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
-        const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
-        setRecoProjects(mapped);
-        if (cacheKey) {
-          try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); } catch {}
-        }
-
-        // 백그라운드에서 전체 데이터 로드
-        setTimeout(async () => {
-          try {
-            const fullFeed = await fetchProjectFeed({ page: 0, size: 500, sort: 'latest' });
-            const fullById = new Map<number, Project>((fullFeed.content || []).map((p: Project) => [p.id, p]));
-            const fullMapped: Project[] = sortedByScore.map(i => fullById.get(i.project_id)).filter((p): p is Project => !!p);
-            setRecoProjects(fullMapped);
-            if (cacheKey) {
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(fullMapped)); } catch {}
+        
+        try {
+          // 최적화: 필요한 만큼만 로드 (100개로 제한)
+          const feed = await fetchProjectFeed({ page: 0, size: 100, sort: 'latest' });
+          const byId = new Map<number, Project>((feed.content || []).map((p: Project) => [p.id, p]));
+          const mapped: Project[] = sortedByScore.map(i => byId.get(i.project_id)).filter((p): p is Project => !!p);
+          
+          // ✅ AI 추천 프로젝트에도 메타 정보 가져오기 (좋아요, 댓글, 조회수)
+          if (mapped.length > 0) {
+            try {
+              const projectIds = mapped.map(p => p.id);
+              const metaData = await fetchProjectsMeta(projectIds);
+              
+              // 메타 정보를 프로젝트에 병합
+              const mappedWithMeta = mapped.map(project => ({
+                ...project,
+                likes: metaData[project.id]?.likes || 0,
+                comments: metaData[project.id]?.comments || 0,
+                views: metaData[project.id]?.views || 0,
+              }));
+              
+              setRecoProjects(mappedWithMeta);
+              
+              // 캐시에 메타 정보 포함된 데이터 저장
+              if (cacheKey) {
+                try { 
+                  sessionStorage.setItem(cacheKey, JSON.stringify(mappedWithMeta)); 
+                } catch {
+                  // sessionStorage 저장 실패 시 무시
+                }
+              }
+            } catch (metaError) {
+              // ✅ 메타 API 실패 시 기본값으로 표시
+              console.warn('AI 추천 프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
+              const mappedWithDefaults = mapped.map(project => ({
+                ...project,
+                likes: project.likes || 0,
+                comments: project.comments || 0,
+                views: project.views || 0,
+              }));
+              setRecoProjects(mappedWithDefaults);
+              
+              // 캐시에 기본값 저장
+              if (cacheKey) {
+                try { 
+                  sessionStorage.setItem(cacheKey, JSON.stringify(mappedWithDefaults)); 
+                } catch {}
+              }
             }
-          } catch (error) {
-            console.error('추가 추천 프로젝트 로딩 실패:', error);
+          } else {
+            setRecoProjects(mapped);
+            
+            // 캐시에 저장
+            if (cacheKey) {
+              try { 
+                sessionStorage.setItem(cacheKey, JSON.stringify(mapped)); 
+              } catch {
+                // sessionStorage 저장 실패 시 무시
+              }
+            }
           }
-        }, 100);
-      })
-      .catch(() => {
-        // 실패 시 에러 메시지 표시
-        setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      })
-      .finally(() => setLoadingReco(false));
+        } catch (feedError) {
+          // ✅ 추천 API는 성공했지만 프로젝트 피드 조회 실패 시
+          console.warn('추천 피드 조회 실패:', feedError);
+          setRecoProjects(null);
+        }
+      } catch (error) {
+        // ✅ 추천 API 전체 실패 시 일반 프로젝트는 정상 표시
+        console.error('추천 프로젝트 로딩 실패:', error);
+        setRecoError('AI 추천을 불러오는 중 오류가 발생했습니다.');
+        setRecoProjects(null); // 추천 프로젝트는 null로, 일반 프로젝트는 계속 표시
+      } finally {
+        setLoadingReco(false);
+      }
+    };
+    
+    loadRecommendations();
   }, [userId, isLoggedIn, cacheKey]);
 
   const handleOpenSortModal = () => {
@@ -239,6 +296,17 @@ const MainPage = () => {
     try {
       sessionStorage.setItem('mainPage:selectedSort', tempSelectedSort);
       sessionStorage.setItem('mainPage:selectedUploadTime', tempSelectedUploadTime);
+    } catch {
+      // sessionStorage 사용 불가 시 무시
+    }
+  };
+
+  const handleQuickSortToSandwichPick = () => {
+    setSelectedSort('샌드위치 픽');
+    setSelectedUploadTime('전체기간');
+    try {
+      sessionStorage.setItem('mainPage:selectedSort', '샌드위치 픽');
+      sessionStorage.setItem('mainPage:selectedUploadTime', '전체기간');
     } catch {
       // sessionStorage 사용 불가 시 무시
     }
@@ -293,42 +361,86 @@ const MainPage = () => {
   const gridPrimary = hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10);
   const heroProjects = hasReco
     ? filteredRecoProjects.slice(0, 7)
-    : (sortedProjects.length > 0 ? sortedProjects : dummyProjects).slice(0, 7);
+    : sortedProjects.slice(0, 7);
   const gridMore = hasReco
     ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
     : sortedProjects.slice(10);
 
   // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
-  const gridTitle = useReco ? 'AI 추천 프로젝트' : `"${selectedCategory}" 카테고리 프로젝트`;
+  const gridTitle = useReco ? 'AI 추천 프로젝트' : '전체 프로젝트';
 
   return (
     <div className="min-h-screen">
       <main className="px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
-        <MainHeroSection projects={heroProjects.length > 0 ? heroProjects : dummyProjects.slice(0, 7)} />
-
-        <div className="mb-10">
-          <MainCategoryFilter
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            onOpenSortModal={handleOpenSortModal}
-          />
-        </div>
+        <MainHeroSection projects={heroProjects} />
 
         {/* 메인 그리드 */}
-        {isInitialLoad && loadingProjects ? (
-          <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
-            프로젝트를 불러오는 중입니다…
-          </div>
-        ) : useReco ? (
+        {useReco ? (
           hasReco ? (
-            <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+            gridPrimary.length > 0 ? (
+              <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
+            ) : (
+              <div className="px-3 py-8 md:py-12 lg:py-[50px]">
+                <div className="flex justify-between items-center mb-3 md:mb-4">
+                  <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black dark:text-gray-100">{gridTitle}</h2>
+                  <button
+                    onClick={handleOpenSortModal}
+                    className="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 lg:px-4 py-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 whitespace-nowrap flex-shrink-0"
+                  >
+                    ↕ 정렬
+                  </button>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 md:py-16 lg:py-20 text-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base lg:text-lg mb-4">
+                    선택한 조건에 맞는 프로젝트가 없습니다.
+                  </p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs md:text-sm mb-6">
+                    다른 정렬 방식으로 변경해보세요.
+                  </p>
+                  <button
+                    onClick={handleQuickSortToSandwichPick}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-medium transition-colors"
+                  >
+                    샌드위치 픽으로 보기
+                  </button>
+                </div>
+              </div>
+            )
           ) : (
             <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
               {recoError ? recoError : 'AI 추천을 불러오는 중입니다…'}
             </div>
           )
         ) : (
-          <MainProjectGrid title={gridTitle} projects={gridPrimary} />
+          gridPrimary.length > 0 ? (
+            <MainProjectGrid title={gridTitle} projects={gridPrimary} onOpenSortModal={handleOpenSortModal} />
+          ) : (
+            <div className="px-3 py-8 md:py-12 lg:py-[50px]">
+              <div className="flex justify-between items-center mb-3 md:mb-4">
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black dark:text-gray-100">{gridTitle}</h2>
+                <button
+                  onClick={handleOpenSortModal}
+                  className="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 lg:px-4 py-1 transition-all duration-200 text-black dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 whitespace-nowrap flex-shrink-0"
+                >
+                  ↕ 정렬
+                </button>
+              </div>
+              <div className="flex flex-col items-center justify-center py-12 md:py-16 lg:py-20 text-center">
+                <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base lg:text-lg mb-4">
+                  선택한 조건에 맞는 프로젝트가 없습니다.
+                </p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs md:text-sm mb-6">
+                  다른 정렬 방식으로 변경해보세요.
+                </p>
+                <button
+                  onClick={handleQuickSortToSandwichPick}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-medium transition-colors"
+                >
+                  샌드위치 픽으로 보기
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {/* 다른 섹션은 항상 표시 */}

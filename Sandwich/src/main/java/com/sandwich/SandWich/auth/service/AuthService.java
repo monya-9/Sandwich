@@ -22,7 +22,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -137,10 +137,8 @@ public class AuthService {
             String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
             redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
 
-            // (선택) 플래그 BYPASS 상황에서도 '기기 기억' 체크시 쿠키 발급하려면 주석 해제
-            // if (Boolean.TRUE.equals(req.getRememberMe())) {
-            //     deviceTrustService.remember(httpReq, httpRes, user.getId(), "FeatureFlag-Bypass");
-            // }
+            // ✅ 쿠키로 토큰 전달
+            setTokenCookies(httpRes, accessToken, refreshToken);
 
             log.info("[LOGIN] MFA_ENABLED=false → issue tokens immediately. userId={}", user.getId());
             return new TokenResponse(accessToken, refreshToken, "local");
@@ -151,6 +149,10 @@ public class AuthService {
             String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
             String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
             redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
+            
+            // ✅ 쿠키로 토큰 전달
+            setTokenCookies(httpRes, accessToken, refreshToken);
+            
             return new TokenResponse(accessToken, refreshToken, "local");
         }
 
@@ -175,6 +177,29 @@ public class AuthService {
                 "issued=true", httpReq);
 
         return new MfaRequiredResponse("MFA_REQUIRED", pendingId, ctx.getMaskedEmail());
+    }
+
+    // ✅ 쿠키 헬퍼 메서드
+    private void setTokenCookies(HttpServletResponse res, String accessToken, String refreshToken) {
+        String sameSite = System.getenv().getOrDefault("TOKEN_COOKIE_SAMESITE", "None");
+        boolean secure  = Boolean.parseBoolean(System.getenv().getOrDefault("TOKEN_COOKIE_SECURE", "true"));
+        String domain   = System.getenv().getOrDefault("TOKEN_COOKIE_DOMAIN", "");
+
+        addTokenCookie(res, "ACCESS_TOKEN", accessToken, 60 * 60, sameSite, secure, domain);
+        addTokenCookie(res, "REFRESH_TOKEN", refreshToken, 14 * 24 * 60 * 60, sameSite, secure, domain);
+    }
+
+    private void addTokenCookie(HttpServletResponse res,
+                                String name, String value, int maxAgeSeconds,
+                                String sameSite, boolean secure, String domain) {
+        var builder = org.springframework.http.ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(secure)
+                .sameSite(sameSite)
+                .path("/")
+                .maxAge(Duration.ofSeconds(maxAgeSeconds));
+        if (domain != null && !domain.isBlank()) builder = builder.domain(domain);
+        res.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, builder.build().toString());
     }
 
     public void logout(String accessToken) {

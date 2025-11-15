@@ -19,6 +19,7 @@ interface PreviewActionBarProps {
 		ownerId: number;
 		shareUrl?: string;
 		coverUrl?: string;
+		qrCodeEnabled?: boolean;
 	};
 }
 
@@ -52,7 +53,7 @@ export default function PreviewActionBar({ onCommentClick, project }: PreviewAct
 			<CollectionAction />
 			<CommentAction onClick={onCommentClick} />
 			<ShareAction shareUrl={shareUrlFinal} thumbnailUrl={project.coverUrl} title={project.name} />
-			<QrCodeAction qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} />
+			<QrCodeAction qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} qrCodeEnabled={project.qrCodeEnabled} />
 			<LiveDemoAction url={liveUrl} />
 		</aside>
 	);

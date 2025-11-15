@@ -10,6 +10,10 @@ export type UserMini = {
   nickname?: string;
   displayName?: string;
   email?: string;
+  profileImageUrl?: string;
+  profileImage?: string;
+  avatarUrl?: string;
+  avatar?: string;
 };
 
 const CANDIDATE_USER_PATHS = (id: string) => [
@@ -50,6 +54,11 @@ function toDisplayName(mini: UserMini | null | undefined): string | null {
   );
 }
 
+function toProfileImageUrl(mini: UserMini | null | undefined): string | undefined {
+  if (!mini) return undefined;
+  return firstNonEmpty(mini.profileImageUrl, mini.profileImage, mini.avatarUrl, mini.avatar);
+}
+
 /** 주어진 내부 userId(숫자)로 사용자 표시 이름을 조회한다. 실패 시 null */
 export async function fetchUserNameById(userId: number | string): Promise<string | null> {
   const id = String(userId);
@@ -57,6 +66,20 @@ export async function fetchUserNameById(userId: number | string): Promise<string
     const got = await tryGet<UserMini>(p);
     const name = toDisplayName(got);
     if (name) return name;
+  }
+  return null;
+}
+
+/** 주어진 내부 userId(숫자)로 사용자 정보를 조회한다. 실패 시 null */
+export async function fetchUserById(userId: number | string): Promise<UserMini | null> {
+  const id = String(userId);
+  for (const p of CANDIDATE_USER_PATHS(id)) {
+    const got = await tryGet<UserMini>(p);
+    if (got) {
+      // 프로필 이미지 URL 정규화
+      const profileImageUrl = toProfileImageUrl(got);
+      return { ...got, profileImageUrl };
+    }
   }
   return null;
 }

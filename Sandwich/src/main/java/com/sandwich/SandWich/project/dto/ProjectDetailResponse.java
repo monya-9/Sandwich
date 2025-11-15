@@ -25,6 +25,7 @@ public class ProjectDetailResponse {
     private String coverUrl;
     private String shareUrl;
     private Boolean qrCodeEnabled;
+    private Boolean deployEnabled;
     private String qrImageUrl;
     private String frontendBuildCommand;
     private String backendBuildCommand;

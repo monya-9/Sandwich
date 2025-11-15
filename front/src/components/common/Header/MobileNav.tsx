@@ -24,12 +24,8 @@ const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
         localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"
     );
     
-    const accessToken =
-        localStorage.getItem("accessToken") ||
-        sessionStorage.getItem("accessToken") ||
-        "";
-    
-    const notiReady = isLoggedIn && !!accessToken;
+    // ✅ httpOnly 쿠키 기반: 버튼/드롭다운 표시 여부(로그인만 체크)
+    const notiReady = isLoggedIn;
     
     // 알림 스트림
     const noti = useNotificationStream({
@@ -38,10 +34,8 @@ const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
         wsUrl: "/stomp",
         topicBase: "/topic/users",
         pageSize: 20,
-        getToken: () =>
-            localStorage.getItem("accessToken") ||
-            sessionStorage.getItem("accessToken") ||
-            null,
+        // ✅ httpOnly 쿠키 기반: getToken 불필요 (쿠키로 자동 인증)
+        getToken: () => null,
         resetOnDisable: false,
         debug: false,
         dropdownOpen: false,
@@ -66,6 +60,7 @@ const MobileNav: React.FC<Props> = ({ onOpenMenu }) => {
                 createdAt: r.lastAt,
                 isRead: r.unreadCount === 0,
                 unreadCount: r.unreadCount,
+                avatarUrl: r.partnerAvatarUrl || undefined,
             }));
             setMessages(mapped);
         } catch {

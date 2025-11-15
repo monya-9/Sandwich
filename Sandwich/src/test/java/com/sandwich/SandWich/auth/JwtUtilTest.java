@@ -11,11 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class JwtUtilTest {
 
     private JwtUtil jwtUtil;
+    private static final String TEST_SECRET_KEY = "test-key-for-local-unit-tests-2025-0123456789";
 
     @BeforeEach
     void setUp() {
-        // 테스트 시작 전마다 JwtUtil 인스턴스를 새로 생성하여 초기화
-        jwtUtil = new JwtUtil();
+        jwtUtil = new JwtUtil(TEST_SECRET_KEY);
     }
 
     @Test

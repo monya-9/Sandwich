@@ -11,8 +11,7 @@ import LoginActions from "./LoginActions";
 import RecentLogin from "../RecentLogin";
 import OtpForm from "./OtpForm";
 import api from "../../../api/axiosInstance";
-import { setToken, setRefreshToken, clearAllUserData } from "../../../utils/tokenStorage";
-import { ensureNicknameInStorage } from "../../../utils/profile";
+import { clearAllUserData } from "../../../utils/tokenStorage";
 
 const LoginForm = () => {
     const navigate = useNavigate();
@@ -36,9 +35,12 @@ const LoginForm = () => {
             clearAllUserData();
 
             // ✅ 2. React 상태 즉시 초기화 (깜빡임 방지)
-            clearState(); // React 상태만 즉시 초기화
+            clearState();
 
-            const res = await api.post("/auth/login", { email, password });
+            // ✅ 3. public API: 로그인은 인증 없이 호출
+            const res = await api.post("/auth/login", { email, password }, {
+                headers: { 'X-Skip-Auth-Refresh': '1' }
+            });
             
             // 🆕 MFA_REQUIRED 분기 처리
             if (res.data?.status === "MFA_REQUIRED") {
@@ -46,33 +48,17 @@ const LoginForm = () => {
                 setMaskedEmail(res.data.maskedEmail);
                 setShowOtpForm(true);
                 setLoginFailed(false);
-                return; // 여기서 종료
+                return;
             }
 
-            // 기존 성공 로직
-            const {
-                accessToken,
-                refreshToken,          // ⬅️ 응답에 오면 같이 저장
-                email: serverEmail,
-            } = res.data || {};
+            // ✅ 4. 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
 
-            // ✅ 3. 새 토큰 저장 (keepLogin=true → localStorage, false → sessionStorage)
-            setToken(accessToken, keepLogin);
-            setRefreshToken(refreshToken ?? null, keepLogin); // ⬅️ 중요!
-
-            // ✅ 4. 새 사용자 정보 저장
-            const storage = keepLogin ? localStorage : sessionStorage;
-            const effectiveEmail = serverEmail || email;
-            storage.setItem("userEmail", effectiveEmail);
-            
-            // ✅ 최근 로그인 방법 저장 (이메일 로그인)
+            // ✅ 5. 최근 로그인 방법 저장 (이메일 로그인)
             localStorage.setItem("lastLoginMethod", "local");
 
-            // ✅ 5. 로그인 직후 프로필/닉네임 보강
-            await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
-
-            // ✅ 6. 컨텍스트 업데이트
-            login(effectiveEmail);
+            // ✅ 6. 컨텍스트 업데이트 (AuthContext에서 /users/me 호출하여 프로필 정보 자동 저장)
+            const effectiveEmail = res.data?.email || email;
+            await login(effectiveEmail);
 
             setLoginFailed(false);
             navigate("/");
@@ -82,26 +68,16 @@ const LoginForm = () => {
         }
     };
 
-    // 🆕 OTP 인증 성공 처리
-    const handleOtpSuccess = async (accessToken: string, refreshToken: string) => {
+    // 🆕 OTP 인증 성공 처리 (쿠키 전용)
+    const handleOtpSuccess = async () => {
         try {
-            // 토큰 저장
-            setToken(accessToken, keepLogin);
-            setRefreshToken(refreshToken ?? null, keepLogin);
-
-            // 사용자 정보 저장
-            const storage = keepLogin ? localStorage : sessionStorage;
-            const effectiveEmail = email;
-            storage.setItem("userEmail", effectiveEmail);
+            // ✅ 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
             
             // 최근 로그인 방법 저장 (이메일 로그인)
             localStorage.setItem("lastLoginMethod", "local");
 
-            // 로그인 직후 프로필/닉네임 보강
-            await ensureNicknameInStorage(accessToken, effectiveEmail, storage);
-
-            // 컨텍스트 업데이트
-            login(effectiveEmail);
+            // 컨텍스트 업데이트 (AuthContext에서 /users/me 호출하여 프로필 정보 자동 저장)
+            await login(email);
 
             navigate("/");
         } catch (err) {

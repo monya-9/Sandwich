@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from "react";
+import React, { useContext, useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import ProfileCircle from "./ProfileCircle";
@@ -10,28 +10,23 @@ interface Props {
     onLogout: () => void;
 }
 
-function isAdminFromStoredToken(): boolean {
-    try {
-        const token =
-            (typeof window !== 'undefined' && (localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken'))) || '';
-        if (!token) return false;
-        const parts = token.split('.');
-        if (parts.length !== 3) return false;
-        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const json = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf-8');
-        const payload = JSON.parse(decodeURIComponent(Array.prototype.map.call(json, (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
-        const candidates = [payload.roles, payload.authorities, payload.auth, payload.scope, payload.scopes, payload.role];
-        const toStr = (v: any) => (typeof v === 'string' ? v : Array.isArray(v) ? v.join(' ') : '');
-        const txt = toStr(candidates.find(Boolean)).toUpperCase();
-        return txt.includes('ROLE_ADMIN') || txt.split(/[ ,]/).includes('ADMIN');
-    } catch {
-        return false;
-    }
-}
+// ✅ httpOnly 쿠키 기반: JWT 디코딩 대신 서버 API로 권한 확인
+// (deprecated - 이제 useEffect에서 비동기로 확인)
 
 const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
     const { isLoggedIn, email } = useContext(AuthContext);
-    const isAdmin = isAdminFromStoredToken();
+    const [isAdmin, setIsAdmin] = React.useState(false);
+    
+    // ✅ httpOnly 쿠키 기반: 서버 API로 관리자 권한 확인
+    React.useEffect(() => {
+        if (isLoggedIn) {
+            import('../../../utils/authz').then(({ isAdmin: checkAdmin }) => {
+                checkAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
+            }).catch(() => setIsAdmin(false));
+        } else {
+            setIsAdmin(false);
+        }
+    }, [isLoggedIn]);
 
     // ✅ 안전한 이메일 (JWT 혼입 방지)
     const safeEmail = useMemo(() => {
@@ -39,6 +34,9 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
         const looksLikeJwt = email.split(".").length === 3 && email.length > 50;
         return looksLikeJwt ? "" : email;
     }, [email]);
+
+    // 닉네임 변경 감지를 위한 상태
+    const [nicknameUpdateTrigger, setNicknameUpdateTrigger] = useState(0);
 
     // ✅ 통일된 표시 이름: nickname > username > email 로컬파트 > "사용자"
     const displayName = useMemo(() => {
@@ -56,7 +54,19 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail]);
+    }, [safeEmail, nicknameUpdateTrigger]);
+
+    // 닉네임 변경 이벤트 리스너
+    useEffect(() => {
+        const handleNicknameUpdate = () => {
+            setNicknameUpdateTrigger(prev => prev + 1);
+        };
+
+        window.addEventListener('user-nickname-updated', handleNicknameUpdate);
+        return () => {
+            window.removeEventListener('user-nickname-updated', handleNicknameUpdate);
+        };
+    }, []);
 
     return (
         <div

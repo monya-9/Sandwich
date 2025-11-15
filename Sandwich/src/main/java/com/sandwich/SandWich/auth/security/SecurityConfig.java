@@ -180,6 +180,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/representative-careers").permitAll()
 
+                        // slug 기반 공개 프로필
+                        .requestMatchers(HttpMethod.GET, "/api/users/slug/**").permitAll()
                         // 사용자 보안 세분화 =====
                         // 1) 내 프로필은 반드시 인증
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
@@ -212,12 +214,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,   "/api/search/recent").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/search/recent/**").authenticated()
 
+                        .requestMatchers(HttpMethod.GET, "/api/reco/**").permitAll()
                         // 이 라인이 '프로젝트 공개 GET'들보다 반드시 아래에 와야 함
                         .requestMatchers("/api/projects/**").authenticated()
 
                         // 마이 페이지 등
                         .requestMatchers(HttpMethod.GET,  "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT,  "/api/users/message-preferences/me").authenticated()
+
+                        // 마이페이지 계열
+                        .requestMatchers("/api/me/**").authenticated()
 
                         // 그 외 전부 인증
                         .anyRequest().authenticated()

@@ -1,12 +1,13 @@
 // pages/GitHubCallback.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Toast from "../../components/common/Toast";
-import { API_BASE } from "../../config/apiBase";
+import { AuthContext } from "../../context/AuthContext";
 
 const GitHubCallback = () => {
     const navigate = useNavigate();
+    const { login } = useContext(AuthContext);
     const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({
         visible: false,
         message: '',
@@ -17,15 +18,25 @@ const GitHubCallback = () => {
         const code = new URL(window.location.href).searchParams.get("code");
 
         if (code) {
+            // ✅ httpOnly 쿠키 기반: 토큰은 쿠키로 자동 설정됨
             axios
-                .post(`${API_BASE}/auth/signup`, {
+                .post(`${process.env.REACT_APP_API_BASE || "/api"}/auth/signup`, {
                     provider: "github",
                     code,
+                }, {
+                    headers: { 'X-Skip-Auth-Refresh': '1' },
+                    withCredentials: true
                 })
-                .then((res) => {
-                    const { accessToken, refreshToken } = res.data;
-                    localStorage.setItem("accessToken", accessToken);
-                    localStorage.setItem("refreshToken", refreshToken);
+                .then(async (res) => {
+                    // ✅ 토큰은 httpOnly 쿠키로 자동 설정됨 (localStorage 저장 안 함)
+                    
+                    // 최근 로그인 방법 저장
+                    localStorage.setItem("lastLoginMethod", "github");
+                    
+                    // AuthContext 업데이트 (사용자 정보 자동 로드)
+                    const email = res.data?.email;
+                    await login(email);
+                    
                     setToast({
                         visible: true,
                         message: "GitHub 로그인 성공!",
@@ -50,7 +61,7 @@ const GitHubCallback = () => {
             });
             setTimeout(() => navigate("/join"), 2000);
         }
-    }, [navigate]);
+    }, [navigate, login]);
 
     return (
         <>

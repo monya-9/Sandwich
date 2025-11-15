@@ -52,7 +52,12 @@ export default function PortfolioVotePage() {
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     
     const nav = useNavigate();
-    const admin = isAdmin();
+    const [admin, setAdmin] = useState(false);
+    
+    // ✅ httpOnly 쿠키 기반: 비동기로 관리자 권한 확인
+    useEffect(() => {
+        isAdmin().then(setAdmin);
+    }, []);
 
     // 현재 사용자 정보 로드
     useEffect(() => {
@@ -152,6 +157,7 @@ export default function PortfolioVotePage() {
         e.stopPropagation();
         
         try {
+            // 쓰기 작업은 리프레시 허용 (토큰 만료 시 자동 갱신)
             const response = await api.post('/likes', {
                 targetType: 'PORTFOLIO_SUBMISSION',
                 targetId: submissionId
@@ -371,7 +377,7 @@ export default function PortfolioVotePage() {
                         onBack={() => nav(`/challenge/portfolio/${id}`)}
                         titleExtra={<AdminRebuildButton challengeId={id} className="ml-2" onAfterRebuild={() => setReloadKey((k) => k + 1)} />}
                         actionButton={
-                            derivedStage === "SUBMISSION_OPEN" ? (
+                            derivedStage === "SUBMISSION_OPEN" && !admin ? (
                                 <CTAButton as="button" onClick={handleSubmitClick}>
                                     프로젝트 제출하기
                                 </CTAButton>
@@ -445,8 +451,16 @@ export default function PortfolioVotePage() {
                                     {/* 1. 프로필 정보 */}
                                     <div className="p-4 pb-3">
                                         <div className="flex items-center gap-3">
-                                            {/* 프로필 이미지 */}
-                                            <div className="flex-shrink-0">
+                                            {/* 프로필 이미지 - 클릭 가능 */}
+                                            <div 
+                                                className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (submission.owner?.userId) {
+                                                        nav(`/users/${submission.owner.userId}`);
+                                                    }
+                                                }}
+                                            >
                                                 {submission.owner?.profileImageUrl ? (
                                                     <img 
                                                         src={submission.owner.profileImageUrl} 
@@ -474,7 +488,17 @@ export default function PortfolioVotePage() {
                                             {/* 사용자명 & 직책 */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="text-sm font-semibold text-gray-900 dark:text-neutral-100 truncate">
-                                                    {submission.owner?.username || '익명'}
+                                                    <span 
+                                                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            if (submission.owner?.userId) {
+                                                                nav(`/users/${submission.owner.userId}`);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {submission.owner?.username || '익명'}
+                                                    </span>
                                                 </div>
                                                 <div className="text-xs text-gray-500 dark:text-neutral-400">개발자</div>
                                             </div>
@@ -540,12 +564,21 @@ export default function PortfolioVotePage() {
                                             </div>
                                             
                                             {/* 전체보기 버튼 */}
-                                            <Link 
-                                                to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                                className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                            >
-                                                전체보기
-                                            </Link>
+                                            {admin && derivedStage === "VOTING" ? (
+                                                <button
+                                                    disabled
+                                                    className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-neutral-600 border border-gray-200 dark:border-neutral-800 rounded-md cursor-not-allowed opacity-50"
+                                                >
+                                                    전체보기
+                                                </button>
+                                            ) : (
+                                                <Link 
+                                                    to={`/challenge/portfolio/${id}/vote/${submission.id}`}
+                                                    className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                >
+                                                    전체보기
+                                                </Link>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -559,6 +592,7 @@ export default function PortfolioVotePage() {
                                 type="PORTFOLIO" 
                                 onSubmit={handleSubmitClick} 
                                 challengeStatus={challengeStatus}
+                                isAdmin={admin}
                             />
                         ) : (
                             <div className="flex items-center justify-center py-16 text-center text-neutral-600">

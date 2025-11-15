@@ -69,11 +69,16 @@ export default function PortfolioSubmitPage() {
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
     const [timeline, setTimeline] = useState<{ startAt?: string; endAt?: string; voteStartAt?: string; voteEndAt?: string }>({});
 
-    const { isLoggedIn } = useContext(AuthContext);
+    const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
     const [loginOpen, setLoginOpen] = useState(false);
     const nav = useNavigate();
 
-    useEffect(() => { if (!isLoggedIn) setLoginOpen(true); }, [isLoggedIn]);
+    useEffect(() => { 
+        // 인증 확인이 완료된 후에만 로그인 모달 상태 업데이트
+        if (!isAuthChecking) {
+            setLoginOpen(!isLoggedIn);
+        }
+    }, [isLoggedIn, isAuthChecking]);
 
     // 챌린지 존재 여부 확인
     useEffect(() => {

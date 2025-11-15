@@ -23,6 +23,7 @@ export type ProjectDetailResponse = {
 };
 
 export async function fetchProjectDetail(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectDetailResponse> {
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}`.replace(/\/+/, "/");
     const res = await api.get(url);
@@ -112,6 +113,7 @@ export async function deleteProject(userId: number, projectId: number, baseUrl: 
 export type ProjectContentResponseItem = { id: number; type: "IMAGE" | "TEXT" | "VIDEO"; data: string; order: number };
 
 export async function fetchProjectContents(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectContentResponseItem[]> {
+  // ✅ public API: URL 패턴으로 이미 처리됨 (헤더 불필요)
   if (baseUrl) {
     const url = `${baseUrl}/api/projects/${userId}/${projectId}/contents`.replace(/\/+/, "/");
     const res = await api.get(url);

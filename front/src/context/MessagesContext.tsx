@@ -45,8 +45,10 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
         );
     }, []);
 
-    // 초기 로드
+    // 초기 로드: 로그인 상태 확인 후에만 호출 (401 방지)
     React.useEffect(() => {
+        // ✅ httpOnly 쿠키 기반: AuthContext의 isLoggedIn 사용 권장
+        // 여기서는 일단 항상 시도하고, 401이면 무시
         loadRooms().catch(() => void 0);
     }, [loadRooms]);
 

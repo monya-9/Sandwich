@@ -16,7 +16,7 @@ import NotificationIcon from "./icons/NotificationIcon";
 import type { Message } from "../../../types/Message";
 import type { NotifyItem } from "../../../types/Notification";
 import { fetchRooms } from "../../../api/messages";
-import { onMessagesRefresh } from "../../../lib/messageEvents";
+import { onMessagesRefresh, onMessageRead } from "../../../lib/messageEvents";
 import { useNotificationStream } from "../../../hooks/useNotificationStream";
 
 // (옵션) 더미 확인용
@@ -38,6 +38,9 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         return looksLikeJwt ? "" : email;
     }, [email]);
 
+    // 닉네임 변경 감지를 위한 상태
+    const [nicknameUpdateTrigger, setNicknameUpdateTrigger] = useState(0);
+
     const displayName = useMemo(() => {
         const getItem = (k: string) =>
             (typeof window !== "undefined" &&
@@ -51,20 +54,27 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         if (user) return user;
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
-    }, [safeEmail]);
+    }, [safeEmail, nicknameUpdateTrigger]);
+
+    // 닉네임 변경 이벤트 리스너
+    useEffect(() => {
+        const handleNicknameUpdate = () => {
+            setNicknameUpdateTrigger(prev => prev + 1);
+        };
+
+        window.addEventListener('user-nickname-updated', handleNicknameUpdate);
+        return () => {
+            window.removeEventListener('user-nickname-updated', handleNicknameUpdate);
+        };
+    }, []);
 
     const myId = Number(
-        localStorage.getItem("userId") || sessionStorage.getItem("userId") || "0"
+        localStorage.getItem("userId") || "0"
     );
 
-    const accessToken =
-        localStorage.getItem("accessToken") ||
-        sessionStorage.getItem("accessToken") ||
-        "";
-
-    // 버튼/드롭다운 표시 여부(로그인 & 토큰)
-    const notiReady = isLoggedIn && !!accessToken;
-    // WS 연결은 useNotificationStream 훅 내부에서 처리됨
+    // ✅ httpOnly 쿠키 기반: 버튼/드롭다운 표시 여부(로그인만 체크)
+    const notiReady = isLoggedIn;
+    // WS 연결은 useNotificationStream 훅 내부에서 처리됨 (쿠키로 인증)
 
     // ▼ 드롭다운 토글
     const [showProfile, setShowProfile] = useState(false);
@@ -89,6 +99,7 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 createdAt: r.lastAt,
                 isRead: r.unreadCount === 0,
                 unreadCount: r.unreadCount,
+                avatarUrl: r.partnerAvatarUrl || undefined,
             }));
             setMessages(mapped);
         } catch {
@@ -101,6 +112,19 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     }, [notiReady, loadHeaderMessages]);
 
     useEffect(() => onMessagesRefresh(loadHeaderMessages), [loadHeaderMessages]);
+
+    // 읽음 이벤트 구독: 특정 방이 읽음 처리되었을 때 즉시 UI 업데이트
+    useEffect(() => {
+        const unsubscribe = onMessageRead((roomId) => {
+            setMessages((prev) =>
+                prev.map((m) => {
+                    const mRoomId = typeof (m as any).roomId === 'number' ? (m as any).roomId : m.id;
+                    return (mRoomId === roomId ? { ...m, isRead: true, unreadCount: 0 } : m);
+                })
+            );
+        });
+        return unsubscribe;
+    }, []);
 
     const markMessageRead = (id: number | string) => {
         setMessages((prev) =>
@@ -115,10 +139,8 @@ const DesktopNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         wsUrl: "/stomp",
         topicBase: "/topic/users",
         pageSize: 20,
-        getToken: () =>
-            localStorage.getItem("accessToken") ||
-            sessionStorage.getItem("accessToken") ||
-            null,
+        // ✅ httpOnly 쿠키 기반: getToken 불필요 (쿠키로 자동 인증)
+        getToken: () => null,
         resetOnDisable: false,
         debug: false,
         dropdownOpen: showNotification, // ★ 드롭다운 열림 상태 전달

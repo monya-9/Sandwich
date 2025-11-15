@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { FaFolderMinus } from "react-icons/fa6";
 import LoginPrompt from "../LoginPrompt";
 import { useNavigate } from "react-router-dom";
 import CollectionPickerModal from "../CollectionPickerModal";
 import { listMyCollectionFolders, getCollectionFolder } from "../../../api/collections";
+import { AuthContext } from "../../../context/AuthContext";
 
 export default function CollectionAction({ projectId, isMobile = false }: { projectId?: number; isMobile?: boolean } = {}) {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -11,6 +12,9 @@ export default function CollectionAction({ projectId, isMobile = false }: { proj
   const [hasCollected, setHasCollected] = useState(false);
   const [initialSelected, setInitialSelected] = useState<number[]>([]);
   const navigate = useNavigate();
+  
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
   const broadcast = (value: boolean) => {
     try {
@@ -21,8 +25,9 @@ export default function CollectionAction({ projectId, isMobile = false }: { proj
   useEffect(() => {
     const loadMembership = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (!token || !projectId) return;
+        // 인증 확인 중이거나 로그인하지 않았으면 스킵
+        if (isAuthChecking || !isLoggedIn || !projectId) return;
+        
         const folders = await listMyCollectionFolders();
         const ids = folders.map(f => f.id);
         const results = await Promise.allSettled(ids.map(id => getCollectionFolder(id) as any));
@@ -40,11 +45,12 @@ export default function CollectionAction({ projectId, isMobile = false }: { proj
       } catch {}
     };
     loadMembership();
-  }, [projectId]);
+  }, [projectId, isLoggedIn, isAuthChecking]);
 
   const openPickerWithAuth = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) {
+    if (isAuthChecking) return false;
+    
+    if (!isLoggedIn) {
       setShowLoginPrompt(true);
       return false;
     }

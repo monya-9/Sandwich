@@ -3,6 +3,7 @@ package com.sandwich.SandWich.notification.handlers;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.LikeCreatedEvent;
 import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.time.OffsetDateTime;
 public class LikeNotifyListener {
 
     private final NotificationFanoutService fanout;
+    private final ProjectRepository projectRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onLikeCreated(LikeCreatedEvent ev) {
@@ -24,7 +26,15 @@ public class LikeNotifyListener {
         Long id = ev.getResourceId();
 
         String deep = switch (type) {
-            case "PROJECT" -> "/projects/" + id;
+            case "PROJECT" -> {
+                // 프로젝트 소유자 ID 조회 후 올바른 경로 생성
+                Long ownerId = projectRepository.findAuthorIdById(id).orElse(null);
+                if (ownerId != null) {
+                    yield "/other-project/" + ownerId + "/" + id;
+                }
+                log.warn("[LikeNotify] PROJECT ownerId not found for projectId={}", id);
+                yield "/";
+            }
             case "POST"    -> "/posts/" + id;
             case "COMMENT" -> "/posts/" + id + "#comment-" + id; // 필요 시 원글 경로로 보정
             default        -> "/";

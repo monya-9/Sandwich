@@ -9,13 +9,18 @@ import com.sandwich.SandWich.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Map;
 
 @Component
@@ -46,9 +51,19 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             email = username + "@" + provider + ".local";
         }
 
-        User user = userRepository.findByEmailAndIsDeletedFalse(email)
-                .orElseThrow(() -> new IllegalStateException("OAuth2UserService에서 유저 생성/연동 실패"));
-
+        User user = userRepository.findByEmailAndIsDeletedFalse(email).orElse(null);
+        if (user == null) {
+            // 여기까지 왔는데 유저가 없으면 에러 페이지로 리다이렉트
+            String frontendUrl = Optional.ofNullable(System.getenv("FRONTEND_URL"))
+                    .orElse("https://sandwich-dev.com");
+            String msg = URLEncoder.encode(
+                    "계정 정보를 찾을 수 없습니다. 다시 로그인해 주세요.",
+                    StandardCharsets.UTF_8
+            );
+            response.sendRedirect(frontendUrl + "/oauth2/error?message=" + msg);
+            return;
+        }
+        // ---- optional attributes from authorization request (remember / deviceName)
         OAuth2AuthorizationRequest authReq = authReqRepo.removeAuthorizationRequest(request, response);
         String remember = null;
         String deviceName = "Web Browser";
@@ -70,44 +85,62 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         boolean trustedNow = deviceTrustService.isTrusted(request);
         System.out.println("### [OAUTH2] isTrusted=" + trustedNow);
 
-        if (rememberFlag && !trustedNow) {
-            deviceTrustService.remember(request, response, user.getId(), deviceName);
-            System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
-        } else if (rememberFlag) {
-            System.out.println("### [OAUTH2] remember skipped (already trusted)");
-        } else {
-            System.out.println("### [OAUTH2] remember skipped (flag=false)");
-        }
-
-
-        // ===== 임시 강제 호출(문제 분리용): 아래 한 줄이 DB insert를 만든다면 파이프라인은 정상 ====
-        deviceTrustService.remember(request, response, user.getId(), "Temp-Force"); // <-- 테스트 후 제거
-        System.out.println("### [OAUTH2] forced remember() called");
-
-        // 정상 경로(플래그 기반)
         if (rememberFlag) {
-            deviceTrustService.remember(request, response, user.getId(), deviceName);
-            System.out.println("### [OAUTH2] remember() called with deviceName=" + deviceName);
+            if (trustedNow) {
+                deviceTrustService.extendCurrentDevice(request, user.getId(), 30); // 기존 신뢰기기 연장(30일)
+                System.out.println("### [OAUTH2] extend trust 30d");
+            } else {
+                deviceTrustService.remember(request, response, user.getId(), deviceName);
+                System.out.println("### [OAUTH2] remember() executed (deviceName=" + deviceName + ")");
+            }
         } else {
             System.out.println("### [OAUTH2] remember skipped (flag=false)");
         }
 
+        // ---- create tokens
         String accessToken = jwtUtil.createAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
         redisUtil.saveRefreshToken(String.valueOf(user.getId()), refreshToken);
+
+        String tokenSameSite = System.getenv().getOrDefault("TOKEN_COOKIE_SAMESITE", "None");
+        boolean tokenSecure  = Boolean.parseBoolean(System.getenv().getOrDefault("TOKEN_COOKIE_SECURE", "true"));
+        String tokenDomain   = System.getenv().getOrDefault("TOKEN_COOKIE_DOMAIN", "");
+
+        ResponseCookie.ResponseCookieBuilder acb = ResponseCookie.from("ACCESS_TOKEN", accessToken)
+                .httpOnly(true)
+                .secure(tokenSecure)
+                .sameSite(tokenSameSite)
+                .path("/")
+                .maxAge(Duration.ofHours(1));
+
+        ResponseCookie.ResponseCookieBuilder rcb = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
+                .httpOnly(true)
+                .secure(tokenSecure)
+                .sameSite(tokenSameSite)
+                .path("/")
+                .maxAge(Duration.ofDays(14));
+
+        if (tokenDomain != null && !tokenDomain.isBlank()) {
+            acb = acb.domain(tokenDomain);
+            rcb = rcb.domain(tokenDomain);
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, acb.build().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, rcb.build().toString());
 
         boolean needNickname = (user.getProfile() == null)
                 || user.getProfile().getNickname() == null
                 || user.getProfile().getNickname().isBlank();
 
-        String redirectUriBase = System.getenv("FRONTEND_URL") != null ? 
-        System.getenv("FRONTEND_URL") : "http://localhost:3000";
+        String redirectUriBase = System.getenv("FRONTEND_URL") != null
+                ? System.getenv("FRONTEND_URL")
+                : "https://sandwich-dev.com"; // 운영 기본값 권장
+
         String redirectPath = needNickname ? "/oauth/profile-step" : "/oauth2/success";
 
+        // 토큰/리프레시토큰은 쿠키로 이미 내려갔으므로 URL에 실지 않음
         String redirectUri = redirectUriBase + redirectPath
-                + "?token=" + accessToken
-                + "&refreshToken=" + refreshToken
-                + "&email=" + user.getEmail()
+                + "?email=" + user.getEmail()
                 + "&provider=" + user.getProvider()
                 + "&isProfileSet=" + Boolean.TRUE.equals(user.getIsProfileSet())
                 + "&needNickname=" + needNickname;

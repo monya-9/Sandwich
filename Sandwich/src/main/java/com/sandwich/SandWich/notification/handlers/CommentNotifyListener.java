@@ -3,6 +3,7 @@ package com.sandwich.SandWich.notification.handlers;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.CommentCreatedEvent;
 import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
+import com.sandwich.SandWich.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.util.Map;
 public class CommentNotifyListener {
 
     private final NotificationFanoutService fanout;
+    private final ProjectRepository projectRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCommentCreated(CommentCreatedEvent ev) {
@@ -26,7 +28,14 @@ public class CommentNotifyListener {
         String deepLink;
         switch (type) {
             case "PROJECT":
-                deepLink = "/projects/" + id;
+                // 프로젝트 소유자 ID 조회 후 올바른 경로 생성
+                Long ownerId = projectRepository.findAuthorIdById(id).orElse(null);
+                if (ownerId != null) {
+                    deepLink = "/other-project/" + ownerId + "/" + id;
+                } else {
+                    log.warn("[CommentNotify] PROJECT ownerId not found for projectId={}", id);
+                    deepLink = "/";
+                }
                 break;
             case "CHALLENGE":
                 deepLink = "/challenges/" + id;

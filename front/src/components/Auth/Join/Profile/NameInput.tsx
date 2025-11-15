@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE } from "../../../../config/apiBase";
+import { UserApi } from "../../../../api/userApi";
 
 interface Props {
     value: string;
@@ -20,8 +19,8 @@ const NameInput = ({ value, onChange }: Props) => {
         const delayDebounce = setTimeout(async () => {
             setChecking(true);
             try {
-                const res = await axios.get(`${API_BASE}/users/check-nickname?value=${value}`);
-                setIsDuplicate(res.data); // boolean 값 직접 사용
+                const isDup = await UserApi.checkNickname(value.trim());
+                setIsDuplicate(isDup);
             } catch (error) {
                 setIsDuplicate(null);
             } finally {

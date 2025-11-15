@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { FaUser } from "react-icons/fa";
 import api from "../../../api/axiosInstance";
 import { useNavigate, useParams } from "react-router-dom";
 import LoginPrompt from "../LoginPrompt";
 import Toast from "../../common/Toast";
+import { AuthContext } from "../../../context/AuthContext";
 
 interface ProfileActionProps {
   targetUserId?: number;
@@ -39,7 +40,8 @@ export default function ProfileAction({
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardTopPx, setCardTopPx] = useState<number | null>(null);
 
-  const isLoggedIn = !!(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
   const navigate = useNavigate();
   const { ownerId: ownerIdParam } = useParams<{ ownerId?: string }>();
   const targetUserId = targetUserIdProp ?? (ownerIdParam ? Number(ownerIdParam) : undefined);
@@ -60,14 +62,17 @@ export default function ProfileAction({
     if (typeof initialIsFollowing === "boolean") return;
     const fetchFollowStatus = async () => {
       try {
-        const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-        if (!token || !targetUserId || targetUserId <= 0) { setIsFollowing(false); return; }
+        // 인증 확인 중이거나 로그인하지 않았으면 스킵
+        if (isAuthChecking || !isLoggedIn || !targetUserId || targetUserId <= 0) { 
+          setIsFollowing(false); 
+          return; 
+        }
         const res = await api.get(`/users/${targetUserId}/follow-status`);
         setIsFollowing(!!res.data?.isFollowing);
       } catch (e: any) { if (e.response?.status === 401) setIsFollowing(false); }
     };
     fetchFollowStatus();
-  }, [targetUserId, initialIsFollowing]);
+  }, [targetUserId, initialIsFollowing, isLoggedIn, isAuthChecking]);
 
   useEffect(() => {
     if (!hover && !tooltipHover) return;
@@ -106,11 +111,10 @@ export default function ProfileAction({
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isAuthChecking) return;
     if (!isLoggedIn) return requireLogin();
     if (!targetUserId || targetUserId <= 0) return requireTarget();
     try {
-      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-      if (!token) return requireLogin();
       await api.post(`/users/${targetUserId}/follow`, null);
       setIsFollowing(true);
       setToast("follow");
@@ -124,11 +128,10 @@ export default function ProfileAction({
   };
   const handleUnfollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isAuthChecking) return;
     if (!isLoggedIn) return requireLogin();
     if (!targetUserId || targetUserId <= 0) return requireTarget();
     try {
-      const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-      if (!token) return requireLogin();
       await api.delete(`/users/${targetUserId}/unfollow`);
       setIsFollowing(false);
       setToast("unfollow");
@@ -185,7 +188,7 @@ export default function ProfileAction({
       <div ref={containerRef} className="relative">
         {showLoginPrompt && (<LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />)}
 
-        <button ref={btnRef} className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={goProfile}>
+        <button ref={btnRef} className={`flex items-center group relative z-50 ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'}`} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={(e) => { e.stopPropagation(); goProfile(); }}>
           <div className={`rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
             <FaUser className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />
           </div>
@@ -194,13 +197,20 @@ export default function ProfileAction({
 
       {(hover || tooltipHover) && !isMobile && (
         <>
+          {/* 브릿지 영역: 버튼과 툴팁 사이의 간격을 메움 */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[70px] z-30"
+            onMouseEnter={() => setTooltipHover(true)}
+            onMouseLeave={() => setTooltipHover(false)}
+          />
           <div
             ref={tooltipRef}
-            className="absolute right-[calc(100%+14px)] rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-center z-50 px-7 py-6 gap-4 w-max min-w-[350px]"
+            className="absolute right-[calc(100%+14px)] rounded-[4px] bg-white shadow-lg border border-gray-200 flex flex-col items-center z-40 px-7 py-6 gap-4 w-max min-w-[350px]"
             style={{ top: (cardTopPx ?? 0) + "px" }}
             onMouseEnter={() => setTooltipHover(true)}
             onMouseLeave={() => { setTooltipHover(false); setFollowBtnHover(false); }}
             onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="absolute -right-2 top-5 w-4 h-4 bg-white rotate-45 rounded-[2px]" />
             {avatar}

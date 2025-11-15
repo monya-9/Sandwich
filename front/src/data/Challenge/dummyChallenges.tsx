@@ -9,27 +9,29 @@ export const dummyChallenges: ChallengeCardData[] = [
         id: 11100,  // 🔥 높은 ID로 변경
         type: "CODE",
         title: "이번 주 코드 챌린지",
-        subtitle: "🧮 예산으로 만드는 최대 방 번호",
+        subtitle: "🔄 준비 중",
         description: (
-            <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
-                <p>📣 숫자 스티커 가격과 예산 M으로 만들 수 있는 <b>가장 큰 방 번호</b>를 구해보자!</p>
-                <p className="text-[13px]">조건: 0으로 시작 불가(단, 한 자리면 0 가능) · 자동 채점 지원</p>
+            <div className="space-y-2 text-[13.5px] leading-6 text-neutral-500 dark:text-neutral-400">
+                <p>이번 주 코드 챌린지를 준비하고 있습니다.</p>
+                <p className="text-[13px]">곧 새로운 챌린지가 시작됩니다. 조금만 기다려주세요! 🚀</p>
             </div>
         ),
-        ctaLabel: "참여하러 가기",
+        ctaLabel: "준비 중",
+        ctaHref: "#",
     },
     {
         id: 22200,  // 🔥 높은 ID로 변경
         type: "PORTFOLIO",
         title: "이번 달 포트폴리오 챌린지",
-        subtitle: "🎨 레트로 감성의 개발자 블로그",
+        subtitle: "🔄 준비 중",
         description: (
-            <div className="space-y-2 text-[13.5px] leading-6 text-neutral-800">
-                <p>✨ 80~90년대 무드를 현대적으로 재해석한<b>레트로 테마 포트폴리오</b>를 만들어보세요.</p>
-                <p className="text-[13px]">팀/개인 모두 가능 · 결과는 <b>커뮤니티 투표 100%</b></p>
+            <div className="space-y-2 text-[13.5px] leading-6 text-neutral-500 dark:text-neutral-400">
+                <p>이번 달 포트폴리오 챌린지를 준비하고 있습니다.</p>
+                <p className="text-[13px]">곧 새로운 챌린지가 시작됩니다. 조금만 기다려주세요! 🚀</p>
             </div>
         ),
-        ctaLabel: "참여하러 가기",
+        ctaLabel: "준비 중",
+        ctaHref: "#",
     },
 ];
 
@@ -37,7 +39,8 @@ export const dummyChallenges: ChallengeCardData[] = [
 export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
     try {
         // 1. 백엔드 챌린지 데이터 가져오기 (우선순위)
-        const backendChallenges = await fetchChallenges(0, 100); // 충분히 많이 가져와서 필터링
+        // ✅ 성능 최적화: 필요한 만큼만 요청 (30개면 충분 - CODE/PORTFOLIO 각 1개씩만 필요)
+        const backendChallenges = await fetchChallenges(0, 30);
         
         // 백엔드에서 가져온 챌린지 중 CODE와 PORTFOLIO 타입 찾기
         // 최신(created/start 기준) 챌린지 우선: content가 정렬되어 있지 않을 수 있어 시작일/생성일 기준으로 최신을 선택
@@ -94,13 +97,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
         const codeChallenge = byLatestRegistered("CODE");
         const portfolioChallenge = byLatestRegistered("PORTFOLIO");
         
-        // 디버깅: 선택된 챌린지 확인
-        console.log('🔍 [DEBUG] 현재 챌린지 선택 결과:');
-        console.log('  - CODE 챌린지:', codeChallenge ? `ID: ${codeChallenge.id}, 제목: ${codeChallenge.title}, 상태: ${codeChallenge.status}` : '없음');
-        console.log('  - PORTFOLIO 챌린지:', portfolioChallenge ? `ID: ${portfolioChallenge.id}, 제목: ${portfolioChallenge.title}, 상태: ${portfolioChallenge.status}` : '없음');
-        console.log('  - 전체 챌린지 수:', challenges.length);
-        console.log('  - PORTFOLIO 타입 챌린지들:', challenges.filter(c => c.type === 'PORTFOLIO').map(c => ({ id: c.id, title: c.title, status: c.status })));
-        
         // 최신 단건 상세를 불러와 카드 내용을 백엔드 기준으로 구성
         const [codeDetail, portfolioDetail] = await Promise.all([
             codeChallenge?.id ? fetchChallengeDetail(codeChallenge.id) : Promise.resolve(null),
@@ -122,7 +118,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             if (!codeDetail || !isAllowed('CODE', codeDetail.status)) return null;
             const endAt = codeDetail.endAt ? new Date(codeDetail.endAt as any) : null;
             if (endAt && now > endAt) {
-                console.log(`⏰ [DETAIL] CODE 챌린지 ID ${codeDetail.id} - 마감시간 경과로 제외`);
                 return null;
             }
             return codeDetail;
@@ -134,7 +129,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             const endAt = portfolioDetail.endAt ? new Date(portfolioDetail.endAt as any) : null;
             const finalEndTime = voteEndAt || endAt;
             if (finalEndTime && now > finalEndTime) {
-                console.log(`⏰ [DETAIL] PORTFOLIO 챌린지 ID ${portfolioDetail.id} - 마감시간 경과로 제외`);
                 return null;
             }
             return portfolioDetail;
@@ -180,9 +174,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
         // CODE 챌린지 추가 (백엔드 데이터가 있을 때만)
         if (codeChallenge?.id) {
             const codeExpireMs = codeChallenge.endAt ? new Date(codeChallenge.endAt as any).getTime() : undefined;
-            console.log(`📌 [BUILD] CODE 챌린지 ID ${codeChallenge.id} 생성`);
-            console.log(`   → endAt: ${codeChallenge.endAt}`);
-            console.log(`   → expireAtMs: ${codeExpireMs} (${codeExpireMs ? new Date(codeExpireMs).toLocaleString('ko-KR') : '없음'})`);
             
             result.push({
                 id: codeChallenge.id,
@@ -213,12 +204,6 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             const voteEndAtMs = portfolioChallenge.voteEndAt ? new Date(portfolioChallenge.voteEndAt as any).getTime() : undefined;
             const portfolioExpireMs = voteEndAtMs || endAtMs; // 최종 마감 시간
             
-            console.log(`📌 [BUILD] PORTFOLIO 챌린지 ID ${portfolioChallenge.id} 생성`);
-            console.log(`   → endAt: ${portfolioChallenge.endAt} (${endAtMs ? new Date(endAtMs).toLocaleString('ko-KR') : '없음'})`);
-            console.log(`   → voteStartAt: ${portfolioChallenge.voteStartAt} (${voteStartAtMs ? new Date(voteStartAtMs).toLocaleString('ko-KR') : '없음'})`);
-            console.log(`   → voteEndAt: ${portfolioChallenge.voteEndAt} (${voteEndAtMs ? new Date(voteEndAtMs).toLocaleString('ko-KR') : '없음'})`);
-            console.log(`   → expireAtMs: ${portfolioExpireMs} (${portfolioExpireMs ? new Date(portfolioExpireMs).toLocaleString('ko-KR') : '없음'})`);
-            
             result.push({
                 id: portfolioChallenge.id,
                 type: "PORTFOLIO", 
@@ -244,6 +229,42 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
             });
         }
         
+        // 🔥 포트폴리오 챌린지만 있고 코드 챌린지가 없으면 코드 챌린지 섹션을 맨 앞에 추가
+        if (portfolioUse && !codeUse) {
+            result.unshift({
+                id: 11100, // 더미 ID
+                type: "CODE",
+                title: "이번 주 코드 챌린지",
+                subtitle: "🔄 준비 중",
+                description: (
+                    <div className="space-y-2 text-[13.5px] leading-6 text-neutral-500 dark:text-neutral-400">
+                        <p>이번 주 코드 챌린지를 준비하고 있습니다.</p>
+                        <p className="text-[13px]">곧 새로운 챌린지가 시작됩니다. 조금만 기다려주세요! 🚀</p>
+                    </div>
+                ),
+                ctaLabel: "준비 중",
+                ctaHref: "#",
+            });
+        }
+        
+        // 🔥 코드 챌린지만 있고 포트폴리오 챌린지가 없으면 포트폴리오 챌린지 섹션을 맨 뒤에 추가
+        if (codeUse && !portfolioUse) {
+            result.push({
+                id: 22200, // 더미 ID
+                type: "PORTFOLIO",
+                title: "이번 달 포트폴리오 챌린지",
+                subtitle: "🔄 준비 중",
+                description: (
+                    <div className="space-y-2 text-[13.5px] leading-6 text-neutral-500 dark:text-neutral-400">
+                        <p>이번 달 포트폴리오 챌린지를 준비하고 있습니다.</p>
+                        <p className="text-[13px]">곧 새로운 챌린지가 시작됩니다. 조금만 기다려주세요! 🚀</p>
+                    </div>
+                ),
+                ctaLabel: "준비 중",
+                ctaHref: "#",
+            });
+        }
+        
         // 챌린지가 하나도 없으면 더미 데이터 반환
         return result.length > 0 ? result : dummyChallenges;
     } catch (error) {
@@ -255,7 +276,8 @@ export async function getDynamicChallenges(): Promise<ChallengeCardData[]> {
 // 🆕 지난 챌린지 데이터 가져오기 (지난 대결 보기용)
 export async function getPastChallenges(): Promise<ChallengeCardData[]> {
     try {
-        const backendChallenges = await fetchChallenges(0, 100); // 최대 100개까지 가져오기
+        // ✅ 성능 최적화: 필요한 만큼만 요청 (30개면 충분 - 최근 지난 챌린지만 표시)
+        const backendChallenges = await fetchChallenges(0, 30);
         
         if (!backendChallenges.content || backendChallenges.content.length === 0) {
             return [];
@@ -282,9 +304,6 @@ export async function getPastChallenges(): Promise<ChallengeCardData[]> {
                 // 종료일 기준으로 최신순 정렬
                 // 포트폴리오: 투표 종료일(voteEndAt) 우선, 없으면 제출 종료일(endAt), 없으면 시작일(startAt)
                 // 코드: 제출 종료일(endAt) 우선, 없으면 시작일(startAt)
-                const aType = String(a.type || '').toUpperCase();
-                const bType = String(b.type || '').toUpperCase();
-                
                 const getEndDate = (challenge: any) => {
                     if (challenge.type === 'PORTFOLIO') {
                         // 포트폴리오는 투표 종료일을 우선으로 사용

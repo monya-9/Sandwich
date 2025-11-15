@@ -1,14 +1,13 @@
 // src/components/home/MainHeroSection.tsx
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import type { Project } from '../../types/Project';
 import { resolveCover, swapJpgPng } from '../../utils/getProjectCover';
 import { Link } from 'react-router-dom';
-import { fetchWeeklyTop } from '../../api/reco';
-import { fetchProjectFeed } from '../../api/projects';
+import { fetchWeeklyTop, type WeeklyTopProject } from '../../api/reco';
 import { fetchProjectDetail } from '../../api/projectApi';
 
 /** 이미지 컴포넌트: jpg 실패 시 png로 한번 더 시도 */
-function CoverImage({ initialSrc, title }: { initialSrc: string; title: string }) {
+const CoverImage = memo(({ initialSrc, title }: { initialSrc: string; title: string }) => {
     const [src, setSrc] = useState(initialSrc);
     const [triedAltExt, setTriedAltExt] = useState(false);
 
@@ -28,7 +27,9 @@ function CoverImage({ initialSrc, title }: { initialSrc: string; title: string }
             }}
         />
     );
-}
+});
+
+CoverImage.displayName = 'CoverImage';
 
 /** 첫 번째 카드 오버라이드 설정 */
 const HERO_OVERRIDES = {
@@ -38,14 +39,17 @@ const HERO_OVERRIDES = {
 const WEEKLY_CACHE_KEY = 'cache:weeklyTopProjects:v1';
 const OVERRIDE_META_CACHE_KEY = 'cache:heroOverrideMeta:v1';
 
-const MainHeroSection = ({ projects }: { projects: Project[] }) => {
+const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [scrollPosition, setScrollPosition] = useState(0);
     const [showFakeScroll, setShowFakeScroll] = useState(false);
     const [isAtStart, setIsAtStart] = useState(true);
     const [isAtEnd, setIsAtEnd] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+    const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+    const [isUserScrolling, setIsUserScrolling] = useState(false);
 
     // 개발자 도구에서 캐시 삭제를 위한 전역 함수 등록
     useEffect(() => {
@@ -75,6 +79,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             return null; 
         }
     });
+    const [isLoadingWeeklyTop, setIsLoadingWeeklyTop] = useState(false);
 
     // 오버라이드 카드에 표시할 제목/썸네일(cover) 동적 로딩 결과 저장: index -> { title, coverUrl }
     const [overrideMeta, setOverrideMeta] = useState<Record<number, { title?: string; coverUrl?: string }>>(() => {
@@ -100,6 +105,12 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         if (!showFakeScroll) setShowFakeScroll(true);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => setShowFakeScroll(false), 5000);
+        
+        // 사용자 스크롤 감지
+        if (!isAutoScrolling) {
+            setIsUserScrolling(true);
+            setTimeout(() => setIsUserScrolling(false), 3000); // 3초 후 자동 스크롤 재개
+        }
     };
 
     useEffect(() => {
@@ -118,36 +129,91 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // 피드 페이지를 스캔해서 특정 ID들의 프로젝트를 찾아오는 헬퍼
-    async function findProjectsByIdsViaFeed(targetIds: number[], maxPages = 10, pageSize = 100): Promise<Project[]> {
-        const found = new Map<number, Project>();
-        let page = 0;
-        while (page < maxPages && found.size < targetIds.length) {
-            try {
-                const feed = await fetchProjectFeed({ page, size: pageSize, sort: 'latest' });
-                const content = feed.content || [];
-                for (const p of content) {
-                    if (targetIds.includes(p.id) && !found.has(p.id)) {
-                        found.set(p.id, p);
-                    }
-                }
-                if (feed.last) break;
-                page += 1;
-            } catch {
-                break; // 피드 실패 시 중단하고 현재까지 수집분만 사용
+    // 자동 스크롤 애니메이션
+    const startAutoScroll = useCallback(() => {
+        if (autoScrollRef.current) clearInterval(autoScrollRef.current);
+        
+        autoScrollRef.current = setInterval(() => {
+            const el = scrollRef.current;
+            if (!el || isAutoScrolling || isUserScrolling) return;
+            
+            const cardWidth = windowWidth < 768 ? 280 : windowWidth < 1024 ? 350 : 450;
+            const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16; // gap-2, gap-3, gap-4
+            const scrollAmount = cardWidth + gap;
+            
+            setIsAutoScrolling(true);
+            
+            // 현재 스크롤 위치 확인
+            const currentScroll = el.scrollLeft;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            
+            // 끝에 도달했으면 처음으로 돌아가기
+            if (currentScroll + scrollAmount >= maxScroll - 10) { // 10px 여유를 둠
+                el.scrollTo({
+                    left: 0,
+                    behavior: 'smooth'
+                });
+            } else {
+                el.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
             }
+            
+            // 애니메이션 완료 후 상태 리셋
+            setTimeout(() => {
+                setIsAutoScrolling(false);
+            }, 1500); // 애니메이션 시간을 조금 더 길게
+        }, 4000); // 4초마다 자동 스크롤 (더 여유있게)
+    }, [windowWidth, isAutoScrolling, isUserScrolling]);
+
+    // 자동 스크롤 시작/중지
+    useEffect(() => {
+        const currentProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
+            ? weeklyTopProjects.slice(0, 15)
+            : [];
+            
+        if (currentProjects.length > 1) {
+            startAutoScroll();
         }
-        // 주어진 targetIds 순서대로 정렬
-        return targetIds.map(id => found.get(id)).filter((p): p is Project => !!p);
+        
+        return () => {
+            if (autoScrollRef.current) {
+                clearInterval(autoScrollRef.current);
+            }
+        };
+    }, [weeklyTopProjects, startAutoScroll]);
+
+    // WeeklyTopProject를 Project 타입으로 변환
+    function convertWeeklyTopToProject(wp: WeeklyTopProject): Project {
+        return {
+            id: wp.id,
+            title: wp.title,
+            description: wp.description || null,
+            coverUrl: wp.coverUrl || null,
+            isTeam: wp.isTeam || null,
+            username: wp.username || undefined,
+            shareUrl: wp.shareUrl || undefined,
+            qrImageUrl: wp.qrImageUrl || null,
+            owner: wp.owner ? {
+                id: wp.owner.id,
+                nickname: wp.owner.nickname,
+                email: '', // 백엔드에서 email 제외
+                avatarUrl: wp.owner.avatarUrl || null,
+                username: wp.owner.username,
+            } : undefined,
+            authorId: wp.owner?.id,
+        };
     }
 
-    // 주간 TOP 불러와서 실제 프로젝트로 매핑 (결과는 세션 캐시에 저장)
+    // 주간 TOP 불러오기 (백엔드에서 이미 프로젝트 데이터를 제공)
     useEffect(() => {
         let isMounted = true;
         (async () => {
             try {
-                const items = await fetchWeeklyTop();
-                if (!items || items.length === 0) {
+                setIsLoadingWeeklyTop(true);
+                const response = await fetchWeeklyTop();
+                if (!response || !response.content || response.content.length === 0) {
                     // 데이터가 없으면 캐시도 삭제
                     if (isMounted) {
                         setWeeklyTopProjects(null);
@@ -156,12 +222,8 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                     return;
                 }
 
-                // 점수 높은 순으로 정렬 후 상단 N개만 선택
-                const sorted = [...items].sort((a, b) => b.score - a.score);
-                const topIds = sorted.map(i => i.project_id).slice(0, 50);
-
-                // 피드에서 스캔하여 해당 ID들에 매칭되는 프로젝트 회수
-                const mapped = await findProjectsByIdsViaFeed(topIds, 10, 100);
+                // 백엔드에서 이미 score 기준으로 정렬되어 있으므로 바로 변환
+                const mapped = response.content.map(convertWeeklyTopToProject);
 
                 if (isMounted) {
                     if (mapped.length > 0) {
@@ -173,12 +235,18 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                         try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
                     }
                 }
-            } catch {
+            } catch (error) {
+                console.error('주간 TOP 프로젝트 로드 실패:', error);
                 // 실패 시 캐시 삭제하고 일반 프로젝트 사용
                 if (isMounted) {
                     setWeeklyTopProjects(null);
                     try { sessionStorage.removeItem(WEEKLY_CACHE_KEY); } catch {}
                 }
+            } finally {
+                if (isMounted) {
+                    setIsLoadingWeeklyTop(false);
+                }
+                isMounted = false;
             }
         })();
         return () => { isMounted = false; };
@@ -215,13 +283,37 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
         });
     }, []);
 
-    // 표시 소스 선택: 주간 TOP 데이터가 준비되면 그것을 우선 사용
+    // 표시 소스 선택: 주간 TOP API에서만 데이터 가져오기
     const displayProjects = (weeklyTopProjects && weeklyTopProjects.length > 0)
-        ? weeklyTopProjects.slice(0, 7)
-        : projects.slice(0, 7);
+        ? weeklyTopProjects.slice(0, 15)
+        : [];
 
-    // 버튼 위치 계산
-    const buttonTop = windowWidth < 768 ? '80px' : windowWidth < 1024 ? '100px' : '140px';
+    // 버튼 위치 계산 (카드 컨테이너 중앙)
+    const buttonTop = '50%';
+
+    // 로딩 상태 처리
+    if (isLoadingWeeklyTop && (!weeklyTopProjects || weeklyTopProjects.length === 0)) {
+        return (
+            <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
+                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
+                <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
+                    프로젝트를 불러오는 중입니다…
+                </div>
+            </section>
+        );
+    }
+
+    // 데이터가 없을 때
+    if (displayProjects.length === 0) {
+        return (
+            <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
+                <h1 className="text-lg md:text-xl lg:text-2xl font-bold mb-3 md:mb-4 text-left ml-3 md:ml-4 lg:ml-[15px] text-black dark:text-white">이번 주 인기 프로젝트</h1>
+                <div className="text-center text-gray-500 py-8 md:py-12 lg:py-[50px] text-sm md:text-base lg:text-lg">
+                    프로젝트를 불러오는 중입니다…
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="w-full relative mb-6 md:mb-8 lg:mb-10 py-3 md:py-4 lg:py-5">
@@ -229,7 +321,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
             <button
                 onClick={scrollLeft}
-                className="absolute left-0 md:left-1 lg:left-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-2 md:mt-3 lg:mt-[15px] bg-white dark:bg-black"
+                className="absolute left-0 md:left-1 lg:left-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 bg-white dark:bg-black transform -translate-y-1/2"
                 style={{ top: buttonTop }}
                 aria-label="왼쪽으로 스크롤"
             >
@@ -238,7 +330,7 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
 
             <button
                 onClick={scrollRight}
-                className="absolute right-0 md:right-1 lg:right-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 mt-2 md:mt-3 lg:mt-[15px] bg-white dark:bg-black"
+                className="absolute right-0 md:right-1 lg:right-0 w-8 h-8 md:w-10 md:h-10 lg:w-[50px] lg:h-[50px] rounded-full shadow-md flex items-center justify-center z-10 bg-white dark:bg-black transform -translate-y-1/2"
                 style={{ top: buttonTop }}
                 aria-label="오른쪽으로 스크롤"
             >
@@ -266,11 +358,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
                         <CardTag
                             key={project.id}
                             {...cardProps}
-                            className="group relative min-w-[200px] md:min-w-[250px] lg:min-w-[300px] h-[140px] md:h-[180px] lg:h-[220px] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
+                            className="group relative min-w-[280px] md:min-w-[350px] lg:min-w-[450px] aspect-[4/3] rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden flex-shrink-0 bg-gray-200 scroll-snap-align-start cursor-pointer"
                         >
                             <CoverImage initialSrc={initialSrc} title={displayTitle} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
-                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-xs md:text-sm font-semibold line-clamp-1">
+                            <p className="absolute bottom-0 left-0 right-0 p-2 md:p-3 lg:p-4 text-white text-sm md:text-base lg:text-lg font-semibold line-clamp-1">
                                 {displayTitle}
                             </p>
                         </CardTag>
@@ -291,6 +383,11 @@ const MainHeroSection = ({ projects }: { projects: Project[] }) => {
             </div>
         </section>
     );
-};
+}, () => {
+    // 주간 TOP API만 사용하므로 props 비교 불필요 (항상 true 반환하여 리렌더링 허용)
+    return false;
+});
+
+MainHeroSection.displayName = 'MainHeroSection';
 
 export default MainHeroSection;

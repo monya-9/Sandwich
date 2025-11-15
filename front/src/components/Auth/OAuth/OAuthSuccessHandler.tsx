@@ -1,7 +1,7 @@
 // src/components/Auth/OAuth/OAuthSuccessHandler.tsx
 import React, { useEffect, useRef, useContext } from "react";
 import { AuthContext } from "../../../context/AuthContext";
-import { setToken, clearAllUserData } from "../../../utils/tokenStorage";
+import { clearAllUserData } from "../../../utils/tokenStorage";
 import api from "../../../api/axiosInstance";
 
 type Me = {
@@ -22,15 +22,18 @@ const OAuthSuccessHandler: React.FC = () => {
         isHandled.current = true;
 
         (async () => {
+            // ✅ httpOnly=true 쿠키는 JavaScript에서 읽을 수 없음 (보안상 정상)
+            // axios가 자동으로 쿠키를 전송하므로 직접 읽을 필요 없음
+
+            // URL 파라미터에서 메타 정보 읽기
             const q = new URLSearchParams(window.location.search);
-            const token = q.get("token");
-            const refreshToken = q.get("refreshToken");
             const provider = q.get("provider");
             const emailFromUrl = q.get("email") || undefined;
             const isProfileSetFlag = q.get("isProfileSet") === "true";
             const needNickname = q.get("needNickname") === "true";
 
-            if (!token) {
+            if (!emailFromUrl) {
+                console.error("❌ 이메일 정보가 없습니다");
                 window.location.replace("/login");
                 return;
             }
@@ -41,25 +44,15 @@ const OAuthSuccessHandler: React.FC = () => {
             // ✅ 2. React 상태 즉시 초기화 (깜빡임 방지)
             clearState(); // React 상태만 즉시 초기화
 
-            // ✅ 3. 새 토큰/부가정보 저장 (OAuth는 keepLogin = true가 일반적)
-            console.log("🔍 OAuthSuccessHandler 토큰 저장:", {
-                token: token ? "있음" : "없음",
-                tokenLength: token?.length,
-                refreshToken: refreshToken ? "있음" : "없음",
+            // ✅ 3. 토큰은 httpOnly 쿠키에 있음 (JavaScript 접근 불가, 자동 전송됨)
+            console.log("🔍 OAuthSuccessHandler - httpOnly 쿠키 방식:", {
                 provider,
+                email: emailFromUrl,
                 needNickname
             });
             
-            setToken(token, true); // => accessToken을 localStorage에
-            if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
             if (provider) localStorage.setItem("lastLoginMethod", provider);
             if (emailFromUrl) localStorage.setItem("userEmail", emailFromUrl);
-            
-            // 토큰 저장 확인
-            console.log("🔍 토큰 저장 후 확인:", {
-                storedToken: localStorage.getItem("accessToken") ? "있음" : "없음",
-                storedRefreshToken: localStorage.getItem("refreshToken") ? "있음" : "없음"
-            });
 
             // URL 정리 (히스토리만 치환)
             window.history.replaceState(null, "", "/oauth2/success");
@@ -75,7 +68,10 @@ const OAuthSuccessHandler: React.FC = () => {
                     (me.username && me.username.trim()) ||
                     "";
 
-                if (display) localStorage.setItem("userNickname", display);
+                if (display) {
+                    localStorage.setItem("userNickname", display);
+                    sessionStorage.setItem("userNickname", display);
+                }
                 if (me.username) {
                     localStorage.setItem("userUsername", me.username);
                     const scopedKey = me.email ? `userUsername:${me.email}` : undefined;
@@ -89,6 +85,11 @@ const OAuthSuccessHandler: React.FC = () => {
                     if (scopedSlugKey) localStorage.setItem(scopedSlugKey, me.profileSlug);
                 }
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
+
+                // 닉네임 변경 이벤트 발생
+                if (display) {
+                    window.dispatchEvent(new Event("user-nickname-updated"));
+                }
 
                 // ✅ 6. 컨텍스트 갱신
                 login(me.email || emailFromUrl);

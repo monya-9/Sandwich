@@ -30,13 +30,29 @@ public class Profile extends BaseEntity {
     private String github;
     private String linkedin;
     private String profileImage;
+    private String coverImage;
 
     public void updateFrom(UserProfileRequest dto) {
-        this.bio = dto.getBio();
-        this.skills = dto.getSkills();
-        this.github = dto.getGithub();
-        this.linkedin = dto.getLinkedin();
-        this.profileImage = dto.getProfileImageUrl();
-        this.nickname = dto.getNickname();
+        if (dto.getBio() != null) {
+            this.bio = dto.getBio();
+        }
+        if (dto.getSkills() != null) {
+            this.skills = dto.getSkills();
+        }
+        if (dto.getGithub() != null) {
+            this.github = dto.getGithub();
+        }
+        if (dto.getLinkedin() != null) {
+            this.linkedin = dto.getLinkedin();
+        }
+        if (dto.getProfileImageUrl() != null) {
+            this.profileImage = dto.getProfileImageUrl();
+        }
+        if (dto.getNickname() != null) {
+            this.nickname = dto.getNickname();
+        }
+        if (dto.getCoverImageUrl() != null) {
+            this.coverImage = dto.getCoverImageUrl();
+        }
     }
 }

@@ -1,5 +1,4 @@
 import api from "./axiosInstance";
-import { API_BASE } from "../config/apiBase";
 
 /** ===== 서버 스키마 ===== */
 export type ServerMessageType =
@@ -82,6 +81,7 @@ export type RoomSummary = {
     lastContent: string;
     lastAt: string;
     unreadCount: number;
+    partnerAvatarUrl?: string | null;
 };
 
 export type RoomParticipant = {
@@ -168,25 +168,19 @@ export async function uploadAttachment(roomId: number, file: File): Promise<Serv
     const form = new FormData();
     form.append("file", file); // 필드명은 반드시 'file'
 
-    const token =
-        localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-
-    const res = await fetch(`${API_BASE}/messages/${roomId}/attachments`, {
-        method: "POST",
-        body: form,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        // 중요: Content-Type 설정하지 말 것! (브라우저가 boundary 포함하여 자동 설정)
-        credentials: "include",
-    });
-
-    // JSON 파싱 시도
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        // 백엔드 에러 메시지 그대로 보여주기
-        const msg = (data && (data.message || data.error || data.code)) || `HTTP ${res.status}`;
+    // ✅ httpOnly 쿠키 기반: axios는 withCredentials: true로 자동 전송
+    try {
+        const { data } = await api.post(`/messages/${roomId}/attachments`, form, {
+            headers: {
+                // Content-Type 설정하지 말 것! (브라우저가 boundary 포함하여 자동 설정)
+            },
+        });
+        return normalizeMessage(data, roomId);
+    } catch (error: any) {
+        const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || `업로드 실패`;
+        console.error("[uploadAttachment] 업로드 실패:", error?.response?.data || error);
         throw new Error(msg);
     }
-    return normalizeMessage(data, roomId);
 }
 
 /** 메시지 전송 */
@@ -221,6 +215,7 @@ export async function fetchRooms(page = 0, size = 20) {
         lastContent: r.lastMessagePreview,
         lastAt: r.lastMessageAt,
         unreadCount: r.unreadCount,
+        partnerAvatarUrl: r.partnerAvatarUrl,
     }));
     return list;
 }
@@ -277,16 +272,19 @@ export async function downloadMessageRangePNG(
     const scale = opts?.scale || 2;
     const theme = opts?.theme || "light";
 
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    // ✅ httpOnly 쿠키 기반: credentials로 자동 전송
     const headers: Record<string, string> = {
         'Accept': 'image/png'
     };
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     const qs = `?fromId=${fromId}&toId=${toId}&width=${width}&preset=${preset}&scale=${scale}&theme=${theme}`;
     const url = `/api/messages/${roomId}/screenshot.png${qs}`;
 
-    const res = await fetch(url, { method: "GET", headers });
+    const res = await fetch(url, { 
+        method: "GET", 
+        headers,
+        credentials: "include"
+    });
     if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(`PNG 스크린샷 요청 실패 (${res.status}): ${body || "알 수 없음"}`);
@@ -318,16 +316,19 @@ export async function downloadMessageRangePDF(
     const preset = opts?.preset || "default";
     const theme = opts?.theme || "light";
 
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    // ✅ httpOnly 쿠키 기반: credentials로 자동 전송
     const headers: Record<string, string> = {
         'Accept': 'application/pdf'
     };
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     const qs = `?fromId=${fromId}&toId=${toId}&width=${width}&preset=${preset}&theme=${theme}`;
     const url = `/api/messages/${roomId}/screenshot.pdf${qs}`;
 
-    const res = await fetch(url, { method: "GET", headers });
+    const res = await fetch(url, { 
+        method: "GET", 
+        headers,
+        credentials: "include"
+    });
     if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(`PDF 스크린샷 요청 실패 (${res.status}): ${body || "알 수 없음"}`);
@@ -357,10 +358,7 @@ export async function downloadRoomScreenshot(
     const width = String(opts?.width ?? 960);
     const theme = opts?.theme || "light";
 
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-
+    // ✅ httpOnly 쿠키 기반: credentials로 자동 전송
     const qs = `?tz=${encodeURIComponent(tz)}&width=${encodeURIComponent(width)}&theme=${encodeURIComponent(theme)}`;
     const candidates = [
         `/api/rooms/${roomId}/screenshot${qs}`,
@@ -370,7 +368,10 @@ export async function downloadRoomScreenshot(
     let res: Response | null = null;
     for (const url of candidates) {
         try {
-            res = await fetch(url, { method: "GET", headers });
+            res = await fetch(url, { 
+                method: "GET",
+                credentials: "include"
+            });
             if (res.ok) break;
         } catch {}
     }

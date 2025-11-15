@@ -1,21 +1,23 @@
 // src/setupProxy.js
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
-const envApiBase = process.env.REACT_APP_API_BASE_LOCAL || "/api";
-const target = envApiBase.startsWith("http")
-  ? envApiBase.replace(/\/api$/, '')
-  : 'http://localhost:8080';
+const target = process.env.REACT_APP_API_BASE;
 
 /**
  * 주의:
  * - 프런트(클라이언트)는 무조건 "/stomp" 로만 STOMP/SockJS 접속
- * - 프록시가 "/stomp" 를 백엔드 "/ws" 로만 리라이트 (dev HMR 의 /ws 와 충돌 방지)
+ * - 프록시가 "/stomp" 를 백엔드 "/ws/chat" 로 리라이트 (백엔드 엔드포인트와 일치)
+ * - dev HMR 의 /ws 와 충돌 방지 (HMR은 /sockjs-node만 보호)
  * - REST 프록시는 ws 업그레이드 끔(ws:false)
  */
 module.exports = function (app) {
     // 개발서버 내부 소켓 경로는 건드리지 않기 (HMR)
+    // 단, /stomp로 시작하는 요청은 프록시로 보내야 하므로 제외
     app.use((req, res, next) => {
-        if (req.url.startsWith("/ws") || req.url.startsWith("/sockjs-node")) return next();
+        // /stomp 경로는 WebSocket 프록시로 처리되어야 함
+        if (req.url.startsWith("/stomp")) return next();
+        // HMR 소켓 경로만 건드리지 않음
+        if (req.url.startsWith("/sockjs-node")) return next();
         return next();
     });
 
@@ -79,12 +81,25 @@ module.exports = function (app) {
             target,
             changeOrigin: true,
             ws: true,           // ← 소켓 업그레이드 허용
-            pathRewrite: { "^/stomp": "/ws" }, // 백엔드 엔드포인트가 /ws 라는 가정
+            pathRewrite: { "^/stomp": "/ws/chat" }, // 백엔드 엔드포인트가 /ws/chat
             logLevel: "warn",
             // 끊김 시 write-after-end 노이즈 줄이기 위한 타임아웃/에러 처리
             proxyTimeout: 60_000,
             timeout: 60_000,
+            // SockJS 폴백 요청(xhr_streaming, xhr, eventsource)도 인증 헤더 전달
+            onProxyReq(proxyReq, req, res) {
+                // 클라이언트가 보낸 Authorization 헤더를 백엔드로 전달
+                const authHeader = req.headers.authorization;
+                if (authHeader) {
+                    proxyReq.setHeader("Authorization", authHeader);
+                }
+            },
             onError(err, req, res) {
+                // EPIPE 에러는 클라이언트가 연결을 끊은 후에도 프록시가 쓰기를 시도할 때 발생하는 정상적인 동작
+                // WebSocket 업그레이드된 연결에서 자주 발생하므로 무시
+                if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+                    return; // 조용히 무시
+                }
                 try {
                     res.writeHead(502, { "Content-Type": "text/plain" });
                     res.end("WebSocket proxy error");
@@ -92,9 +107,14 @@ module.exports = function (app) {
                     // ignore
                 }
             },
-            // 필요 시 헤더/쿠키 조정 가능
-            onProxyReqWs(proxyReq /* , req, socket */) {
-                // 예: 뒤단에서 Origin 체크가 까다로우면 아래처럼 맞춰 줄 수 있음
+            // WebSocket 업그레이드 요청도 헤더 전달
+            onProxyReqWs(proxyReq, req, socket) {
+                // WebSocket 핸드셰이크 시에도 Authorization 헤더 전달
+                const authHeader = req.headers.authorization;
+                if (authHeader) {
+                    proxyReq.setHeader("Authorization", authHeader);
+                }
+                // Origin 헤더 조정 (필요시)
                 // proxyReq.setHeader("Origin", target);
             },
         })

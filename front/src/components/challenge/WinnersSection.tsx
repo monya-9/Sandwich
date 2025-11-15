@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { WinnerEntry } from "../../data/Challenge/winnersDummy";
 import { 
     fetchChallenges, 
@@ -18,14 +19,26 @@ const getMedalIcon = (rank: number) => {
 
 /** 1·2·3등 카드(ChallengeDetailPage와 동일한 스타일) */
 function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
+    const navigate = useNavigate();
+    
     // WinnerEntry와 LeaderboardEntry 모두 호환되도록 처리
     const rank = data.rank as 1 | 2 | 3;
     const userInitial = 'userInitial' in data ? data.userInitial : (data as LeaderboardEntry).userInitial;
     const name = 'name' in data ? data.name : (data as LeaderboardEntry).userName;
     const teamName = 'teamName' in data ? data.teamName : undefined;
+    const profileImageUrl = 'profileImageUrl' in data ? data.profileImageUrl : undefined;
+    const userId = 'userId' in data ? data.userId : undefined;
+    
+    console.log('👤 WinnerCard:', { rank, name, profileImageUrl, userId, data });
 
     // 이름과 팀 이름을 "제출자 이름 • 팀 이름" 형식으로 표시
     const displayName = teamName ? `${name} • ${teamName}` : name;
+    
+    const handleProfileClick = () => {
+        if (userId) {
+            navigate(`/users/${userId}`);
+        }
+    };
 
     return (
         <div className="text-center">
@@ -34,13 +47,32 @@ function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
                 {getMedalIcon(rank)}
             </div>
             
-            {/* 이니셜 */}
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-                <span className="font-bold text-lg text-gray-700">{userInitial}</span>
+            {/* 프로필 이미지 또는 이니셜 - 클릭 가능 */}
+            <div 
+                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleProfileClick}
+            >
+                {profileImageUrl ? (
+                    <img 
+                        src={profileImageUrl} 
+                        alt={name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${userInitial}</span>`;
+                        }}
+                    />
+                ) : (
+                    <span className="font-bold text-lg text-gray-700">{userInitial}</span>
+                )}
             </div>
             
-            {/* 이름과 팀 이름 */}
-            <div className="font-semibold text-gray-800 mb-1 break-words text-sm">
+            {/* 이름과 팀 이름 - 클릭 가능 */}
+            <div 
+                className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleProfileClick}
+            >
                 {displayName}
             </div>
             
@@ -127,41 +159,64 @@ export default function WinnersSection() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchWinnersData = async () => {
-            try {
-                setLoading(true);
-                
-                // 1. 종료된 포트폴리오 챌린지 목록 가져오기
-                const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED");
-                const endedPortfolioChallenges = challengesResponse.content;
-                
-                if (endedPortfolioChallenges.length === 0) {
-                    setWinners([]);
-                    setError(null);
-                    return;
-                }
-
-                // 2. 가장 최근 종료된 포트폴리오 챌린지 선택
-                const latestChallenge = endedPortfolioChallenges[0]; // 이미 날짜순 정렬되어 있음
-                
-                // 3. 해당 챌린지의 리더보드 가져오기
-                const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
-                
-                console.log('리더보드 데이터:', leaderboardData.entries);
-                
-                setWinners(leaderboardData.entries.slice(0, 3));
-                setError(null);
-                
-            } catch (err) {
-                setError("우승자 정보를 불러올 수 없습니다.");
+    const fetchWinnersData = async () => {
+        try {
+            setLoading(true);
+            
+            // 1. 종료된 포트폴리오 챌린지 목록 가져오기 (종료일 기준 최신순)
+            const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED", { sort: "endAt,desc" });
+            const endedPortfolioChallenges = challengesResponse.content;
+            
+            if (endedPortfolioChallenges.length === 0) {
                 setWinners([]);
-            } finally {
-                setLoading(false);
+                setError(null);
+                return;
+            }
+
+            // 2. 가장 최근 종료된 포트폴리오 챌린지 선택
+            const latestChallenge = endedPortfolioChallenges[0]; // 이미 날짜순 정렬되어 있음
+            
+            // 3. 해당 챌린지의 리더보드 가져오기
+            const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
+            
+            console.log('리더보드 데이터:', leaderboardData.entries);
+            
+            setWinners(leaderboardData.entries.slice(0, 3));
+            setError(null);
+            
+        } catch (err) {
+            setError("우승자 정보를 불러올 수 없습니다.");
+            setWinners([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchWinnersData();
+    }, []);
+
+    // 페이지 가시성 변경 시 새로고침 (챌린지 상태 변경 감지)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                console.log('🔄 포트폴리오 Winners 섹션 새로고침');
+                fetchWinnersData();
             }
         };
 
-        fetchWinnersData();
+        const handleChallengeStatusChange = () => {
+            console.log('🔄 챌린지 상태 변경 감지 - 포트폴리오 Winners 섹션 새로고침');
+            fetchWinnersData();
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('challengeStatusChanged', handleChallengeStatusChange);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('challengeStatusChanged', handleChallengeStatusChange);
+        };
     }, []);
 
     // 데이터가 없어도 폼은 유지하되, 더미 데이터로 표시

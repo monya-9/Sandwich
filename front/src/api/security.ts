@@ -1,6 +1,5 @@
 // front/src/api/security.ts
 import api from "./axiosInstance";
-import { API_BASE } from "../config/apiBase";
 
 export type SecurityEventType =
     | "OTP_ISSUE"
@@ -95,9 +94,7 @@ export async function adminRevokeAllDevicesByUser(userId: number): Promise<{ rev
     const res = await api.post<{ revoked: number }>(
         `/admin/devices/revoke-all/${userId}`,
         undefined,
-        { baseURL: API_BASE }
+        { baseURL: "" }
     );
     return res.data;
 }
-
-

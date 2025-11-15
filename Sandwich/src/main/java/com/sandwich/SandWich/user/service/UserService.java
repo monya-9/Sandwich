@@ -139,6 +139,9 @@ public class UserService {
                 ? "탈퇴한 사용자"
                 : (profile != null ? profile.getNickname() : null);
 
+        // 권한 정보 추가
+        List<String> roles = List.of(user.getRole().name());
+
         return new UserProfileResponse(
                 user.getId(),
                 user.getUsername(),
@@ -150,10 +153,12 @@ public class UserService {
                 profile != null ? profile.getGithub() : null,
                 profile != null ? profile.getLinkedin() : null,
                 profile != null ? profile.getProfileImage() : null,
+                profile != null ? profile.getCoverImage() : null,
                 position != null ? new PositionDto(position) : null,
                 interests,
                 followerCount,
-                followingCount
+                followingCount,
+                roles
         );
     }
     public User findByEmail(String email) {
@@ -309,7 +314,7 @@ public class UserService {
         if (trimmed.length() < 2 || trimmed.length() > 20) {
             throw new IllegalArgumentException("닉네임은 2~20자 사이여야 합니다.");
         }
-        if (!trimmed.matches("^[0-9A-Za-z가-힣._-]+$")) {
+        if (!trimmed.matches("^[0-9A-Za-z가-힣._\\- ]+$")) {
             throw new IllegalArgumentException("닉네임은 한글/영문/숫자/._-만 사용할 수 있습니다.");
         }
         if (profileRepository.existsByNickname(trimmed)) {
@@ -344,6 +349,20 @@ public class UserService {
         profile.setProfileSlug(slug);
         userRepository.save(user);
         ensureWallet(user.getId()); // 기존 지갑 보장 로직 유지
+    }
+
+    @Transactional(readOnly = true)
+    public PublicProfileResponse getPublicProfileBySlug(String slug) {
+        Profile profile = profileRepository.findByProfileSlug(slug)
+                .orElseThrow(UserNotFoundException::new);
+
+        User user = profile.getUser();
+        if (user == null || user.isDeleted()) {
+            throw new UserNotFoundException();
+        }
+
+        // 기존 userId 기반 로직 재사용
+        return getPublicProfile(user.getId());
     }
 
 
@@ -463,7 +482,11 @@ public class UserService {
         String nicknameOut = user.isDeleted()
                 ? "탈퇴한 사용자"
                 : (user.getProfile() != null ? user.getProfile().getNickname() : null);
-
+        String profileImage = (user.getProfile() != null) ? user.getProfile().getProfileImage() : null;
+        String coverImage   = (user.getProfile() != null) ? user.getProfile().getCoverImage()   : null;
+        String bio          = (!user.isDeleted() && user.getProfile() != null)
+                ? user.getProfile().getBio()
+                : null;
         return new PublicProfileResponse(
                 user.getId(),
                 nicknameOut,
@@ -471,7 +494,10 @@ public class UserService {
                 user.getProfile() != null ? user.getProfile().getProfileSlug() : null,
                 user.getEmail(),
                 posName,
-                interestNames
+                interestNames,
+                profileImage,
+                coverImage,
+                bio
         );
     }
     private void ensureWallet(long userId) {
@@ -481,4 +507,73 @@ public class UserService {
         ON CONFLICT (user_id) DO NOTHING
     """, userId);
     }
+    // ====== [추가] 유틸: 닉네임/슬러그 유일값 생성 ======
+    private String makeUniqueNickname(String base) {
+        String candidate = base;
+        int counter = 1;
+        while (profileRepository.existsByNickname(candidate)) {
+            candidate = base + "_" + counter++;
+        }
+        return candidate;
+    }
+
+    private String makeUniqueSlug(String base) {
+        String candidate = base;
+        int counter = 1;
+        while (profileRepository.existsByProfileSlug(candidate)) {
+            candidate = base + "_" + counter++;
+        }
+        return candidate;
+    }
+
+    // ====== [추가] 프로필 보장 생성기 (없으면 닉/슬러그 자동 생성) ======
+    @org.springframework.transaction.annotation.Transactional
+    private Profile ensureProfileMaterialized(User user) {
+        Profile profile = user.getProfile();
+        if (profile != null) return profile;
+
+        profile = new Profile();
+        profile.setUser(user);
+
+        // 기본 닉네임: username 또는 user-<id>
+        String baseNick = (user.getUsername() != null && !user.getUsername().isBlank())
+                ? user.getUsername().trim()
+                : ("user-" + user.getId());
+        // 특수문자 정리
+        baseNick = baseNick.replaceAll("[^0-9A-Za-z가-힣._-]", "_");
+        String nick = makeUniqueNickname(baseNick);
+        profile.setNickname(nick);
+
+        // 기본 슬러그: 닉네임 기반
+        String baseSlug = nick.replaceAll("[^0-9A-Za-z가-힣]", "_");
+        String slug = makeUniqueSlug(baseSlug);
+        profile.setProfileSlug(slug);
+
+        // 다른 필드는 null 허용
+        profileRepository.save(profile);   // ✅ 새 엔티티는 명시 저장 (소유자 측 관계 때문)
+        user.setProfile(profile);
+        return profile;
+    }
+
+    // ====== [교체] 아바타 이미지 URL 교체 ======
+    @org.springframework.transaction.annotation.Transactional
+    public void updateProfileImage(Long userId, String url) {
+        var user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+        if (user.isDeleted()) throw new IllegalStateException("탈퇴된 계정은 프로필을 수정할 수 없습니다.");
+
+        var profile = ensureProfileMaterialized(user); // ✅ 닉/슬러그 자동 생성 포함
+        profile.setProfileImage(url);
+    }
+
+    // ====== [교체] 배경(커버) 이미지 URL 교체 ======
+    @org.springframework.transaction.annotation.Transactional
+    public void updateProfileCover(Long userId, String url) {
+        var user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+        if (user.isDeleted()) throw new IllegalStateException("탈퇴된 계정은 프로필을 수정할 수 없습니다.");
+
+        var profile = ensureProfileMaterialized(user); // ✅ 닉/슬러그 자동 생성 포함
+        profile.setCoverImage(url);
+    }
+
+
 }

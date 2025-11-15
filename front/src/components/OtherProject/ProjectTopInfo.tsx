@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import api from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import LoginPrompt from "./LoginPrompt";
 import Toast from "../common/Toast";
 import { deleteProject as apiDeleteProject } from "../../api/projectApi";
+import { AuthContext } from "../../context/AuthContext";
 
 
 type Props = {
@@ -27,6 +28,9 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
   });
   const navigate = useNavigate();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  
+  // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
+  const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
 
 
   useEffect(() => {
@@ -37,11 +41,13 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
 
   useEffect(() => {
     if (typeof initialIsFollowing === "boolean") return;
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token || !ownerId || ownerId <= 0) {
+    
+    // 인증 확인 중이거나 로그인하지 않았으면 스킵
+    if (isAuthChecking || !isLoggedIn || !ownerId || ownerId <= 0) {
       setIsFollowing(false);
       return;
     }
+    
     (async () => {
       try {
         const res = await api.get(`/users/${ownerId}/follow-status`);
@@ -52,7 +58,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
         }
       }
     })();
-  }, [ownerId, initialIsFollowing]);
+  }, [ownerId, initialIsFollowing, isLoggedIn, isAuthChecking]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -70,8 +76,9 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
   }, [ownerId]);
 
   const ensureLogin = () => {
-    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-    if (!token) {
+    if (isAuthChecking) return false;
+    
+    if (!isLoggedIn) {
       setShowLoginPrompt(true);
       return false;
     }
@@ -160,14 +167,9 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
               </div>
             </div>
           )}
-          {/* 닉네임/팔로우 */}
+          {/* 닉네임 */}
           <div className="flex items-center gap-2 text-gray-600 text-base mt-2">
             <span>{userName}</span>
-            {!isOwner && (
-              <span className="hidden lg:inline font-bold text-green-700 ml-2 cursor-pointer hover:underline" onClick={handleToggleFollow}>
-              {isFollowing ? "팔로잉" : "팔로우"}
-            </span>
-            )}
           </div>
         </div>
       </div>

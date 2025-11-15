@@ -12,6 +12,7 @@ import java.util.List;
 public class CommentResponse {
     private Long id;
     private String comment;
+    private Long userId;
     private String username;
     private String profileImageUrl;
     private OffsetDateTime createdAt;

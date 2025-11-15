@@ -169,14 +169,17 @@ const CollectionsTab: React.FC = () => {
 					</div>
 				</button>
 
-				{/* 리스트: 프로젝트 카드 크기와 동일한 그리드/카드 구조 */}
-                <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-left">
-					{loading ? (
-                        <div className="text-[13px] text-black/50 dark:text-white/60 col-span-full text-center py-10">불러오는 중…</div>
-					) : folders.length === 0 ? (
-                        <div className="text-[13px] text-black/50 dark:text-white/60 col-span-full text-center py-10">등록된 컬렉션이 없습니다.</div>
-					) : (
-						folders.map((f) => (
+				{loading ? (
+					<div className="min-h-[360px] flex items-center justify-center text-black/60 dark:text-white/60">불러오는 중…</div>
+				) : folders.length === 0 ? (
+					<div className="min-h-[360px] flex flex-col items-center justify-center text-center">
+						<div className="mt-6 text-[16px] md:text-[18px] text-black/80 dark:text-white/80">아직 공개 컬렉션이 없습니다.</div>
+					</div>
+				) : (
+					<>
+						{/* 리스트: 프로젝트 카드 크기와 동일한 그리드/카드 구조 */}
+						<div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-left">
+							{folders.map((f) => (
 							<div key={f.id}>
 								<div className="relative rounded-xl overflow-hidden cursor-pointer group" onMouseLeave={() => setMenuOpenId(null)} onClick={() => navigate(`/collections/${f.id}`)}>
 									<div className="relative w-full aspect-[4/3] bg-gray-200">
@@ -233,9 +236,11 @@ const CollectionsTab: React.FC = () => {
                                     <div className="text-[12px] text-black/50 dark:text-white/60 inline-flex items-center gap-1">총 {(f.itemCount ?? 0)}개의 작업  |  {f.private ? (<><Lock className="w-3 h-3" /> 비공개 컬렉션</>) : "공개 컬렉션"}</div>
 								</div>
 							</div>
-					))
-					)}
-				</div>
+							))
+							}
+						</div>
+					</>
+				)}
 
 				{/* 커스텀 포털 모달: OtherProject와 동일 스타일 */}
 				{open && ReactDOM.createPortal(

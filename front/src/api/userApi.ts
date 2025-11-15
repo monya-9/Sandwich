@@ -11,12 +11,14 @@ export type UserProfileResponse = {
 	github?: string | null;
 	linkedin?: string | null;
 	profileImage?: string | null;
+	coverImage?: string | null;
 	position?: PositionDto | null;
 	interests: InterestDto[];
 	followerCount: number;
 	followingCount: number;
 	profileName?: string | null; // one-line profile
 	profileSlug?: string | null; // 프로필 URL용 슬러그
+	roles?: string[]; // 사용자 권한 (ROLE_USER, ROLE_ADMIN, ROLE_AI)
 };
 
 export type UserProfileRequest = {

@@ -5,6 +5,7 @@ import com.sandwich.SandWich.common.exception.exceptiontype.TokenExpiredExceptio
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -13,11 +14,14 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "this-is-a-very-very-super-secret-key-that-is-at-least-64-characters!";
     private static final long ACCESS_TOKEN_EXP = 1000 * 60 * 15; // 15분
     private static final long REFRESH_TOKEN_EXP = 1000L * 60 * 60 * 24 * 7; // 7일
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
+    private final Key key;
+    public JwtUtil(@Value("${jwt.secret.key}") String secretKey) {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
 
     public String createAccessToken(String email, String role) {
         return Jwts.builder()
