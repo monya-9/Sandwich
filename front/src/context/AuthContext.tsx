@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: Props) => {
         setIsAuthChecking(true);
         try {
             const { data } = await api.get("/users/me");
-            const { id, email, username, nickname, profileName, profileSlug } = data || {};
+            const { id, email, username, nickname, profileName, profileSlug, profileImage } = data || {};
 
             // userId 저장 (알림 WS 구독에 필요)
             if (typeof id === "number" && Number.isFinite(id)) {
@@ -61,6 +61,12 @@ export const AuthProvider = ({ children }: Props) => {
             if (profileName) localStorage.setItem("userProfileName", profileName);
             if (profileSlug) localStorage.setItem("profileUrlSlug", profileSlug);
             if (email) localStorage.setItem("userEmail", email);
+            
+            // 프로필 이미지 저장
+            if (profileImage) {
+                localStorage.setItem("userProfileImage", profileImage);
+                sessionStorage.setItem("userProfileImage", profileImage);
+            }
 
             setIsLoggedIn(true);
             refreshFromStorage();

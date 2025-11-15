@@ -8,16 +8,18 @@ interface QrCodeActionProps {
   title?: string;
   thumbnailUrl?: string;
   isMobile?: boolean;
+  deployEnabled?: boolean;
   qrCodeEnabled?: boolean;
 }
 
-export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile = false, qrCodeEnabled = true }: QrCodeActionProps) {
+export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile = false, deployEnabled = false, qrCodeEnabled = false }: QrCodeActionProps) {
   const [open, setOpen] = useState(false);
 
   const finalTitle = title || "프로젝트 이름";
   const finalThumb = thumbnailUrl || getStaticUrl("assets/images/default-thumbnail.png");
 
-  const isDisabled = !qrCodeEnabled;
+  // deployEnabled=false 이거나 qrCodeEnabled=false 이면 비활성화
+  const isDisabled = !deployEnabled || !qrCodeEnabled;
 
   return (
     <div className="relative">
@@ -25,7 +27,7 @@ export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile
         className={`flex items-center group ${isMobile ? 'flex-col gap-0.5' : 'flex-col gap-1'} ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
         onClick={() => !isDisabled && setOpen(true)}
         disabled={isDisabled}
-        title={isDisabled ? "QR 코드가 생성되지 않았습니다" : ""}
+        title={isDisabled ? (!deployEnabled ? "배포가 활성화되지 않았습니다." : "QR 코드가 생성되지 않았습니다.") : ""}
       >
         <div className={`rounded-full bg-white shadow ring-1 ring-black/10 dark:ring-white/20 flex items-center justify-center ${isMobile ? 'w-10 h-10' : 'w-14 h-14 mb-1'}`}>
           <FaQrcode className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} />

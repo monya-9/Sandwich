@@ -394,7 +394,7 @@ export default function ProfilePage() {
               <div className="mt-1 text-center text-[16px] md:text-[16px] text-black/80 dark:text-white/80">{oneLiner}</div>
             )}
             <div className="mt-2 text-center text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">
-              {profileUrlSlug ? `sandwich.com/${profileUrlSlug}` : "sandwich.com"}
+              {profileUrlSlug ? `sandwich-dev.com/${profileUrlSlug}` : "sandwich-dev.com"}
             </div>
 
             {/* 버튼 */}

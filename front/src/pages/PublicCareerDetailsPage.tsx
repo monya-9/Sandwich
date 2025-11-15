@@ -83,7 +83,7 @@ export default function PublicCareerDetailsPage() {
 						<div>
 							<div className="text-[24px] md:text-[28px] text-black dark:text-white font-medium">{displayName}</div>
 							<div className="mt-1 text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">
-								{userInfo?.username ? `sandwich.com/${userInfo.username}` : `sandwich.com/user/${userIdNum}`}
+								{userInfo?.username ? `sandwich-dev.com/${userInfo.username}` : `sandwich-dev.com/user/${userIdNum}`}
 							</div>
 						</div>
 						<div className="w-[80px] h-[80px] rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] overflow-hidden shrink-0 flex items-center justify-center">
