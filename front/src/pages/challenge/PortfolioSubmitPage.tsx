@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import LoginRequiredModal from "../../components/common/modal/LoginRequiredModal";
-import { SectionCard, CTAButton, Row, Label, GreenBox } from "../../components/challenge/common";
+import { SectionCard, CTAButton, Row, Label, GreenBox, Help } from "../../components/challenge/common";
 import { getChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import type { PortfolioChallengeDetail } from "../../data/Challenge/challengeDetailDummy";
 import { ChevronLeft } from "lucide-react";
@@ -27,6 +27,7 @@ type PortfolioSubmitPayload = {
     language?: string;
     coverUrl?: string;
     images?: string[]; // 추가 이미지들
+    isPublic: boolean; // 공개 여부 (포트폴리오는 항상 공개, UI만 표시)
 };
 
 // 기술 스택 옵션들
@@ -200,6 +201,7 @@ export default function PortfolioSubmitPage() {
         language: "",
         coverUrl: "",
         images: [],
+        isPublic: true, // 기본값: 공개 (포트폴리오는 항상 공개)
     });
 
     // 수정 모드일 때 기존 제출물 로드
@@ -221,6 +223,7 @@ export default function PortfolioSubmitPage() {
                         language: submission.portfolio?.language || "",
                         coverUrl: submission.coverUrl || "",
                         images: submission.assets?.map(asset => asset.url) || [],
+                        isPublic: submission.isPublic !== undefined ? submission.isPublic : true, // 기존 값 유지, 없으면 true
                     });
                 } catch (error) {
                     console.error('제출물 로드 실패:', error);
@@ -359,7 +362,8 @@ export default function PortfolioSubmitPage() {
                 assets: form.images?.map(url => ({ url, mime: "image/jpeg" })) || [],
                 portfolio: form.language ? {
                     language: form.language.trim()
-                } : undefined
+                } : undefined,
+                isPublic: form.isPublic, // 공개 여부 (포트폴리오는 항상 공개되지만 일관성을 위해 전송)
             };
 
             if (isEditMode && editSubmissionId) {
@@ -383,9 +387,16 @@ export default function PortfolioSubmitPage() {
             
             let errorMessage = isEditMode ? "수정에 실패했습니다. 다시 시도해주세요." : "제출에 실패했습니다. 다시 시도해주세요.";
             
-            // 중복 제출 에러 처리
+            // 에러 처리
             if (error?.response?.status === 409) {
                 errorMessage = "이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.";
+            } else if (error?.response?.status === 403) {
+                const serverMessage = error?.response?.data?.message;
+                if (serverMessage === "NOT_OWNER") {
+                    errorMessage = "소유자만 수정할 수 있습니다.";
+                } else {
+                    errorMessage = "권한이 없습니다.";
+                }
             } else if (error?.response?.status === 400) {
                 const serverMessage = error?.response?.data?.message;
                 if (serverMessage) {
@@ -758,6 +769,22 @@ export default function PortfolioSubmitPage() {
                                     onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))}
                                     placeholder="포트폴리오에 대해서 간략하게 설명해주세요."
                                 />
+                            </Row>
+
+                            <Row>
+                                <Label>공개 여부</Label>
+                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.isPublic}
+                                        onChange={(e) => setForm((f) => ({ ...f, isPublic: e.target.checked }))}
+                                        className="w-4 h-4 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500"
+                                    />
+                                    <span className="text-[13.5px] text-neutral-800 dark:text-neutral-200">
+                                        제출물을 다른 사용자에게 공개합니다
+                                    </span>
+                                </label>
+                                <Help>포트폴리오 챌린지는 항상 공개됩니다. (투표를 위해 모든 제출물이 공개돼요)</Help>
                             </Row>
 
                             {/* 종료된 챌린지 안내 */}
