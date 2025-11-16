@@ -63,7 +63,7 @@ export async function publishChallengeResults(challengeId: number): Promise<{
     amount: number;
   }>;
 }> {
-  const response = await api.post(`/api/admin/rewards/challenges/${challengeId}/publish-results`);
+  const response = await api.post(`admin/rewards/challenges/${challengeId}/publish-results`);
   return response.data;
 }
 
@@ -79,7 +79,7 @@ export async function adminCustomPayout(
  if (idempotencyKey && idempotencyKey.trim()) {
    headers["Idempotency-Key"] = idempotencyKey.trim();
  }
- const res = await api.post(`/api/admin/rewards/${challengeId}/custom-payout`, payload, {
+ const res = await api.post(`admin/rewards/${challengeId}/custom-payout`, payload, {
    headers,
  });
  return res.data;
@@ -105,7 +105,7 @@ export async function fetchCustomPayouts(
     createdAt: string;
   }>;
 }> {
-  const res = await api.get(`/api/admin/rewards/${challengeId}/custom-payouts`, {
+  const res = await api.get(`admin/rewards/${challengeId}/custom-payouts`, {
     params: params || {},
       });
   return res.data;
