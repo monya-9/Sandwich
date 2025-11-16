@@ -129,6 +129,9 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
   const [pickerOpen, setPickerOpen] = useState(false); // 미디어 피커 상태 (훅은 early return 위)
   const [noImageToast, setNoImageToast] = useState(false); // 콘텐츠 이미지 없음 토스트
 
+  // 배포/데모 여부
+  const [deployEnabled, setDeployEnabled] = useState(false);
+
   // GitHub 배포 설정
   const [ghOwner, setGhOwner] = useState("");
   const [ghRepo, setGhRepo] = useState("");
@@ -167,9 +170,18 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
     onCoverChangeRef.current = onCoverChange;
   });
 
+  // 배포가 비활성화되면 QR 코드 생성도 자동으로 비활성화
+  useEffect(() => {
+    if (!deployEnabled) {
+      setQrCodeEnabled(false);
+    }
+  }, [deployEnabled]);
+
   useEffect(() => {
     if (!open) return;
     if (!editMode || !initialDetail) return;
+    
+    // 수정 모드일 때만 기존 값 불러오기
     try {
       const titleValue = initialDetail.title || "";
       const summaryValue = initialDetail.summary || initialDetail.description || "";
@@ -191,6 +203,7 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       setBackendBuildCommand(initialDetail.backendBuildCommand || "");
       setPortNumber(initialDetail.portNumber || "");
       if (typeof initialDetail.qrCodeEnabled === 'boolean') setQrCodeEnabled(initialDetail.qrCodeEnabled);
+      if (typeof initialDetail.deployEnabled === 'boolean') setDeployEnabled(initialDetail.deployEnabled);
 
       // Prefill GitHub information from existing fields
       // GitHub 정보는 별도 필드가 없으므로 기존 필드들을 활용하거나 빈 값으로 설정
@@ -521,15 +534,19 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         description: summary || detailDescription,
         tools: tools.join(","),
         repositoryUrl,
+        // demoUrl은 배포 시스템/백엔드가 채우는 값이므로 프론트에서 전송하지 않음
         startYear: startYear === "" ? undefined : Number(startYear),
         endYear: endYear === "" ? undefined : Number(endYear),
         isTeam,
         teamSize: teamSize === "" ? undefined : Number(teamSize),
         coverUrl: String(resolvedCover),
         image: String(resolvedCover),
+        deployEnabled,
         qrCodeEnabled,
-        frontendBuildCommand: frontendBuildCommand || undefined,
-        backendBuildCommand: backendBuildCommand || undefined,
+        // 배포 설정이 체크되었을 때 빌드 명령어를 저장 (빈 문자열이어도 저장하여 배포 설정이 체크되었음을 표시)
+        // 체크되지 않았으면 undefined로 저장하여 배포 설정이 해제되었음을 표시
+        frontendBuildCommand: deployEnabled ? (frontendBuildCommand.trim() || "") : undefined,
+        backendBuildCommand: deployEnabled ? (backendBuildCommand.trim() || "") : undefined,
         portNumber: portNumber === "" ? undefined : Number(portNumber),
       };
       
@@ -666,6 +683,21 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
           }
         }
       }
+      
+      // 프로젝트 생성/업데이트 성공 후 상태 초기화
+      setDeployEnabled(false);
+      setQrCodeEnabled(true);
+      setGhOwner("");
+      setGhRepo("");
+      setGhBase("main");
+      setGhToken("");
+      setFrontendBuildCommand("");
+      setBackendBuildCommand("");
+      setPortNumber("");
+      setGithubSyncEnabled(false);
+      setEnvVars([{key: '', value: ''}]);
+      setEnvVarsSubmitted(false);
+      
       onClose();
     } catch (e: any) {
       setErrorToast({
@@ -825,52 +857,117 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
 
               {/* 섹션 2: 저장소/빌드/포트 */}
               <div className="pt-4">
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프로젝트 배포 설정 여부</div>
+                <label className="flex items-center gap-2 text-[16px] text-black dark:text-white mb-3">
+                  <input 
+                    type="checkbox" 
+                    className="scale-110" 
+                    checked={deployEnabled} 
+                    onChange={(e) => setDeployEnabled(e.target.checked)} 
+                  /> 
+                  <span>배포 설정</span>
+                </label>
+              </div>
+              {/* QR 코드 생성 여부 - 배포 설정 바로 아래 */}
+              <div className={!deployEnabled ? 'opacity-50 pointer-events-none' : ''}>
+                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">QR 코드 생성 여부</div>
+                <label className="flex items-center gap-2 text-[16px] text-black dark:text-white">
+                  <input 
+                    type="checkbox" 
+                    className="scale-110" 
+                    checked={qrCodeEnabled} 
+                    onChange={(e) => setQrCodeEnabled(e.target.checked)}
+                    disabled={!deployEnabled}
+                  /> 
+                  <span>QR 코드 생성</span>
+                </label>
+                {!deployEnabled && (
+                  <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
+                    배포 설정을 활성화해야 QR 코드를 생성할 수 있습니다.
+                  </div>
+                )}
+                {deployEnabled && (
+                  <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">
+                    QR 코드는 배포가 완료되어 URL이 생성된 후 자동으로 생성됩니다.
+                  </div>
+                )}
+              </div>
+              
+              <div className="pt-4">
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 이름</div>
-                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="owner (Github 사용자/조직)" value={ghOwner} onChange={e=>setGhOwner(e.target.value)} />
+                <input 
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                  placeholder="owner (Github 사용자/조직)" 
+                  value={ghOwner} 
+                  onChange={e=>setGhOwner(e.target.value)}
+                  disabled={!deployEnabled}
+                />
               </div>
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 레포명</div>
-                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="repo (레포 이름)" value={ghRepo} onChange={e=>setGhRepo(e.target.value)} />
+                <input 
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                  placeholder="repo (레포 이름)" 
+                  value={ghRepo} 
+                  onChange={e=>setGhRepo(e.target.value)}
+                  disabled={!deployEnabled}
+                />
               </div>
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">레포 메인 브랜치명</div>
-                <input className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="baseBranch (기본 main)" value={ghBase} onChange={e=>setGhBase(e.target.value)} />
+                <input 
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                  placeholder="baseBranch (기본 main)" 
+                  value={ghBase} 
+                  onChange={e=>setGhBase(e.target.value)}
+                  disabled={!deployEnabled}
+                />
               </div>
               {/* 빌드 커맨드 입력 */}
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프론트 빌드 명령어</div>
                 <input
-                  className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white"
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="예: npm run build"
                   value={frontendBuildCommand}
                   onChange={(e) => setFrontendBuildCommand(e.target.value)}
+                  disabled={!deployEnabled}
                 />
               </div>
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">백엔드 빌드 명령어</div>
                 <input
-                  className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white"
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-5 h-12 w-full text-[16px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="예: ./gradlew build"
                   value={backendBuildCommand}
                   onChange={(e) => setBackendBuildCommand(e.target.value)}
+                  disabled={!deployEnabled}
                 />
               </div>
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">Github 토큰</div>
-                <input type="password" className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 h-12 w-full text-[16px] bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="Personal Access Token" value={ghToken} onChange={e=>setGhToken(e.target.value)} />
+                <input 
+                  type="password" 
+                  className={`border border-[#ADADAD] dark:border-[var(--border-color)] rounded px-4 h-12 w-full text-[16px] bg-white dark:bg-[var(--surface)] dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                  placeholder="Personal Access Token" 
+                  value={ghToken} 
+                  onChange={e=>setGhToken(e.target.value)}
+                  disabled={!deployEnabled}
+                />
                 
                 {/* GitHub 동기화 체크박스 - 토큰 입력 바로 아래 */}
                 <div className="mt-2">
-                  <label className="flex items-center gap-2 text-[14px] text-black dark:text-white">
+                  <label className={`flex items-center gap-2 text-[14px] text-black dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <input 
                       type="checkbox" 
                       className="scale-110" 
                       checked={githubSyncEnabled} 
-                      onChange={(e) => setGithubSyncEnabled(e.target.checked)} 
+                      onChange={(e) => setGithubSyncEnabled(e.target.checked)}
+                      disabled={!deployEnabled}
                     /> 
                     <span>GitHub 동기화 여부</span>
                   </label>
-                  {githubSyncEnabled && (
+                  {githubSyncEnabled && deployEnabled && (
                     <div className="text-[12px] text-gray-500 dark:text-white/60 mt-1">
                       환경변수가 GitHub Actions Secrets로도 등록됩니다.
                     </div>
@@ -880,15 +977,16 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
                 <button 
                   type="button" 
-                  className="mt-2 px-4 py-2 text-sm bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded hover:from-orange-600 hover:to-yellow-600 transition-colors"
+                  className={`mt-2 px-4 py-2 text-sm bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded hover:from-orange-600 hover:to-yellow-600 transition-colors ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => setTokenGuideOpen(true)}
+                  disabled={!deployEnabled}
                 >
                   토큰 발급 설명서
                 </button>
               </div>
               {/* 배포용 추가 파일 업로드 - 수정 모드에서만 표시 */}
               {editMode && editOwnerId && editProjectId && (
-                <div className="pt-4">
+                <div className={`pt-4 ${!deployEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">
                     배포용 추가 파일
                     <span className="text-[12px] text-gray-500 dark:text-white/60 ml-2 font-normal">
@@ -945,11 +1043,13 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                 </div>
               )}
 
-              <EnvVarsInput
-                envVars={envVars}
-                onEnvVarsChange={setEnvVars}
-                submitted={envVarsSubmitted}
-              />
+              <div className={!deployEnabled ? 'opacity-50 pointer-events-none' : ''}>
+                <EnvVarsInput
+                  envVars={envVars}
+                  onEnvVarsChange={setEnvVars}
+                  submitted={envVarsSubmitted}
+                />
+              </div>
 
               {/* 섹션 3: 카테고리 및 상세 설명 */}
               <div className="pt-4">
@@ -965,15 +1065,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
               <div>
                 <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">프로젝트 상세 설명</div>
                 <textarea className="border border-[#ADADAD] dark:border-[var(--border-color)] rounded p-4 w-full min-h-[180px] text-[15px] placeholder:text-gray-500 dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-black/15 focus:border-black bg-white dark:bg-[var(--surface)] dark:text-white" placeholder="프로젝트 소개, 주요 기능, 구현 내용 등 상세 설명을 입력해주세요" value={detailDescription} onChange={e=>setDetailDescription(e.target.value)} />
-              </div>
-
-              {/* 섹션 4: QR만 유지 */}
-              <div>
-                <div className="text-[16px] font-semibold text-gray-900 dark:text-white mb-3">QR 코드 자동 생성 여부 (기본 자동 생성)</div>
-                <div className="flex items-center gap-8">
-                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="" checked={qrCodeEnabled} onChange={()=>setQrCodeEnabled(true)} /> <span className="text-black dark:text-white">생성</span></label>
-                  <label className="flex items-center gap-2"><input type="radio" name="qr" className="" checked={!qrCodeEnabled} onChange={()=>setQrCodeEnabled(false)} /> <span className="text-black dark:text-white">생성 안 함</span></label>
-                </div>
               </div>
             </div>
           </div>

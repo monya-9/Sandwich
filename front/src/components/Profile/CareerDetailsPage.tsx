@@ -185,7 +185,7 @@ function CareerDetailsPage() {
 								<div className="mt-1 text-[14px] text-black/80 dark:text-white/80">{oneLiner}</div>
 							) : null}
 							<div className="mt-1 text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">
-								{profileUrlSlug ? `sandwich.com/${profileUrlSlug}` : "sandwich.com"}
+								{profileUrlSlug ? `sandwich-dev.com/${profileUrlSlug}` : "sandwich-dev.com"}
 							</div>
 							{bioText ? (
 								<div className="mt-4 text-[14px] text-black/80 dark:text-white/80 whitespace-pre-line">{bioText}</div>

@@ -106,6 +106,7 @@ public class SubmissionService {
                 .membersText(req.getMembersText())
                 .extraJson("{}")
                 .status(SubmissionStatus.SUBMITTED)
+                .isPublic(req.getIsPublic() != null ? req.getIsPublic() : Boolean.TRUE)
                 .build();
         sub = submissionRepo.save(sub);
 
@@ -174,6 +175,7 @@ public class SubmissionService {
                 .teamName(req.getTeamName())
                 .membersText(req.getMembersText())
                 .status(SubmissionStatus.PENDING)
+                .isPublic(req.getIsPublic() != null ? req.getIsPublic() : Boolean.TRUE)
                 .build();
         sub = submissionRepo.save(sub);
 
@@ -195,23 +197,39 @@ public class SubmissionService {
 
     // ===== 목록 =====
     @Transactional(readOnly = true)
-    public Page<SubmissionDtos.Item> list(Long challengeId, Pageable pageable) {
-        final var page = submissionRepo.findByChallenge_Id(challengeId, pageable);
+    public Page<SubmissionDtos.Item> list(Long challengeId, Pageable pageable, Long viewerId) {
+        // ★ 먼저 챌린지 타입 조회
+        var ch = challengeRepo.findById(challengeId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Challenge not found"));
+
+        final Page<Submission> page;
+
+        if (ch.getType() == ChallengeType.CODE) {
+            // 코드 챌린지에만 공개/비공개 정책 적용
+            if (viewerId == null) {
+                // 비로그인 → 공개만
+                page = submissionRepo.findByChallenge_IdAndIsPublicTrue(challengeId, pageable);
+            } else {
+                // 로그인 → 공개 + 내 비공개
+                page = submissionRepo.findVisibleForViewer(challengeId, viewerId, pageable);
+            }
+        } else {
+            // 포트폴리오 챌린지 → isPublic 무시, 모두 조회
+            page = submissionRepo.findByChallenge_Id(challengeId, pageable);
+        }
 
         final var ids = page.getContent().stream().map(Submission::getId).toList();
         if (ids.isEmpty()) return page.map(SubmissionDtos.Item::from);
 
-        // 에셋 그룹핑
+        // 이하 기존 로직 동일 (assets, owner, codeInfo, view/like/comment 집계 등)
         final var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(ids);
         final Map<Long, List<SubmissionAsset>> grouped = assets.stream()
                 .collect(java.util.stream.Collectors.groupingBy(a -> a.getSubmission().getId()));
 
-        // 오너 맵
         final var ownerIds = page.getContent().stream().map(Submission::getOwnerId).toList();
         final List<User> owners = userRepo.findAllById(ownerIds);
         final Map<Long, User> ownerById = owners.stream()
                 .collect(java.util.stream.Collectors.toMap(User::getId, Function.identity(), (a,b)->a));
-
 
         final Map<Long, CodeSubmission> codeBySubId = codeRepo.findBySubmission_IdIn(ids).stream()
                 .collect(java.util.stream.Collectors.toMap(
@@ -219,6 +237,7 @@ public class SubmissionService {
                         cs -> cs,
                         (a,b)->a
                 ));
+
         return page.map(s -> mapItem(
                 s,
                 grouped.getOrDefault(s.getId(), List.of()),
@@ -237,10 +256,22 @@ public class SubmissionService {
         if (!s.getChallenge().getId().equals(challengeId))
             throw new ResponseStatusException(BAD_REQUEST, "MISMATCH_CHALLENGE");
 
-        // 조회수 증가 (중복 방지 포함)
+        var ch = s.getChallenge();
+        boolean isCode = (ch.getType() == ChallengeType.CODE);
+
+        // 코드 챌린지에만 비공개 제한 적용
+        if (isCode) {
+            boolean isOwner = (viewerId != null && viewerId.equals(s.getOwnerId()));
+            if (!Boolean.TRUE.equals(s.getIsPublic()) && !isOwner) {
+                // 비공개 + 소유자 아님 → 403
+                throw new ResponseStatusException(FORBIDDEN, "SUBMISSION_PRIVATE");
+            }
+        }
+        // 포트폴리오는 isPublic 상관없이 모두 통과
+
+        // 권한 통과 후에만 조회수 증가
         subViewService.handleSubmissionView(s.getId(), s.getOwnerId(), viewerId, req);
 
-        // 단건 매핑
         var assets = assetRepo.findBySubmission_IdInOrderByIdAsc(List.of(submissionId));
         var owner = userRepo.findById(s.getOwnerId()).orElse(null);
         var code = codeRepo.findBySubmission_Id(submissionId).orElse(null);
@@ -378,6 +409,10 @@ public class SubmissionService {
         if (req.getParticipationType() != null) s.setParticipationType(req.getParticipationType());
         if (req.getTeamName() != null) s.setTeamName(req.getTeamName());
         if (req.getMembersText() != null) s.setMembersText(req.getMembersText());
+
+        if (req.getIsPublic() != null) {
+            s.setIsPublic(req.getIsPublic());
+        }
 
         // 에셋 전체 교체(옵션)
         if (req.getAssets() != null) {

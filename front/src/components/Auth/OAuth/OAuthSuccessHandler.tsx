@@ -11,6 +11,7 @@ type Me = {
     username?: string | null;
     profileName?: string | null;
     profileSlug?: string | null; // 프로필 URL용 슬러그
+    profileImage?: string | null; // 프로필 이미지 URL
 };
 
 const OAuthSuccessHandler: React.FC = () => {
@@ -83,6 +84,11 @@ const OAuthSuccessHandler: React.FC = () => {
                     localStorage.setItem("profileUrlSlug", me.profileSlug);
                     const scopedSlugKey = me.email ? `profileUrlSlug:${me.email}` : undefined;
                     if (scopedSlugKey) localStorage.setItem(scopedSlugKey, me.profileSlug);
+                }
+                // ✅ profileImage 저장
+                if (me.profileImage) {
+                    localStorage.setItem("userProfileImage", me.profileImage);
+                    sessionStorage.setItem("userProfileImage", me.profileImage);
                 }
                 localStorage.setItem("userEmail", me.email || emailFromUrl || "");
 

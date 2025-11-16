@@ -23,7 +23,11 @@ export interface ActionBarProps {
     ownerEmail?: string;
     ownerImageUrl?: string;
     initialIsFollowing?: boolean;
+    deployEnabled?: boolean;
     qrCodeEnabled?: boolean;
+    demoUrl?: string;
+    frontendBuildCommand?: string;
+    backendBuildCommand?: string;
   };
   isMobile?: boolean;
 }
@@ -37,28 +41,15 @@ export default function ActionBar({ onCommentClick, project, isMobile = false }:
     if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`;
     return s.replace(/\/$/, "");
   };
-  const cloudfrontBase = normalizeBase(process.env.REACT_APP_CLOUDFRONT_BASE as any);
-  const numericPath = project.ownerId && project.id ? `/${project.ownerId}/${project.id}/` : undefined;
-  const cfUrl = numericPath ? (cloudfrontBase ? `${cloudfrontBase}${numericPath}` : numericPath) : undefined;
-  const serverShare = project.shareUrl || undefined;
-
-  const ensureIndexHtml = (u?: string) => {
-    if (!u) return undefined;
-    if (/index\.html$/i.test(u)) return u;
-    if (/\/\d+\/\d+\/?$/.test(u) || /\/$/.test(u)) return u.replace(/\/?$/, "/index.html");
-    return u;
-  };
-
-  // 예전 우선순위: 서버가 CF/숫자 경로를 주면 그걸 사용, 아니면 우리가 구성한 숫자 경로 사용
-  const serverLooksNumericOrCf = !!serverShare && /(cloudfront\.net|\/\d+\/\d+\/?$)/.test(serverShare);
-  const shareUrlFinal = serverLooksNumericOrCf ? serverShare : (cfUrl || serverShare);
-  const liveUrl = ensureIndexHtml(shareUrlFinal || cfUrl);
+  // 배포 활성화 여부와 demoUrl 기반으로 라이브 데모 링크 결정
+  // deployEnabled=true 이고 demoUrl이 있을 때만 라이브 데모 활성화
+  const liveUrl = (project.deployEnabled && project.demoUrl) ? project.demoUrl : undefined;
 
   // 단일 컴포넌트로 유지하되 레이아웃만 변경
   return (
     <aside 
       className={isMobile 
-        ? "flex flex-row items-center justify-around gap-2 py-3 px-4 overflow-x-auto"
+        ? "flex flex-row flex-nowrap items-center justify-around gap-2 py-3 px-4 overflow-x-auto"
         : "flex flex-col items-center gap-4"
       }
       style={isMobile ? {
@@ -74,14 +65,32 @@ export default function ActionBar({ onCommentClick, project, isMobile = false }:
           }
         `}</style>
       )}
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <ProfileAction key="profile-action" targetUserId={project.ownerId} userName={project.owner} email={project.ownerEmail} profileImageUrl={project.ownerImageUrl} isOwner={isOwner} initialIsFollowing={project.initialIsFollowing} isMobile={isMobile} />
-      {!isOwner && <SuggestAction key="suggest-action" targetUserId={project.ownerId} isMobile={isMobile} />}
+      </div>
+      {!isOwner && (
+        <div className={isMobile ? "flex-shrink-0" : ""}>
+          <SuggestAction key="suggest-action" targetUserId={project.ownerId} isMobile={isMobile} />
+        </div>
+      )}
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <LikeAction key="like-action" targetType="PROJECT" targetId={project.id} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <CollectionAction key="collection-action" projectId={project.id} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <CommentAction key="comment-action" onClick={onCommentClick} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
       <ShareAction key="share-action" thumbnailUrl={project.coverUrl} title={project.name} isMobile={isMobile} />
-      <QrCodeAction key="qrcode-action" qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} isMobile={isMobile} qrCodeEnabled={project.qrCodeEnabled} />
-      <LiveDemoAction key="livedemo-action" url={liveUrl} isMobile={isMobile} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
+      <QrCodeAction key="qrcode-action" qrImageUrl={project.qrImageUrl} title={project.name} thumbnailUrl={project.coverUrl} isMobile={isMobile} deployEnabled={project.deployEnabled} qrCodeEnabled={project.qrCodeEnabled} />
+      </div>
+      <div className={isMobile ? "flex-shrink-0" : ""}>
+      <LiveDemoAction key="livedemo-action" url={liveUrl} deployEnabled={project.deployEnabled} isMobile={isMobile} />
+      </div>
     </aside>
   );
 }

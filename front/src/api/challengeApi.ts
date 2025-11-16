@@ -533,23 +533,60 @@ export type AiChallengeListResponse = {
 
 /**
  * AI가 생성한 주간 코드 챌린지 목록 조회
- * /ext 프록시를 통해 https://api.dnutzs.org/api 에 접근
- * baseURL이 없는 일반 axios를 사용하여 프록시 경로 직접 호출
+ * 로컬: /ext 프록시를 통해 https://api.dnutzs.org/api 에 접근
+ * 배포: 환경변수의 AI API URL로 직접 호출
  */
 export async function fetchAiGeneratedChallenges(): Promise<AiChallengeListResponse> {
-  const response = await axios.get('/ext/reco/topics/weekly/list', {
-    timeout: 10000,
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+
+  if (isLocalDev) {
+    // 로컬 개발에서는 프록시 사용
+    const response = await axios.get('/ext/reco/topics/weekly/list', {
+      timeout: 10000,
+    });
+    return response.data;
+  }
+
+  // 운영/비-로컬 환경: 외부 공개 API 직접 호출
+  const AI_BASE = process.env.REACT_APP_AI_API_BASE?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  const directUrl = `${AI_BASE}/api/reco/topics/weekly/list`;
+  const res = await fetch(directUrl, {
+    credentials: "omit",
+    headers: { "Cache-Control": "no-cache" },
   });
-  return response.data;
+  if (!res.ok) {
+    throw new Error(`AI 주간 챌린지 목록 조회 실패: ${res.status}`);
+  }
+  return await res.json() as AiChallengeListResponse;
 }
 
 /**
  * AI가 생성한 월간 포트폴리오 챌린지 목록 조회
- * /ext 프록시를 통해 https://api.dnutzs.org/api 에 접근
+ * 로컬: /ext 프록시를 통해 https://api.dnutzs.org/api 에 접근
+ * 배포: 환경변수의 AI API URL로 직접 호출
  */
 export async function fetchAiGeneratedMonthlyChallenges(): Promise<AiChallengeListResponse> {
-  const response = await axios.get('/ext/reco/topics/monthly/list', {
-    timeout: 10000,
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+
+  if (isLocalDev) {
+    // 로컬 개발에서는 프록시 사용
+    const response = await axios.get('/ext/reco/topics/monthly/list', {
+      timeout: 10000,
+    });
+    return response.data;
+  }
+
+  // 운영/비-로컬 환경: 외부 공개 API 직접 호출
+  const AI_BASE = process.env.REACT_APP_AI_API_BASE?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  const directUrl = `${AI_BASE}/api/reco/topics/monthly/list`;
+  const res = await fetch(directUrl, {
+    credentials: "omit",
+    headers: { "Cache-Control": "no-cache" },
   });
-  return response.data;
+  if (!res.ok) {
+    throw new Error(`AI 월간 챌린지 목록 조회 실패: ${res.status}`);
+  }
+  return await res.json() as AiChallengeListResponse;
 }
