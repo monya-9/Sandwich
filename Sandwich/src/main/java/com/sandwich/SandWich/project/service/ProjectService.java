@@ -74,6 +74,11 @@ public class ProjectService {
         project.setBackendBuildCommand(request.getBackendBuildCommand());
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
+        
+        // GitHub 설정 정보
+        project.setGithubOwner(request.getGithubOwner());
+        project.setGithubRepo(request.getGithubRepo());
+        project.setGithubBaseBranch(request.getGithubBaseBranch());
 
         // 배포 여부 플래그
         Boolean deployEnabled = (request.getDeployEnabled() != null && request.getDeployEnabled());
@@ -176,6 +181,9 @@ public class ProjectService {
                 .backendBuildCommand(project.getBackendBuildCommand())
                 .portNumber(project.getPortNumber())
                 .extraRepoUrl(project.getExtraRepoUrl())
+                .githubOwner(project.getGithubOwner())
+                .githubRepo(project.getGithubRepo())
+                .githubBaseBranch(project.getGithubBaseBranch())
                 .owner(project.getUser() != null ? new ProjectDetailResponse.Owner(project.getUser()) : null)
                 .build();
     }
@@ -270,6 +278,11 @@ public class ProjectService {
         project.setBackendBuildCommand(request.getBackendBuildCommand());
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
+        
+        // GitHub 설정 정보
+        project.setGithubOwner(request.getGithubOwner());
+        project.setGithubRepo(request.getGithubRepo());
+        project.setGithubBaseBranch(request.getGithubBaseBranch());
 
         Boolean afterDeployEnabled =
                 request.getDeployEnabled() != null && request.getDeployEnabled();
