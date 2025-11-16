@@ -128,7 +128,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE,"/api/auth/devices/*").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,  "/api/auth/devices/revoke-all").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,  "/api/auth/devices/revoke-current").authenticated()
-                        .requestMatchers("/admin/devices/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/devices/**").hasRole("ADMIN")
                         // ===== 공개 라우트들 =====
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup",
@@ -147,7 +147,7 @@ public class SecurityConfig {
                         // 필요시 정적 폴더 패턴도 추가
                         .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/check-email").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/search/accounts").permitAll()

@@ -6,7 +6,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/admin/_ops/challenges")
+@RequestMapping("/api/admin/_ops/challenges")
 @RequiredArgsConstructor
 public class ChallengeOpsController {
 
