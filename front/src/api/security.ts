@@ -43,7 +43,7 @@ export interface SecurityEventQuery {
  */
 export async function fetchSecurityEvents(params: SecurityEventQuery): Promise<Page<SecurityEventDTO> | null> {
     try {
-        const res = await api.get<Page<SecurityEventDTO>>("/api/admin/security/events", { params });
+        const res = await api.get<Page<SecurityEventDTO>>("admin/security/events", { params });
         return res.data;
     } catch (e: any) {
         if (e?.response?.status === 404) {
@@ -91,7 +91,7 @@ export async function revokeAllMyDevices(): Promise<{ revoked: number } | void> 
 /** (관리자) 특정 사용자 모든 디바이스 무효화 */
 export async function adminRevokeAllDevicesByUser(userId: number): Promise<{ revoked: number }> {
     const res = await api.post<{ revoked: number }>(
-        `/api/admin/devices/revoke-all/${userId}`
+        `admin/devices/revoke-all/${userId}`
     );
     return res.data;
 }
