@@ -226,7 +226,7 @@ const MessagesPage: React.FC = () => {
                     )}
                 </div>
 
-                <div className={`flex-1 ${!selectedRoomId && 'hidden md:flex'}`}>
+                <div className={`flex-1 min-h-0 flex flex-col ${!selectedRoomId && 'hidden md:flex'}`}>
                     <MessageDetail
                         message={selectedMessage}
                         onSend={async (messageId, body) => {

@@ -469,7 +469,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
     };
 
     return (
-        <>
+        <div className="flex-1 min-h-0 flex flex-col">
             <Toast
                 visible={errorToast.visible}
                 message={errorToast.message}
@@ -499,9 +499,9 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                     </div>
                 </div>
             )}
-            <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)] h-full">
+            <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)] overflow-hidden">
             {/* 헤더 */}
-            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-[var(--border-color)] flex items-center gap-2 sm:gap-3 text-black dark:text-white">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-[var(--border-color)] flex items-center gap-2 sm:gap-3 text-black dark:text-white shrink-0">
                 {/* 모바일 뒤로가기 버튼 */}
                 {onBack && (
                     <button
@@ -586,7 +586,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 </div>
             </div>
 
-            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
+            <div id="chat-panel" ref={messageContainerRef} className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
                 {history.map((m) => {
                     const m2 = hydrated[m.messageId] ?? m;
                     const when = new Date(m2.createdAt || 0);
@@ -697,7 +697,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
             </div>
 
             {/* 입력 */}
-            <div className="px-3 sm:px-6 py-2 sm:py-3 border-t dark:border-[var(--border-color)] flex flex-col gap-1.5 sm:gap-2 bg-white dark:bg-[var(--surface)]">
+            <div className="px-3 sm:px-6 py-2 sm:py-3 border-t dark:border-[var(--border-color)] flex flex-col gap-1.5 sm:gap-2 bg-white dark:bg-[var(--surface)] shrink-0">
                 <div className="flex items-end gap-1.5 sm:gap-2">
           <textarea
               ref={taRef}
@@ -832,7 +832,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 </div>
             </div>
         </div>
-        </>
+        </div>
     );
 };
 
