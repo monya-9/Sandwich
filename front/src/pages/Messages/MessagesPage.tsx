@@ -44,7 +44,7 @@ const MessagesPage: React.FC = () => {
         [],
     );
 
-    const loadFirstPage = React.useCallback(async () => {
+    const loadFirstPage = React.useCallback(async (preserveSelection = false) => {
         if (loadingRef.current) return;
         loadingRef.current = true;
         try {
@@ -54,7 +54,8 @@ const MessagesPage: React.FC = () => {
             setHasMore(rooms.length === PAGE_SIZE);
             setPage(0);
 
-            if (routeRoomId && mapped.some((m) => m.roomId === routeRoomId)) {
+            // preserveSelection이 false일 때만 자동 선택 (초기 로드 시에만)
+            if (!preserveSelection && routeRoomId && mapped.some((m) => m.roomId === routeRoomId)) {
                 setSelectedRoomId(routeRoomId);
             }
         } catch (e) {
@@ -146,9 +147,10 @@ const MessagesPage: React.FC = () => {
             }
             
             // 전체 리스트는 디바운스 후 업데이트 (다른 방의 변경사항 반영)
+            // preserveSelection=true로 현재 선택된 메시지 유지
             if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
             refreshTimerRef.current = window.setTimeout(() => {
-                loadFirstPage();
+                loadFirstPage(true); // 현재 선택 유지
                 refreshTimerRef.current = null;
             }, 300);
         };
@@ -273,8 +275,8 @@ const MessagesPage: React.FC = () => {
                                     });
                                 }
                             }
-                            // 백그라운드에서 전체 리스트 갱신
-                            loadFirstPage().catch(() => {});
+                            // 백그라운드에서 전체 리스트 갱신 (현재 선택 유지)
+                            loadFirstPage(true).catch(() => {});
                         }}
                         onBack={() => {
                             setSelectedRoomId(undefined);
