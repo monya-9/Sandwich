@@ -110,6 +110,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
     const [uploading, setUploading] = React.useState(false);
     const [isComposing, setIsComposing] = React.useState(false);
     const [showEmoji, setShowEmoji] = React.useState(false);
+    const [showMessageModal, setShowMessageModal] = React.useState<{ visible: boolean; content: string }>({ visible: false, content: "" });
 
     const [myId, setMyId] = React.useState<number | null>(null);
     const [history, setHistory] = React.useState<ServerMessage[]>([]);
@@ -478,6 +479,26 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 closable={true}
                 onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
             />
+            {/* 메시지 자세히 보기 모달 */}
+            {showMessageModal.visible && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
+                    <div className="bg-white dark:bg-[var(--surface)] rounded-lg p-6 max-w-2xl w-[90vw] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">메시지 내용</h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowMessageModal({ visible: false, content: "" })}
+                                className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-2xl leading-none"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="whitespace-pre-wrap text-sm text-gray-800 dark:text-white">
+                            {showMessageModal.content}
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)] h-full">
             {/* 헤더 */}
             <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-[var(--border-color)] flex items-center gap-2 sm:gap-3 text-black dark:text-white">
@@ -610,7 +631,27 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                   })()
                                 : m2.type === "ATTACHMENT"
                                     ? renderAttachment(m2)
-                                    : <div className="whitespace-pre-wrap text-sm text-gray-800">{m2.content}</div>;
+                                    : (() => {
+                                        const content = m2.content || "";
+                                        const isLong = content.length > 300;
+                                        const displayContent = isLong ? content.substring(0, 300) + "..." : content;
+                                        return (
+                                            <div className="whitespace-pre-wrap text-sm text-gray-800">
+                                                {displayContent}
+                                                {isLong && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowMessageModal({ visible: true, content });
+                                                        }}
+                                                        className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs"
+                                                    >
+                                                        자세히 보기
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })();
 
                     return mine ? (
                         <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
@@ -663,7 +704,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
               value={text}
               onChange={(e) => {
                   const newText = e.currentTarget.value;
-                  if (newText.length <= 80) {
+                  if (newText.length <= 500) {
                       setText(newText);
                   }
               }}
@@ -675,9 +716,9 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
               }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
-              placeholder="메시지 입력 (최대 80자)"
+              placeholder="메시지 입력 (최대 500자)"
               rows={1}
-              maxLength={80}
+              maxLength={500}
               className="flex-1 border border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-black rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
           />
                     <button
@@ -692,8 +733,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 
                 {/* 문자 수 표시 */}
                 <div className="flex justify-end">
-                    <span className={`text-xs ${text.length > 70 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
-                        {text.length}/80
+                    <span className={`text-xs ${text.length > 450 ? 'text-red-500' : text.length > 300 ? 'text-orange-500' : 'text-gray-400 dark:text-white/50'}`}>
+                        {text.length}/500
                     </span>
                 </div>
 

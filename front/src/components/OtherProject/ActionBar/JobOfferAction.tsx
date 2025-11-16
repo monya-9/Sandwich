@@ -327,8 +327,26 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">내용<span className="text-green-500">*</span></label>
-                    <textarea value={description} onChange={(e) => { setDescription(e.target.value); setDescTouched(true); }} onBlur={() => setDescTouched(true)} placeholder="간단한 회사 소개 및 업무 내용을 입력해주세요." className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none ${(descTouched && descError) ? "border-rose-500" : "border-gray-300"}`} />
+                    <label className="text-[12px] font-semibold text-gray-700">내용 (최대 80자)<span className="text-green-500">*</span></label>
+                    <textarea 
+                      value={description} 
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        if (newValue.length <= 80) {
+                          setDescription(newValue);
+                          setDescTouched(true);
+                        }
+                      }} 
+                      onBlur={() => setDescTouched(true)} 
+                      placeholder="간단한 회사 소개 및 업무 내용을 입력해주세요." 
+                      maxLength={80}
+                      className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none ${(descTouched && descError) ? "border-rose-500" : "border-gray-300"}`} 
+                    />
+                    <div className="flex justify-end">
+                      <span className={`text-xs ${description.length > 70 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {description.length}/80
+                      </span>
+                    </div>
                     {(descTouched && descError) && (<div className="text-[12px] text-rose-500">{descError}</div>)}
                   </div>
 
