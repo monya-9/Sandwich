@@ -44,8 +44,8 @@ type Props = {
 };
 
 /* ---------- 스타일 ---------- */
-const youBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
-const meBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
+const youBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm";
+const meBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm";
 
 /* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
@@ -457,7 +457,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                     src={src}
                     fileName={p.name}
                     alt={p.name || "attachment"}
-                    className="block max-w-[320px] max-h-[320px] rounded-lg object-contain"
+                    className="block w-full max-w-full sm:max-w-[280px] md:max-w-[320px] max-h-[200px] sm:max-h-[280px] md:max-h-[320px] rounded-lg object-contain"
                 />
             );
         }
@@ -481,19 +481,19 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
             />
             {/* 메시지 자세히 보기 모달 */}
             {showMessageModal.visible && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
-                    <div className="bg-white dark:bg-[var(--surface)] rounded-lg p-6 max-w-2xl w-[90vw] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">메시지 내용</h3>
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
+                    <div className="bg-white dark:bg-[var(--surface)] rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 max-w-2xl w-[95vw] sm:w-[90vw] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-800 dark:text-white">메시지 내용</h3>
                             <button
                                 type="button"
                                 onClick={() => setShowMessageModal({ visible: false, content: "" })}
-                                className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-2xl leading-none"
+                                className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-xl sm:text-2xl leading-none p-1"
                             >
                                 ×
                             </button>
                         </div>
-                        <div className="whitespace-pre-wrap text-sm text-gray-800 dark:text-white">
+                        <div className="whitespace-pre-wrap text-[11px] sm:text-xs md:text-sm text-gray-800 dark:text-white break-words">
                             {showMessageModal.content}
                         </div>
                     </div>
@@ -633,10 +633,14 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                     ? renderAttachment(m2)
                                     : (() => {
                                         const content = m2.content || "";
-                                        const isLong = content.length > 300;
-                                        const displayContent = isLong ? content.substring(0, 300) + "..." : content;
+                                        // 모바일에서는 200자, 데스크탑에서는 300자 기준
+                                        // CSS breakpoint sm: 640px 기준
+                                        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                                        const maxLength = isMobile ? 200 : 300;
+                                        const isLong = content.length > maxLength;
+                                        const displayContent = isLong ? content.substring(0, maxLength) + "..." : content;
                                         return (
-                                            <div className="whitespace-pre-wrap text-sm text-gray-800">
+                                            <div className="whitespace-pre-wrap text-[11px] sm:text-sm text-gray-800">
                                                 {displayContent}
                                                 {isLong && (
                                                     <button
@@ -644,7 +648,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                                         onClick={() => {
                                                             setShowMessageModal({ visible: true, content });
                                                         }}
-                                                        className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs"
+                                                        className="ml-2 mt-1 inline-block text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium text-[10px] sm:text-xs"
                                                     >
                                                         자세히 보기
                                                     </button>
@@ -657,7 +661,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                         <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
                             {/* ⬇️ 시간 + 작은 다운로드 버튼 (오른쪽 정렬 라인) */}
                             <div className="flex items-center gap-1 order-1">
-                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[9px] sm:text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                                 {attSrc && (
                                     <button
                                         type="button"
@@ -688,7 +692,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                         <Download size={14} />
                                     </button>
                                 )}
-                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[9px] sm:text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                             </div>
                         </div>
                     );
