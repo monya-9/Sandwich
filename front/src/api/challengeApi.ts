@@ -218,9 +218,9 @@ export async function createChallenge(payload: ChallengeUpsertRequest): Promise<
     ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
   });
 
-  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body), { baseURL: '' })).data;
+  const post = async (path: string, body: ChallengeUpsertRequest) => (await api.post(path, toServerBody(body))).data;
   try {
-    return await post('/admin/challenges', payload);
+    return await post('/api/admin/challenges', payload);
   } catch (e: any) {
     const status = e?.response?.status;
     // 날짜 포맷 문제 가능성: 'T' → ' ' 로 한번 더 시도
@@ -233,7 +233,7 @@ export async function createChallenge(payload: ChallengeUpsertRequest): Promise<
         voteEndAt: payload.voteEndAt ? payload.voteEndAt.replace('T', ' ') : undefined,
       };
       try {
-        return await post('/admin/challenges', p2);
+        return await post('/api/admin/challenges', p2);
       } catch {}
     }
     // 폴백은 권한/라우팅 불일치일 때만 수행, 서버 5xx면 재시도하지 않음
@@ -262,9 +262,9 @@ export async function updateChallenge(challengeId: number, payload: ChallengeUps
     ruleJson: p.ruleJson ? JSON.stringify(p.ruleJson) : undefined,
   });
 
-  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body), { baseURL: '' });
+  const patch = async (path: string, body: ChallengeUpsertRequest) => api.patch(path, toServerBody(body));
   try {
-    await patch(`/admin/challenges/${challengeId}`, payload);
+    await patch(`/api/admin/challenges/${challengeId}`, payload);
   } catch (e: any) {
     const status = e?.response?.status;
     if (status >= 400) {
@@ -275,7 +275,7 @@ export async function updateChallenge(challengeId: number, payload: ChallengeUps
         voteStartAt: payload.voteStartAt ? payload.voteStartAt.replace('T', ' ') : undefined,
         voteEndAt: payload.voteEndAt ? payload.voteEndAt.replace('T', ' ') : undefined,
       };
-      try { await patch(`/admin/challenges/${challengeId}`, p2); return; } catch {}
+      try { await patch(`/api/admin/challenges/${challengeId}`, p2); return; } catch {}
     }
     if (status === 404 || status === 405 || status === 403) {
       try { await patch(`/challenges/${challengeId}`, payload); return; } catch {}
@@ -297,14 +297,14 @@ export async function changeChallengeStatus(
   challengeId: number,
   status: ChallengeStatus
 ): Promise<void> {
-  await api.patch(`/admin/challenges/${challengeId}/status`, { status }, { baseURL: '' });
+  await api.patch(`/api/admin/challenges/${challengeId}/status`, { status });
 }
 
 // 관리자: 챌린지 삭제
 export async function deleteChallenge(challengeId: number, opts?: { force?: boolean }): Promise<void> {
   const params: any = {};
   if (opts?.force) params.force = true;
-  await api.delete(`/admin/challenges/${challengeId}`, { params, baseURL: '' });
+  await api.delete(`/api/admin/challenges/${challengeId}`, { params });
 }
 
 // 관리자: 챌린지 목록 조회 (admin 전용)
@@ -321,7 +321,7 @@ export async function adminFetchChallenges(params?: {
   const p: any = { page: 0, size: 20, sort: '-startAt', ...(params || {}) };
   if (params?.ym) p.aiMonth = params.ym;
   if (params?.week) p.aiWeek = params.week;
-  const res = await api.get('/admin/challenges', { params: p, timeout: 10000, baseURL: '' });
+  const res = await api.get('/api/admin/challenges', { params: p, timeout: 10000 });
     return res.data as ChallengeListResponse;
 }
 
@@ -329,7 +329,7 @@ export async function adminFetchChallenges(params?: {
 
 /** 관리자: 리더보드 재집계 트리거 */
 export async function rebuildLeaderboard(challengeId: number): Promise<void> {
-  await api.post(`/admin/challenges/${challengeId}/rebuild-leaderboard`, {}, { baseURL: '' });
+  await api.post(`/api/admin/challenges/${challengeId}/rebuild-leaderboard`, {});
 }
 export type LeaderboardEntry = {
   rank: number;
