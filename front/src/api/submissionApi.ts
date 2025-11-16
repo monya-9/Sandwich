@@ -40,6 +40,7 @@ export type SubmissionCreateRequest = {
   assets?: SubmissionAsset[];
   code?: SubmissionCode;
   portfolio?: SubmissionPortfolio;
+  isPublic?: boolean; // 공개 여부 (기본값: true)
 };
 
 export type SubmissionResponse = {
@@ -71,6 +72,7 @@ export type SubmissionListItem = {
   owner: SubmissionOwner;
   language: string;
   totalScore: number;
+  isPublic?: boolean; // 공개 여부
 };
 
 export type SubmissionDetailResponse = {
@@ -95,6 +97,7 @@ export type SubmissionDetailResponse = {
   totalScore: number;
   entrypoint?: string; // 코드 실행 진입점
   note?: string; // 메모/노트
+  isPublic?: boolean; // 공개 여부
 };
 
 export type SubmissionListResponse = {

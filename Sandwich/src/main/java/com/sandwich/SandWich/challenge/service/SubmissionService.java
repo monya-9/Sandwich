@@ -204,9 +204,19 @@ public class SubmissionService {
 
         final Page<Submission> page;
 
+        // 관리자 확인
+        boolean isAdmin = false;
+        if (viewerId != null) {
+            var viewer = userRepo.findById(viewerId).orElse(null);
+            isAdmin = (viewer != null && viewer.getRole() == com.sandwich.SandWich.user.domain.Role.ROLE_ADMIN);
+        }
+
         if (ch.getType() == ChallengeType.CODE) {
             // 코드 챌린지에만 공개/비공개 정책 적용
-            if (viewerId == null) {
+            if (isAdmin) {
+                // 관리자 → 모든 제출물 조회
+                page = submissionRepo.findByChallenge_Id(challengeId, pageable);
+            } else if (viewerId == null) {
                 // 비로그인 → 공개만
                 page = submissionRepo.findByChallenge_IdAndIsPublicTrue(challengeId, pageable);
             } else {
@@ -262,8 +272,16 @@ public class SubmissionService {
         // 코드 챌린지에만 비공개 제한 적용
         if (isCode) {
             boolean isOwner = (viewerId != null && viewerId.equals(s.getOwnerId()));
-            if (!Boolean.TRUE.equals(s.getIsPublic()) && !isOwner) {
-                // 비공개 + 소유자 아님 → 403
+            
+            // 관리자 확인
+            boolean isAdmin = false;
+            if (viewerId != null) {
+                var viewer = userRepo.findById(viewerId).orElse(null);
+                isAdmin = (viewer != null && viewer.getRole() == com.sandwich.SandWich.user.domain.Role.ROLE_ADMIN);
+            }
+            
+            if (!Boolean.TRUE.equals(s.getIsPublic()) && !isOwner && !isAdmin) {
+                // 비공개 + 소유자 아님 + 관리자 아님 → 403
                 throw new ResponseStatusException(FORBIDDEN, "SUBMISSION_PRIVATE");
             }
         }

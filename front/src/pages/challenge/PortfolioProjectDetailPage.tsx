@@ -144,9 +144,17 @@ export default function PortfolioProjectDetailPage() {
                 const submissionDetail = await fetchChallengeSubmissionDetail(id, pid);
                 setItem(submissionDetail);
                 setLikeCount(submissionDetail.likeCount || 0);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('포트폴리오 상세 로드 실패:', err);
-                setError('제출물을 찾을 수 없습니다.');
+                
+                // 에러 메시지 상세화 (포트폴리오는 항상 공개이지만 일관성을 위해)
+                if (err?.response?.status === 404) {
+                    setError('제출물을 찾을 수 없습니다.');
+                } else if (err?.response?.status === 403) {
+                    setError('접근 권한이 없습니다.');
+                } else {
+                    setError('제출물을 불러오는 중 오류가 발생했습니다.');
+                }
                 setItem(null);
             } finally {
                 setLoading(false);

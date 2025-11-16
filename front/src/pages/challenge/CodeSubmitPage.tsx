@@ -19,6 +19,7 @@ type CodeSubmitPayload = {
     entrypoint: string;
     commitSha?: string; // 커밋 SHA 추가
     note?: string;
+    isPublic: boolean; // 공개 여부
 };
 
 type AiStatus = {
@@ -121,6 +122,7 @@ export default function CodeSubmitPage() {
         entrypoint: "",
         commitSha: "",
         note: "",
+        isPublic: true, // 기본값: 공개
     });
     const [submissionLoading, setSubmissionLoading] = useState(false);
 
@@ -155,6 +157,7 @@ export default function CodeSubmitPage() {
                         entrypoint: entrypoint,
                         commitSha: submission.code?.commitSha || "",
                         note: submission.desc || "",
+                        isPublic: submission.isPublic !== undefined ? submission.isPublic : true, // 기존 값 유지, 없으면 true
                     });
                     
                     // 레거시 데이터(code 없음)면 사용자에게 알림
@@ -225,6 +228,7 @@ export default function CodeSubmitPage() {
                 desc: form.note?.trim() || `repo: ${form.repoUrl || "-"} / ${form.language} ${form.entrypoint}`,
                 repoUrl: form.repoUrl || "",
                 participationType: "SOLO" as const,
+                isPublic: form.isPublic, // 공개 여부
                 // 코드 챌린지 필수 필드
                 code: {
                     language: form.language || "python",
@@ -255,9 +259,16 @@ export default function CodeSubmitPage() {
             
             let errorMessage = isEditMode ? "수정 중 오류가 발생했습니다. 다시 시도해주세요." : "제출 중 오류가 발생했습니다. 다시 시도해주세요.";
             
-            // 중복 제출 에러 처리
+            // 에러 처리
             if (error?.response?.status === 409) {
                 errorMessage = "이미 제출물이 있습니다. 기존 제출물을 수정하거나 삭제 후 다시 제출해주세요.";
+            } else if (error?.response?.status === 403) {
+                const serverMessage = error?.response?.data?.message;
+                if (serverMessage === "NOT_OWNER") {
+                    errorMessage = "소유자만 수정할 수 있습니다.";
+                } else {
+                    errorMessage = "권한이 없습니다.";
+                }
             } else if (error?.response?.status === 400) {
                 const serverMessage = error?.response?.data?.message;
                 if (serverMessage) {
@@ -424,6 +435,22 @@ export default function CodeSubmitPage() {
                                     placeholder="실행 방법이나 특이사항이 있다면 간단히 적어주세요."
                                 />
                                 <Help>예: 추가 환경변수 / 빌드 스텝 / 샘플 입력 설명 등</Help>
+                            </Row>
+
+                            <Row>
+                                <Label>공개 여부</Label>
+                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.isPublic}
+                                        onChange={(e) => setForm((f) => ({ ...f, isPublic: e.target.checked }))}
+                                        className="w-4 h-4 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500"
+                                    />
+                                    <span className="text-[13.5px] text-neutral-800 dark:text-neutral-200">
+                                        제출물을 다른 사용자에게 공개합니다
+                                    </span>
+                                </label>
+                                <Help>비공개로 설정하면 본인만 제출물을 볼 수 있습니다.</Help>
                             </Row>
 
                             {/* 종료된 챌린지 안내 */}

@@ -90,9 +90,17 @@ export default function CodeSubmissionDetailPage() {
             try {
                 const submissionDetail = await fetchChallengeSubmissionDetail(id, sid);
                 setItem(submissionDetail);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('제출물 상세 로드 실패:', err);
-                setError('제출물을 찾을 수 없습니다.');
+                
+                // SUBMISSION_PRIVATE 에러 처리
+                if (err?.response?.status === 403 && err?.response?.data?.message === 'SUBMISSION_PRIVATE') {
+                    setError('비공개 제출물입니다. 소유자만 볼 수 있습니다.');
+                } else if (err?.response?.status === 404) {
+                    setError('제출물을 찾을 수 없습니다.');
+                } else {
+                    setError('제출물을 불러오는 중 오류가 발생했습니다.');
+                }
                 setItem(null);
             } finally {
                 setLoading(false);
