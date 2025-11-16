@@ -19,6 +19,7 @@ import RightPanelActions from "./RightPanelActions";
 import VideoUrlModal from "./VideoUrlModal";
 import api from "../../api/axiosInstance";
 import { AuthContext } from "../../context/AuthContext";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 // Quill size whitelist to show pt values like 16pt
 const SizeAttributor = Quill.import("attributors/style/size");
@@ -65,6 +66,9 @@ export default function ProjectMangeSampleForm() {
    
    // ✅ httpOnly 쿠키 기반: AuthContext에서 로그인 상태 확인
    const { isLoggedIn, isAuthChecking } = useContext(AuthContext);
+
+	// 모바일 감지 (768px 이하를 모바일로 간주)
+	const isMobile = useMediaQuery('(max-width: 768px)');
 
 	const mainQuillRef = useRef<ReactQuill | null>(null);
 	const [previewHtml, setPreviewHtml] = useState<string>("");
@@ -1417,9 +1421,19 @@ export default function ProjectMangeSampleForm() {
 					</div>
 				</div>
 			)}
-			<main className="w-full max-w-[1800px] mx-auto">
-				<div className="grid grid-cols-1 xl:grid-cols-[1fr_1200px_1fr] lg:grid-cols-[1fr_1000px_1fr] md:grid-cols-[1fr_800px_1fr] sm:grid-cols-[1fr_600px_1fr] items-start gap-[28px] px-[15px] sm:px-[20px] md:px-[25px] lg:px-[30px] xl:px-[30px]">
-                    <section className="w-full sm:w-[600px] md:w-[800px] lg:w-[1000px] xl:w-[1200px] min-h-screen rounded-[10px] flex flex-col items-center relative pt-0 sm:col-start-2 md:col-start-2 lg:col-start-2 xl:col-start-2" style={{ backgroundColor: 'transparent' }}>
+			{/* 모바일 경고 메시지 */}
+			{isMobile && (
+				<main className="w-full max-w-[1800px] mx-auto px-4 py-8">
+					<div className="bg-[#F04438] rounded-[10px] px-6 py-4 flex items-center justify-center">
+						<span className="text-white text-[16px] font-medium text-center">모바일에서는 작업 업로드 및 수정이 불가능합니다.</span>
+					</div>
+				</main>
+			)}
+			<main className={`w-full max-w-[1800px] mx-auto ${isMobile ? 'hidden' : ''}`}>
+				<div className="flex flex-row items-start justify-center gap-[20px] sm:gap-[24px] lg:gap-[28px] px-[15px] sm:px-[20px] md:px-[25px] lg:px-[30px] xl:px-[30px]">
+					<div className="flex flex-row items-start gap-[20px] sm:gap-[24px] lg:gap-[28px] w-full max-w-[1600px]">
+					<div className="flex-1 min-w-0 max-w-[1200px]">
+                    <section className="w-full min-h-screen rounded-[10px] flex flex-col items-center relative pt-0" style={{ backgroundColor: 'transparent' }}>
                         <div className="pointer-events-none absolute inset-0 rounded-[10px] z-20" style={{ boxShadow: 'inset 0 0 0 1px var(--editor-border, #ADADAD)' }} />
 						<div className="w-full flex flex-col items-center" style={{ gap: `${contentGapPx}px` }}>
 							<div className="pm-editor-frame">
@@ -1453,8 +1467,6 @@ export default function ProjectMangeSampleForm() {
 										<option value="48pt">48pt</option>
 										<option value="72pt">72pt</option>
 									</select>
-									<button className="ql-image" />
-									<button className="ql-video" />
 								</span>
 							</div>
 						</div>
@@ -1675,13 +1687,14 @@ export default function ProjectMangeSampleForm() {
 							</div>
 							</div>
 						</section>
+					</div>
 
-                    <aside className="w-full sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[357px] flex flex-col gap-[16px] mt-[0px] sm:sticky md:sticky lg:sticky xl:sticky top-[24px] self-start sm:col-start-3 md:col-start-3 lg:col-start-3 xl:col-start-3">
+                    <aside className="flex-shrink-0 w-[280px] sm:w-[300px] md:w-[320px] lg:w-[320px] xl:w-[357px] flex flex-col gap-[16px] mt-[0px] sticky top-[24px] self-start">
 						<RightPanelActions onImageAdd={triggerImageAdd} onVideoAdd={triggerVideoAdd} onReorder={openReorder} />
                         <SettingsPanel backgroundColor={backgroundColor} onBackgroundColorChange={(hex) => { userBgRef.current = true; setBackgroundColor((hex || '').toUpperCase()); }} contentGapPx={contentGapPx} onContentGapChange={setContentGapPx} />
 												<div className="flex flex-col gap-[12px]">
 							<button
-                                className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] dark:bg-white/10 cursor-not-allowed'} rounded-[30px] w-full sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[357px] h-[82px] text-black dark:text-white text-[24px] transition-colors duration-200`}
+                                className={`${hasContent ? 'bg-[#168944] hover:bg-green-700' : 'bg-[#E5E7EB] dark:bg-white/10 cursor-not-allowed'} rounded-[30px] w-full h-[82px] text-black dark:text-white text-[24px] transition-colors duration-200`}
 								type="button"
 								onClick={handleSubmit}
 								disabled={!hasContent}
@@ -1689,7 +1702,7 @@ export default function ProjectMangeSampleForm() {
 								다음
 							</button>
 							<button
-                                className="w-full sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[357px] h-[45px] text-[#6B7280] dark:text-white/70 text-[20px] inline-flex items-center justify-center gap-2 hover:text-black dark:hover:text-white"
+                                className="w-full h-[45px] text-[#6B7280] dark:text-white/70 text-[20px] inline-flex items-center justify-center gap-2 hover:text-black dark:hover:text-white"
 								type="button"
 								onClick={openPreview}
 							>
@@ -1697,6 +1710,7 @@ export default function ProjectMangeSampleForm() {
 							</button>
 						</div>
 					</aside>
+					</div>
 				</div>
 				{modal}
             <ProjectDetailsModal 

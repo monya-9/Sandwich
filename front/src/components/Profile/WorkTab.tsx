@@ -235,7 +235,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 
 	return (
 		<div
-			className={`relative rounded-xl overflow-hidden ${isReorderMode ? "cursor-move" : "cursor-pointer"}`}
+			className={`relative rounded-xl ${isReorderMode ? "cursor-move overflow-hidden" : "cursor-pointer"}`}
 			{...(isReorderMode ? { draggable: true, onDragStart: (e: any) => onDragStart(e, project.id), onDragOver: (e: any) => onDragOver(e), onDrop: (e: any) => onDrop(e, project.id) } : { onClick: goDetail })}
 		>
 			<div className="relative w-full aspect-[4/3] bg-gray-200 group" onMouseLeave={() => setMenuOpen(false)}>
@@ -250,7 +250,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 					···
 				</button>
                 {menuOpen && (
-                    <div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
+                    <div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-50`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
                         <button className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left text-black dark:text-white" onClick={goEdit}>수정하기</button>
                         <button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
 					</div>

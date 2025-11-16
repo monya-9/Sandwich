@@ -505,9 +505,9 @@ export default function PortfolioVotePage() {
                                         </div>
                                     </div>
                                     
-                                    {/* 2. 썸네일 이미지 */}
-                                    {submission.coverUrl && (
-                                        <div className="relative h-48 bg-gray-100 dark:bg-neutral-800">
+                                    {/* 2. 썸네일 이미지 - 항상 표시 */}
+                                    <div className="relative h-48 bg-gray-100 dark:bg-neutral-800">
+                                        {submission.coverUrl ? (
                                             <img 
                                                 src={submission.coverUrl} 
                                                 alt={submission.title}
@@ -517,8 +517,14 @@ export default function PortfolioVotePage() {
                                                     target.style.display = 'none';
                                                 }}
                                             />
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-neutral-600">
+                                                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
                                     
                                     <div className="p-4">
                                         {/* 3. 제목 */}

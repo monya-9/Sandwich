@@ -143,8 +143,12 @@ function App() {
                         <Routes>
                             <Route element={<AppLayout />}>
                                 <Route index element={<MainPage />} />
-                                {/* Notefolio 스타일 상세 경로 */}
+                                
+                                {/* Notefolio 스타일 상세 경로 (두 개의 세그먼트) */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
+                                
+                                {/* slug 기반 프로필 페이지 (단일 세그먼트, 숫자가 아닌 경우) */}
+                                <Route path="/:slug" element={<UserPublicProfilePage />} />
                                 
                                 {/* 기존 알림 호환 경로 (레거시) */}
                                 <Route path="/projects/:id" element={<LegacyProjectRedirect />} />

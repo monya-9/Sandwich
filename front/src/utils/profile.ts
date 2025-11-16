@@ -8,6 +8,7 @@ type MeResponse = {
     nickname?: string | null;
     profileName?: string | null;
     profileSlug?: string | null; // 프로필 URL용 슬러그
+    profileImage?: string | null; // 프로필 이미지 URL
 };
 
 /**
@@ -24,7 +25,7 @@ export async function ensureNicknameInStorage(
         // ✅ httpOnly 쿠키로 자동 전송되므로 Authorization 헤더 불필요
         const { data } = await api.get<MeResponse>("/users/me");
 
-        const { id, email, username, nickname, profileName, profileSlug } = data || ({} as MeResponse);
+        const { id, email, username, nickname, profileName, profileSlug, profileImage } = data || ({} as MeResponse);
 
         // ★ userId 저장 (알림 WS 구독에 필요)
         if (typeof id === "number" && Number.isFinite(id)) {
@@ -39,6 +40,10 @@ export async function ensureNicknameInStorage(
         if (profileName) storage.setItem("userProfileName", profileName);
         // ✅ profileSlug 저장
         if (profileSlug) storage.setItem("profileUrlSlug", profileSlug);
+        // ✅ profileImage 저장
+        if (profileImage) {
+            storage.setItem("userProfileImage", profileImage);
+        }
 
         storage.setItem("userEmail", email || fallbackEmail);
     } catch {

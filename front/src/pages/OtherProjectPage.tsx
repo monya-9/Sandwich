@@ -293,7 +293,11 @@ export default function OtherProjectPage() {
         coverUrl: projectDetail?.coverUrl,
         isOwner,
         initialIsFollowing: initialFollow,
+        deployEnabled: projectDetail?.deployEnabled,
         qrCodeEnabled: projectDetail?.qrCodeEnabled,
+        demoUrl: projectDetail?.demoUrl,
+        frontendBuildCommand: projectDetail?.frontendBuildCommand,
+        backendBuildCommand: projectDetail?.backendBuildCommand,
     } as const;
 
     // 사용자 설정 메타: 배경/간격
