@@ -703,9 +703,30 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       
       onClose();
     } catch (e: any) {
+      // axios 에러 응답에서 메시지 추출
+      let errorMessage = "생성 실패";
+      
+      // axios 에러 구조: e.response.data.message 또는 e.response.data (문자열인 경우)
+      if (e?.response?.data) {
+        if (typeof e.response.data === 'string') {
+          errorMessage = e.response.data;
+        } else if (e.response.data.message) {
+          errorMessage = e.response.data.message;
+        }
+      } else if (e?.message) {
+        errorMessage = e.message;
+      }
+      
+      // 크레딧 부족 에러를 사용자 친화적인 메시지로 변환
+      if (errorMessage.includes("insufficient_balance") || errorMessage.includes("잔액 부족")) {
+        errorMessage = "크레딧이 부족하여 프로젝트를 등록할 수 없습니다.";
+      } else if (errorMessage.includes("credits_not_enabled")) {
+        errorMessage = "크레딧 기능이 활성화되어 있지 않습니다.";
+      }
+      
       setErrorToast({
         visible: true,
-        message: e?.message ?? "생성 실패"
+        message: errorMessage
       });
     } finally {
       setSubmitting(false);
@@ -958,26 +979,6 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
                   disabled={!deployEnabled}
                 />
                 
-                {/* GitHub 동기화 체크박스 - 토큰 입력 바로 아래 */}
-                <div className="mt-2">
-                  <label className={`flex items-center gap-2 text-[14px] text-black dark:text-white ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    <input 
-                      type="checkbox" 
-                      className="scale-110" 
-                      checked={githubSyncEnabled} 
-                      onChange={(e) => setGithubSyncEnabled(e.target.checked)}
-                      disabled={!deployEnabled}
-                    /> 
-                    <span>GitHub 동기화 여부</span>
-                  </label>
-                  {githubSyncEnabled && deployEnabled && (
-                    <div className="text-[12px] text-gray-500 dark:text-white/60 mt-1">
-                      환경변수가 GitHub Actions Secrets로도 등록됩니다.
-                    </div>
-                  )}
-                </div>
-                
-                <div className="text-[12px] text-gray-500 dark:text-white/60 mt-2">토큰은 저장 시 사용만 하고 서버에 보관하지 않습니다.</div>
                 <button 
                   type="button" 
                   className={`mt-2 px-4 py-2 text-sm bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded hover:from-orange-600 hover:to-yellow-600 transition-colors ${!deployEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}

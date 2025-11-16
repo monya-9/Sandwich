@@ -32,16 +32,33 @@ export function normalizeWeek(week: string): string {
 export async function fetchAiLeaderboard(week: string): Promise<AiLeaderboardResponse> {
   const w = normalizeWeek(week);
   
-  // 모든 환경에서 프록시 사용 (CORS 방지)
-  // 로컬: /ext -> http://localhost:3000/ext -> setupProxy.js -> https://api.dnutzs.org/api
-  // 배포: /ext -> nginx -> https://api.dnutzs.org/api
-  const res = await api.get(`/ext/reco/judge/leaderboard/${encodeURIComponent(w)}` as const, {
-    baseURL: "",
-    withCredentials: false,
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+  
+  if (isLocalDev) {
+    // 로컬 개발에서는 프록시만 사용 (외부 직접 호출 금지: CORS 방지)
+    const res = await api.get(`/ext/reco/judge/leaderboard/${encodeURIComponent(w)}` as const, {
+      baseURL: "",
+      withCredentials: false,
+      headers: { "Cache-Control": "no-cache" },
+      timeout: 10000,
+    });
+    return res.data as AiLeaderboardResponse;
+  }
+  
+  // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용)
+  const AI_BASE = process.env.REACT_APP_AI_API_BASE?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  
+  const directUrl = `${AI_BASE}/api/reco/judge/leaderboard/${encodeURIComponent(w)}`;
+  const res = await fetch(directUrl, { 
+    credentials: "omit",
     headers: { "Cache-Control": "no-cache" },
-    timeout: 10000,
   });
-  return res.data as AiLeaderboardResponse;
+  
+  if (!res.ok) {
+    throw new Error(`리더보드 조회 실패: ${res.status}`);
+  }
+  return await res.json() as AiLeaderboardResponse;
 }
 
 /**
@@ -52,14 +69,33 @@ export async function fetchAiUserResult(week: string, userId: string | number): 
   const w = normalizeWeek(week);
   const u = String(userId);
   
-  // 모든 환경에서 프록시 사용 (CORS 방지)
-  const res = await api.get(`/ext/reco/judge/result/${encodeURIComponent(w)}/${encodeURIComponent(u)}` as const, {
-    baseURL: "",
-    withCredentials: false,
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+  
+  if (isLocalDev) {
+    // 로컬 개발에서는 프록시만 사용 (외부 직접 호출 금지: CORS 방지)
+    const res = await api.get(`/ext/reco/judge/result/${encodeURIComponent(w)}/${encodeURIComponent(u)}` as const, {
+      baseURL: "",
+      withCredentials: false,
+      headers: { "Cache-Control": "no-cache" },
+      timeout: 10000,
+    });
+    return res.data as AiUserResultResponse;
+  }
+  
+  // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용)
+  const AI_BASE = process.env.REACT_APP_AI_API_BASE?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  
+  const directUrl = `${AI_BASE}/api/reco/judge/result/${encodeURIComponent(w)}/${encodeURIComponent(u)}`;
+  const res = await fetch(directUrl, { 
+    credentials: "omit",
     headers: { "Cache-Control": "no-cache" },
-    timeout: 10000,
   });
-  return res.data as AiUserResultResponse;
+  
+  if (!res.ok) {
+    throw new Error(`유저 결과 조회 실패: ${res.status}`);
+  }
+  return await res.json() as AiUserResultResponse;
 }
 
 

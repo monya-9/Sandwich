@@ -25,16 +25,39 @@ function parseWeekly(json: any): WeeklyChallengeData {
 }
 
 export async function fetchWeeklyLatest(baseUrl?: string): Promise<WeeklyChallengeData> {
-  // 모든 환경에서 프록시 사용 (CORS 방지)
-  const res = await fetch(`/ext/reco/weekly`, { credentials: "omit" });
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+  
+  if (isLocalDev) {
+    const res = await fetch(`/ext/reco/weekly`, { credentials: "omit" });
+    if (!res.ok) throw new Error(`주간 챌린지 프록시 조회 실패: ${res.status}`);
+    const json = await res.json();
+    return parseWeekly(json);
+  }
+  
+  const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  
+  const res = await fetch(`${AI_BASE}/api/reco/weekly`, { credentials: "omit" });
   if (!res.ok) throw new Error(`주간 챌린지 조회 실패: ${res.status}`);
   const json = await res.json();
   return parseWeekly(json);
 }
 
 export async function fetchWeeklyByKey(week: string, baseUrl?: string): Promise<WeeklyChallengeData> {
-  // 모든 환경에서 프록시 사용 (CORS 방지)
-  const url = `/ext/reco/topics/weekly?week=${encodeURIComponent(week)}`;
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+  
+  if (isLocalDev) {
+    const url = `/ext/reco/topics/weekly?week=${encodeURIComponent(week)}`;
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) throw new Error(`주간(특정) 프록시 조회 실패: ${res.status}`);
+    const json = await res.json();
+    return parseWeekly(json);
+  }
+  
+  const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  
+  const url = `${AI_BASE}/api/reco/topics/weekly?week=${encodeURIComponent(week)}`;
   const res = await fetch(url, { credentials: "omit" });
   if (!res.ok) throw new Error(`주간(특정) 조회 실패: ${res.status}`);
   const json = await res.json();
@@ -43,8 +66,19 @@ export async function fetchWeeklyByKey(week: string, baseUrl?: string): Promise<
 
 // 유틸: AI 응답 원형(JSON) 그대로 반환 (폼 역매핑용)
 export async function fetchWeeklyRaw(week: string, baseUrl?: string): Promise<any> {
-  // 모든 환경에서 프록시 사용 (CORS 방지)
-  const url = `/ext/reco/topics/weekly?week=${encodeURIComponent(week)}`;
+  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+  
+  if (isLocalDev) {
+    const url = `/ext/reco/topics/weekly?week=${encodeURIComponent(week)}`;
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) throw new Error(`주간(특정) 프록시 조회 실패: ${res.status}`);
+    return await res.json();
+  }
+  
+  const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
+  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+  
+  const url = `${AI_BASE}/api/reco/topics/weekly?week=${encodeURIComponent(week)}`;
   const res = await fetch(url, { credentials: "omit" });
   if (!res.ok) throw new Error(`주간(특정) 조회 실패: ${res.status}`);
   return await res.json();

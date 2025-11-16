@@ -163,10 +163,14 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
             <div className="mt-2 relative">
               <div className="inline-flex relative bg-white text-gray-900 text-[15px] px-4 py-2 rounded-3xl border border-gray-200 shadow-sm max-w-[640px] min-w-[72px] min-h-[36px] items-center justify-center text-center break-words">
                 {intro}
-                <div className="absolute left-4 -top-1 w-3 h-3 bg-white rotate-45 shadow-sm border-l border-t border-gray-200"></div>
+                <div className="absolute left-4 -bottom-1 w-3 h-3 bg-white rotate-45 shadow-sm border-r border-b border-gray-200"></div>
               </div>
             </div>
           )}
+          {/* 닉네임 */}
+          <div className="flex items-center gap-2 text-gray-600 text-base mt-2">
+            <span>{userName}</span>
+          </div>
         </div>
       </div>
     </>

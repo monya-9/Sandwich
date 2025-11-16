@@ -92,8 +92,7 @@ public class SecurityConfig {
                 .map(String::trim)
                 .toList();
 
-        // setAllowedOriginPatterns()를 사용하여 와일드카드 패턴 지원
-        configuration.setAllowedOriginPatterns(origins);
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(methods);
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));
         configuration.setAllowCredentials(true);
