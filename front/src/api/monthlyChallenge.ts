@@ -46,24 +46,11 @@ function parseMonthlyChallenge(json: any): MonthlyChallengeData {
 
 /**
  * 월간 챌린지 문제 조회
- * 기본 base는 제공받은 도메인으로 설정. 필요시 override 가능.
+ * 모든 환경에서 프록시 사용 (CORS 방지)
  */
 export async function fetchMonthlyChallenge(baseUrl?: string): Promise<MonthlyChallengeData> {
-  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
-
-  if (isLocalDev) {
-    // 로컬 개발에서는 프록시만 사용 (외부 직접 호출 금지: CORS 방지)
-    const res = await fetch(`/ext/reco/monthly`, { credentials: "omit" });
-    if (!res.ok) throw new Error(`월간 챌린지 프록시 조회 실패: ${res.status}`);
-    const json = await res.json();
-    return parseMonthlyChallenge(json);
-  }
-
-  // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용; 기본값 없음)
-  const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
-  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
-  const directUrl = `${AI_BASE}/api/reco/monthly`;
-  const res = await fetch(directUrl, { credentials: "omit" });
+  // 모든 환경에서 프록시 사용
+  const res = await fetch(`/ext/reco/monthly`, { credentials: "omit" });
   if (!res.ok) throw new Error(`월간 챌린지 조회 실패: ${res.status}`);
   const json = await res.json();
   return parseMonthlyChallenge(json);
@@ -71,17 +58,8 @@ export async function fetchMonthlyChallenge(baseUrl?: string): Promise<MonthlyCh
 
 /** 특정 월(MM) 조회: /api/reco/topics/monthly?ym=YYYY-MM */
 export async function fetchMonthlyByYm(ym: string, baseUrl?: string): Promise<MonthlyChallengeData> {
-  const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
-  if (isLocalDev) {
-    const res = await fetch(`/ext/reco/topics/monthly?ym=${encodeURIComponent(ym)}`, { credentials: "omit" });
-    if (!res.ok) throw new Error(`월간(특정) 프록시 조회 실패: ${res.status}`);
-    const json = await res.json();
-    return parseMonthlyChallenge(json);
-  }
-  const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
-  if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
-  const url = `${AI_BASE}/api/reco/topics/monthly?ym=${encodeURIComponent(ym)}`;
-  const res = await fetch(url, { credentials: "omit" });
+  // 모든 환경에서 프록시 사용
+  const res = await fetch(`/ext/reco/topics/monthly?ym=${encodeURIComponent(ym)}`, { credentials: "omit" });
   if (!res.ok) throw new Error(`월간(특정) 조회 실패: ${res.status}`);
   const json = await res.json();
   return parseMonthlyChallenge(json);
