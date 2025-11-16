@@ -51,7 +51,7 @@ export async function fetchMyRewards(): Promise<RewardResponse> {
 
 /**
  * 챌린지 결과 발표 및 보상 지급 (관리자용)
- * POST /admin/rewards/challenges/{challengeId}/publish-results
+ * POST /api/admin/rewards/challenges/{challengeId}/publish-results
  */
 export async function publishChallengeResults(challengeId: number): Promise<{
   success: boolean;
@@ -63,12 +63,12 @@ export async function publishChallengeResults(challengeId: number): Promise<{
     amount: number;
   }>;
 }> {
-  const response = await api.post(`/admin/rewards/challenges/${challengeId}/publish-results`);
+  const response = await api.post(`/api/admin/rewards/challenges/${challengeId}/publish-results`);
   return response.data;
 }
 
 /** 커스텀 보상 지급 (관리자용)
-* POST /admin/rewards/{challengeId}/custom-payout
+* POST /api/admin/rewards/{challengeId}/custom-payout
 */
 export async function adminCustomPayout(
  challengeId: number,
@@ -79,15 +79,14 @@ export async function adminCustomPayout(
  if (idempotencyKey && idempotencyKey.trim()) {
    headers["Idempotency-Key"] = idempotencyKey.trim();
  }
- const res = await api.post(`/admin/rewards/${challengeId}/custom-payout`, payload, {
+ const res = await api.post(`/api/admin/rewards/${challengeId}/custom-payout`, payload, {
    headers,
-   baseURL: '',
  });
  return res.data;
 }
 
 /** 커스텀 보상 지급 내역 조회 (관리자용)
-* GET /admin/rewards/{challengeId}/custom-payouts
+* GET /api/admin/rewards/{challengeId}/custom-payouts
 */
 export async function fetchCustomPayouts(
   challengeId: number,
@@ -106,9 +105,8 @@ export async function fetchCustomPayouts(
     createdAt: string;
   }>;
 }> {
-  const res = await api.get(`/admin/rewards/${challengeId}/custom-payouts`, {
+  const res = await api.get(`/api/admin/rewards/${challengeId}/custom-payouts`, {
     params: params || {},
-    baseURL: '',
       });
   return res.data;
 }
