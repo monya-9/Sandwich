@@ -5,7 +5,6 @@ import { AuthContext } from "../../../context/AuthContext";
 import { getStaticUrl } from "../../../config/staticBase";
 import LoginInput from "./LoginInput";
 import LoginButton from "./LoginButton";
-import KeepLoginCheck from "./KeepLoginCheck";
 import SNSLogin from "./SNSLogin";
 import LoginActions from "./LoginActions";
 import RecentLogin from "../RecentLogin";
@@ -19,7 +18,6 @@ const LoginForm = () => {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [keepLogin, setKeepLogin] = useState(true); // 기본 체크
     const [loginFailed, setLoginFailed] = useState(false);
     
     // 🆕 MFA 관련 상태들
@@ -120,10 +118,9 @@ const LoginForm = () => {
                     isError={loginFailed}
                 />
                 <LoginButton onClick={handleLogin} isActive={isActive} />
-                <KeepLoginCheck checked={keepLogin} onChange={setKeepLogin} />
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 mt-8">
                 <LoginActions isError={loginFailed} />
                 <SNSLogin />
                 <RecentLogin />

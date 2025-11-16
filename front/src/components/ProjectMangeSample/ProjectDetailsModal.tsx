@@ -205,11 +205,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
       if (typeof initialDetail.qrCodeEnabled === 'boolean') setQrCodeEnabled(initialDetail.qrCodeEnabled);
       if (typeof initialDetail.deployEnabled === 'boolean') setDeployEnabled(initialDetail.deployEnabled);
 
-      // Prefill GitHub information from existing fields
-      // GitHub 정보는 별도 필드가 없으므로 기존 필드들을 활용하거나 빈 값으로 설정
-      setGhOwner(initialDetail.repositoryUrl || "");
-      setGhRepo(initialDetail.extraRepoUrl || "");
-      setGhBase("main"); // 기본값으로 설정 (프로젝트 상세에는 브랜치 정보가 없음)
+      // GitHub 설정 정보 불러오기
+      setGhOwner(initialDetail.githubOwner || "");
+      setGhRepo(initialDetail.githubRepo || "");
+      setGhBase(initialDetail.githubBaseBranch || "main");
       setGhToken(""); // 토큰은 보안상 저장되지 않으므로 빈 값
       
       // 콜백 함수들은 별도 useEffect에서 호출
@@ -548,6 +547,10 @@ const ProjectDetailsModal: React.FC<Props> = ({ open, onClose, onCreated, librar
         frontendBuildCommand: deployEnabled ? (frontendBuildCommand.trim() || "") : undefined,
         backendBuildCommand: deployEnabled ? (backendBuildCommand.trim() || "") : undefined,
         portNumber: portNumber === "" ? undefined : Number(portNumber),
+        // GitHub 설정 정보 (배포 설정이 체크되었을 때만 저장)
+        githubOwner: deployEnabled ? (ghOwner.trim() || undefined) : undefined,
+        githubRepo: deployEnabled ? (ghRepo.trim() || undefined) : undefined,
+        githubBaseBranch: deployEnabled ? (ghBase.trim() || undefined) : undefined,
       };
       
       let projectId: number;
