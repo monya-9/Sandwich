@@ -204,7 +204,7 @@ const MessagesPage: React.FC = () => {
     );
 
     return (
-        <main className="mx-auto max-w-6xl xl:max-w-6xl 2xl:max-w-[2600px] px-2 sm:px-4 xl:px-4 2xl:px-20 mt-2 sm:mt-4">
+        <main className="mx-auto max-w-6xl xl:max-w-6xl 2xl:max-w-[2600px] px-2 sm:px-4 xl:px-4 2xl:px-20 mt-2 sm:mt-4 pb-5">
             <section className="bg-white dark:bg-[var(--surface)] rounded-lg border dark:border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[calc(100vh-100px)] sm:h-[530px] md:h-[600px] xl:h-[600px] 2xl:h-[800px] min-h-0">
                 {/* 모바일: 선택된 메시지가 없으면 목록, 있으면 상세 표시 */}
                 {/* 데스크탑: 항상 목록과 상세 함께 표시 */}
