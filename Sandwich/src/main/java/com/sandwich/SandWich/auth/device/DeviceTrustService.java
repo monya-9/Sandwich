@@ -11,6 +11,7 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import static com.sandwich.SandWich.auth.security.TrustedDeviceFilter.ATTR_TRUSTED;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,13 @@ public class DeviceTrustService {
 
 
     public boolean isTrusted(HttpServletRequest req, Long userId) {
+
+        // 필터에서 심어준 trusted attribute가 있으면 먼저 사용
+        Object attr = req.getAttribute(ATTR_TRUSTED);
+        if (attr instanceof Boolean trustedFlag) {
+            return trustedFlag;   // true/false 그대로 반환
+        }
+        // 기존 로직: 쿠키 → DB 검증
         String tdid = readCookie(req,"tdid");
         String tdt  = readCookie(req,"tdt");
         if (tdid==null || tdt==null) return false;
