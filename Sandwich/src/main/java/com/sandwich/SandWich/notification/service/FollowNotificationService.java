@@ -23,7 +23,6 @@ public class FollowNotificationService {
         var notify = NotifyPayload.builder()
                 .event("FOLLOW_CREATED")
                 .actorId(payload.getSenderId())
-                .targetUserId(/* 팔로우 당한 유저 ID */ extractTargetUserId(payload))
                 .resource(NotifyPayload.Resource.builder()
                         .type("PROFILE").id(payload.getSenderId()).build())
                 .extra(Map.of(
@@ -37,9 +36,4 @@ public class FollowNotificationService {
         publisher.sendToUser(notify);
     }
 
-    private Long extractTargetUserId(FollowNotificationPayload payload) {
-        // TODO: 실제 타겟 유저 식별 로직(팔로우 도메인 흐름에서 받거나, 인자로 전달)
-        // 임시로 null이면 예외 던지도록 하거나, 메서드 시그니처를 바꿔 targetUserId를 받게 설계해.
-        throw new IllegalStateException("targetUserId 결정 로직을 연결하세요");
-    }
 }

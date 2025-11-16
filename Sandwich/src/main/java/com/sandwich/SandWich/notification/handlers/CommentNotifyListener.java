@@ -22,13 +22,17 @@ public class CommentNotifyListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCommentCreated(CommentCreatedEvent ev) {
-        String type = ev.getResourceType() == null ? "POST" : ev.getResourceType();
         Long id = ev.getResourceId();
+        String type = ev.getResourceType();
+
+        if (type == null) {
+            log.warn("[CommentNotify] resourceType is null for resourceId={}", id);
+            return;
+        }
 
         String deepLink;
         switch (type) {
-            case "PROJECT":
-                // 프로젝트 소유자 ID 조회 후 올바른 경로 생성
+            case "PROJECT": {
                 Long ownerId = projectRepository.findAuthorIdById(id).orElse(null);
                 if (ownerId != null) {
                     deepLink = "/other-project/" + ownerId + "/" + id;
@@ -37,12 +41,15 @@ public class CommentNotifyListener {
                     deepLink = "/";
                 }
                 break;
-            case "CHALLENGE":
+            }
+            case "CHALLENGE": {
                 deepLink = "/challenges/" + id;
                 break;
-            case "POST":
-            default:
-                deepLink = "/posts/" + id;
+            }
+            default: {
+                log.warn("[CommentNotify] Unknown resourceType={}, id={}", type, id);
+                deepLink = "/";
+            }
         }
 
         var payload = NotifyPayload.builder()

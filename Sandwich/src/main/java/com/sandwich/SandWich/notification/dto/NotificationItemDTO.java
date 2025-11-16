@@ -30,7 +30,7 @@ public class NotificationItemDTO {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Resource {
-        private String type;                  // PROJECT | POST | COMMENT | USER | ROOM | ...
+        private String type;                  // PROJECT | COMMENT | USER | ROOM | ...
         private Long id;
     }
 }

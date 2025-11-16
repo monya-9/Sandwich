@@ -48,7 +48,7 @@ public class PreferenceChecker {
             case COMMENT     -> p.isEmailComment();
             case LIKE        -> p.isEmailLike();
             case FOLLOW      -> p.isEmailFollow();
-            case COLLECTION  -> p.isPushCollection();
+            case COLLECTION  -> false;
             case EVENT       -> p.isEmailEvent();
             case WORK_DIGEST -> p.isEmailWorkDigest();
         };

@@ -2,7 +2,6 @@ package com.sandwich.SandWich.user.domain;
 
 import com.sandwich.SandWich.notification.domain.Notification;
 import com.sandwich.SandWich.comment.domain.Comment;
-import com.sandwich.SandWich.post.domain.Post;
 import com.sandwich.SandWich.common.domain.BaseEntity;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.social.domain.Follow;
@@ -63,9 +62,6 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Follow> followers = new ArrayList<>();
 
-    @Builder.Default
-    @OneToMany(mappedBy = "user")
-    private List<Post> posts = new ArrayList<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "user")

@@ -35,8 +35,7 @@ public class LikeNotifyListener {
                 log.warn("[LikeNotify] PROJECT ownerId not found for projectId={}", id);
                 yield "/";
             }
-            case "POST"    -> "/posts/" + id;
-            case "COMMENT" -> "/posts/" + id + "#comment-" + id; // 필요 시 원글 경로로 보정
+            case "COMMENT" -> "/posts/" + id + "#comment-" + id;  // 필요 시 원글 경로로 보정
             default        -> "/";
         };
 

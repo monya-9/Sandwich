@@ -1,6 +1,5 @@
 package com.sandwich.SandWich.comment.support;
 
-import com.sandwich.SandWich.post.repository.PostRepository;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.challenge.domain.Submission; // ⬅ 추가
@@ -18,7 +17,6 @@ import java.util.Optional;
 public class CommentTargetResolverImpl implements CommentTargetResolver {
 
     private final ProjectRepository projectRepo;
-    private final PostRepository postRepo;
     private final SubmissionRepository submissionRepo;
 
     @Value("${app.system.user-id:0}")
@@ -33,9 +31,6 @@ public class CommentTargetResolverImpl implements CommentTargetResolver {
             switch (t) {
                 case "project": {
                     return projectRepo.findAuthorIdById(commentableId);
-                }
-                case "post": {
-                    return postRepo.findAuthorIdById(commentableId);
                 }
                 case "code_submission": {
                     return submissionRepo.findById(commentableId).map(Submission::getOwnerId);

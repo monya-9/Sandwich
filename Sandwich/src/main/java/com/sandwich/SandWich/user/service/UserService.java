@@ -3,9 +3,7 @@ package com.sandwich.SandWich.user.service;
 
 import com.sandwich.SandWich.auth.dto.SignupRequest;
 import com.sandwich.SandWich.comment.domain.Comment;
-import com.sandwich.SandWich.post.domain.Post;
 import com.sandwich.SandWich.comment.repository.CommentRepository;
-import com.sandwich.SandWich.post.repository.PostRepository;
 import com.sandwich.SandWich.common.exception.exceptiontype.InterestNotFoundException;
 import com.sandwich.SandWich.common.exception.exceptiontype.PositionNotFoundException;
 import com.sandwich.SandWich.common.exception.exceptiontype.UserNotFoundException;
@@ -32,7 +30,6 @@ public class UserService {
 
     private final CommentRepository commentRepository;
     private final ProfileRepository profileRepository;
-    private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PositionRepository positionRepository;
     private final InterestRepository interestRepository;
@@ -284,9 +281,6 @@ public class UserService {
         // 5) 소유 리소스 소유자 변경
         List<Project> myProjects = projectRepository.findByUser(user);
         for (Project project : myProjects) project.setUser(anonymous);
-
-        List<Post> myPosts = postRepository.findAllByUser(user);
-        for (Post post : myPosts) post.setUser(anonymous);
 
         List<Comment> myComments = commentRepository.findAllByUser(user);
         for (Comment comment : myComments) comment.setUser(anonymous);

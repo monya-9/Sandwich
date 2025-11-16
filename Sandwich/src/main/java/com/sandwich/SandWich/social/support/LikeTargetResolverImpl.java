@@ -3,7 +3,6 @@ package com.sandwich.SandWich.social.support;
 import com.sandwich.SandWich.challenge.domain.Submission;
 import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.comment.repository.CommentRepository;
-import com.sandwich.SandWich.post.repository.PostRepository;
 import com.sandwich.SandWich.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +18,6 @@ import java.util.Optional;
 public class LikeTargetResolverImpl implements LikeTargetResolver {
 
     private final ProjectRepository projectRepo;
-    private final PostRepository postRepo;
     private final CommentRepository commentRepo;
     private final SubmissionRepository submissionRepo;
 
@@ -34,7 +32,6 @@ public class LikeTargetResolverImpl implements LikeTargetResolver {
         try {
             Optional<Long> authorIdOpt = switch (t) {
                 case "PROJECT" -> projectRepo.findAuthorIdById(id);
-                case "POST"    -> postRepo.findAuthorIdById(id);
                 case "COMMENT" -> commentRepo.findAuthorIdById(id);
                 case "CODE_SUBMISSION", "PORTFOLIO_SUBMISSION" ->
                         submissionRepo.findById(id).map(Submission::getOwnerId);

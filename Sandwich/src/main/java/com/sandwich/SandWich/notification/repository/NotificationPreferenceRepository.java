@@ -11,12 +11,4 @@ import java.util.Optional;
 
 public interface NotificationPreferenceRepository extends JpaRepository<NotificationPreference, Long> {
     Optional<NotificationPreference> findByUserId(Long userId);
-    boolean existsByUserId(Long userId);
-    @Modifying
-    @Query("update DeviceToken d set d.lastSeenAt = :seenAt where d.id = :id")
-    int touchLastSeen(@Param("id") Long id, @Param("seenAt") OffsetDateTime seenAt);
-
-    @Modifying
-    @Query("update DeviceToken d set d.isActive = false where d.user.id = :userId and d.token <> :token")
-    int deactivateOthers(@Param("userId") Long userId, @Param("token") String token);
 }
