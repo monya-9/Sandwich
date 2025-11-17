@@ -1,10 +1,13 @@
 package com.sandwich.SandWich.internal.ai;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AiRecoClient {
@@ -12,47 +15,93 @@ public class AiRecoClient {
     private final AiApiProps props;
 
     private WebClient client() {
-        return WebClient.builder()
-                .baseUrl(props.base())
-                .defaultHeader("X-AI-API-Key", props.key())
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                .build();
+        boolean apiKeyPresent = props != null && props.key() != null && !props.key().isBlank();
+        String base = (props != null && props.base() != null && !props.base().isBlank())
+                ? props.base()
+                : "https://api.dnutzs.org";
+
+        log.debug("[AiRecoClient] building WebClient. baseUrl={}, apiKeyPresent={}, apiKeyLength={}",
+                base, apiKeyPresent,
+                (props != null && props.key() != null) ? props.key().length() : 0);
+
+        WebClient.Builder builder = WebClient.builder()
+                .baseUrl(base)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+
+        if (apiKeyPresent) {
+            builder.defaultHeader("X-AI-API-Key", props.key());
+        }
+
+        return builder.build();
     }
+
+    // === 공통 helper: GET + 강한 로그 ===
+    private <T> T getWithLog(String pathDescription,
+                             String uriString,
+                             Class<T> bodyType) {
+
+        WebClient c = client(); // 매번 새로 만들지만, 지금 구조 유지
+
+        log.debug("[AiRecoClient] GET {} -> {}", pathDescription, uriString);
+
+        try {
+            return c.get()
+                    .uri(uriString)
+                    .exchangeToMono(res -> {
+                        var status = res.statusCode();  // HttpStatusCode
+                        log.debug("[AiRecoClient] response status={} for {}", status, pathDescription);
+
+                        if (status.is2xxSuccessful()) {
+                            return res.bodyToMono(bodyType)
+                                    .doOnNext(body -> log.info(
+                                            "[AiRecoClient] 2xx OK. path={}, status={}, bodyClass={}",
+                                            pathDescription, status, bodyType.getSimpleName()
+                                    ));
+                        } else {
+                            return res.bodyToMono(String.class)
+                                    .defaultIfEmpty("")
+                                    .flatMap(body -> {
+                                        log.warn("[AiRecoClient] NON-2xx. path={}, status={}, bodySnippet={}",
+                                                pathDescription, status, truncate(body));
+                                        return res.createException().flatMap(Mono::error);
+                                    });
+                        }
+                    })
+                    .doOnError(ex -> log.error(
+                            "[AiRecoClient] exception while calling {} uri={}",
+                            pathDescription, uriString, ex))
+                    .block();
+        } catch (Exception e) {
+            log.error("[AiRecoClient] FAILED call. path={}, uri={}", pathDescription, uriString, e);
+            throw e;
+        }
+    }
+
 
     // 최신 월간
     public MonthlyResp getLatestMonthly() {
-        return client().get()
-                .uri("/api/reco/monthly")
-                .retrieve()
-                .bodyToMono(MonthlyResp.class)
-                .block();
+        return getWithLog("getLatestMonthly", "/api/reco/monthly", MonthlyResp.class);
     }
 
     // 특정 월간
     public MonthlyResp getMonthly(String ym) {
-        return client().get()
-                .uri(uri -> uri.path("/api/reco/topics/monthly").queryParam("ym", ym).build())
-                .retrieve()
-                .bodyToMono(MonthlyResp.class)
-                .block();
+        String uri = "/api/reco/topics/monthly?ym=" + ym;
+        return getWithLog("getMonthly(ym=" + ym + ")", uri, MonthlyResp.class);
     }
 
     // 최신 주간
     public WeeklyResp getLatestWeekly() {
-        return client().get()
-                .uri("/api/reco/weekly")
-                .retrieve()
-                .bodyToMono(WeeklyResp.class)
-                .block();
+        return getWithLog("getLatestWeekly", "/api/reco/weekly", WeeklyResp.class);
     }
 
     // 특정 주간
     public WeeklyResp getWeekly(String week) {
-        return client().get()
-                .uri(uri -> uri.path("/api/reco/topics/weekly").queryParam("week", week).build())
-                .retrieve()
-                .bodyToMono(WeeklyResp.class)
-                .block();
+        String uri = "/api/reco/topics/weekly?week=" + week;
+        return getWithLog("getWeekly(week=" + week + ")", uri, WeeklyResp.class);
+    }
+
+    public TopWeekResp getTopWeekRanking() {
+        return getWithLog("getTopWeekRanking", "/api/reco/top/week", TopWeekResp.class);
     }
 
     // === 응답 DTO ===
@@ -86,11 +135,10 @@ public class AiRecoClient {
         ) {}
     }
 
-    public TopWeekResp getTopWeekRanking() {
-        return client().get()
-                .uri("/api/reco/top/week")
-                .retrieve()
-                .bodyToMono(TopWeekResp.class)
-                .block();
+    private static String truncate(String body) {
+        if (body == null) return "";
+        int max = 500;
+        String trimmed = body.replaceAll("\\s+", " ").trim();
+        return (trimmed.length() <= max) ? trimmed : trimmed.substring(0, max) + "...(truncated)";
     }
 }
