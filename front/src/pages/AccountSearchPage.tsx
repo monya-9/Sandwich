@@ -1,10 +1,11 @@
 // 계정 검색 전용 페이지 컴포넌트
 import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import AccountSearchContainer from '../components/AccountSearch/AccountSearchContainer';
 
 const AccountSearchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   // URL에서 초기 검색어와 페이지 가져오기
   const initialSearchTerm = searchParams.get('q') || '';
@@ -13,11 +14,11 @@ const AccountSearchPage: React.FC = () => {
   // 검색 타입 변경 핸들러 (포트폴리오로 이동)
   const handleSearchTypeChange = (type: 'PORTFOLIO' | 'ACCOUNT') => {
     if (type === 'PORTFOLIO') {
-      // 포트폴리오 검색으로 이동
+      // 포트폴리오 검색으로 이동 (새로고침 없이)
       if (initialSearchTerm) {
-        window.location.href = `/search?q=${encodeURIComponent(initialSearchTerm)}`;
+        navigate(`/search?q=${encodeURIComponent(initialSearchTerm)}`);
       } else {
-        window.location.href = '/search';
+        navigate('/search');
       }
     }
     // ACCOUNT는 현재 페이지이므로 아무것도 하지 않음
