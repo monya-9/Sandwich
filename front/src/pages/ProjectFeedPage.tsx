@@ -1,11 +1,12 @@
 // 검색 페이지 컴포넌트 (프로젝트 + 계정 검색)
 import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import ProjectFeedContainer from '../components/ProjectFeed/ProjectFeedContainer';
 import AccountSearchContainer from '../components/AccountSearch/AccountSearchContainer';
 
 const ProjectFeedPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [searchType, setSearchType] = useState<'PORTFOLIO' | 'ACCOUNT'>('PORTFOLIO');
   
   // URL에서 초기 검색어와 페이지 가져오기
@@ -15,11 +16,11 @@ const ProjectFeedPage: React.FC = () => {
   // 검색 타입 변경 핸들러
   const handleSearchTypeChange = (type: 'PORTFOLIO' | 'ACCOUNT') => {
     setSearchType(type);
-    // 검색 타입 변경 시 해당 라우트로 이동
+    // 검색 타입 변경 시 해당 라우트로 이동 (새로고침 없이)
     if (type === 'ACCOUNT') {
-      window.location.href = '/search/accounts';
+      navigate('/search/accounts');
     } else {
-      window.location.href = '/search';
+      navigate('/search');
     }
   };
 
