@@ -345,10 +345,6 @@ const MainPage = () => {
       newTime = '전체기간';
     }
     
-    // ✅ 모달 닫기 전에 상태 업데이트 (순서 중요!)
-    setSelectedSort(newSort);
-    setSelectedUploadTime(newTime);
-    
     // 선택한 정렬 옵션을 sessionStorage에 저장
     try {
       sessionStorage.setItem('mainPage:selectedSort', newSort);
@@ -357,8 +353,14 @@ const MainPage = () => {
       // sessionStorage 사용 불가 시 무시
     }
     
-    // ✅ 모달 닫기
+    // ✅ 모달 먼저 닫기
     setIsSortModalOpen(false);
+    
+    // ✅ 모달이 완전히 닫힌 후 상태 업데이트 (useEffect 충돌 방지)
+    setTimeout(() => {
+      setSelectedSort(newSort);
+      setSelectedUploadTime(newTime);
+    }, 0);
   };
 
   const handleQuickSortToSandwichPick = () => {
