@@ -14,12 +14,8 @@ const AccountSearchPage: React.FC = () => {
   // 검색 타입 변경 핸들러 (포트폴리오로 이동)
   const handleSearchTypeChange = (type: 'PORTFOLIO' | 'ACCOUNT') => {
     if (type === 'PORTFOLIO') {
-      // 포트폴리오 검색으로 이동 (새로고침 없이)
-      if (initialSearchTerm) {
-        navigate(`/search?q=${encodeURIComponent(initialSearchTerm)}`);
-      } else {
-        navigate('/search');
-      }
+      // 포트폴리오 검색으로 이동 (새로고침 없이, 검색어 없이)
+      navigate('/search');
     }
     // ACCOUNT는 현재 페이지이므로 아무것도 하지 않음
   };
