@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminFetchChallenges, fetchChallengeDetail, fetchPortfolioLeaderboard, type ChallengeListResponse, type ChallengeListItem, type ChallengeType, type ChallengeStatus } from "../../api/challengeApi";
 import api from "../../api/axiosInstance";
-import { fetchUserNameById } from "../../api/userMini";
 import { adminCustomPayout, fetchCustomPayouts } from "../../api/challenge_creditApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
 
