@@ -27,12 +27,27 @@ function parseRecoResponse(json: any): RecoResponse {
 
 /**
  * 사용자별 추천 프로젝트 목록(ID+score)
- * 모든 환경에서 프록시 사용 (CORS 방지)
+ * 기본 base는 제공받은 도메인으로 설정. 필요시 override 가능.
  */
 export async function fetchUserRecommendations(userId: number, baseUrl?: string): Promise<RecoResponse> {
-    // 모든 환경에서 프록시 사용
-    const res = await fetch(`/ext/reco/user/${userId}`, { credentials: "omit" });
-    if (!res.ok) throw new Error(`사용자 추천 조회 실패: ${res.status}`);
+    const isLocalDev = typeof window !== 'undefined' && /localhost:\d+/.test(window.location.host);
+
+    if (isLocalDev) {
+        // 로컬 개발에서는 프록시만 사용 (외부 직접 호출 금지: CORS 방지)
+        const res = await fetch(`/ext/reco/user/${userId}`, { credentials: "omit" });
+        if (!res.ok) throw new Error(`사용자 추천 프록시 조회 실패: ${res.status}`);
+        const json = await res.json();
+        return parseRecoResponse(json);
+    }
+
+    // 운영/비-로컬 환경: 외부 공개 API 직접 호출 (환경변수 사용; 기본값 없음)
+    const AI_BASE = (baseUrl ?? process.env.REACT_APP_AI_API_BASE)?.replace(/\/+$/, "");
+    if (!AI_BASE) throw new Error("AI base URL is not configured (REACT_APP_AI_API_BASE)");
+    const directUrl = `${AI_BASE}/api/reco/user/${userId}`;
+    const res = await fetch(directUrl, { credentials: "omit" });
+    if (!res.ok) {
+        throw new Error(`추천 조회 실패: ${res.status}`);
+    }
     const json = await res.json();
     return parseRecoResponse(json);
 }
