@@ -41,7 +41,7 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
 
   // 검색어 초기화 함수
   const handleClearSearch = () => {
-    const clearedFilters = { page: 0, size: 20, q: undefined }; // ✅ 사이즈를 20으로 변경
+    const clearedFilters = { page: 0, size: 20, q: undefined, followingOnly: false, uploadedWithin: undefined }; // ✅ 모든 필터 초기화
     setFilters(clearedFilters);
     setCurrentSearchQuery(''); // 검색어 입력창 초기화
     // loadProjects는 useEffect에서 자동으로 호출됨

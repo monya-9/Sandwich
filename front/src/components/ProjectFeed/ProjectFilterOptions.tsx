@@ -31,12 +31,12 @@ const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
 
   // 업로드 시간 변경
   const handleTimeChange = (uploadedWithin: string | undefined) => {
-    onFiltersChange({ ...filters, uploadedWithin: uploadedWithin as any });
+    onFiltersChange({ ...filters, uploadedWithin: uploadedWithin as any, page: 0 });
   };
 
   // 팔로우 회원만 토글
   const handleFollowingToggle = () => {
-    onFiltersChange({ ...filters, followingOnly: !filters.followingOnly });
+    onFiltersChange({ ...filters, followingOnly: !filters.followingOnly, page: 0 });
   };
 
   return (
@@ -75,9 +75,9 @@ const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
 
         <button
           onClick={onClearSearch}
-          className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 dark:border-white/20 text-gray-600 dark:text-white/70 rounded-md hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm border border-gray-300 dark:border-white/20 text-gray-600 dark:text-white/70 rounded-md hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
         >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           초기화
