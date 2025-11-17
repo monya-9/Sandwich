@@ -43,7 +43,7 @@ export interface SecurityEventQuery {
  */
 export async function fetchSecurityEvents(params: SecurityEventQuery): Promise<Page<SecurityEventDTO> | null> {
     try {
-        const res = await api.get<Page<SecurityEventDTO>>("/admin/security/events", { params });
+        const res = await api.get<Page<SecurityEventDTO>>("admin/security/events", { params });
         return res.data;
     } catch (e: any) {
         if (e?.response?.status === 404) {
@@ -90,11 +90,8 @@ export async function revokeAllMyDevices(): Promise<{ revoked: number } | void> 
 
 /** (관리자) 특정 사용자 모든 디바이스 무효화 */
 export async function adminRevokeAllDevicesByUser(userId: number): Promise<{ revoked: number }> {
-    // baseURL("/api")를 우회해 /admin 경로로 직접 호출 (토큰 인터셉터는 그대로 사용)
     const res = await api.post<{ revoked: number }>(
-        `/admin/devices/revoke-all/${userId}`,
-        undefined,
-        { baseURL: "" }
+        `admin/devices/revoke-all/${userId}`
     );
     return res.data;
 }

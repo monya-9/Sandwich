@@ -26,7 +26,7 @@ public class CreditQueryController {
                 "SELECT COALESCE((SELECT balance FROM credit_wallet WHERE user_id = ?), 0)::bigint",
                 Long.class, uid
         );
-      List<Map<String,Object>> txns = jdbc.queryForList("""
+        List<Map<String,Object>> txns = jdbc.queryForList("""
             SELECT amount, reason, ref_id, created_at
             FROM credit_txn
             WHERE user_id = ?

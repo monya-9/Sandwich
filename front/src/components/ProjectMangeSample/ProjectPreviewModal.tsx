@@ -59,6 +59,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 	// 닉네임/이메일 기반 표시 이름과 이니셜 계산
 	const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
 	const storedEmail = (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "").trim();
+	const storedProfileImage = (localStorage.getItem("userProfileImage") || sessionStorage.getItem("userProfileImage") || "").trim();
 	const finalOwnerName = storedNickname || ownerName;
 	const emailInitial = storedEmail ? storedEmail[0].toUpperCase() : "";
 	const ownerInitial = emailInitial || (finalOwnerName?.[0] || "").toUpperCase();
@@ -201,8 +202,12 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 						{/* 상단 헤더: 제목(-), 닉네임, 수정/삭제 */}
 						<div className="px-8">
 							<div className="w-full flex items-start gap-3 mb-6">
-								<div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 flex-shrink-0">
-									{ownerInitial}
+								<div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 flex-shrink-0 overflow-hidden">
+									{storedProfileImage ? (
+										<img src={storedProfileImage} alt="avatar" className="w-full h-full object-cover" />
+									) : (
+										ownerInitial
+									)}
 								</div>
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-2 flex-wrap">
@@ -220,7 +225,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
                                  </div>
                               </div>
                            )}
-                           <div className="text-gray-600 text-sm mt-1 truncate">{finalOwnerName}</div>
+                           <div className="text-gray-600 text-base mt-1 truncate">{finalOwnerName}</div>
 								</div>
 							</div>
 						</div>
@@ -276,7 +281,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 									category={category}
                                     ownerName={finalOwnerName}
                                     ownerEmail={storedEmail}
-                                    ownerImageUrl={undefined}
+                                    ownerImageUrl={storedProfileImage || undefined}
                                     ownerId={0}
 								/>
 							</div>
@@ -333,3 +338,8 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 		</div>
 	);
 }
+
+
+
+
+

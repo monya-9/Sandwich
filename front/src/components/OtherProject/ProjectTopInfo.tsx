@@ -168,9 +168,7 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
             </div>
           )}
           {/* 닉네임 */}
-          <div className="flex items-center gap-2 text-gray-600 text-base mt-2">
-            <span>{userName}</span>
-          </div>
+          <div className="text-[20px] text-[#1F2937] mt-1">{userName}</div>
         </div>
       </div>
     </>

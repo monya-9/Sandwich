@@ -55,6 +55,8 @@ public class Message extends BaseEntity {
     private String title;     // PROJECT_OFFER
     private String contact;   // PROJECT_OFFER
     private String budget;    // PROJECT_OFFER
+
+    @Column(columnDefinition = "text")
     private String cardDescription; // JOB_OFFER, PROJECT_OFFER 공통
 
     @Column(name = "is_deleted", nullable = false)

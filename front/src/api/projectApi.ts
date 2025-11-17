@@ -14,12 +14,16 @@ export type ProjectDetailResponse = {
   teamSize?: number;
   coverUrl?: string;
   shareUrl?: string;
+  deployEnabled?: boolean;
   qrCodeEnabled?: boolean;
   qrImageUrl?: string;
   frontendBuildCommand?: string;
   backendBuildCommand?: string;
   portNumber?: number;
   extraRepoUrl?: string;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubBaseBranch?: string;
 };
 
 export async function fetchProjectDetail(userId: number, projectId: number, baseUrl: string = ""): Promise<ProjectDetailResponse> {
@@ -46,12 +50,16 @@ export type ProjectRequest = {
   teamSize?: number;
   coverUrl?: string;
   shareUrl?: string;
+  deployEnabled?: boolean;
   qrCodeEnabled?: boolean;
   frontendBuildCommand?: string;
   backendBuildCommand?: string;
   portNumber?: number;
   extraRepoUrl?: string;
   envValues?: string;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubBaseBranch?: string;
 };
 
 export type ProjectCreateResponse = {

@@ -25,11 +25,18 @@ public class ProjectDetailResponse {
     private String coverUrl;
     private String shareUrl;
     private Boolean qrCodeEnabled;
+    private Boolean deployEnabled;
     private String qrImageUrl;
     private String frontendBuildCommand;
     private String backendBuildCommand;
     private Integer portNumber;
     private String extraRepoUrl;
+    
+    // GitHub 설정 정보 (배포용)
+    private String githubOwner;
+    private String githubRepo;
+    private String githubBaseBranch;
+    
     private Owner owner;
 
     @Getter

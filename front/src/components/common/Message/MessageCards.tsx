@@ -23,11 +23,11 @@ export const CardShell: React.FC<
     React.PropsWithChildren<{ title: string; icon?: React.ReactNode }>
 > = ({ title, icon, children }) => (
     <div className="max-w-[520px] rounded-2xl overflow-hidden bg-white shadow-sm border">
-        <div className="bg-teal-500 text-white px-4 py-3 text-sm font-semibold flex items-center gap-2">
+        <div className="bg-teal-500 text-white px-4 py-3 text-[11px] sm:text-sm font-semibold flex items-center gap-2">
             {icon ?? <span className="inline-block w-4 h-4">✉️</span>}
             {title}
         </div>
-        <div className="p-4 text-sm text-gray-800 space-y-3">{children}</div>
+        <div className="p-4 text-[11px] sm:text-sm text-gray-800 space-y-3">{children}</div>
     </div>
 );
 
@@ -36,8 +36,8 @@ const Row: React.FC<{ label: string; value?: React.ReactNode }> = ({
                                                                        value,
                                                                    }) => (
     <div className="grid grid-cols-[110px_1fr] gap-3">
-        <div className="text-gray-500">{label}</div>
-        <div className="whitespace-pre-wrap">{value ?? "-"}</div>
+        <div className="text-gray-500 text-[11px] sm:text-sm">{label}</div>
+        <div className="whitespace-pre-wrap text-[11px] sm:text-sm">{value ?? "-"}</div>
     </div>
 );
 

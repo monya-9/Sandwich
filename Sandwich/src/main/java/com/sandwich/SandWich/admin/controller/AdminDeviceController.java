@@ -9,7 +9,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin/devices")
+@RequestMapping("/api/admin/devices")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminDeviceController {
 

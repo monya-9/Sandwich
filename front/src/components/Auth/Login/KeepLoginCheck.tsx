@@ -4,7 +4,7 @@ import React, { useState } from "react";
 interface Props {
     /** 컨트롤드로 쓰고 싶을 때 전달 (생략하면 내부 state 사용) */
     checked?: boolean;
-    /** 언컨트롤드일 때의 초기 체크 상태 (기본값: true) */
+
     defaultChecked?: boolean;
     onChange: (checked: boolean) => void;
 }
@@ -41,3 +41,4 @@ const KeepLoginCheck: React.FC<Props> = ({
 };
 
 export default KeepLoginCheck;
+

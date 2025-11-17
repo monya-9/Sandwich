@@ -73,17 +73,15 @@ function RewardsTable({
         <div className="mb-6">
             <SectionTitle>{title}</SectionTitle>
             <GreenBox>
-                <div className="grid grid-cols-4 gap-2 text-[13px]">
+                <div className="grid grid-cols-3 gap-2 text-[13px]">
                     <div className="font-semibold">순위</div>
                     <div className="font-semibold">크레딧</div>
                     <div className="font-semibold">환산</div>
-                    <div className="font-semibold">의미</div>
                     {rewards?.map((r, i) => (
                         <React.Fragment key={i}>
                             <div>{r.rank}</div>
                             <div>{r.credit}</div>
                             <div>{r.krw}</div>
-                            <div>{r.note}</div>
                         </React.Fragment>
                     ))}
                 </div>
@@ -181,46 +179,18 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
         );
     }
 
-    // 데이터가 없을 때 더미 우승자 카드 표시
+    // 데이터가 없을 때 안내 메시지 표시
     if (winners.length === 0) {
-        const dummyWinners = [
-            { rank: 2, userName: "2등", teamName: "팀", userInitial: "2", credits: 5000 },
-            { rank: 1, userName: "1등", teamName: "팀", userInitial: "1", credits: 10000 },
-            { rank: 3, userName: "3등", teamName: "팀", userInitial: "3", credits: 3000 }
-        ];
-
         return (
             <div className="mb-6">
                 <h2 className="text-xl font-bold mb-4 text-center">
                     지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
                 </h2>
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                    <div className="flex justify-between items-start w-full">
-                        {dummyWinners.map((winner) => (
-                            <div key={winner.rank} className="flex-1 flex justify-center">
-                                <div className="text-center">
-                                    {/* 메달 아이콘 */}
-                                    <div className="mb-2 text-3xl">
-                                        {getMedalIcon(winner.rank)}
-                                    </div>
-                                    
-                                    {/* 이니셜 */}
-                                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                        <span className="font-bold text-lg text-gray-500">{winner.userInitial}</span>
-                                    </div>
-                                    
-                                    {/* 이름과 팀 이름 */}
-                                    <div className="font-semibold text-gray-500 mb-1 break-words text-sm">
-                                        {winner.userName} • {winner.teamName}
-                                    </div>
-                                    
-                                    {/* 점수 */}
-                                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-sm font-medium">
-                                        {winner.credits.toLocaleString()}C
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full">
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-base text-neutral-600 text-center font-medium">
+                            아직 리더보드가 없습니다.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -577,7 +547,7 @@ export default function ChallengeDetailPage() {
     const goSecondary = () => {
         if (!data) return;
         const href = secondaryHref(type, id);
-        const needsLogin = type === "PORTFOLIO";
+        const needsLogin = true; // 코드 챌린지와 포트폴리오 모두 로그인 필요
         if (needsLogin && !isLoggedIn) return setLoginModalOpen(true);
         navigate(href);
     };
@@ -831,7 +801,12 @@ export default function ChallengeDetailPage() {
                     {/* 유형별 */}
                     {type === "CODE" ? (
                         <>
-                            <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
+                            <ScheduleList items={[
+                                { label: '챌린지 시작', date: '매주 월요일 00:00' },
+                                { label: '문제 제출 마감', date: '매주 일요일 23:59' },
+                                { label: 'AI 자동 채점 → 점수/코멘트 반영(수 분 소요)', date: '월요일 00:00 ~ 03:00' },
+                                { label: '결과 발표', date: '월요일 10:00' },
+                            ]} />
                             <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards || []} />
                             
@@ -933,7 +908,7 @@ export default function ChallengeDetailPage() {
                     {type === "CODE" ? (
                         <>
                             {/* 코드 챌린지 - 심사 기준 */}
-                            <div className="mb-6">
+                            <div>
                                 <SectionTitle>💡 심사 기준</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     <li>자리 수를 먼저 최대화한 뒤 각 자리에서 가능한 가장 큰 수를 고르는 전략(그리디+보정) 제시</li>
@@ -942,36 +917,16 @@ export default function ChallengeDetailPage() {
                                     <li>창의적인 접근(DP/증명/튜닝) 환영</li>
                                 </ul>
                             </div>
-
-                            {/* 코드 챌린지 - 안내 */}
-                            <div>
-                                <SectionTitle>📣 안내</SectionTitle>
-                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    <li>챌린지 시작: 월요일 00:00 (KST) ~ 문제 제출 마감: 일요일 23:59</li>
-                                    <li>AI 자동 채점 → 점수/코멘트 반영(수 분 소요)</li>
-                                    {/* 포트폴리오 전용 문구 제거: 코드 챌린지에는 투표 점수 합산/자동 지급 안내 미표시 */}
-                                </ul>
-                            </div>
                         </>
                     ) : (
                         <>
                             {/* 포트폴리오 챌린지 - 운영/공정성 */}
-                            <div className="mb-6">
+                            <div>
                                 <SectionTitle>🛡 운영/공정성</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     <li>운영 정책/공정성: 챌린지당 1표, 본인 작품 투표 불가, 투표 기간 내에만 가능</li>
                                     <li>UI/UX, 기술력, 창의성, 기획력의 종합 점수(별점 합산)로 순위 산정</li>
                                     <li>제출물은 표절/저작권을 침해하지 않도록 주의(참고 출처 표기 권장)</li>
-                                </ul>
-                            </div>
-
-                            {/* 포트폴리오 챌린지 - 안내 */}
-                            <div>
-                                <SectionTitle>📣 안내</SectionTitle>
-                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    <li>챌린지 기간: 매월 1일 ~ 말일</li>
-                                    <li>투표 기간: 다음달 1일 ~ 3일</li>
-                                    <li>결과 발표: 다음달 4일, 보상은 크레딧으로 자동 지급</li>
                                 </ul>
                             </div>
                         </>

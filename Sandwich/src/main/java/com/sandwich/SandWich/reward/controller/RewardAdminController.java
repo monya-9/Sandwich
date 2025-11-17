@@ -15,7 +15,7 @@ import java.util.Map;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
-@RequestMapping(value = "/admin/rewards", produces = "application/json")
+@RequestMapping(value = "/api/admin/rewards", produces = "application/json")
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "reward.enabled", havingValue = "true", matchIfMissing = true)
 public class RewardAdminController {

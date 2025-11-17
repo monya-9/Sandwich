@@ -69,6 +69,15 @@ public class Project extends BaseEntity {
     private Integer portNumber;
     private String extraRepoUrl;
 
+    // GitHub 설정 정보 (배포용)
+    private String githubOwner;
+    private String githubRepo;
+    private String githubBaseBranch;
+
+    // 배포 기능 사용 여부
+    @Column(name = "deploy_enabled")
+    private Boolean deployEnabled;
+
     // 해시태그 기능 연동
     @OneToMany(mappedBy = "project")
     private List<Hashtag> hashtags = new ArrayList<>();
@@ -76,6 +85,7 @@ public class Project extends BaseEntity {
     // 인기 프로젝트 순위 집계용
     @OneToMany(mappedBy = "project")
     private List<ProjectRanking> rankings = new ArrayList<>();
+
     // [에디터 콘텐츠] - 이미지/텍스트/영상 순서 저장
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectContent> contents = new ArrayList<>();

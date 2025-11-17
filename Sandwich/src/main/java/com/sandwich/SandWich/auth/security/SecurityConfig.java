@@ -92,7 +92,8 @@ public class SecurityConfig {
                 .map(String::trim)
                 .toList();
 
-        configuration.setAllowedOrigins(origins);
+        // setAllowedOriginPatterns()를 사용하여 와일드카드 패턴 지원
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(methods);
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "X-Requested-With"));
         configuration.setAllowCredentials(true);
@@ -127,7 +128,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE,"/api/auth/devices/*").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,  "/api/auth/devices/revoke-all").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,  "/api/auth/devices/revoke-current").authenticated()
-                        .requestMatchers("/admin/devices/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/devices/**").hasRole("ADMIN")
                         // ===== 공개 라우트들 =====
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup",
@@ -146,7 +147,7 @@ public class SecurityConfig {
                         // 필요시 정적 폴더 패턴도 추가
                         .requestMatchers("/css/**", "/js/**", "/img/**", "/assets/**", "/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/check-email").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/meta/**").permitAll()
                         .requestMatchers("/api/_debug/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/search/accounts").permitAll()
@@ -180,6 +181,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/representative-careers").permitAll()
 
+                        // slug 기반 공개 프로필
+                        .requestMatchers(HttpMethod.GET, "/api/users/slug/**").permitAll()
                         // 사용자 보안 세분화 =====
                         // 1) 내 프로필은 반드시 인증
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
@@ -219,6 +222,9 @@ public class SecurityConfig {
                         // 마이 페이지 등
                         .requestMatchers(HttpMethod.GET,  "/api/users/me/message-preferences").authenticated()
                         .requestMatchers(HttpMethod.PUT,  "/api/users/message-preferences/me").authenticated()
+
+                        // 마이페이지 계열
+                        .requestMatchers("/api/me/**").authenticated()
 
                         // 그 외 전부 인증
                         .anyRequest().authenticated()
