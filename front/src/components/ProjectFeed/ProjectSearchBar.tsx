@@ -100,9 +100,10 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
 
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-6">
-      {/* 검색 입력창 */}
-      <div className="flex-1 relative">
-        <div className="relative">
+      {/* 검색 입력창 + 검색 버튼 (모바일만 같이) */}
+      <div className="flex sm:flex-1 items-center gap-2">
+        {/* 검색 입력창 */}
+        <div className="flex-1 relative">
           <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70 w-4 h-4 sm:w-5 sm:h-5" />
           <input
             type="text"
@@ -110,7 +111,7 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
             onChange={handleQueryChange}
             onKeyPress={handleKeyPress}
             placeholder="프로젝트를 검색해보세요..."
-            className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base rounded-lg outline-none border-0 ring-1 ring-gray-300 dark:ring-white/20 bg-white dark:bg-black text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/70 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
+            className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 h-[38px] sm:h-auto text-xs sm:text-base rounded-lg outline-none border-0 ring-1 ring-gray-300 dark:ring-white/20 bg-white dark:bg-black text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/70 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
             disabled={false}
           />
           {/* X 버튼 */}
@@ -126,20 +127,20 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
             </button>
           )}
         </div>
+
+        {/* 검색 버튼 - 서치바와 같은 높이 */}
+        <button
+          onClick={handleSearchClick}
+          disabled={!searchQuery.trim() || isLoading}
+          className="h-[38px] sm:h-[48px] min-w-[70px] sm:min-w-[120px] px-2.5 sm:px-4 text-xs sm:text-base rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2"
+        >
+          <span className="leading-none">검색</span>
+          <Search className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+        </button>
       </div>
 
-      {/* 검색 버튼 */}
-      <button
-        onClick={handleSearchClick}
-        disabled={!searchQuery.trim() || isLoading}
-        className="h-[48px] min-w-[120px] px-4 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        <span className="leading-none">검색</span>
-        <Search className="w-4 h-4 flex-shrink-0" />
-      </button>
-
-      {/* 검색 타입 드롭다운 */}
-      <div className="flex-1 sm:flex-initial">
+      {/* 검색 타입 드롭다운 - 데스크톱만 */}
+      <div className="hidden sm:block sm:flex-initial">
         <SearchTypeDropdown
           value={searchType}
           onChange={onSearchTypeChange}

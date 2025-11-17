@@ -71,6 +71,8 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
             onClearFilters={handleClearSearch}
             onClearSearch={handleClearSearch}
             totalElements={totalElements}
+            searchType={searchType}
+            onSearchTypeChange={onSearchTypeChange}
           />
         </div>
       </div>
