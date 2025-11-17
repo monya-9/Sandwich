@@ -141,4 +141,48 @@ public class AiRecoClient {
         String trimmed = body.replaceAll("\\s+", " ").trim();
         return (trimmed.length() <= max) ? trimmed : trimmed.substring(0, max) + "...(truncated)";
     }
+
+    public record WeeklyTopicListResp(
+            String week,
+            Integer total,
+            java.util.List<WeeklyTopic> data,
+            Boolean found
+    ) {
+        public record WeeklyTopic(
+                Integer idx,
+                String title,
+                String summary,
+                @com.fasterxml.jackson.annotation.JsonAlias({"must", "must_have"})
+                java.util.List<String> must_have,
+                Long updated_at
+        ) {}
+    }
+
+    public record MonthlyTopicListResp(
+            String ym,
+            Integer total,
+            java.util.List<MonthlyTopic> data,
+            Boolean found
+    ) {
+        public record MonthlyTopic(
+                Integer idx,
+                String title,
+                String summary,
+                @com.fasterxml.jackson.annotation.JsonAlias({"must", "must_have"})
+                java.util.List<String> must_have,
+                Long updated_at
+        ) {}
+    }
+
+    /** AI 서버: 주간 토픽 리스트 */
+    public WeeklyTopicListResp getWeeklyTopicList() {
+        String uri = "/api/reco/topics/weekly/list";
+        return getWithLog("getWeeklyTopicList", uri, WeeklyTopicListResp.class);
+    }
+
+    /** AI 서버: 월간 토픽 리스트 */
+    public MonthlyTopicListResp getMonthlyTopicList() {
+        String uri = "/api/reco/topics/monthly/list";
+        return getWithLog("getMonthlyTopicList", uri, MonthlyTopicListResp.class);
+    }
 }
