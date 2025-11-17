@@ -433,7 +433,7 @@ const MainPage = () => {
   // 그리드 제목: 정렬 방식에 따라 변경
   const gridTitle = useMemo(() => {
     if (useReco) {
-      return '샌드위치 PICK 프로젝트';
+      return 'AI 추천 프로젝트';
     }
     
     switch (selectedSort) {
