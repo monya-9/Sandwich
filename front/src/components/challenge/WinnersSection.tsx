@@ -167,6 +167,12 @@ export default function WinnersSection() {
             const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED", { sort: "endAt,desc" });
             const endedPortfolioChallenges = challengesResponse.content;
             
+            console.log('🧩 ENDED 포트폴리오 챌린지 목록:', endedPortfolioChallenges.map(c => ({
+                id: c.id,
+                title: c.title,
+                endAt: c.endAt,
+            })));
+            
             if (endedPortfolioChallenges.length === 0) {
                 setWinners([]);
                 setError(null);
@@ -175,11 +181,11 @@ export default function WinnersSection() {
 
             // 2. 가장 최근 종료된 포트폴리오 챌린지 선택
             const latestChallenge = endedPortfolioChallenges[0]; // 이미 날짜순 정렬되어 있음
+            console.log('✅ WinnersSection이 선택한 latestChallenge:', latestChallenge.id, latestChallenge.title);
             
             // 3. 해당 챌린지의 리더보드 가져오기
             const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
-            
-            console.log('리더보드 데이터:', leaderboardData.entries);
+            console.log('🏆 리더보드 raw 응답:', leaderboardData);
             
             setWinners(leaderboardData.entries.slice(0, 3));
             setError(null);
