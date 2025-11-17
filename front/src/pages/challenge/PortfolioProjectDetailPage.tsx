@@ -238,11 +238,16 @@ export default function PortfolioProjectDetailPage() {
             } catch (error) {
                 console.error('투표 데이터 로드 실패:', error);
                 setMyVote(null);
+                // 에러 발생 시 별점도 초기화
+                setUx(0);
+                setTech(0);
+                setCre(0);
+                setPlan(0);
             }
         };
 
         // 투표 가능한 상태이거나 이미 투표한 상태라면 투표 데이터 로드
-        // 투표 가능한 기간에만 투표 데이터 로드
+        // 투표 기간 여부와 관계없이 항상 투표 데이터를 확인하여 상태 동기화
         const parseTs = (v?: string) => {
             if (!v) return null;
             const s = v.includes('T') ? v : v.replace(' ', 'T');
@@ -253,7 +258,10 @@ export default function PortfolioProjectDetailPage() {
         const vStart = parseTs(timeline.voteStartAt);
         const vEnd = parseTs(timeline.voteEndAt);
         const votingNow = !!(vStart && now >= vStart && (!vEnd || now <= vEnd));
-        if (votingNow && item) {
+        const votingPeriodDefined = !!(vStart || vEnd);
+        
+        // 투표 기간이 정의되어 있고 item이 로드된 경우 항상 투표 데이터 확인
+        if (votingPeriodDefined && item) {
             loadVoteData();
         }
     }, [id, challengeStatus, item, timeline.voteStartAt, timeline.voteEndAt]);
