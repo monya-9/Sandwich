@@ -29,7 +29,7 @@ const Sidebar: React.FC = () => {
             }
         >
             <span className="truncate">{label}</span>
-            <span className="lg:hidden text-[#111827] text-[30px] leading-none ml-3">›</span>
+            <span className="lg:hidden text-[#ADADAD] dark:text-white/60 text-[30px] leading-none ml-3">›</span>
         </Link>
     );
 

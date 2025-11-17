@@ -623,7 +623,7 @@ const MyPageSettingPage: React.FC = () => {
 						<main className={`${(isNarrow && view !== "profile") ? "hidden" : "flex-1 space-y-0"}`}>
 							{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
 							<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
-								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827] dark:text-white">‹</button>
 								<div className="justify-self-center text-[16px] font-medium text-center">프로필 설정</div>
 								<span />
 							</div>
@@ -762,13 +762,15 @@ const MyPageSettingPage: React.FC = () => {
 							{/* 샌드위치 URL (닉네임 기반 자동 생성) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-								<div className="flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
+								<div className="flex rounded-[10px] overflow-hidden min-h-[48px] md:min-h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
                                         <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich-dev.com/</div>
-									<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
-										{isEditingNickname 
-											? (tempNickname.trim() ? tempNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')
-											: (profile?.profileSlug || (userName.trim() ? userName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요'))
-										}
+									<div className="flex-1 px-3 py-2 md:px-3 md:py-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
+										<span className="break-all leading-snug">
+											{isEditingNickname 
+												? (tempNickname.trim() ? tempNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')
+												: (profile?.profileSlug || (userName.trim() ? userName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요'))
+											}
+										</span>
 									</div>
 								</div>
 								<div className="mt-2 text-[12px] text-[#6B7280] dark:text-white/60">
