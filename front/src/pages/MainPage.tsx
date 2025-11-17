@@ -211,6 +211,14 @@ const MainPage = () => {
     }
   }, [isLoggedIn]);
 
+  // ✅ 모달이 닫힐 때마다 temp 상태를 실제 상태로 동기화
+  useEffect(() => {
+    if (!isSortModalOpen) {
+      setTempSelectedSort(selectedSort);
+      setTempSelectedUploadTime(selectedUploadTime);
+    }
+  }, [isSortModalOpen]); // ✅ 오직 모달 열림/닫힘만 감지
+
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
     
@@ -330,7 +338,12 @@ const MainPage = () => {
   const handleApplySortModal = () => {
     // ✅ 상태 업데이트를 먼저 처리
     const newSort = tempSelectedSort;
-    const newTime = tempSelectedUploadTime;
+    let newTime = tempSelectedUploadTime;
+    
+    // ✅ 샌드위치 픽 선택 시 업로드 시간을 전체기간으로 리셋
+    if (newSort === '샌드위치 픽') {
+      newTime = '전체기간';
+    }
     
     // ✅ 모달 닫기 전에 상태 업데이트 (순서 중요!)
     setSelectedSort(newSort);
@@ -344,10 +357,8 @@ const MainPage = () => {
       // sessionStorage 사용 불가 시 무시
     }
     
-    // ✅ 상태 업데이트 후 모달 닫기 (약간의 지연)
-    setTimeout(() => {
-      setIsSortModalOpen(false);
-    }, 0);
+    // ✅ 모달 닫기
+    setIsSortModalOpen(false);
   };
 
   const handleQuickSortToSandwichPick = () => {
