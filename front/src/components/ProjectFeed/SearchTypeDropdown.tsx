@@ -25,7 +25,8 @@ export const SearchTypeDropdown: React.FC<SearchTypeDropdownProps> = ({
       options={options}
       value={value}
       onChange={handleChange}
-      className="min-w-[120px]"
+      className="min-w-[90px] md:min-w-[120px] md:h-[48px]"
+      size="sm"
     />
   );
 };

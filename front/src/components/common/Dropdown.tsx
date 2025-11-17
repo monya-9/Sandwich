@@ -62,7 +62,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`flex items-center justify-between w-full ${sizeBtn} bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg transition-colors ${
+        className={`flex items-center justify-between w-full h-full ${sizeBtn} bg-white dark:bg-black border border-gray-300 dark:border-white/20 rounded-lg transition-colors ${
           disabled 
             ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-neutral-800' 
             : 'hover:bg-gray-50 dark:hover:bg-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent'

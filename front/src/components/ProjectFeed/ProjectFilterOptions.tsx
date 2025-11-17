@@ -7,19 +7,15 @@ interface ProjectFilterOptionsProps {
   onFiltersChange: (filters: ProjectFeedParams) => void;
   onClearFilters: () => void;
   onClearSearch: () => void;
-  totalElements: number;
+  totalElements?: number;
 }
 
-export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
+const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
   filters,
   onFiltersChange,
-  onClearFilters,
   onClearSearch,
   totalElements
 }) => {
-  // 정렬 방식은 드롭다운으로 이동됨
-
-  // 업로드 기간 옵션
   const timeOptions = [
     { value: undefined, label: '전체기간' },
     { value: '24h', label: '최근 24시간' },
@@ -28,9 +24,7 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
     { value: '3m', label: '최근 세달' }
   ];
 
-  // 정렬 방식은 드롭다운으로 이동됨
-
-  // 업로드 기간 변경
+  // 업로드 시간 변경
   const handleTimeChange = (uploadedWithin: string | undefined) => {
     onFiltersChange({ ...filters, uploadedWithin: uploadedWithin as any });
   };
@@ -41,61 +35,98 @@ export const ProjectFilterOptions: React.FC<ProjectFilterOptionsProps> = ({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4">
-      {/* 팔로우 회원만 */}
-      <button
-        onClick={handleFollowingToggle}
-        className={`px-3 py-1.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-          filters.followingOnly
-            ? 'bg-green-500 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
-        }`}
-      >
-        팔로우 회원만
-      </button>
+    <div className="mt-2 md:mt-0">
+      {/* 데스크톱: 기존 스타일 */}
+      <div className="hidden md:flex items-center justify-end gap-4">
+        <button
+          onClick={handleFollowingToggle}
+          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+            filters.followingOnly
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
+          }`}
+        >
+          팔로우 회원만
+        </button>
 
-      {/* 업로드 시간 */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-white">업로드 시간:</span>
-        <div className="flex flex-wrap gap-1.5 sm:gap-1">
-          {timeOptions.map((option) => (
-            <button
-              key={option.value || 'all'}
-              onClick={() => handleTimeChange(option.value)}
-              className={`px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-sm font-medium transition-colors ${
-                filters.uploadedWithin === option.value
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-white">업로드 시간:</span>
+          <div className="flex gap-1">
+            {timeOptions.map((option) => (
+              <button
+                key={option.value || 'all'}
+                onClick={() => handleTimeChange(option.value)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  filters.uploadedWithin === option.value
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <button
+          onClick={onClearSearch}
+          className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 dark:border-white/20 text-gray-600 dark:text-white/70 rounded-md hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          초기화
+        </button>
       </div>
 
-      {/* 필터 초기화 */}
-      <button
-        onClick={onClearSearch}
-        className="flex items-center justify-center gap-1 px-2 py-1.5 sm:py-1 text-xs border border-gray-300 dark:border-white/20 text-gray-600 dark:text-white/70 rounded-md hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
-      >
-        <svg 
-          className="w-3 h-3" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-          />
-        </svg>
-        초기화
-      </button>
+      {/* 모바일: 컴팩트하게 */}
+      <div className="flex flex-col gap-2 md:hidden mt-2">
+        {/* 팔로우 회원만 + 초기화 */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleFollowingToggle}
+            className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              filters.followingOnly
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
+            }`}
+          >
+            팔로우 회원만
+          </button>
+          <button
+            onClick={onClearSearch}
+            className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-white/20 text-gray-600 dark:text-white/70 rounded-md hover:bg-gray-50 dark:hover:bg-white/10 transition-colors whitespace-nowrap"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            초기화
+          </button>
+        </div>
+
+        {/* 업로드 시간 */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-gray-700 dark:text-white">업로드 시간</span>
+          <div className="flex flex-wrap gap-1.5">
+            {timeOptions.map((option) => (
+              <button
+                key={option.value || 'all'}
+                onClick={() => handleTimeChange(option.value)}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                  filters.uploadedWithin === option.value
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default ProjectFilterOptions;
+
