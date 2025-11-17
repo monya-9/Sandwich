@@ -132,10 +132,10 @@ export const ProjectSearchBar: React.FC<ProjectSearchBarProps> = ({
       <button
         onClick={handleSearchClick}
         disabled={!searchQuery.trim() || isLoading}
-        className="px-4 sm:px-6 py-2 sm:py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm sm:text-base font-medium rounded-lg transition-colors flex items-center gap-2 sm:gap-3 whitespace-nowrap"
+        className="px-4 sm:px-6 py-2 sm:py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-300 disabled:text-white disabled:opacity-80 disabled:cursor-not-allowed text-white text-sm sm:text-base font-medium rounded-lg transition-colors flex items-center gap-2 sm:gap-3 whitespace-nowrap"
       >
-        <Search className="w-4 h-4 sm:w-5 sm:h-5" />
         <span>검색</span>
+        <Search className="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
 
       {/* 검색 타입 드롭다운 */}
