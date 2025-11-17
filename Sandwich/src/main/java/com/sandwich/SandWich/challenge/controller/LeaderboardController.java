@@ -6,6 +6,7 @@ import com.sandwich.SandWich.challenge.repository.ChallengeRepository;
 import com.sandwich.SandWich.challenge.service.PortfolioLeaderboardCache;
 import com.sandwich.SandWich.internal.ai.AiJudgeClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/challenges/{id}/leaderboard")
@@ -28,13 +30,18 @@ public class LeaderboardController {
     @GetMapping
     public ResponseEntity<?> get(@PathVariable Long id,
                                  @RequestParam(defaultValue = "50") int limit) {
+        log.debug("[Leaderboard] request received. challengeId={}, limit={}", id, limit);
+
         var ch = challengeRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CHALLENGE_NOT_FOUND"));
+
+        log.debug("[Leaderboard] challenge found. type={}, aiWeek={}", ch.getType(), ch.getAiWeek());
 
         limit = Math.max(1, Math.min(limit, 200));
 
         // 포폴: 기존 캐시 사용
         if (ch.getType() == ChallengeType.PORTFOLIO) {
+            log.debug("[Leaderboard] challenge type=PORTFOLIO → using cache");
             return ResponseEntity.ok(cache.get(id, limit));
         }
 
@@ -42,11 +49,15 @@ public class LeaderboardController {
         if (ch.getType() == ChallengeType.CODE) {
             String week = ch.getAiWeek();
             if (week == null || week.isBlank()) {
+                log.warn("[Leaderboard] AI week missing for challengeId={}", id);
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "AI_WEEK_REQUIRED");
             }
+            log.info("[Leaderboard] calling AI server. week={}", week);
 
             var ai = aiJudgeClient.getWeeklyLeaderboard(week);
             if (ai == null || ai.leaderboard() == null || ai.leaderboard().isEmpty()) {
+                log.warn("[Leaderboard] AI returned NULL. (likely 404 OR API error). week={}", week);
+
                 return ResponseEntity.ok(
                         CodeLeaderboardDtos.Resp.builder()
                                 .week(week).items(List.of()).found(false)
@@ -54,10 +65,17 @@ public class LeaderboardController {
                                 .build()
                 );
             }
+            if (ai.leaderboard() == null) {
+                log.warn("[Leaderboard] AI leaderboard null. week={}", week);
+            } else {
+                log.info("[Leaderboard] AI leaderboard loaded. week={}, size={}",
+                        week, ai.leaderboard().size());
+            }
 
             var list  = ai.leaderboard();
             var slice = list.subList(0, Math.min(limit, list.size()));
-
+            log.debug("[Leaderboard] slicing leaderboard. originalSize={}, sliceSize={}",
+                    list.size(), slice.size());
             // 1) AI user -> Long userId (숫자 문자열만 인정)
             List<Long> ids = slice.stream()
                     .map(e -> parseLongOrNull(e.user()))
