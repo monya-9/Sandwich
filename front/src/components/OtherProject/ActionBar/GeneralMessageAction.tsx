@@ -172,8 +172,24 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
 
                 <form className="flex flex-col gap-3" onSubmit={submitForm}>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">메시지</label>
-                    <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="메시지를 입력해주세요." className="w-full h-[220px] border border-gray-300 rounded px-3 py-2 text-[14px] resize-none outline-none" />
+                    <label className="text-[12px] font-semibold text-gray-700">메시지 (최대 500자)</label>
+                    <textarea 
+                      value={message} 
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        if (newValue.length <= 500) {
+                          setMessage(newValue);
+                        }
+                      }} 
+                      placeholder="메시지를 입력해주세요." 
+                      maxLength={500}
+                      className="w-full h-[220px] border border-gray-300 rounded px-3 py-2 text-[14px] resize-none outline-none" 
+                    />
+                    <div className="flex justify-end">
+                      <span className={`text-xs ${message.length > 450 ? 'text-red-500' : message.length > 300 ? 'text-orange-500' : 'text-gray-400'}`}>
+                        {message.length}/500
+                      </span>
+                    </div>
                   </div>
                 </form>
               </div>

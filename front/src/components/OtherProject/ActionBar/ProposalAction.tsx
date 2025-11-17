@@ -36,6 +36,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
   // 토스트 상태
   const [errorToast, setErrorToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
   const [successToast, setSuccessToast] = React.useState<{ visible: boolean; message: string }>({ visible: false, message: "" });
+  const [showMessageModal, setShowMessageModal] = React.useState<{ visible: boolean; content: string }>({ visible: false, content: "" });
 
   // 폼 상태
   const [title, setTitle] = React.useState("");
@@ -308,8 +309,35 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">프로젝트 내용<span className="text-green-500">*</span></label>
-                    <textarea value={description} onChange={(e) => { setDescription(e.target.value); setDescTouched(true); }} onBlur={() => setDescTouched(true)} placeholder="프로젝트의 간략한 정보로 적어주세요(최소 10자 이상)" className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none ${((descTouched && descError)) ? "border-rose-500" : "border-gray-300"}`} />
+                    <label className="text-[12px] font-semibold text-gray-700">프로젝트 내용 (최대 500자)<span className="text-green-500">*</span></label>
+                    <textarea 
+                      value={description} 
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        if (newValue.length <= 500) {
+                          setDescription(newValue);
+                          setDescTouched(true);
+                        }
+                      }} 
+                      onBlur={() => setDescTouched(true)} 
+                      placeholder="프로젝트의 간략한 정보로 적어주세요(최소 10자 이상)" 
+                      maxLength={500}
+                      className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none ${((descTouched && descError)) ? "border-rose-500" : "border-gray-300"}`} 
+                    />
+                    <div className="flex justify-end">
+                      <span className={`text-xs ${description.length > 450 ? 'text-red-500' : description.length > 300 ? 'text-orange-500' : 'text-gray-400'}`}>
+                        {description.length}/500
+                      </span>
+                    </div>
+                    {description.length > 300 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowMessageModal({ visible: true, content: description })}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline self-end"
+                      >
+                        자세히 보기
+                      </button>
+                    )}
                     {(descTouched && descError) && (<div className="text-[12px] text-rose-500">{descError}</div>)}
                   </div>
 
@@ -399,6 +427,26 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
 
   return <>
     {Modal}
+    {/* 메시지 자세히 보기 모달 */}
+    {showMessageModal.visible && (
+      <div className="fixed inset-0 z-[10011] flex items-center justify-center bg-black/50" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
+        <div className="bg-white dark:bg-[var(--surface)] rounded-lg p-6 max-w-2xl w-[90vw] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">프로젝트 내용</h3>
+            <button
+              type="button"
+              onClick={() => setShowMessageModal({ visible: false, content: "" })}
+              className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-2xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+          <div className="whitespace-pre-wrap text-sm text-gray-800 dark:text-white">
+            {showMessageModal.content}
+          </div>
+        </div>
+      </div>
+    )}
     {/* 토스트: 포털 바깥에서 렌더링하여 모달 닫혀도 유지 */}
     <Toast
       visible={errorToast.visible}
