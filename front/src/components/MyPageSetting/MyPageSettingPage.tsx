@@ -623,7 +623,7 @@ const MyPageSettingPage: React.FC = () => {
 						<main className={`${(isNarrow && view !== "profile") ? "hidden" : "flex-1 space-y-0"}`}>
 							{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
 							<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
-								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827] dark:text-white">‹</button>
 								<div className="justify-self-center text-[16px] font-medium text-center">프로필 설정</div>
 								<span />
 							</div>
