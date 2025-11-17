@@ -56,6 +56,9 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
       {/* 검색바와 필터 옵션 */}
       <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-2 sm:px-4 py-3 sm:py-6">
         <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">포트폴리오 검색</h1>
+          </div>
           <ProjectSearchBar 
             onSearch={handleSearch}
             currentQuery={currentSearchQuery}
