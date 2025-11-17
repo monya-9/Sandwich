@@ -27,23 +27,23 @@ export const ProjectCardGrid: React.FC<ProjectCardGridProps> = ({
   // 초기 로딩 상태
   if (isInitialLoading) {
     return (
-      <div className="flex flex-col justify-center items-center py-20">
+      <div className="flex flex-col justify-center items-center py-12 md:py-20">
         <LoadingSpinner size="large" />
-        <p className="mt-4 text-gray-600 text-lg">회원수 10만명 포트폴리오 가져오는 중입니다...</p>
+        <p className="mt-3 md:mt-4 text-gray-600 dark:text-white/70 text-sm md:text-lg">회원수 10만명 포트폴리오 가져오는 중입니다...</p>
       </div>
     );
   }
 
-  // 로딩 상태 (검색 중일 때는 이전 결과 숨김)
-  if (isLoading) {
+  // 로딩 상태 (검색 중일 때만 전체 로딩, 페이지네이션은 기존 결과 유지)
+  if (isLoading && projects.length === 0) {
     const loadingMessage = currentSearchTerm 
       ? `'${currentSearchTerm}'에 대한 검색 중입니다...`
       : '검색중입니다...';
     
     return (
-      <div className="flex flex-col justify-center items-center py-20">
+      <div className="flex flex-col justify-center items-center py-12 md:py-20">
         <LoadingSpinner size="large" />
-        <p className="mt-4 text-gray-600 text-lg">{loadingMessage}</p>
+        <p className="mt-3 md:mt-4 text-gray-600 dark:text-white/70 text-sm md:text-lg">{loadingMessage}</p>
       </div>
     );
   }
@@ -73,17 +73,17 @@ export const ProjectCardGrid: React.FC<ProjectCardGridProps> = ({
   }
 
   return (
-    <div className="space-y-4 sm:space-y-8">
-      {/* 프로젝트 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+    <div className="space-y-4 md:space-y-8 relative">
+      {/* 프로젝트 그리드 - 모바일 2개, 태블릿 3개, 데스크톱 4개 */}
+      <div className={`grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 ${isLoading && projects.length > 0 ? 'opacity-60' : ''}`}>
         {projects.map((project, index) => (
           <ProjectCard key={project.id} project={project} indexInList={index} />
         ))}
       </div>
 
-      {/* 더 로딩 중일 때 */}
+      {/* 페이지네이션 로딩 중일 때 - 작은 로딩 표시 */}
       {isLoading && projects.length > 0 && (
-        <div className="flex justify-center py-4 sm:py-8">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
           <LoadingSpinner size="medium" />
         </div>
       )}

@@ -1,9 +1,8 @@
 // src/components/challenge/CodeWinnersSection.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchChallenges, fetchChallengeDetail } from "../../api/challengeApi";
-import { fetchAiLeaderboard } from "../../api/aiJudgeApi";
-import { fetchUserById } from "../../api/userMini";
+import { fetchChallenges } from "../../api/challengeApi";
+import api from "../../api/axiosInstance";
 
 type SimpleWinner = { rank: number; name: string; profileImageUrl?: string; userId?: number };
 
@@ -76,46 +75,37 @@ export default function CodeWinnersSection() {
       // 이미 정렬되어 있으므로 첫 번째가 가장 최근 종료
       const latest = content[0];
 
-      // 2) week 추출 (ruleJson.week)
-      let week: string | null = null;
-      try {
-        const detail = await fetchChallengeDetail(latest.id);
-        // 1) 최우선: detail.aiWeek 컬럼
-        week = (detail as any)?.aiWeek || null;
-        if (!week) {
-          // 2) ruleJson 안의 week
-          const raw = (detail as any)?.ruleJson ?? latest.ruleJson;
-          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          week = parsed?.week || parsed?.aiWeek || null;
-        }
-      } catch {}
-      if (!week) { setWinners([]); return; }
-
-      // 3) AI 리더보드 상위 3 조회 + 이름 매핑
-      const lb = await fetchAiLeaderboard(week);
-      const top3 = (lb?.leaderboard || []).slice(0, 3);
-
-      const idSet = new Set<number>();
-      top3.forEach(e => { const n = Number(String(e.user)); if (Number.isFinite(n)) idSet.add(n); });
-      const idArr = Array.from(idSet);
-      const userMap = new Map<number, { name: string | null; profileImageUrl?: string }>();
-      await Promise.all(idArr.map(async (id) => {
-        const user = await fetchUserById(id);
-        const name = user?.nickname || user?.displayName || user?.username || user?.userName || null;
-        const profileImageUrl = user?.profileImageUrl || user?.profileImage || user?.avatarUrl || user?.avatar;
-        console.log(`👤 User ${id}:`, { name, profileImageUrl, rawUser: user });
-        userMap.set(id, { name, profileImageUrl });
-      }));
-
-      const winnersMapped: SimpleWinner[] = top3.map(e => {
-        const n = Number(String(e.user));
-        const fallback = `user ${e.user}`;
-        const userInfo = Number.isFinite(n) && userMap.has(n) ? userMap.get(n)! : { name: null, profileImageUrl: undefined };
-        const name = userInfo.name || fallback;
-        return { rank: e.rank, name, profileImageUrl: userInfo.profileImageUrl, userId: Number.isFinite(n) ? n : undefined };
+      // 2) 백엔드 API를 통해 AI 리더보드 조회 (상위 3명)
+      // 백엔드가 AI 서버 호출 + 유저 정보 매핑을 모두 처리해줌
+      const res = await api.get(`/challenges/${latest.id}/leaderboard`, {
+        params: { limit: 3 },
+        withCredentials: true,
       });
+      
+      const data = res.data;
+      if (!data?.found || !data?.items?.length) {
+        setWinners([]);
+        return;
+      }
+
+      // 3) 백엔드 응답을 SimpleWinner 형식으로 변환
+      const winnersMapped: SimpleWinner[] = data.items.map((item: any) => {
+        const owner = item.owner;
+        const name = owner?.username || `user ${item.user}`;
+        const profileImageUrl = owner?.profileImageUrl;
+        const userId = owner?.userId;
+        
+        return {
+          rank: item.rank,
+          name,
+          profileImageUrl,
+          userId,
+        };
+      });
+      
       setWinners(winnersMapped);
     } catch (e) {
+      console.error("코드 리더보드 로딩 실패:", e);
       setError("코드 리더보드를 불러오지 못했습니다.");
       setWinners([]);
     } finally {
