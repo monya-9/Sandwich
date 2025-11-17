@@ -410,27 +410,46 @@ const MainPage = () => {
   }, [filteredProjects, selectedSort]);
 
   // 정렬 옵션에 따라 AI 추천 적용 여부 결정 (신규 유저는 제외)
-  const useReco = isLoggedIn && selectedSort === '샌드위치 픽' && !isNewUser;
-  const hasReco = useReco && !!(recoProjects && recoProjects.length > 0);
+  const useReco = useMemo(() => 
+    isLoggedIn && selectedSort === '샌드위치 픽' && !isNewUser,
+    [isLoggedIn, selectedSort, isNewUser]
+  );
+  
+  const hasReco = useMemo(() => 
+    useReco && !!(recoProjects && recoProjects.length > 0),
+    [useReco, recoProjects]
+  );
 
   // 카테고리 필터를 추천 프로젝트에도 적용
   // TODO: 백엔드에서 categories 데이터가 추가되면 필터링 활성화
-  const filteredRecoProjects = (recoProjects || []).filter((project) => {
-    // 임시: 카테고리 필터 무시하고 모든 프로젝트 표시
-    return true;
-    // const matchesCategory =
-    //   selectedCategory === '전체' || project.categories?.includes(selectedCategory);
-    // return matchesCategory;
-  });
+  const filteredRecoProjects = useMemo(() => 
+    (recoProjects || []).filter((project) => {
+      // 임시: 카테고리 필터 무시하고 모든 프로젝트 표시
+      return true;
+      // const matchesCategory =
+      //   selectedCategory === '전체' || project.categories?.includes(selectedCategory);
+      // return matchesCategory;
+    }),
+    [recoProjects, selectedCategory]
+  );
 
   // 렌더 소스 선택 (정렬된 데이터 사용)
-  const gridPrimary = hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10);
-  const heroProjects = hasReco
-    ? filteredRecoProjects.slice(0, 7)
-    : sortedProjects.slice(0, 7);
-  const gridMore = hasReco
-    ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
-    : sortedProjects.slice(10);
+  const gridPrimary = useMemo(() => 
+    hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10),
+    [hasReco, filteredRecoProjects, sortedProjects]
+  );
+  
+  const heroProjects = useMemo(() => 
+    hasReco ? filteredRecoProjects.slice(0, 7) : sortedProjects.slice(0, 7),
+    [hasReco, filteredRecoProjects, sortedProjects]
+  );
+  
+  const gridMore = useMemo(() => 
+    hasReco
+      ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
+      : sortedProjects.slice(10),
+    [hasReco, filteredRecoProjects, sortedProjects]
+  );
 
   // 그리드 제목: 정렬 방식에 따라 변경
   const gridTitle = useMemo(() => {
