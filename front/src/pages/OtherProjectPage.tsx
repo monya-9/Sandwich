@@ -407,7 +407,7 @@ export default function OtherProjectPage() {
                             {!commentOpen && (
                                 <div 
                                     className={`${forcePage ? 'op-actionbar' : ''} ${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-50' : ''}`}
-                                    style={!isMobile ? { width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" } : {}}
+                                    style={!isMobile ? { width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative", zIndex: 10 } : {}}
                                 >
                                     <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} isMobile={isMobile} />
                                 </div>

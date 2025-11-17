@@ -48,6 +48,7 @@ export default function ProjectStatsBox({ likes, views, comments, projectName, d
               <span className="text-xl">{((ownerEmail?.[0] || ownerName?.[0] || '?') as string).toUpperCase()}</span>
             )}
           </button>
+          <div className="text-[20px] text-[#1F2937]">{ownerName || ''}</div>
         </div>
         <div className="w-16 h-[2px] bg-white/60 mb-3 rounded" />
 
