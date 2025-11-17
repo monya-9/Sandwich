@@ -52,8 +52,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
     setIsOpen(false);
   };
 
-  const sizeBtn = size === 'sm' ? 'px-2 md:px-3 py-1.5 md:py-2 text-[10px] md:text-[13px]' : 'px-4 py-3 text-[14px]';
-  const sizeItem = size === 'sm' ? 'px-2 md:px-3 py-1.5 md:py-2 text-[10px] md:text-[13px]' : 'px-4 py-3 text-[14px]';
+  const sizeBtn = size === 'sm' ? 'px-2 md:px-3 py-1.5 md:py-2 text-[10px] md:text-base' : 'px-4 py-3 text-[14px]';
+  const sizeItem = size === 'sm' ? 'px-2 md:px-3 py-1.5 md:py-2 text-[10px] md:text-base' : 'px-4 py-3 text-[14px]';
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
