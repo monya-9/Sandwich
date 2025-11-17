@@ -1,23 +1,22 @@
 package com.sandwich.SandWich.challenge.service;
 
-
 import com.sandwich.SandWich.challenge.dto.LeaderboardDtos;
 import com.sandwich.SandWich.challenge.repository.PortfolioVoteRepository;
 import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.user.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 public class PortfolioLeaderboardCache {
 
     private final RedisTemplate<String, Object> redis;
     private final PortfolioVoteRepository voteRepo;
-
     private final SubmissionRepository submissionRepo;
     private final UserRepository userRepo;
-
 
     private static int toInt(Object o) {
         if (o == null) return 0;
@@ -32,7 +31,7 @@ public class PortfolioLeaderboardCache {
 
     @SuppressWarnings("unchecked")
     private static java.util.List<Integer> toIntList(Object o) {
-        if (o == null) return java.util.List.of(0,0,0,0);
+        if (o == null) return java.util.List.of(0, 0, 0, 0);
         if (o instanceof java.util.List<?> l) {
             var out = new java.util.ArrayList<Integer>(l.size());
             for (var e : l) out.add(toInt(e));
@@ -44,7 +43,7 @@ public class PortfolioLeaderboardCache {
 
     public PortfolioLeaderboardCache(
             @org.springframework.beans.factory.annotation.Qualifier("redisJsonTemplate")
-            org.springframework.data.redis.core.RedisTemplate<String, Object> redis,
+            RedisTemplate<String, Object> redis,
             PortfolioVoteRepository voteRepo,
             SubmissionRepository submissionRepo,
             UserRepository userRepo
@@ -67,7 +66,7 @@ public class PortfolioLeaderboardCache {
         @SuppressWarnings("unchecked")
         var cur = (java.util.Map<String, Object>) h.get(keyStats(chId), f);
 
-        int[] sum = {0,0,0,0};
+        int[] sum = {0, 0, 0, 0};
         int cnt = 0;
 
         if (cur != null) {
@@ -79,7 +78,7 @@ public class PortfolioLeaderboardCache {
             cnt = toInt(cur.get("cnt"));
         }
 
-        sum[0]+=dUi; sum[1]+=dCr; sum[2]+=dCq; sum[3]+=dDf; cnt+=dCnt;
+        sum[0] += dUi; sum[1] += dCr; sum[2] += dCq; sum[3] += dDf; cnt += dCnt;
 
         if (cnt <= 0) {
             h.delete(keyStats(chId), f);
@@ -125,43 +124,63 @@ public class PortfolioLeaderboardCache {
         var statsKey = keyStats(chId);
         var subsKey  = keySubs(chId);
 
-        var subIds = redis.opsForSet().members(subsKey);
-        boolean cacheHit = subIds != null && !subIds.isEmpty();
+        java.util.Set<Object> subIds = null;
+        boolean cacheHit = false;
 
-        if (!cacheHit) {
-            rebuild(chId);
+        try {
             subIds = redis.opsForSet().members(subsKey);
             cacheHit = subIds != null && !subIds.isEmpty();
+
+            if (!cacheHit) {
+                log.debug("[LB] cache miss. rebuilding. chId={}", chId);
+                rebuild(chId);
+                subIds = redis.opsForSet().members(subsKey);
+                cacheHit = subIds != null && !subIds.isEmpty();
+            }
+        } catch (Exception e) {
+            log.error("[LB] redis error while loading leaderboard. chId={}", chId, e);
+            return LeaderboardDtos.Resp.builder()
+                    .items(java.util.List.of())
+                    .cacheHit(false)
+                    .generatedAt(System.currentTimeMillis())
+                    .build();
         }
+
         var items = new java.util.ArrayList<LeaderboardDtos.Item>();
         if (subIds != null) {
             for (var sid : subIds) {
-                @SuppressWarnings("unchecked")
-                var m = (java.util.Map<String, Object>) redis.opsForHash().get(statsKey, sid.toString());
-                if (m == null) continue;
+                try {
+                    @SuppressWarnings("unchecked")
+                    var m = (java.util.Map<String, Object>) redis.opsForHash().get(statsKey, sid.toString());
+                    if (m == null) continue;
 
-                var sum = toIntList(m.get("sum"));
-                while (sum.size() < 4) sum.add(0);
-                int cnt = toInt(m.get("cnt"));
-                if (cnt <= 0) continue;
+                    var sum = toIntList(m.get("sum"));
+                    while (sum.size() < 4) sum.add(0);
+                    int cnt = toInt(m.get("cnt"));
+                    if (cnt <= 0) continue;
 
-                double a1 = sum.get(0) / (double) cnt;
-                double a2 = sum.get(1) / (double) cnt;
-                double a3 = sum.get(2) / (double) cnt;
-                double a4 = sum.get(3) / (double) cnt;
-                double total = (a1 + a2 + a3 + a4) / 4.0;
-                items.add(LeaderboardDtos.Item.builder()
-                        .submissionId(Long.valueOf(sid.toString()))
-                        .voteCount(cnt)
-                        .uiUxAvg(a1).creativityAvg(a2).codeQualityAvg(a3).difficultyAvg(a4)
-                        .totalScore(total).build());
+                    double a1 = sum.get(0) / (double) cnt;
+                    double a2 = sum.get(1) / (double) cnt;
+                    double a3 = sum.get(2) / (double) cnt;
+                    double a4 = sum.get(3) / (double) cnt;
+                    double total = (a1 + a2 + a3 + a4) / 4.0;
+
+                    items.add(LeaderboardDtos.Item.builder()
+                            .submissionId(Long.valueOf(sid.toString()))
+                            .voteCount(cnt)
+                            .uiUxAvg(a1).creativityAvg(a2).codeQualityAvg(a3).difficultyAvg(a4)
+                            .totalScore(total)
+                            .build());
+                } catch (Exception e) {
+                    // 개별 엔트리만 깨져 있으면 스킵하고 나머지는 계속 사용
+                    log.warn("[LB] skip corrupted leaderboard entry. chId={}, sid={}", chId, sid, e);
+                }
             }
         }
+
+        // 점수 정렬 및 랭크 지정
         items.sort(java.util.Comparator.comparingDouble(LeaderboardDtos.Item::totalScore).reversed());
-        int r=1;
-        for (var i : items) {
-            // set rank via builder copy
-        }
+        int r = 1;
         var ranked = new java.util.ArrayList<LeaderboardDtos.Item>();
         for (var it : items) {
             ranked.add(LeaderboardDtos.Item.builder()
@@ -172,10 +191,12 @@ public class PortfolioLeaderboardCache {
                     .codeQualityAvg(it.codeQualityAvg())
                     .difficultyAvg(it.difficultyAvg())
                     .totalScore(it.totalScore())
-                    .rank(r++).build());
-            if (limit>0 && ranked.size()>=limit) break;
+                    .rank(r++)
+                    .build());
+            if (limit > 0 && ranked.size() >= limit) break;
         }
 
+        // enrich 부분 그대로 유지
         if (!ranked.isEmpty()) {
             var ids = ranked.stream().map(LeaderboardDtos.Item::submissionId).toList();
 
@@ -185,7 +206,7 @@ public class PortfolioLeaderboardCache {
                     .collect(java.util.stream.Collectors.toMap(
                             com.sandwich.SandWich.challenge.domain.Submission::getId,
                             java.util.function.Function.identity(),
-                            (a,b)->a
+                            (a, b) -> a
                     ));
 
             // 오너 로드
@@ -195,7 +216,7 @@ public class PortfolioLeaderboardCache {
                     .collect(java.util.stream.Collectors.toMap(
                             com.sandwich.SandWich.user.domain.User::getId,
                             java.util.function.Function.identity(),
-                            (a,b)->a
+                            (a, b) -> a
                     ));
 
             // 최종 enrich된 리스트 구성
