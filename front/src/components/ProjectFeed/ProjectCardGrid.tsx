@@ -73,17 +73,17 @@ export const ProjectCardGrid: React.FC<ProjectCardGridProps> = ({
   }
 
   return (
-    <div className="space-y-4 md:space-y-8">
+    <div className="space-y-4 md:space-y-8 relative">
       {/* 프로젝트 그리드 - 모바일 2개, 태블릿 3개, 데스크톱 4개 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+      <div className={`grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 ${isLoading && projects.length > 0 ? 'opacity-60' : ''}`}>
         {projects.map((project, index) => (
           <ProjectCard key={project.id} project={project} indexInList={index} />
         ))}
       </div>
 
-      {/* 더 로딩 중일 때 */}
+      {/* 페이지네이션 로딩 중일 때 - 작은 로딩 표시 */}
       {isLoading && projects.length > 0 && (
-        <div className="flex justify-center py-4 md:py-8">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
           <LoadingSpinner size="medium" />
         </div>
       )}
