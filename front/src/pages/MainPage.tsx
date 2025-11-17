@@ -10,6 +10,9 @@ import { fetchProjectFeed, fetchProjectsMeta } from '../api/projects';
 import { AuthContext } from '../context/AuthContext';
 
 const MainPage = () => {
+  // 로그인 상태 (가장 먼저 가져오기)
+  const { isLoggedIn } = useContext(AuthContext);
+  
   // 정렬 옵션을 sessionStorage에서 불러오기 (페이지 이동 시에도 유지)
   const selectedCategory: Category | '전체' = '전체'; // 카테고리 필터 제거로 고정
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
@@ -41,9 +44,6 @@ const MainPage = () => {
   const [actualProjects, setActualProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로딩 여부
-
-  // 로그인 상태
-  const { isLoggedIn } = useContext(AuthContext);
 
   // 로그인 사용자 ID (스토리지 저장 규칙 준수)
   const userId = useMemo(() => {
@@ -178,6 +178,17 @@ const MainPage = () => {
     loadProjects();
   }, [selectedUploadTime, isInitialLoad]);
 
+  // 로그인 시 자동으로 샌드위치 픽으로 전환
+  useEffect(() => {
+    if (isLoggedIn && selectedSort !== '샌드위치 픽') {
+      setSelectedSort('샌드위치 픽');
+      setTempSelectedSort('샌드위치 픽');
+      try {
+        sessionStorage.setItem('mainPage:selectedSort', '샌드위치 픽');
+      } catch {}
+    }
+  }, [isLoggedIn]);
+
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
     
@@ -187,7 +198,8 @@ const MainPage = () => {
       setIsNewUser(false);
       
       try {
-        const response = await fetchUserRecommendations(userId);
+        // 상위 50개 AI 추천 프로젝트 가져오기
+        const response = await fetchUserRecommendations(userId, 50);
         
         // total이 0이면 신규 유저로 판단하여 기본 최신순 프로젝트 사용
         if (response.total === 0) {
