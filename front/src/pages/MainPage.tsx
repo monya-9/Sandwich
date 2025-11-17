@@ -430,8 +430,23 @@ const MainPage = () => {
     ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
     : sortedProjects.slice(10);
 
-  // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
-  const gridTitle = useReco ? 'AI 추천 프로젝트' : '전체 프로젝트';
+  // 그리드 제목: 정렬 방식에 따라 변경
+  const gridTitle = useMemo(() => {
+    if (useReco) {
+      return '샌드위치 PICK 프로젝트';
+    }
+    
+    switch (selectedSort) {
+      case '최신순':
+        return '최신 프로젝트';
+      case '추천순':
+        return '추천 프로젝트';
+      case '샌드위치 픽':
+        return '샌드위치 PICK 프로젝트';
+      default:
+        return '전체 프로젝트';
+    }
+  }, [useReco, selectedSort]);
 
   return (
     <div className="min-h-screen">
@@ -511,7 +526,7 @@ const MainPage = () => {
         <MainDeveloperHighlight />
 
         {gridMore.length > 0 && (
-          <MainProjectGrid title={useReco ? 'AI 추천 프로젝트 계속 보기' : '계속해서 프로젝트를 살펴보세요!'} projects={gridMore} />
+          <MainProjectGrid title={`${gridTitle} 계속 보기`} projects={gridMore} />
         )}
 
         {isSortModalOpen && (
