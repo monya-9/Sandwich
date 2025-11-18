@@ -87,7 +87,7 @@ export default function ProjectDetailLightboxPage() {
   const closeLightbox = () => { try { nav(-1); } catch { nav("/search"); } };
 
   return (
-    <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black" style={{ background: pageBg }}>
+    <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black">
       <div className="w-full flex justify-center items-start">
         <div className="flex flex-row items-start w-full" style={{ maxWidth: 1440 }}>
           {/* 캔버스 영역 */}
