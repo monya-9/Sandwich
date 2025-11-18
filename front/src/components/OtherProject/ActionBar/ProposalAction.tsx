@@ -229,7 +229,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
         <>
           {/* 투명 캡처 오버레이: 부모의 어두운 배경 유지 */}
           <div
-            className="fixed inset-0 z-[99998]"
+            className="fixed inset-0 z-[100000]"
             onClick={onClose}
             onWheel={(e) => e.preventDefault()}
             onTouchMove={(e) => e.preventDefault()}
@@ -239,7 +239,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[99999] w-full sm:w-[480px] max-w-[95vw] max-h-[90vh] sm:max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[100001] w-full sm:w-[480px] max-w-[95vw] max-h-[90vh] sm:max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={fixedModalSize ? { width: fixedModalSize.w, height: fixedModalSize.h } : undefined}
           >
             {/* 헤더: 뒤로가기/중앙 사용자/닫기(X) + 구분선 */}
@@ -429,7 +429,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
     {Modal}
     {/* 메시지 자세히 보기 모달 */}
     {showMessageModal.visible && (
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-3 sm:p-4" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
+      <div className="fixed inset-0 z-[100002] flex items-center justify-center bg-black/50 p-3 sm:p-4" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
         <div className="bg-white dark:bg-[var(--surface)] rounded-lg p-4 sm:p-6 max-w-2xl w-full sm:w-[90vw] max-h-[85vh] sm:max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">프로젝트 내용</h3>

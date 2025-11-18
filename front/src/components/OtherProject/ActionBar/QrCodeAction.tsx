@@ -40,13 +40,13 @@ export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile
         <>
           {/* 배경 */}
           <div
-            className="fixed inset-0 z-[99998]"
+            className="fixed inset-0 z-[100000]"
             style={{ background: "rgba(0, 0, 0, 0.65)" }}
             onClick={() => setOpen(false)}
           />
 
           {/* 컨테이너 */}
-          <div className="fixed z-[99999] inset-0 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed z-[100001] inset-0 flex items-center justify-center p-3 sm:p-4">
             <div
               className="bg-white dark:bg-[var(--surface)] w-full sm:w-[520px] max-w-[95vw] rounded-xl sm:rounded-2xl shadow-2xl px-4 py-6 sm:px-6 sm:py-7 md:px-9 md:py-8 relative flex flex-col"
               style={{ fontFamily: "GmarketSans, sans-serif" }}

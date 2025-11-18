@@ -195,12 +195,12 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
         <>
           {/* 배경 */}
           <div
-           className="fixed inset-0 z-[99998]"
+           className="fixed inset-0 z-[100000]"
            style={{ background: "rgba(0, 0, 0, 0.65)" }}
            onClick={() => setOpen(false)}
           />
           {/* 데스크탑 기준 중앙 고정 & 적정 너비 */}
-          <div className="fixed z-[99999] inset-0 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed z-[100001] inset-0 flex items-center justify-center p-3 sm:p-4">
             <div
               className="
                 bg-white dark:bg-[var(--surface)] w-full sm:w-[520px] max-w-[95vw]
