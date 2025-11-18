@@ -12,8 +12,7 @@ public class RedisProps {
     private Integer port = 6379;
 
     /** 공통 */
-    // application.properties의 spring.data.redis.ssl-enabled 와 바인딩됨
-    private Boolean sslEnabled = true;
+    private Boolean sslEnabled = false;
     private String username;
     private String password;
 

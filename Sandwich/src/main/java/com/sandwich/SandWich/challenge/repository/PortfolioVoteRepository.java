@@ -32,18 +32,17 @@ public interface PortfolioVoteRepository extends JpaRepository<PortfolioVote, Lo
     void deleteByChallengeId(@Param("challengeId") Long challengeId);
 
     @Query("""
-      select v.submission.id as submissionId,
-             sum(v.uiUx) as sumUiUx,
-             sum(v.creativity) as sumCreativity,
-             sum(v.codeQuality) as sumCodeQuality,
-             sum(v.difficulty) as sumDifficulty,
-             count(v) as cnt
-      from PortfolioVote v
-      where v.challenge.id = :challengeId
-      group by v.submission.id
+        SELECT v.submission.id AS submissionId,
+               COUNT(v.id)      AS cnt,
+               SUM(v.uiUx)      AS sumUiUx,
+               SUM(v.creativity)      AS sumCreativity,
+               SUM(v.codeQuality)     AS sumCodeQuality,
+               SUM(v.difficulty)      AS sumDifficulty
+        FROM PortfolioVote v
+        WHERE v.challenge.id = :challengeId
+        GROUP BY v.submission.id
     """)
-    List<Agg> aggregateBySubmission(@Param("challengeId") Long challengeId);
-
+    List<PortfolioVoteAgg> aggregateBySubmission(@Param("challengeId") Long challengeId);
 
 
     @Query(value = """
