@@ -230,7 +230,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 	const onError = () => { if (!triedAlt) { setTriedAlt(true); setSrc(swapJpgPng(src)); } };
 
 	const ownerId = (project as any).owner?.id || (project as any).authorId;
-	const goDetail = () => navigate(`/other-project/${ownerId}/${project.id}`);
+	const goDetail = () => navigate(`/other-project/${ownerId}/${project.id}`, { state: { fromApp: true } });
 	const goEdit = () => navigate(`/project/edit/${ownerId}/${project.id}`);
 
 	return (

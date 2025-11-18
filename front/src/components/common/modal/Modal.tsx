@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import ReactDOM from "react-dom";
 import { X } from "lucide-react";
 
 type ModalProps = {
@@ -29,7 +30,7 @@ export default function Modal({
 
     if (!open) return null;
 
-    return (
+    return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4" aria-modal="true" role="dialog">
             <div className="absolute inset-0 bg-[rgba(51,51,51,0.7)]" onClick={onClose} />
             <div
@@ -49,6 +50,7 @@ export default function Modal({
                 </button>
                 {children}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
