@@ -47,12 +47,24 @@ function saveCachedUser(data?: { id: number; nickname?: string; email?: string; 
 
 export default function OtherProjectPage() {
     const [commentOpen, setCommentOpen] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
     const projectWidth = commentOpen ? PROJECT_NARROW : PROJECT_WIDE;
     const { isLoggedIn } = useContext(AuthContext);
     const nav = useNavigate();
     const location = useLocation();
     const forcePage = !!(location.state as any)?.page; // 상세페이지로 이동에서만 true
     const isMobile = !useMediaQuery('(min-width: 1024px)'); // lg 브레이크포인트
+
+    // 다크모드 감지
+    useEffect(() => {
+        const checkDarkMode = () => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        };
+        checkDarkMode();
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
 
     const { ownerId: ownerIdParam, projectId: projectIdParam } = useParams<{ ownerId?: string; projectId?: string }>();
     const ownerId = ownerIdParam ? Number(ownerIdParam) : undefined;
@@ -315,6 +327,42 @@ export default function OtherProjectPage() {
     }, [contents]);
     const pageBg = (metaFromContents as any)?.bg || '#ffffff';
     const gapPx = typeof (metaFromContents as any)?.gap === 'number' ? (metaFromContents as any).gap : 10;
+    
+    // 배경색의 밝기를 계산하는 함수 (0~255)
+    const getLuminance = (hex: string) => {
+        try {
+            const rgb = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+            if (!rgb) return 128;
+            const r = parseInt(rgb[1], 16);
+            const g = parseInt(rgb[2], 16);
+            const b = parseInt(rgb[3], 16);
+            // 밝기 계산 (perceived luminance)
+            return 0.299 * r + 0.587 * g + 0.114 * b;
+        } catch {
+            return 128;
+        }
+    };
+    
+    // 흰색/검은색 여부 확인
+    const isWhiteOrBlack = (color: string) => {
+        const normalized = color.toUpperCase().replace(/\s/g, '');
+        return normalized === '#FFFFFF' || normalized === '#FFF' || 
+               normalized === '#000000' || normalized === '#000';
+    };
+    
+    // 배경색 결정: 흰색/검은색이면 모드에 따라 전환, 아니면 설정한 색 그대로
+    const effectiveBg = (() => {
+        if (isWhiteOrBlack(pageBg)) {
+            // 흰색/검은색: 다크모드면 검은색, 라이트모드면 흰색
+            return isDarkMode ? '#000000' : '#FFFFFF';
+        } else {
+            // 다른 색상: 그대로 사용
+            return pageBg;
+        }
+    })();
+    
+    // 배경색의 밝기에 따라 텍스트 색상 결정
+    const textColor = getLuminance(effectiveBg) < 128 ? '#FFFFFF' : '#000000';
     const styles = (
         <style>
             {`
@@ -416,8 +464,8 @@ export default function OtherProjectPage() {
                             <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
                                 <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                                 <div className="mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 mb-4 sm:mb-6 md:mb-8">
-                                    <div className="rounded-lg sm:rounded-xl overflow-hidden bg-white dark:bg-black">
-                                        <div className="px-0 py-3 sm:py-4 md:py-6">
+                                    <div className="rounded-lg sm:rounded-xl overflow-hidden" style={{ backgroundColor: effectiveBg }}>
+                                        <div className="px-0 py-3 sm:py-4 md:py-6" style={{ color: textColor }}>
                                             <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                                 <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
                                             </div>
@@ -484,8 +532,8 @@ export default function OtherProjectPage() {
                         <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
                             <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                             <div className="mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 mb-4 sm:mb-6 md:mb-8">
-                                <div className="rounded-lg sm:rounded-xl overflow-hidden bg-white dark:bg-black">
-                                    <div className="px-0 py-3 sm:py-4 md:py-6">
+                                <div className="rounded-lg sm:rounded-xl overflow-hidden" style={{ backgroundColor: effectiveBg }}>
+                                    <div className="px-0 py-3 sm:py-4 md:py-6" style={{ color: textColor }}>
                                         <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                             <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
                                         </div>
