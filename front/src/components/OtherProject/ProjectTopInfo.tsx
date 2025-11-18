@@ -148,27 +148,24 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
         <div role="button" className="w-14 h-14 rounded-full flex-shrink-0 cursor-pointer overflow-hidden" onClick={() => ownerId && navigate(((Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0')) === ownerId) ? '/profile' : `/users/${ownerId}`)} title="프로필 보기">
           {avatar}
         </div>
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-2xl font-bold text-black">{projectName}</h1>
+        <div className="flex-1">
+          {/* 프로젝트 제목 - 한줄 소개 */}
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h1 className="text-xl font-bold text-black dark:text-white">
+              {projectName}
+              {!!(intro && intro.trim()) && (
+                <span className="text-black dark:text-white font-normal"> - {intro}</span>
+              )}
+            </h1>
             {isOwner && (
-              <div className="flex items-center gap-2 ml-20">
-                <button className="bg-white border border-[#E5E7EB] text-gray-700 hover:bg-gray-50 rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onEdit}>수정하기</button>
+              <div className="flex items-center gap-2 ml-4">
+                <button className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[var(--surface)]/80 rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onEdit}>수정하기</button>
                 <button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onDelete}>삭제하기</button>
               </div>
             )}
           </div>
-          {/* 소개 말풍선 (한줄 소개가 있을 때만 표시) */}
-          {!!(intro && intro.trim()) && (
-            <div className="mt-2 relative">
-              <div className="inline-flex relative bg-white text-gray-900 text-[15px] px-4 py-2 rounded-3xl border border-gray-200 shadow-sm max-w-[640px] min-w-[72px] min-h-[36px] items-center justify-center text-center break-words">
-                {intro}
-                <div className="absolute left-4 -bottom-1 w-3 h-3 bg-white rotate-45 shadow-sm border-r border-b border-gray-200"></div>
-              </div>
-            </div>
-          )}
           {/* 닉네임 */}
-          <div className="text-[20px] text-[#1F2937] mt-1">{userName}</div>
+          <div className="text-[18px] text-black dark:text-white">{userName}</div>
         </div>
       </div>
     </>

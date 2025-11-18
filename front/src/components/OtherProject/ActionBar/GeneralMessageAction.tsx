@@ -138,7 +138,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
             {/* 헤더 */}
             <div className="relative px-2 pt-2 pb-2">
               <button
-                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
+                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
                 onClick={() => { onClose(); onBackToMenu?.(); }}
                 aria-label="뒤로가기"
               >
@@ -153,26 +153,26 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
                 <div className="text-[14px] font-medium">{targetName}</div>
               </div>
               <button
-                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
+                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
                 onClick={onClose}
                 aria-label="닫기"
               >
                 ×
               </button>
-              <div className="mt-2 border-t border-gray-200" />
+              <div className="mt-2 border-t border-gray-200 dark:border-[var(--border-color)]" />
             </div>
 
             {/* 내용 영역 */}
             <div className="px-6 py-4 flex-1 overflow-visible" style={{ overscrollBehavior: "auto" }}>
               <div className="w-[400px] max-w-full mx-auto">
                 <div className="text-center mb-3">
-                  <div className="text-[18px] font-bold">일반 메시지</div>
-                  <div className="text-[12px] text-gray-500 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
+                  <div className="text-[18px] font-bold text-gray-800 dark:text-white">일반 메시지</div>
+                  <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
                 </div>
 
                 <form className="flex flex-col gap-3" onSubmit={submitForm}>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">메시지 (최대 500자)</label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">메시지 (최대 500자)</label>
                     <textarea 
                       value={message} 
                       onChange={(e) => {
@@ -183,10 +183,10 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
                       }} 
                       placeholder="메시지를 입력해주세요." 
                       maxLength={500}
-                      className="w-full h-[220px] border border-gray-300 rounded px-3 py-2 text-[14px] resize-none outline-none" 
+                      className="w-full h-[220px] border border-gray-300 dark:border-[var(--border-color)] rounded px-3 py-2 text-[14px] resize-none outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500" 
                     />
                     <div className="flex justify-end">
-                      <span className={`text-xs ${message.length > 450 ? 'text-red-500' : message.length > 300 ? 'text-orange-500' : 'text-gray-400'}`}>
+                      <span className={`text-xs ${message.length >= 500 ? 'text-red-500' : 'text-gray-400'}`}>
                         {message.length}/500
                       </span>
                     </div>
@@ -197,7 +197,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
 
             {/* 하단 고정 버튼 바 */}
             <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
-              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 text-gray-700">취소</button>
+              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300">취소</button>
               <button disabled={!canSubmit} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>
           </div>

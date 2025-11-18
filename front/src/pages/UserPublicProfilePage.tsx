@@ -247,25 +247,25 @@ export default function UserPublicProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">프로필을 불러오는 중...</div>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[var(--bg)]">
+        <div className="text-gray-600 dark:text-gray-400">프로필을 불러오는 중...</div>
       </div>
     );
   }
 
   if (error || (!identifier && !resolvedUserId)) {
     return (
-      <div className="p-8 text-center">
-        <div className="text-lg">{error || "잘못된 사용자입니다."}</div>
-        <button className="mt-4 underline" onClick={() => navigate(-1)}>뒤로가기</button>
+      <div className="p-8 text-center bg-white dark:bg-[var(--bg)] min-h-screen">
+        <div className="text-lg text-black dark:text-white">{error || "잘못된 사용자입니다."}</div>
+        <button className="mt-4 underline text-black dark:text-white" onClick={() => navigate(-1)}>뒤로가기</button>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">프로필을 불러오는 중...</div>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[var(--bg)]">
+        <div className="text-gray-600 dark:text-gray-400">프로필을 불러오는 중...</div>
       </div>
     );
   }
@@ -283,7 +283,7 @@ export default function UserPublicProfilePage() {
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-full min-h-screen bg-white font-gmarket px-4 md:px-8 xl:px-14 pb-20">
+      <div className="w-full min-h-screen bg-white dark:bg-[var(--bg)] font-gmarket px-4 md:px-8 xl:px-14 pb-20 text-black dark:text-white">
         {toast && (
           <Toast
             visible={true}
@@ -297,7 +297,7 @@ export default function UserPublicProfilePage() {
         )}
         {/* 배경: 업로드 UI 제거, 읽기 전용 배너 */}
         <div 
-          className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] h-[300px] md:h-[360px] w-auto rounded-none"
+          className="relative -mt-20 -mx-4 md:-mx-8 xl:-mx-14 bg-[#2F3436] dark:bg-[#14181B] h-[300px] md:h-[360px] w-auto rounded-none border-b border-black/10 dark:border-white/10"
           style={data?.coverImage && typeof data.coverImage === 'string' && data.coverImage.trim() !== "" ? {
             backgroundImage: `url(${data.coverImage})`,
             backgroundSize: 'cover',
@@ -308,10 +308,10 @@ export default function UserPublicProfilePage() {
         {/* 본문 레이아웃 */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-[minmax(300px,420px)_1fr] gap-8 items-start">
           {/* 좌측 카드 */}
-          <aside className="relative z-10 -mt-32 md:-mt-44 lg:-mt-56 xl:-mt-64 border border-[#ADADAD] rounded-[12px] p-6 md:p-8 bg-white overflow-hidden min-h-[1000px] flex flex-col">
+          <aside className="relative z-10 -mt-32 md:-mt-44 lg:-mt-56 xl:-mt-64 border border-[#ADADAD] dark:border-[var(--border-color)] rounded-[12px] p-6 md:p-8 bg-white dark:bg-[var(--surface)] overflow-hidden min-h-[1000px] flex flex-col">
             {/* 아바타 */}
             <div className="flex justify-center">
-              <div className="w-[120px] h-[120px] rounded-full bg-[#F3F4F6] flex items-center justify-center text-black text-3xl overflow-hidden">
+              <div className="w-[120px] h-[120px] rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] flex items-center justify-center text-black dark:text-white text-3xl overflow-hidden">
                 {data?.profileImage ? (
                   <img src={data.profileImage} alt="profile" className="w-full h-full object-cover" />
                 ) : (
@@ -320,8 +320,8 @@ export default function UserPublicProfilePage() {
               </div>
             </div>
             {/* 이름/URL */}
-            <div className="mt-5 text-center text-[22px] md:text-[24px] text-black">{displayName}</div>
-            <div className="mt-2 text-center text-[13px] md:text-[14px] text-black/70 underline break-all">{profileUrl}</div>
+            <div className="mt-5 text-center text-[22px] md:text-[24px] text-black dark:text-white">{displayName}</div>
+            <div className="mt-2 text-center text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">{profileUrl}</div>
 
             {/* 버튼: 팔로우 / 제안하기 */}
             <div className="mt-6 space-y-3">
@@ -334,8 +334,8 @@ export default function UserPublicProfilePage() {
                     isFollowing
                       ? (followBtnHover
                         ? "bg-[#F6323E] text-white border-2 border-[#F6323E]"
-                        : "bg-white border-2 border-black text-black")
-                      : "bg-white border-2 border-black text-black"
+                        : "bg-white dark:bg-[var(--surface)] border-2 border-black dark:border-white text-black dark:text-white")
+                      : "bg-white dark:bg-[var(--surface)] border-2 border-black dark:border-white text-black dark:text-white"
                   } text-[16px] md:text-[18px]`}
                 >
                   {isFollowing ? (
@@ -379,7 +379,7 @@ export default function UserPublicProfilePage() {
                 {repCareers.length > 0 && (
                   <button
                     onClick={() => navigate(`/profile/${resolvedUserId}/careers`)}
-                    className="text-[14px] text-black/60 hover:text-black/80 transition-colors"
+                    className="text-[14px] text-black/60 dark:text-white/60 hover:text-black/80 dark:hover:text-white/80 transition-colors"
                   >
                     자세히 보기 &gt;
                   </button>
@@ -392,16 +392,16 @@ export default function UserPublicProfilePage() {
                     <div key={idx} className="flex items-start gap-3">
                       <span className="text-[18px]" aria-hidden>{iconForType(item.type)}</span>
                       <div className="flex-1">
-                        <div className="text-[14px] text-black font-medium">{item.title}</div>
-                        {!!item.subtitle && <div className="text-[13px] text-black/60">{item.subtitle}</div>}
+                        <div className="text-[14px] text-black dark:text-white font-medium">{item.title}</div>
+                        {!!item.subtitle && <div className="text-[13px] text-black/60 dark:text-white/60">{item.subtitle}</div>}
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="mt-4 w-full flex justify-center">
-                    <div className="inline-flex items-center gap-1 text-black/60">
+                    <div className="inline-flex items-center gap-1 text-black/60 dark:text-white/60">
                       <span>설정된 대표 커리어가 없습니다.</span>
-                      <span className="text-black/40" aria-hidden>ⓘ</span>
+                      <span className="text-black/40 dark:text-white/40" aria-hidden>ⓘ</span>
                     </div>
                   </div>
                 )}
@@ -411,27 +411,27 @@ export default function UserPublicProfilePage() {
             {/* 활동 정보 */}
             <div className="mt-20" />
             <div className="mt-4 text-[14px] md:text-[16px]">
-              <div className="text-black/90">활동 정보</div>
+              <div className="text-black/90 dark:text-white">활동 정보</div>
               <div className="mt-5" />
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
-                <div className="flex flex-col gap-1"><div className="text-[14px]">{workCount}</div><div className="text-[14px] text-black/60">작업 보기</div></div>
-                <div className="flex flex-col gap-1"><div className="text-[14px]">{likesReceived}</div><div className="text-[14px] text-black/60">좋아요 받음</div></div>
-                <div className="flex flex-col gap-1"><div className="text-[14px]">{publicCollectionsCount}</div><div className="text-[14px] text-black/60">컬렉션 저장됨</div></div>
+                <div className="flex flex-col gap-1"><div className="text-[14px] text-black dark:text-white">{workCount}</div><div className="text-[14px] text-black/60 dark:text-white/60">작업 보기</div></div>
+                <div className="flex flex-col gap-1"><div className="text-[14px] text-black dark:text-white">{likesReceived}</div><div className="text-[14px] text-black/60 dark:text-white/60">좋아요 받음</div></div>
+                <div className="flex flex-col gap-1"><div className="text-[14px] text-black dark:text-white">{publicCollectionsCount}</div><div className="text-[14px] text-black/60 dark:text-white/60">컬렉션 저장됨</div></div>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-6 text-[14px]">
                 <button 
                   onClick={() => { setFollowModalType("following"); setFollowModalOpen(true); }}
                   className="flex flex-col gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
                 >
-                  <div className="text-[14px]">{followingCount}</div>
-                  <div className="text-[14px] text-black/60">팔로잉</div>
+                  <div className="text-[14px] text-black dark:text-white">{followingCount}</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">팔로잉</div>
                 </button>
                 <button 
                   onClick={() => { setFollowModalType("followers"); setFollowModalOpen(true); }}
                   className="flex flex-col gap-1 cursor-pointer hover:opacity-70 transition-opacity text-left"
                 >
-                  <div className="text-[14px]">{followerCount}</div>
-                  <div className="text-[14px] text-black/60">팔로워</div>
+                  <div className="text-[14px] text-black dark:text-white">{followerCount}</div>
+                  <div className="text-[14px] text-black/60 dark:text-white/60">팔로워</div>
                 </button>
                 <div />
               </div>
@@ -440,11 +440,11 @@ export default function UserPublicProfilePage() {
 
           {/* 우측: 탭 */}
           <section>
-            <div className="text-[15px] md:text-[16px] border-b border-[#E5E7EB]">
+            <div className="text-[15px] md:text-[16px] border-b border-[#E5E7EB] dark:border-[var(--border-color)]">
               <div className="flex items-center gap-6">
-                <button className={`pb-3 ${activeTab==="work" ? "font-semibold text-black" : "text-black/60"}`} onClick={() => setActiveTab("work")}>작업</button>
-                <button className={`pb-3 ${activeTab==="like" ? "font-semibold text-black" : "text-black/60"}`} onClick={() => setActiveTab("like")}>좋아요</button>
-                <button className={`pb-3 ${activeTab==="collection" ? "font-semibold text-black" : "text-black/60"}`} onClick={() => setActiveTab("collection")}>컬렉션</button>
+                <button className={`pb-3 ${activeTab==="work" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`} onClick={() => setActiveTab("work")}>작업</button>
+                <button className={`pb-3 ${activeTab==="like" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`} onClick={() => setActiveTab("like")}>좋아요</button>
+                <button className={`pb-3 ${activeTab==="collection" ? "font-semibold text-black dark:text-white" : "text-black/60 dark:text-white/60"}`} onClick={() => setActiveTab("collection")}>컬렉션</button>
               </div>
             </div>
 

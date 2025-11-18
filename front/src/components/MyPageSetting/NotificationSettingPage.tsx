@@ -1,3 +1,6 @@
+// TODO: 이메일/SMS 알림 기능이 아직 개발되지 않아 임시로 비활성화되었습니다.
+// 백엔드 API 개발 완료 후 App.tsx와 Sidebar.tsx의 주석을 해제해주세요.
+
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { useNavigate } from "react-router-dom";
