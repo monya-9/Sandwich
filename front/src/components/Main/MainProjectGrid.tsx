@@ -1,6 +1,6 @@
 // MainProjectGrid.tsx
 // 카드 형태로 프로젝트 리스트 보여주는 영역 (재사용 가능하게 title props로 제목 받기)
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import ProjectCard from './ProjectCard';
 import { Project } from '../../types/Project';
 
@@ -8,9 +8,37 @@ type MainProjectGridProps = {
   title: string;
   projects: Project[];
   onOpenSortModal?: () => void;
+  limitToTwoRows?: boolean; // 2줄 제한 여부
 };
 
-const MainProjectGrid: React.FC<MainProjectGridProps> = memo(({ title, projects, onOpenSortModal }) => {
+const MainProjectGrid: React.FC<MainProjectGridProps> = memo(({ title, projects, onOpenSortModal, limitToTwoRows = false }) => {
+  const [maxItems, setMaxItems] = useState(10);
+
+  useEffect(() => {
+    const updateMaxItems = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        // 모바일: 2개 × 2줄 = 4개
+        setMaxItems(4);
+      } else if (width < 768) {
+        // sm: 2개 × 2줄 = 4개
+        setMaxItems(4);
+      } else if (width < 1024) {
+        // md: 3개 × 2줄 = 6개
+        setMaxItems(6);
+      } else {
+        // lg/xl: 5개 × 2줄 = 10개
+        setMaxItems(10);
+      }
+    };
+
+    updateMaxItems();
+    window.addEventListener('resize', updateMaxItems);
+    return () => window.removeEventListener('resize', updateMaxItems);
+  }, []);
+
+  const displayProjects = limitToTwoRows ? projects.slice(0, maxItems) : projects;
+
   return (
     <section className="px-3 py-4 md:px-5 md:py-5 lg:px-6 lg:py-6">
       <div className="flex justify-between items-center mb-3 md:mb-4">
@@ -26,8 +54,8 @@ const MainProjectGrid: React.FC<MainProjectGridProps> = memo(({ title, projects,
       </div>
 
       {/* 반응형 grid: 최소 2개부터 최대 5개까지 자동 조절, 간격은 적당히 압축 */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-4 md:gap-x-4 md:gap-y-5">
-        {projects.map((project) => (
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-x-3 gap-y-4 md:gap-x-4 md:gap-y-5">
+        {displayProjects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>

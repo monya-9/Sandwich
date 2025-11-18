@@ -22,12 +22,12 @@ export type JobOfferPayload = {
 export const CardShell: React.FC<
     React.PropsWithChildren<{ title: string; icon?: React.ReactNode }>
 > = ({ title, icon, children }) => (
-    <div className="max-w-[520px] rounded-2xl overflow-hidden bg-white shadow-sm border">
-        <div className="bg-teal-500 text-white px-4 py-3 text-[11px] sm:text-sm font-semibold flex items-center gap-2">
-            {icon ?? <span className="inline-block w-4 h-4">✉️</span>}
+    <div className="max-w-[calc(100vw-100px)] sm:max-w-[520px] rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm border border-gray-200 dark:border-neutral-700">
+        <div className="bg-teal-500 text-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold flex items-center gap-2">
+            {icon ?? <span className="inline-block w-3 h-3 sm:w-4 sm:h-4">✉️</span>}
             {title}
         </div>
-        <div className="p-4 text-[11px] sm:text-sm text-gray-800 space-y-3">{children}</div>
+        <div className="p-3 sm:p-4 text-xs sm:text-sm text-gray-800 dark:text-gray-200 space-y-2 sm:space-y-3">{children}</div>
     </div>
 );
 
@@ -35,9 +35,9 @@ const Row: React.FC<{ label: string; value?: React.ReactNode }> = ({
                                                                        label,
                                                                        value,
                                                                    }) => (
-    <div className="grid grid-cols-[110px_1fr] gap-3">
-        <div className="text-gray-500 text-[11px] sm:text-sm">{label}</div>
-        <div className="whitespace-pre-wrap text-[11px] sm:text-sm">{value ?? "-"}</div>
+    <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[110px_1fr] gap-2 sm:gap-3">
+        <div className="text-gray-500 dark:text-gray-400 text-[10px] sm:text-sm font-medium">{label}</div>
+        <div className="whitespace-pre-wrap text-[10px] sm:text-sm break-words">{value ?? "-"}</div>
     </div>
 );
 
