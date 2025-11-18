@@ -197,7 +197,7 @@ export default function CommentPanel({
           <input
             value={edit.value}
             onChange={e => setEdit({ id: c.id, value: e.target.value })}
-            className="border border-gray-200 dark:border-[var(--border-color)] p-1 rounded text-xs sm:text-sm flex-1 dark:bg-[var(--surface)] dark:text-white"
+            className="border border-gray-200 p-1 rounded text-xs sm:text-sm flex-1 bg-white text-gray-900"
             maxLength={1000}
             disabled={!isLoggedIn}
           />
@@ -236,7 +236,7 @@ export default function CommentPanel({
           <input
             value={reply.value}
             onChange={e => setReply({ parentId: c.id, value: e.target.value })}
-            className="border border-gray-200 dark:border-[var(--border-color)] p-1 rounded text-xs sm:text-sm flex-1 dark:bg-[var(--surface)] dark:text-white"
+            className="border border-gray-200 p-1 rounded text-xs sm:text-sm flex-1 bg-white text-gray-900"
             maxLength={1000}
             placeholder="대댓글을 입력하세요"
           />
