@@ -52,9 +52,7 @@ const OAuthErrorHandler = () => {
                 <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-neutral-800">
                     {/* 에러 아이콘 */}
                     <div className="flex justify-center mb-4 sm:mb-6">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-                            <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8 text-orange-500 dark:text-orange-400" />
-                        </div>
+                        <AlertTriangle className="w-14 h-14 sm:w-16 sm:h-16 text-orange-500 dark:text-orange-400" />
                     </div>
 
                     {/* 제목 */}
