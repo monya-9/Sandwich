@@ -30,11 +30,11 @@ export default function Modal({
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" aria-modal="true" role="dialog">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4" aria-modal="true" role="dialog">
             <div className="absolute inset-0 bg-[rgba(51,51,51,0.7)]" onClick={onClose} />
             <div
                 className={[
-                    "relative z-10 w-full max-w-[92%] rounded-[24px] bg-[#F2F2F2] dark:bg-[#2A2A2A] shadow-2xl",
+                    "relative z-[100001] w-full max-w-[92%] rounded-[24px] bg-[#F2F2F2] dark:bg-[#2A2A2A] shadow-2xl",
                     widthClass,
                     heightClass,
                     paddingClass,

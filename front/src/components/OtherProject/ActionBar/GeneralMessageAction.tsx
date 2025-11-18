@@ -122,7 +122,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
         <>
           {/* 투명 캡처 오버레이: 부모의 어두운 배경 유지 */}
           <div
-            className="fixed inset-0 z-[99998]"
+            className="fixed inset-0 z-[100000]"
             onClick={onClose}
             onWheel={(e) => e.preventDefault()}
             onTouchMove={(e) => e.preventDefault()}
@@ -132,7 +132,7 @@ export default function GeneralMessageAction({ open, onClose, onBackToMenu, targ
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[99999] w-full sm:w-[480px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[100001] w-full sm:w-[480px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={{ height: '90vh', maxHeight: 500 }}
           >
             {/* 헤더 */}

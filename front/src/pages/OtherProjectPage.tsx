@@ -465,11 +465,20 @@ export default function OtherProjectPage() {
     }
 
     // 기본: 모달 레이아웃
+    const handleModalClose = () => {
+        // URL로 직접 접속한 경우 (state 없음) 메인으로, 아니면 뒤로 가기
+        if (!location.state) {
+            nav('/');
+        } else {
+            nav(-1);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[10000] font-gmarketsans">
             {styles}
-            <div className="absolute inset-0 bg-black/70" onClick={() => { try { nav(-1); } catch { nav('/search'); } }} />
-            <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-2 sm:py-4 md:py-8 lg:py-12" onClick={() => { try { nav(-1); } catch { nav('/search'); } }}>
+            <div className="absolute inset-0 bg-black/70" onClick={handleModalClose} />
+            <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-2 sm:py-4 md:py-8 lg:py-12" onClick={handleModalClose}>
                 <div className="flex flex-col lg:flex-row items-start w-full relative px-2 md:px-4" style={{ maxWidth: MAX_WIDTH }}>
                     <div className="flex flex-col lg:flex-row items-start w-full">
                         <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
