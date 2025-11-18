@@ -26,10 +26,10 @@ function WinnerCard({ w }: { w: SimpleWinner }) {
   };
   
   return (
-    <div className="text-center">
-      <div className="mb-2 text-3xl">{getMedalIcon(w.rank)}</div>
+    <div className="text-center px-2 sm:px-3">
+      <div className="mb-2 text-2xl sm:text-3xl">{getMedalIcon(w.rank)}</div>
       <div 
-        className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
         onClick={handleProfileClick}
       >
         {w.profileImageUrl ? (
@@ -40,20 +40,20 @@ function WinnerCard({ w }: { w: SimpleWinner }) {
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
-              target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${initial}</span>`;
+              target.parentElement!.innerHTML = `<span class="font-bold text-base sm:text-lg text-gray-700">${initial}</span>`;
             }}
           />
         ) : (
-          <span className="font-bold text-lg text-gray-700">{initial}</span>
+          <span className="font-bold text-base sm:text-lg text-gray-700">{initial}</span>
         )}
       </div>
       <div 
-        className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+        className="font-semibold text-gray-800 mb-2 break-words text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity px-1"
         onClick={handleProfileClick}
       >
         {w.name}
       </div>
-      <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">{w.rank}위</div>
+      <div className="bg-gray-800 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm w-16 sm:w-20 text-center mx-auto">{w.rank}위</div>
     </div>
   );
 }
@@ -146,9 +146,9 @@ export default function CodeWinnersSection() {
     <div className="mx-auto mt-5 max-w-screen-xl px-4 md:px-6">
       <div className="flex justify-center w-full">
         <div className="flex flex-col w-full items-stretch">
-          <h3 className="mb-3 text-2xl font-extrabold text-center">지난 코드 챌린지 TOP Winners</h3>
+          <h3 className="mb-3 text-xl sm:text-2xl font-extrabold text-center px-2">지난 코드 챌린지 TOP Winners</h3>
           {loading ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto">
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 mx-auto mb-2"></div>
@@ -157,24 +157,24 @@ export default function CodeWinnersSection() {
               </div>
             </div>
           ) : error ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto">
               <div className="flex items-center justify-center h-full text-sm text-neutral-500">{error}</div>
             </div>
           ) : winners.length === 0 ? (
             // 데이터가 없을 때 안내 메시지 표시
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
-              <div className="text-base text-neutral-600 text-center font-medium">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto flex items-center justify-center">
+              <div className="text-sm sm:text-base text-neutral-600 text-center font-medium px-4">
                 지난 코드 챌린지 우승자 정보가 없습니다.
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
-              <div className="grid grid-cols-3 items-center w-full">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto flex items-center justify-center">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 items-center w-full max-w-2xl mx-auto">
                 {[2, 1, 3].map((rank) => {
                   const w = winners.find((x) => x.rank === rank);
                   return (
-                    <div key={rank} className="flex-1 flex justify-center">
-                      {w ? <WinnerCard w={w} /> : <div className="invisible"><div className="w-12 h-12" /></div>}
+                    <div key={rank} className="flex justify-center">
+                      {w ? <WinnerCard w={w} /> : <div className="invisible"><div className="w-10 h-10 sm:w-12 sm:h-12" /></div>}
                     </div>
                   );
                 })}

@@ -71,7 +71,7 @@ function WinnerCard({ w }: { w: SimpleWinner }) {
       >
         {realName}
       </div>
-      <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+      <div className="bg-gray-800 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm w-16 sm:w-20 text-center mx-auto">
         {w.score ? `${w.score.toFixed(2)}점` : w.credits ? `${w.credits.toLocaleString()}크레딧` : `${w.rank}위`}
       </div>
     </div>

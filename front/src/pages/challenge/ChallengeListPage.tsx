@@ -272,10 +272,10 @@ export default function ChallengeListPage() {
 		<div className="w-full bg-white dark:bg-neutral-950">
 			{/* 오렌지 공지 배너 */}
 			<div>
-				<div className="mx-auto max-w-screen-xl px-4 py-4 md:px-6">
-					<div className="rounded-xl bg-[#FFA31A] px-5 py-4 text-white md:px-6 md:py-5">
-						<p className="text-[14px] font-semibold">매주 주어질 주제로 코드 / 매달 주어지는 포트폴리오 챌린지!</p>
-						<p className="mt-1 text-[13px] leading-6 opacity-95">
+				<div className="mx-auto max-w-screen-xl px-4 py-3 sm:py-4 md:px-6">
+					<div className="rounded-xl bg-[#FFA31A] px-4 py-3 sm:px-5 sm:py-4 text-white md:px-6 md:py-5">
+						<p className="text-[13px] sm:text-[14px] font-semibold">매주 주어질 주제로 코드 / 매달 주어지는 포트폴리오 챌린지!</p>
+						<p className="mt-1 text-[12px] sm:text-[13px] leading-6 opacity-95">
 							개발자라면 누구나 참여 가능, 개인/팀 모두 환영해요.<br className="hidden md:block" />
 							코드 챌린지는 AI 자동 채점으로 공정하게, 포트폴리오 챌린지는 투표로 결정! 1~3등은 크레딧 보상과 전용 뱃지, 참가자 전원도 크레딧 지급!<br className="hidden md:block" />
 							코드 챌린지는 중복 제출·수정 가능, 포트폴리오 챌린지는 팀 or 개인으로 1회 출전 가능!<br className="hidden md:block" />
@@ -345,7 +345,7 @@ export default function ChallengeListPage() {
 				)}
 
 				{/* 지난 챌린지 - 제목만 */}
-				<h2 className="text-2xl font-bold mb-4 text-left ml-[15px] text-black dark:text-white">지난 챌린지</h2>
+				<h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-left ml-[15px] text-black dark:text-white">지난 챌린지</h2>
 
 				{/* 캐러셀 카드 틀만 감싸기 (타이틀 X, 보더 O) */}
 				<SectionCard bordered className="mt-2 overflow-visible">
@@ -368,13 +368,13 @@ export default function ChallengeListPage() {
 						</button>
 
 						{/* 캐러셀 그리드: 타이틀 라인과 정렬(ml[15px] ↔ pl[15px]) / 4열 */}
-						<div className="grid grid-cols-1 gap-4 pl-[15px] pr-[15px] sm:grid-cols-2 lg:grid-cols-4">
+						<div className="grid grid-cols-1 gap-3 sm:gap-4 pl-[15px] pr-[15px] sm:grid-cols-2 lg:grid-cols-4">
 							{pastLoading ? (
 								// 로딩 중일 때 스켈레톤
 								[0, 1, 2, 3].map((i) => (
 									<div
 										key={i}
-								className="h-[180px] rounded-2xl border border-neutral-200 bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-800/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
+								className="h-[160px] sm:h-[180px] rounded-2xl border border-neutral-200 bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-800/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.03)] animate-pulse"
 									/>
 								))
 							) : displayedPastChallenges.length > 0 ? (
@@ -382,48 +382,48 @@ export default function ChallengeListPage() {
 								displayedPastChallenges.map((challenge) => (
 									<div
 										key={challenge.id}
-								className="group h-[180px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+								className="group h-[160px] sm:h-[180px] rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
 										onClick={() => navigate(`/challenge/${challenge.type.toLowerCase()}/${challenge.id}`)}
 									>
 										<div className="flex flex-col justify-between h-full">
 											<div className="flex-1 overflow-hidden min-h-0">
                                             <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-														challenge.type === 'CODE' 
-													? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
-													: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-													}`}>
-														{challenge.type === 'CODE' ? '코드' : '포트폴리오'}
-													</span>
+                                                <span className={`px-2 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-medium flex-shrink-0 ${
+													challenge.type === 'CODE' 
+												? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+												: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+												}`}>
+													{challenge.type === 'CODE' ? '코드' : '포트폴리오'}
+												</span>
                                                 {/* 상태 배지: 지난 챌린지는 모두 종료 처리 */}
-											<span className="ml-1 inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300 flex-shrink-0">
+										<span className="ml-1 inline-flex items-center rounded-full border px-2 py-0.5 sm:py-1 text-[11px] sm:text-[12px] font-medium border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300 flex-shrink-0">
                                                     종료
                                                 </span>
-												</div>
-											<h4 className="font-semibold text-sm text-neutral-800 dark:text-neutral-200 mb-2 line-clamp-2">
-													{challenge.subtitle}
-												</h4>
-											<div className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3">
-													{challenge.description}
-												</div>
-										</div>
-										<div className="flex items-center justify-between mt-2 flex-shrink-0 text-xs">
-											<span className="text-neutral-500 dark:text-neutral-400">
-												✅ 종료된 챌린지
-											</span>
-											<span className="text-neutral-500 dark:text-neutral-400">
-												{challenge.ctaLabel}
-											</span>
-										</div>
+											</div>
+										<h4 className="font-semibold text-[13px] sm:text-sm text-neutral-800 dark:text-neutral-200 mb-1 sm:mb-2 line-clamp-2">
+												{challenge.subtitle}
+											</h4>
+										<div className="text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 sm:line-clamp-3">
+												{challenge.description}
+											</div>
+									</div>
+									<div className="flex items-center justify-between mt-2 flex-shrink-0 text-[11px] sm:text-xs">
+										<span className="text-neutral-500 dark:text-neutral-400">
+											✅ 종료된 챌린지
+										</span>
+										<span className="text-neutral-500 dark:text-neutral-400 truncate ml-1">
+											{challenge.ctaLabel}
+										</span>
 									</div>
 								</div>
-							))) : (
-								// 데이터가 없을 때
-								<div className="col-span-full flex items-center justify-center py-8 text-neutral-500">
-									<p className="text-sm">아직 지난 챌린지가 없습니다.</p>
-								</div>
-							)}
-						</div>
+							</div>
+						))) : (
+							// 데이터가 없을 때
+							<div className="col-span-full flex items-center justify-center py-8 text-neutral-500">
+								<p className="text-sm">아직 지난 챌린지가 없습니다.</p>
+							</div>
+						)}
+					</div>
 
 						{/* ➡️ 오른쪽 버튼: 카드 밖으로 살짝 */}
 						<button

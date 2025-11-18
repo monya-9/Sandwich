@@ -435,28 +435,28 @@ export default function PortfolioSubmitPage() {
                 closable={true}
                 onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
             />
-            <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
+            <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:py-6 md:px-6 md:py-10">
                 <LoginRequiredModal open={loginOpen && !isLoggedIn} onClose={() => setLoginOpen(false)} />
                 
                 {loading ? (
                     /* 로딩 상태 - 전체 화면 */
-                    <div className="flex items-center justify-center py-16">
+                    <div className="flex items-center justify-center py-12 sm:py-16">
                         <div className="text-center">
                             <div className="flex items-center justify-center gap-3 text-neutral-600 dark:text-neutral-300 mb-4">
                                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 dark:border-neutral-600"></div>
-                                <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
+                                <span className="text-base sm:text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
                             </div>
                             <p className="text-sm text-neutral-500 dark:text-neutral-400">잠시만 기다려주세요</p>
                         </div>
                     </div>
                 ) : challengeExists === false ? (
                     /* 챌린지가 존재하지 않는 경우 */
-                    <div className="flex items-center justify-center py-16">
-                        <div className="text-center">
-                            <div className="text-red-600 dark:text-red-400 text-lg font-medium mb-4">
+                    <div className="flex items-center justify-center py-12 sm:py-16">
+                        <div className="text-center px-4">
+                            <div className="text-red-600 dark:text-red-400 text-base sm:text-lg font-medium mb-4">
                                 존재하지 않는 챌린지입니다
                             </div>
-                            <p className="text-gray-600 dark:text-neutral-400 mb-6">
+                            <p className="text-sm sm:text-base text-gray-600 dark:text-neutral-400 mb-6">
                                 챌린지 ID {id}가 존재하지 않습니다. 챌린지 목록에서 확인해주세요.
                             </p>
                             <CTAButton as="button" onClick={() => nav('/challenge')}>
@@ -466,7 +466,7 @@ export default function PortfolioSubmitPage() {
                     </div>
                 ) : (
                     <>
-                        <div className="mb-4 flex items(center) gap-2">
+                        <div className="mb-3 sm:mb-4 flex items-center gap-2">
                             <button
                                 onClick={() => nav(`/challenge/portfolio/${id}`)}
                                 aria-label="뒤로가기"
@@ -474,19 +474,19 @@ export default function PortfolioSubmitPage() {
                             >
                                 <ChevronLeft className="h-5 w-5 dark:text-white" />
                             </button>
-                            <h1 className="text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px] dark:text-white">
+                            <h1 className="text-[18px] font-extrabold tracking-[-0.01em] sm:text-[20px] md:text-[22px] dark:text-white">
                                 {data?.title || '포트폴리오 챌린지'} — {isEditMode ? '프로젝트 수정' : '프로젝트 제출'}
                             </h1>
                         </div>
 
-            <SectionCard className="!px-5 !py-5 mb-4">
-                <div className="text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-200 whitespace-pre-line">{data?.description || '포트폴리오 챌린지에 참여해보세요.'}</div>
+            <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5 mb-4">
+                <div className="text-[13px] sm:text-[13.5px] leading-6 sm:leading-7 text-neutral-800 dark:text-neutral-200 whitespace-pre-line">{data?.description || '포트폴리오 챌린지에 참여해보세요.'}</div>
                 
                 {/* 필수 조건 섹션 - AI API의 mustHave 데이터 사용 */}
                 {mustHave.length > 0 && (
                     <div className="mt-4">
-                        <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white mb-2">📋 필수 조건</h3>
-                        <ul className="list-disc pl-5 text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-200 space-y-1">
+                        <h3 className="text-[13px] sm:text-[14px] font-semibold text-neutral-900 dark:text-white mb-2">📋 필수 조건</h3>
+                        <ul className="list-disc pl-5 text-[13px] sm:text-[13.5px] leading-6 sm:leading-7 text-neutral-800 dark:text-neutral-200 space-y-1">
                             {mustHave.map((requirement, index) => (
                                 <li key={index}>{requirement}</li>
                             ))}
@@ -496,8 +496,8 @@ export default function PortfolioSubmitPage() {
                 
                 {/* 기본 안내사항 */}
                 <div className="mt-4">
-                    <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white mb-2">ℹ️ 제출 안내</h3>
-                    <ul className="list-disc pl-5 text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-200 space-y-1">
+                    <h3 className="text-[13px] sm:text-[14px] font-semibold text-neutral-900 dark:text-white mb-2">ℹ️ 제출 안내</h3>
+                    <ul className="list-disc pl-5 text-[13px] sm:text-[13.5px] leading-6 sm:leading-7 text-neutral-800 dark:text-neutral-200 space-y-1">
                         <li>이 챌린지는 <b>사용자 투표 100%</b>로 순위가 결정돼요.</li>
                         <li>GitHub 레포는 public 권장(또는 제출 후 접근 권한 안내).</li>
                         <li>데모 URL이 없어도 설명만 제출해도 됩니다.</li>
@@ -508,13 +508,13 @@ export default function PortfolioSubmitPage() {
             <div className="mb-3 flex gap-2">
                 <button
                     onClick={() => setTab("edit")}
-                    className={`rounded-full px-3 py-1.5 text-[13px] ${tab === "edit" ? "bg-emerald-600 text-white" : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"}`}
+                    className={`rounded-full px-3 py-1.5 text-[12px] sm:text-[13px] ${tab === "edit" ? "bg-emerald-600 text-white" : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"}`}
                 >
                     작성
                 </button>
                 <button
                     onClick={() => setTab("preview")}
-                    className={`rounded-full px-3 py-1.5 text-[13px] ${tab === "preview" ? "bg-emerald-600 text-white" : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"}`}
+                    className={`rounded-full px-3 py-1.5 text-[12px] sm:text-[13px] ${tab === "preview" ? "bg-emerald-600 text-white" : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"}`}
                 >
                     미리보기
                 </button>
@@ -522,12 +522,12 @@ export default function PortfolioSubmitPage() {
 
             <div>
                 {tab === "edit" ? (
-                    <SectionCard className="!px-5 !py-5">
-                        <div className="space-y-4">
+                    <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5">
+                        <div className="space-y-3 sm:space-y-4">
                             <Row>
                                 <Label>프로젝트 제목</Label>
                                 <input
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.title}
                                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                                     placeholder="예) 레트로 감성 블로그"
@@ -536,7 +536,7 @@ export default function PortfolioSubmitPage() {
 
                             <Row>
                                 <Label>참여 형태</Label>
-                                <div className="flex gap-4 text-[13.5px]">
+                                <div className="flex gap-4 text-[13px] sm:text-[13.5px]">
                                     <label className="inline-flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="radio"
@@ -564,7 +564,7 @@ export default function PortfolioSubmitPage() {
                                 <Row>
                                     <Label>팀명</Label>
                                     <input
-                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
+                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.teamName}
                                         onChange={(e) => setForm((f) => ({ ...f, teamName: e.target.value }))}
                                         placeholder="예) 레트로감성조"
@@ -577,7 +577,7 @@ export default function PortfolioSubmitPage() {
                                     <Label>구성원/역할</Label>
                                     <textarea
                                         rows={4}
-                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
+                                        className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                         value={form.membersText}
                                         onChange={(e) => setForm((f) => ({ ...f, membersText: e.target.value }))}
                                         placeholder={"예)\n민준 - 프론트엔드\n소희 - 디자인/UI"}
@@ -588,7 +588,7 @@ export default function PortfolioSubmitPage() {
                             <Row>
                                 <Label>GitHub 링크</Label>
                                 <input
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.repoUrl}
                                     onChange={(e) => setForm((f) => ({ ...f, repoUrl: e.target.value }))}
                                     placeholder="https://github.com/team/repo"
@@ -598,7 +598,7 @@ export default function PortfolioSubmitPage() {
                             <Row>
                                 <Label>데모 URL</Label>
                                 <input
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.demoUrl}
                                     onChange={(e) => setForm((f) => ({ ...f, demoUrl: e.target.value }))}
                                     placeholder="https://your-demo.example.com"
@@ -764,7 +764,7 @@ export default function PortfolioSubmitPage() {
                                 <Label>포트폴리오 설명</Label>
                                 <textarea
                                     rows={6}
-                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
+                                    className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px] outline-none focus:border-emerald-500 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:placeholder-neutral-500"
                                     value={form.desc}
                                     onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))}
                                     placeholder="포트폴리오에 대해서 간략하게 설명해주세요."
@@ -780,7 +780,7 @@ export default function PortfolioSubmitPage() {
                                         onChange={(e) => setForm((f) => ({ ...f, isPublic: e.target.checked }))}
                                         className="w-4 h-4 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500"
                                     />
-                                    <span className="text-[13.5px] text-neutral-800 dark:text-neutral-200">
+                                    <span className="text-[13px] sm:text-[13.5px] text-neutral-800 dark:text-neutral-200">
                                         제출물을 다른 사용자에게 공개합니다
                                     </span>
                                 </label>
@@ -812,24 +812,24 @@ export default function PortfolioSubmitPage() {
                         </div>
                     </SectionCard>
                 ) : (
-                    <SectionCard className="!px-5 !py-5">
-                        <h3 className="mb-3 text-[15px] font-bold dark:text-white">🖼️ 미리보기</h3>
-                        <div className="grid gap-4 md:grid-cols-[2fr_3fr]">
+                    <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5">
+                        <h3 className="mb-3 text-[14px] sm:text-[15px] font-bold dark:text-white">🖼️ 미리보기</h3>
+                        <div className="grid gap-4 grid-cols-1 md:grid-cols-[2fr_3fr]">
                             {/* 좌측: 커버 이미지 (폼과 동일 4:3) */}
                             <div className="relative w-full">
                                 <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg border bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-600">
                                     {form.coverUrl ? (
                                         <img src={form.coverUrl} alt="커버 이미지" className="absolute inset-0 w-full h-full object-cover" />
                                     ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center text-neutral-400 dark:text-neutral-500 text-sm">커버 이미지 없음</div>
+                                        <div className="absolute inset-0 flex items-center justify-center text-neutral-400 dark:text-neutral-500 text-xs sm:text-sm">커버 이미지 없음</div>
                                     )}
                                 </div>
                             </div>
 
                             {/* 우측: 입력폼과 동일한 정보 구성 */}
-                            <div className="space-y-3 text-[13.5px] leading-7 dark:text-neutral-200">
+                            <div className="space-y-3 text-[13px] sm:text-[13.5px] leading-6 sm:leading-7 dark:text-neutral-200">
                                 <div>
-                                    <div className="text-[16px] font-extrabold tracking-[-0.01em] dark:text-white">{form.title || "제목 미입력"}</div>
+                                    <div className="text-[15px] sm:text-[16px] font-extrabold tracking-[-0.01em] dark:text-white">{form.title || "제목 미입력"}</div>
                                     {form.summary && <div className="text-neutral-600 dark:text-neutral-400 mt-1">{form.summary}</div>}
                                 </div>
 
@@ -910,10 +910,10 @@ export default function PortfolioSubmitPage() {
                     </SectionCard>
                 )}
 
-                <SectionCard className="!px-5 !py-5">
-                    <h3 className="mb-3 text-[15px] font-bold">📌 제출 가이드</h3>
+                <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5">
+                    <h3 className="mb-3 text-[14px] sm:text-[15px] font-bold">📌 제출 가이드</h3>
                     <GreenBox>
-                        <ul className="list-disc pl-5 text-[13.5px] leading-7 text-neutral-800">
+                        <ul className="list-disc pl-5 text-[13px] sm:text-[13.5px] leading-6 sm:leading-7 text-neutral-800">
                             <li>투표 기간 중에는 작품이 리스트에 공개돼요.</li>
                             <li>표절/저작권 침해 금지, 참고 자료는 출처를 적어주세요.</li>
                             <li>팀 구성 시 역할과 기여도를 설명에 간단히 써 주세요.</li>
