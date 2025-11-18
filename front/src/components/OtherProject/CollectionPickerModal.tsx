@@ -154,7 +154,7 @@ export default function CollectionPickerModal({ open, onClose, projectId, initia
     }
   };
 
-  const modalPortal = open ? (
+  const modalPortal = open ? ReactDOM.createPortal(
     <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-4" aria-modal="true" role="dialog">
       <div className="absolute inset-0 bg-[rgba(0,0,0,0.55)]" onClick={onClose} />
       {/* 선택 모달 */}
@@ -250,7 +250,8 @@ export default function CollectionPickerModal({ open, onClose, projectId, initia
           }}
         />
       )}
-    </div>
+    </div>,
+    document.body
   ) : null;
 
   // 토스트는 모달 열림 여부와 무관하게 별도 포털에서 렌더링

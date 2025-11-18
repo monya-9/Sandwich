@@ -108,13 +108,13 @@ export default function CollectionDetailPage() {
 
   const goProject = async (p: { id: number; ownerId?: number }) => {
     const direct = Number(p.ownerId || 0);
-    if (direct > 0) { navigate(`/other-project/${direct}/${p.id}`); return; }
+    if (direct > 0) { navigate(`/other-project/${direct}/${p.id}`, { state: { fromApp: true } }); return; }
     // 보강: 최신 피드에서 해당 프로젝트의 owner 탐색
     try {
       const feed = await fetchProjectFeed({ page: 0, size: 200, sort: 'latest' });
       const match = (feed.content || []).find((it: any) => it?.id === p.id);
       const resolved = (match as any)?.owner?.id || (match as any)?.authorId;
-      if (resolved) { navigate(`/other-project/${resolved}/${p.id}`); return; }
+      if (resolved) { navigate(`/other-project/${resolved}/${p.id}`, { state: { fromApp: true } }); return; }
     } catch {}
     setBanner("작성자 정보를 찾을 수 없습니다.");
     setTimeout(() => setBanner(null), 2000);

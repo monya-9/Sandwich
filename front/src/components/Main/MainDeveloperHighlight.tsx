@@ -149,7 +149,7 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
                     className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-gray-300 dark:bg-gray-600 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation(); // 부모 클릭 이벤트 방지
-                      navigate(`/other-project/${developer.userId}/${project.projectId}`);
+                      navigate(`/other-project/${developer.userId}/${project.projectId}`, { state: { fromApp: true } });
                     }}
                   >
                     {project.coverUrl && project.coverUrl !== 'null' && !project.coverUrl.includes('cdn.example.com') ? (
