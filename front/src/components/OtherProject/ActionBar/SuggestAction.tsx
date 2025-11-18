@@ -236,31 +236,31 @@ export default function SuggestAction({ targetUserId, isMobile = false }: Props 
       {isModalOpen && !proposalOpen && !jobOfferOpen && !generalOpen && ReactDOM.createPortal(
         <>
           <div className="suggest-blur-bg" />
-          <div ref={modalRef} className="fixed left-1/2 top-1/2 z-[20001] w-[480px] max-w-[92vw] h-[480px] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl px-0 py-6" tabIndex={-1} role="dialog">
-            <button className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none" onClick={() => setIsModalOpen(false)} aria-label="닫기">×</button>
-            <div className="mt-8 mb-6">
-              <div className="mx-auto w-[72px] h-[72px] rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] ring-1 ring-gray-300 dark:ring-[var(--border-color)] overflow-hidden flex items-center justify-center">
-                {profile?.profileImage ? (<img src={profile.profileImage} alt="avatar" className="w-full h-full object-cover" />) : (<span className="text-[22px] leading-none text-gray-700 dark:text-white bg-transparent">{targetInitial}</span>)}
+          <div ref={modalRef} className="fixed left-1/2 top-1/2 z-[99999] w-full sm:w-[480px] max-w-[92vw] h-auto max-h-[90vh] sm:h-[480px] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl px-0 py-4 sm:py-6" tabIndex={-1} role="dialog">
+            <button className="absolute right-1 top-0 sm:right-2 sm:top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none" onClick={() => setIsModalOpen(false)} aria-label="닫기">×</button>
+            <div className="mt-4 sm:mt-8 mb-4 sm:mb-6">
+              <div className="mx-auto w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] ring-1 ring-gray-300 dark:ring-[var(--border-color)] overflow-hidden flex items-center justify-center">
+                {profile?.profileImage ? (<img src={profile.profileImage} alt="avatar" className="w-full h-full object-cover" />) : (<span className="text-lg sm:text-[22px] leading-none text-gray-700 dark:text-white bg-transparent">{targetInitial}</span>)}
               </div>
             </div>
-            <div className="text-[20px] font-bold mb-1 text-black dark:text-white">{targetName}</div>
-            <div className="min-h-[18px] max-h-[18px] text-[13px] text-gray-500 dark:text-[var(--text-secondary)] px-6 text-center mb-6"><span className="inline-block max-w-[420px] whitespace-nowrap overflow-hidden text-ellipsis align-top" title=""></span></div>
+            <div className="text-lg sm:text-[20px] font-bold mb-1 text-black dark:text-white px-4 text-center">{targetName}</div>
+            <div className="min-h-[18px] max-h-[18px] text-xs sm:text-[13px] text-gray-500 dark:text-[var(--text-secondary)] px-4 sm:px-6 text-center mb-4 sm:mb-6"><span className="inline-block max-w-[420px] whitespace-nowrap overflow-hidden text-ellipsis align-top" title=""></span></div>
 
-            <div className="w-full px-6 pt-3 pb-10">
-              <div className="flex flex-col gap-3">
-                <button className="flex items-center w-full shrink-0 h-[64px] border border-gray-200 dark:border-[var(--border-color)] rounded-[10px] px-6 bg-white dark:bg-[var(--surface)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a]" style={{ justifyContent: "space-between" }} onClick={() => setProposalOpen(true)}>
-                  <span className="flex items-center gap-4"><span className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center">✓</span><span className="text-[16px] text-gray-800 dark:text-white">프로젝트 의뢰 및 프리랜서 제안하기</span></span>
-                  <span className="text-gray-400 dark:text-white/50 text-[16px]">→</span>
+            <div className="w-full px-4 sm:px-6 pt-2 sm:pt-3 pb-6 sm:pb-10">
+              <div className="flex flex-col gap-2 sm:gap-3">
+                <button className="flex items-center w-full shrink-0 h-14 sm:h-[64px] border border-gray-200 dark:border-[var(--border-color)] rounded-[10px] px-3 sm:px-6 bg-white dark:bg-[var(--surface)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a]" style={{ justifyContent: "space-between" }} onClick={() => setProposalOpen(true)}>
+                  <span className="flex items-center gap-2 sm:gap-4"><span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs sm:text-sm">✓</span><span className="text-xs sm:text-[16px] text-gray-800 dark:text-white text-left">프로젝트 의뢰 및 프리랜서 제안하기</span></span>
+                  <span className="text-gray-400 dark:text-white/50 text-sm sm:text-[16px] flex-shrink-0">→</span>
                 </button>
 
-                <button className="flex items-center w-full shrink-0 h-[64px] border border-gray-200 dark:border-[var(--border-color)] rounded-[10px] px-6 bg-white dark:bg-[var(--surface)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a]" style={{ justifyContent: "space-between" }} onClick={() => setJobOfferOpen(true)}>
-                  <span className="flex items-center gap-4"><span className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center"><BiBriefcase className="text-[14px]" /></span><span className="text-[16px] text-gray-800 dark:text-white">채용 제안하기</span></span>
-                  <span className="text-gray-400 dark:text-white/50 text-[16px]">→</span>
+                <button className="flex items-center w-full shrink-0 h-14 sm:h-[64px] border border-gray-200 dark:border-[var(--border-color)] rounded-[10px] px-3 sm:px-6 bg-white dark:bg-[var(--surface)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a]" style={{ justifyContent: "space-between" }} onClick={() => setJobOfferOpen(true)}>
+                  <span className="flex items-center gap-2 sm:gap-4"><span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center"><BiBriefcase className="text-xs sm:text-[14px]" /></span><span className="text-xs sm:text-[16px] text-gray-800 dark:text-white">채용 제안하기</span></span>
+                  <span className="text-gray-400 dark:text-white/50 text-sm sm:text-[16px] flex-shrink-0">→</span>
                 </button>
 
-                <button className="flex items-center w-full shrink-0 h-[64px] border border-gray-200 dark:border-[var(--border-color)] rounded-[10px] px-6 bg-white dark:bg-[var(--surface)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a]" style={{ justifyContent: "space-between" }} onClick={() => setGeneralOpen(true)}>
-                  <span className="flex items-center gap-4"><span className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center"><FaRegCommentDots className="text-[14px]" /></span><span className="text-[16px] text-gray-800 dark:text-white">일반 메시지</span></span>
-                  <span className="text-gray-400 dark:text-white/50 text-[16px]">→</span>
+                <button className="flex items-center w-full shrink-0 h-14 sm:h-[64px] border border-gray-200 dark:border-[var(--border-color)] rounded-[10px] px-3 sm:px-6 bg-white dark:bg-[var(--surface)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a]" style={{ justifyContent: "space-between" }} onClick={() => setGeneralOpen(true)}>
+                  <span className="flex items-center gap-2 sm:gap-4"><span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center"><FaRegCommentDots className="text-xs sm:text-[14px]" /></span><span className="text-xs sm:text-[16px] text-gray-800 dark:text-white">일반 메시지</span></span>
+                  <span className="text-gray-400 dark:text-white/50 text-sm sm:text-[16px] flex-shrink-0">→</span>
                 </button>
               </div>
             </div>

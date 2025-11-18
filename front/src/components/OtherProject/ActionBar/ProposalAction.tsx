@@ -229,7 +229,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
         <>
           {/* 투명 캡처 오버레이: 부모의 어두운 배경 유지 */}
           <div
-            className="fixed inset-0 z-[10009]"
+            className="fixed inset-0 z-[99998]"
             onClick={onClose}
             onWheel={(e) => e.preventDefault()}
             onTouchMove={(e) => e.preventDefault()}
@@ -239,31 +239,31 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[99999] w-full sm:w-[480px] max-w-[95vw] max-h-[90vh] sm:max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={fixedModalSize ? { width: fixedModalSize.w, height: fixedModalSize.h } : undefined}
           >
             {/* 헤더: 뒤로가기/중앙 사용자/닫기(X) + 구분선 */}
             <div className="relative px-2 pt-2 pb-2">
               {/* 뒤로가기 */}
               <button
-                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
+                className="absolute left-1 sm:left-2 top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none"
                 onClick={() => { onClose(); onBackToMenu?.(); }}
                 aria-label="뒤로가기"
               >
                 ‹
               </button>
               {/* 중앙 사용자 표시: 대상 사용자 */}
-              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
+              <div className="h-10 sm:h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
                 {profile?.profileImage ? (
-                  <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                  <img src={profile.profileImage} alt="avatar" className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover" />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[12px]">{targetInitial}</div>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[10px] sm:text-[12px]">{targetInitial}</div>
                 )}
-                <div className="text-[14px] font-medium">{targetName}</div>
+                <div className="text-[12px] sm:text-[14px] font-medium">{targetName}</div>
               </div>
               {/* 닫기(X): SuggestAction과 동일 크기/위치 */}
               <button
-                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
+                className="absolute right-1 sm:right-2 top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none"
                 onClick={onClose}
                 aria-label="닫기"
               >
@@ -274,12 +274,12 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 내용 영역 (타이틀/설명 + 폼 포함) */}
-            <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0" style={{ overscrollBehavior: "contain", scrollbarGutter: "stable both-edges" }}>
-              <div className="w-[400px] max-w-full mx-auto">
+            <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 overflow-y-auto flex-1 min-h-0" style={{ overscrollBehavior: "contain", scrollbarGutter: "stable both-edges" }}>
+              <div className="w-full sm:w-[400px] max-w-full mx-auto">
                 {/* 타이틀/설명 */}
-                <div className="text-center mb-3">
-                  <div className="text-[18px] font-bold text-gray-800 dark:text-white">프로젝트 의뢰 및 프리랜서 제안하기</div>
-                  <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
+                <div className="text-center mb-2 sm:mb-3">
+                  <div className="text-base sm:text-[18px] font-bold text-gray-800 dark:text-white">프로젝트 의뢰 및 프리랜서 제안하기</div>
+                  <div className="text-[10px] sm:text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
                 </div>
 
                 <form className="flex flex-col gap-3" onSubmit={submitForm}>
@@ -415,9 +415,9 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 하단 고정 버튼 바 */}
-            <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
-              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300">취소</button>
-              <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
+            <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-2 sm:gap-3">
+              <button type="button" onClick={onClose} className="px-3 sm:px-4 h-9 sm:h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 text-sm sm:text-base">취소</button>
+              <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-4 sm:px-5 h-9 sm:h-10 rounded text-white text-sm sm:text-base ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>
           </div>
         </>,
@@ -429,19 +429,19 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
     {Modal}
     {/* 메시지 자세히 보기 모달 */}
     {showMessageModal.visible && (
-      <div className="fixed inset-0 z-[10011] flex items-center justify-center bg-black/50" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
-        <div className="bg-white dark:bg-[var(--surface)] rounded-lg p-6 max-w-2xl w-[90vw] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">프로젝트 내용</h3>
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-3 sm:p-4" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
+        <div className="bg-white dark:bg-[var(--surface)] rounded-lg p-4 sm:p-6 max-w-2xl w-full sm:w-[90vw] max-h-[85vh] sm:max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">프로젝트 내용</h3>
             <button
               type="button"
               onClick={() => setShowMessageModal({ visible: false, content: "" })}
-              className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-2xl leading-none"
+              className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-xl sm:text-2xl leading-none"
             >
               ×
             </button>
           </div>
-          <div className="whitespace-pre-wrap text-sm text-gray-800 dark:text-white">
+          <div className="whitespace-pre-wrap text-xs sm:text-sm text-gray-800 dark:text-white">
             {showMessageModal.content}
           </div>
         </div>
