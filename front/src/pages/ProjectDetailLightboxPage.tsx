@@ -21,18 +21,6 @@ export default function ProjectDetailLightboxPage() {
   const [contents, setContents] = useState<ProjectContentResponseItem[]>([]);
   const [others, setOthers] = useState<Array<{ id: number; coverUrl?: string; title?: string }>>([]);
   const [author, setAuthor] = useState<{ id: number; nickname?: string } | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // 다크모드 감지
-  useEffect(() => {
-    const checkDarkMode = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
-    };
-    checkDarkMode();
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     if (!ownerId || !projectId) return;
@@ -95,54 +83,37 @@ export default function ProjectDetailLightboxPage() {
     return {} as any;
   }, [contents]);
   const pageBg = (meta as any)?.bg || "#f5f6f8";
+  const savedTextColor = (meta as any)?.textColor;
   
-  // 배경색의 밝기를 계산하는 함수 (0~255)
-  const getLuminance = (hex: string) => {
+  // 사용자가 설정한 배경색을 그대로 사용 (테마에 따라 변경하지 않음)
+  const effectiveBg = pageBg;
+  
+  // 텍스트 색상 결정: 저장된 값이 있으면 사용, 없으면 기본값(라이트=검은색, 다크=흰색)
+  const getDefaultTextColor = () => {
     try {
-      const rgb = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-      if (!rgb) return 128;
-      const r = parseInt(rgb[1], 16);
-      const g = parseInt(rgb[2], 16);
-      const b = parseInt(rgb[3], 16);
-      // 밝기 계산 (perceived luminance)
-      return 0.299 * r + 0.587 * g + 0.114 * b;
+      return document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000';
     } catch {
-      return 128;
+      return '#000000';
     }
   };
-  
-  // 흰색/검은색 여부 확인
-  const isWhiteOrBlack = (color: string) => {
-    const normalized = color.toUpperCase().replace(/\s/g, '');
-    return normalized === '#FFFFFF' || normalized === '#FFF' || 
-           normalized === '#000000' || normalized === '#000';
-  };
-  
-  // 배경색 결정: 흰색/검은색이면 모드에 따라 전환, 아니면 설정한 색 그대로
-  const effectiveBg = (() => {
-    if (isWhiteOrBlack(pageBg)) {
-      // 흰색/검은색: 다크모드면 검은색, 라이트모드면 흰색
-      return isDarkMode ? '#000000' : '#FFFFFF';
-    } else {
-      // 다른 색상: 그대로 사용
-      return pageBg;
-    }
-  })();
-  
-  // 배경색의 밝기에 따라 텍스트 색상 결정
-  const textColor = getLuminance(effectiveBg) < 128 ? '#FFFFFF' : '#000000';
+  const textColor = savedTextColor || getDefaultTextColor();
 
   const closeLightbox = () => { try { nav(-1); } catch { nav("/search"); } };
 
   return (
     <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black">
+      <style>{`
+        .project-content-editor.ql-editor {
+          color: ${textColor} !important;
+        }
+      `}</style>
       <div className="w-full flex justify-center items-start">
         <div className="flex flex-row items-start w-full" style={{ maxWidth: 1440 }}>
           {/* 캔버스 영역 */}
           <div className="flex-1 overflow-x-hidden">
             <div className="max-w-[1200px] mx-auto py-6 px-6">
               <div className="ql-snow" style={{ backgroundColor: effectiveBg, color: textColor }}>
-                <div className="ql-editor" dangerouslySetInnerHTML={{ __html: normalizedHtml }} />
+                <div className="ql-editor project-content-editor" style={{ color: textColor }} dangerouslySetInnerHTML={{ __html: normalizedHtml }} />
               </div>
               <div className="mt-6">
                 <ProjectStatsBox likes={0} views={0} comments={0} projectName={projectDetail?.title || ""} date={new Date().toLocaleDateString()} category={projectDetail?.tools || ""} projectId={projectId} />

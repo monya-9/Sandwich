@@ -1279,8 +1279,109 @@ export default function ProjectMangeSampleForm() {
 
    async function persistContents(userId: number, projectId: number, isEdit: boolean) {
       const items = extractContentItems();
-      // 폼 설정을 보존하기 위한 메타 아이템 추가 (배경색/간격)
-      const metaData = `<!--PM_META{"bg":"${backgroundColor}","gap":${contentGapPx}}-->`;
+      
+      // Quill 에디터에서 사용자가 설정한 텍스트 색상 추출
+      const extractTextColorFromEditor = (): string | null => {
+         try {
+            const editor = mainQuillRef.current?.getEditor();
+            if (!editor) return null;
+            const root = editor.root as HTMLElement;
+            const html = root.innerHTML;
+            
+            // HTML에서 color 스타일 추출
+            const colorMatches = html.match(/color:\s*([^;'"]+)/gi);
+            if (!colorMatches || colorMatches.length === 0) return null;
+            
+            // 가장 많이 사용된 색상 찾기 (사용자가 의도적으로 설정한 색상일 가능성)
+            const colorCounts = new Map<string, number>();
+            colorMatches.forEach(match => {
+               const color = match.replace(/color:\s*/i, '').trim();
+               // hex 색상으로 정규화
+               let normalizedColor = color;
+               if (color.startsWith('#')) {
+                  normalizedColor = color.toUpperCase();
+               } else if (color.startsWith('rgb')) {
+                  // rgb를 hex로 변환 (간단한 경우만)
+                  const rgbMatch = color.match(/\d+/g);
+                  if (rgbMatch && rgbMatch.length >= 3) {
+                     const r = parseInt(rgbMatch[0]);
+                     const g = parseInt(rgbMatch[1]);
+                     const b = parseInt(rgbMatch[2]);
+                     normalizedColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
+                  }
+               }
+               
+               // 기본 색상(검은색, 흰색)이 아닌 경우만 카운트
+               const isDefault = normalizedColor === '#000000' || normalizedColor === '#FFFFFF' || 
+                                 normalizedColor === '#000' || normalizedColor === '#FFF' ||
+                                 normalizedColor === 'BLACK' || normalizedColor === 'WHITE';
+               if (!isDefault) {
+                  colorCounts.set(normalizedColor, (colorCounts.get(normalizedColor) || 0) + 1);
+               }
+            });
+            
+            // 가장 많이 사용된 색상 반환
+            if (colorCounts.size > 0) {
+               let maxCount = 0;
+               let mostUsedColor = '';
+               colorCounts.forEach((count, color) => {
+                  if (count > maxCount) {
+                     maxCount = count;
+                     mostUsedColor = color;
+                  }
+               });
+               return mostUsedColor || null;
+            }
+            
+            // 모든 텍스트가 같은 색상인지 확인
+            const allTextElements = root.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div');
+            const uniqueColors = new Set<string>();
+            allTextElements.forEach(el => {
+               const style = window.getComputedStyle(el);
+               const color = style.color;
+               if (color && color !== 'rgb(0, 0, 0)' && color !== 'rgb(255, 255, 255)') {
+                  // rgb를 hex로 변환
+                  const rgbMatch = color.match(/\d+/g);
+                  if (rgbMatch && rgbMatch.length >= 3) {
+                     const r = parseInt(rgbMatch[0]);
+                     const g = parseInt(rgbMatch[1]);
+                     const b = parseInt(rgbMatch[2]);
+                     const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
+                     if (hex !== '#000000' && hex !== '#FFFFFF') {
+                        uniqueColors.add(hex);
+                     }
+                  }
+               }
+            });
+            
+            // 하나의 색상만 사용된 경우 반환
+            if (uniqueColors.size === 1) {
+               return Array.from(uniqueColors)[0];
+            }
+            
+            return null;
+         } catch {
+            return null;
+         }
+      };
+      
+      const userTextColor = extractTextColorFromEditor();
+      
+      // 기본 텍스트 색상 결정 (라이트=검은색, 다크=흰색)
+      const getDefaultTextColor = () => {
+         try {
+            return document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000';
+         } catch {
+            return '#000000';
+         }
+      };
+      
+      // 사용자가 색상을 변경했으면 그 값을, 아니면 현재 테마의 기본 색상을 저장
+      const textColorToSave = userTextColor || getDefaultTextColor();
+      
+      // 폼 설정을 보존하기 위한 메타 아이템 추가 (배경색/텍스트색/간격)
+      const metaObj: any = { bg: backgroundColor, gap: contentGapPx, textColor: textColorToSave };
+      const metaData = `<!--PM_META${JSON.stringify(metaObj)}-->`;
       const withMeta = [{ type: 'TEXT' as const, data: metaData, order: 0 }, ...items.map(it => ({ ...it, order: (it.order ?? 0) + 1 }))];
       if (isEdit) {
          try { await deleteAllProjectContents(userId, projectId); } catch {}
