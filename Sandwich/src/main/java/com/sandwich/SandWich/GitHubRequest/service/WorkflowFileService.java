@@ -65,7 +65,7 @@ public class WorkflowFileService {
         String jsonContent = String.format("""
             {
               "frontendBuildCommand": "%s",
-              "backendBuildCommand": "%s"
+              "backendBuildCommand": "%s",
               "outputDirectory": "build"
             }
         """, frontendBuildCmd, backendBuildCmd);

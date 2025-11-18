@@ -433,10 +433,32 @@ const MainPage = () => {
     [recoProjects, selectedCategory]
   );
 
+  // 화면 크기에 따른 메인 그리드 개수
+  const [mainGridCount, setMainGridCount] = useState(10);
+  
+  useEffect(() => {
+    const updateMainGridCount = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setMainGridCount(4); // 모바일: 2개 × 2줄
+      } else if (width < 768) {
+        setMainGridCount(4); // sm: 2개 × 2줄
+      } else if (width < 1024) {
+        setMainGridCount(6); // md: 3개 × 2줄
+      } else {
+        setMainGridCount(10); // lg/xl: 5개 × 2줄
+      }
+    };
+
+    updateMainGridCount();
+    window.addEventListener('resize', updateMainGridCount);
+    return () => window.removeEventListener('resize', updateMainGridCount);
+  }, []);
+
   // 렌더 소스 선택 (정렬된 데이터 사용)
   const gridPrimary = useMemo(() => 
-    hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10),
-    [hasReco, filteredRecoProjects, sortedProjects]
+    hasReco ? filteredRecoProjects.slice(0, mainGridCount) : sortedProjects.slice(0, mainGridCount),
+    [hasReco, filteredRecoProjects, sortedProjects, mainGridCount]
   );
   
   const heroProjects = useMemo(() => 
@@ -446,9 +468,9 @@ const MainPage = () => {
   
   const gridMore = useMemo(() => 
     hasReco
-      ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
-      : sortedProjects.slice(10),
-    [hasReco, filteredRecoProjects, sortedProjects]
+      ? (filteredRecoProjects.length > mainGridCount ? filteredRecoProjects.slice(mainGridCount) : sortedProjects.slice(mainGridCount))
+      : sortedProjects.slice(mainGridCount),
+    [hasReco, filteredRecoProjects, sortedProjects, mainGridCount]
   );
 
   // 그리드 제목: 정렬 방식에 따라 변경

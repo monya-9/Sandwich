@@ -48,15 +48,26 @@ public class CommentNotifyListener {
                 deepLink = "/challenges/" + id;
                 break;
             }
-            case "CODE_SUBMISSION":
+            case "CODE_SUBMISSION": {
+                var subOpt = submissionRepository.findById(id);
+                if (subOpt.isPresent()) {
+                    var sub = subOpt.get();
+                    Long chId = sub.getChallenge().getId();
+                    deepLink = "/challenge/code/" + chId + "/submissions/" + sub.getId();
+                } else {
+                    log.warn("[CommentNotify] CODE_SUBMISSION not found for id={}", id);
+                    deepLink = "/";
+                }
+                break;
+            }
             case "PORTFOLIO_SUBMISSION": {
                 var subOpt = submissionRepository.findById(id);
                 if (subOpt.isPresent()) {
                     var sub = subOpt.get();
                     Long chId = sub.getChallenge().getId();
-                    deepLink = "/challenges/" + chId + "/submissions/" + sub.getId();
+                    deepLink = "/challenge/portfolio/" + chId + "/vote/" + sub.getId();
                 } else {
-                    log.warn("[CommentNotify] SUBMISSION not found for id={}", id);
+                    log.warn("[CommentNotify] PORTFOLIO_SUBMISSION not found for id={}", id);
                     deepLink = "/";
                 }
                 break;
