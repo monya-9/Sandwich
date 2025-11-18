@@ -40,46 +40,46 @@ export default function QrCodeAction({ qrImageUrl, title, thumbnailUrl, isMobile
         <>
           {/* 배경 */}
           <div
-            className="fixed inset-0 z-[10000]"
+            className="fixed inset-0 z-[99998]"
             style={{ background: "rgba(0, 0, 0, 0.65)" }}
             onClick={() => setOpen(false)}
           />
 
           {/* 컨테이너 */}
-          <div className="fixed z-[10001] inset-0 flex items-center justify-center">
+          <div className="fixed z-[99999] inset-0 flex items-center justify-center p-3 sm:p-4">
             <div
-              className="bg-white w-[520px] max-w-[95vw] rounded-2xl shadow-2xl px-9 py-8 relative flex flex-col"
+              className="bg-white dark:bg-[var(--surface)] w-full sm:w-[520px] max-w-[95vw] rounded-xl sm:rounded-2xl shadow-2xl px-4 py-6 sm:px-6 sm:py-7 md:px-9 md:py-8 relative flex flex-col"
               style={{ fontFamily: "GmarketSans, sans-serif" }}
             >
               {/* 닫기 */}
               <button
                 onClick={() => setOpen(false)}
-                className="absolute right-8 top-8 text-gray-400 hover:text-black text-3xl"
+                className="absolute right-4 top-4 sm:right-6 sm:top-6 md:right-8 md:top-8 text-gray-400 hover:text-black dark:hover:text-white text-2xl sm:text-3xl"
                 aria-label="닫기"
               >✕</button>
 
               {/* 제목 */}
-              <div className="w-full font-bold text-[22px] mb-6 text-left pl-1 leading-tight">QR코드</div>
-              <div className="w-full h-px bg-gray-200 mb-7" />
+              <div className="w-full font-bold text-lg sm:text-xl md:text-[22px] mb-4 sm:mb-5 md:mb-6 text-left pl-0 sm:pl-1 leading-tight dark:text-white">QR코드</div>
+              <div className="w-full h-px bg-gray-200 dark:bg-[var(--border-color)] mb-4 sm:mb-5 md:mb-7" />
 
               {/* 썸네일 + 타이틀 */}
-              <div className="flex items-center w-full mb-7 pl-1">
+              <div className="flex items-center w-full mb-4 sm:mb-5 md:mb-7 pl-0 sm:pl-1">
                 <img
                   src={finalThumb}
                   alt="썸네일"
-                  className="w-14 h-14 rounded-lg bg-gray-100 object-cover flex-shrink-0"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gray-100 dark:bg-[var(--surface)] object-cover flex-shrink-0"
                 />
-                <div className="ml-4 flex flex-col justify-center">
-                  <div className="font-bold text-[15px] text-black leading-snug whitespace-pre-line">
+                <div className="ml-3 sm:ml-4 flex flex-col justify-center min-w-0 flex-1">
+                  <div className="font-bold text-sm sm:text-[15px] text-black dark:text-white leading-snug whitespace-pre-line line-clamp-2">
                     {finalTitle}
                   </div>
                 </div>
               </div>
-              <div className="w-full h-px bg-gray-200 mb-6" />
+              <div className="w-full h-px bg-gray-200 dark:bg-[var(--border-color)] mb-4 sm:mb-5 md:mb-6" />
 
               {/* QR 이미지 영역 (SNS/URL 영역 대체) */}
-              <div className="w-full flex items-center justify-center py-3">
-                <img src={qrImageUrl} alt="프로젝트 QR" className="w-[320px] h-[320px] max-w-full max-h-[70vh] object-contain bg-white" />
+              <div className="w-full flex items-center justify-center py-2 sm:py-3">
+                <img src={qrImageUrl} alt="프로젝트 QR" className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] max-w-full max-h-[60vh] sm:max-h-[70vh] object-contain bg-white" />
               </div>
             </div>
           </div>

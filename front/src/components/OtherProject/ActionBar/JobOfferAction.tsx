@@ -224,7 +224,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
         <>
           {/* 투명 캡처 오버레이: 부모의 어두운 배경 유지 */}
           <div
-            className="fixed inset-0 z-[10009]"
+            className="fixed inset-0 z-[99998]"
             onClick={onClose}
             onWheel={(e) => e.preventDefault()}
             onTouchMove={(e) => e.preventDefault()}
@@ -234,28 +234,28 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[99999] w-full sm:w-[480px] max-w-[95vw] max-h-[90vh] sm:max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={fixedModalSize ? { width: fixedModalSize.w, height: fixedModalSize.h } : undefined}
           >
             {/* 헤더 */}
             <div className="relative px-2 pt-2 pb-2">
               <button
-                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
+                className="absolute left-1 sm:left-2 top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none"
                 onClick={() => { onClose(); onBackToMenu?.(); }}
                 aria-label="뒤로가기"
               >
                 ‹
               </button>
-              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
+              <div className="h-10 sm:h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
                 {profile?.profileImage ? (
-                  <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                  <img src={profile.profileImage} alt="avatar" className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover" />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[12px]">{targetInitial}</div>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[10px] sm:text-[12px]">{targetInitial}</div>
                 )}
-                <div className="text-[14px] font-medium">{targetName}</div>
+                <div className="text-[12px] sm:text-[14px] font-medium">{targetName}</div>
               </div>
               <button
-                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
+                className="absolute right-1 sm:right-2 top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none"
                 onClick={onClose}
                 aria-label="닫기"
               >
@@ -265,11 +265,11 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 내용 영역 */}
-            <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0" style={{ overscrollBehavior: "contain", scrollbarGutter: "stable both-edges" }}>
-              <div className="w-[400px] max-w-full mx-auto">
-                <div className="text-center mb-3">
-                  <div className="text-[18px] font-bold text-gray-800 dark:text-white">채용 제안하기</div>
-                  <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
+            <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 overflow-y-auto flex-1 min-h-0" style={{ overscrollBehavior: "contain", scrollbarGutter: "stable both-edges" }}>
+              <div className="w-full sm:w-[400px] max-w-full mx-auto">
+                <div className="text-center mb-2 sm:mb-3">
+                  <div className="text-base sm:text-[18px] font-bold text-gray-800 dark:text-white">채용 제안하기</div>
+                  <div className="text-[10px] sm:text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
                 </div>
 
                 <form className="flex flex-col gap-3" onSubmit={submitForm}>
@@ -372,9 +372,9 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 하단 고정 버튼 바 */}
-            <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
-              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300">취소</button>
-              <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
+            <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-2 sm:gap-3">
+              <button type="button" onClick={onClose} className="px-3 sm:px-4 h-9 sm:h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 text-sm sm:text-base">취소</button>
+              <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-4 sm:px-5 h-9 sm:h-10 rounded text-white text-sm sm:text-base ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>
           </div>
         </>,
