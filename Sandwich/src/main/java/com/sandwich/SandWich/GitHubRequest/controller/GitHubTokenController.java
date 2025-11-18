@@ -41,10 +41,10 @@ public class GitHubTokenController {
             @PathVariable Long projectId,
             @RequestParam String owner,
             @RequestParam String repo,
+            @RequestParam String branch,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
         Long userId = userDetails.getUser().getId();
-        String branch = "main";
         String sha = gitHubTokenService.getLatestCommitSha(userId, projectId, owner, repo, branch);
         return ResponseEntity.ok(sha);
     }
