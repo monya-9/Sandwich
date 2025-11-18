@@ -64,7 +64,7 @@ export default function ProjectStatsBox({ likes, views, comments, projectName, d
         {/* 프로젝트명, 날짜, 통계 */}
         {displayName && <div className="text-lg sm:text-xl md:text-2xl font-bold mb-1.5 sm:mb-2 text-center text-[#1F2937] px-2">{displayName}</div>}
         <div className="mb-4 sm:mb-5 md:mb-6 text-center text-[#374151] text-xs sm:text-sm md:text-base px-2">
-          {hasCategory ? (<>{date} | {category}</>) : date}
+          {date}
         </div>
         <div className="flex justify-center gap-4 sm:gap-6 md:gap-8 text-[#374151] text-sm sm:text-base md:text-lg flex-wrap px-2">
           <div className="inline-flex items-center gap-1.5 sm:gap-2 h-5 align-middle">
