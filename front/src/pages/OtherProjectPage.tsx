@@ -466,11 +466,11 @@ export default function OtherProjectPage() {
 
     // 기본: 모달 레이아웃
     const handleModalClose = () => {
-        // URL로 직접 접속한 경우 (state 없음) 메인으로, 아니면 뒤로 가기
-        if (!location.state) {
-            nav('/');
-        } else {
+        // 앱 내에서 네비게이션으로 온 경우(state.fromApp 또는 state.page 있음) 뒤로 가기, 아니면 메인으로
+        if ((location.state as any)?.fromApp || (location.state as any)?.page) {
             nav(-1);
+        } else {
+            nav('/');
         }
     };
 

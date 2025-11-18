@@ -66,7 +66,7 @@ const ProjectCard: React.FC<Props> = memo(({ project, indexInList }) => {
         // ownerId는 백엔드 owner.id 우선, 없으면 authorId 사용 (숫자만 허용)
         const ownerId = (project.owner && typeof project.owner.id === 'number' ? project.owner.id : (project.authorId || 0));
         if (ownerId) {
-            navigate(`/other-project/${ownerId}/${project.id}`);
+            navigate(`/other-project/${ownerId}/${project.id}`, { state: { fromApp: true } });
         }
     };
     

@@ -92,7 +92,13 @@ const NotificationDropdown: React.FC<Props> = ({
                                     className="w-full text-left p-1.5 sm:p-2 rounded-lg text-xs sm:text-sm hover:bg-gray-50 cursor-pointer focus:outline-none"
                                     onClick={() => {
                                         onClickItem(n.id);
-                                        nav(n.deepLink || "/");
+                                        // 프로젝트 페이지로 이동하는 경우 state 전달
+                                        const link = n.deepLink || "/";
+                                        if (link.includes('/other-project/')) {
+                                            nav(link, { state: { fromApp: true } });
+                                        } else {
+                                            nav(link);
+                                        }
                                     }}
                                 >
                                     <UnreadBadge

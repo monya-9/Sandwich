@@ -27,7 +27,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, searchTerm }) => {
 
   // 프로젝트 클릭 시 해당 프로젝트 페이지로 이동
   const handleProjectClick = (projectId: number) => {
-    navigate(`/other-project/${id}/${projectId}`);
+    navigate(`/other-project/${id}/${projectId}`, { state: { fromApp: true } });
   };
 
   return (

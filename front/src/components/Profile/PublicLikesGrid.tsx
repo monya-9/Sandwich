@@ -48,7 +48,7 @@ export default function PublicLikesGrid() {
         const cover = (p as any).coverUrl || resolveCover(p as any, { position: idx });
         const title = (p as any).title || "";
         const ownerId = (p as any).owner?.id || (p as any).authorId;
-        const go = () => navigate(`/other-project/${ownerId}/${(p as any).id}`);
+        const go = () => navigate(`/other-project/${ownerId}/${(p as any).id}`, { state: { fromApp: true } });
         return (
           <div key={p.id} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={go}>
             <div className="relative w-full aspect-[4/3] bg-gray-200 group">
