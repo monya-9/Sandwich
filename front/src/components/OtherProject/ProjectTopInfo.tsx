@@ -130,9 +130,9 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
 
   // 아바타 계산: 이미지 우선, 없으면 이메일 이니셜
   const avatar = ownerImageUrl ? (
-    <img src={ownerImageUrl} alt="avatar" className="w-14 h-14 rounded-full object-cover" />
+    <img src={ownerImageUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
   ) : (
-    <div className="w-14 h-14 rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center">
+    <div className="w-full h-full rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center text-lg sm:text-xl">
       {(ownerEmail?.[0] || userName?.[0] || "?").toUpperCase()}
     </div>
   );
@@ -141,31 +141,39 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
     <>
       <Toast visible={!!toast} message={toast === "follow" ? "사용자를 팔로우했습니다." : "사용자를 팔로우하지 않습니다."} type={toast === "follow" ? "success" : "info"} size="medium" autoClose={3000} closable={true} onClose={() => setToast(null)} icon={CheckIcon} />
       <Toast visible={errorToast.visible} message={errorToast.message} type="error" size="medium" autoClose={3000} closable={true} onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))} />
-      <div className="w-full flex items-start gap-4 mb-8">
+      <div className="w-full flex items-start gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
         {showLoginPrompt && (
           <LoginPrompt onLoginClick={() => { setShowLoginPrompt(false); navigate("/login"); }} onSignupClick={() => { setShowLoginPrompt(false); navigate("/join"); }} onClose={() => setShowLoginPrompt(false)} />
         )}
-        <div role="button" className="w-14 h-14 rounded-full flex-shrink-0 cursor-pointer overflow-hidden" onClick={() => ownerId && navigate(((Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0')) === ownerId) ? '/profile' : `/users/${ownerId}`)} title="프로필 보기">
+        <div role="button" className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex-shrink-0 cursor-pointer overflow-hidden" onClick={() => ownerId && navigate(((Number(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0')) === ownerId) ? '/profile' : `/users/${ownerId}`)} title="프로필 보기">
           {avatar}
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {/* 프로젝트 제목 - 한줄 소개 */}
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h1 className="text-xl font-bold text-black dark:text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap mb-1">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-black dark:text-white break-words">
               {projectName}
               {!!(intro && intro.trim()) && (
                 <span className="text-black dark:text-white font-normal"> - {intro}</span>
               )}
             </h1>
+            {/* 데스크톱: 제목 옆에 버튼 표시 */}
             {isOwner && (
-              <div className="flex items-center gap-2 ml-4">
-                <button className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[var(--surface)]/80 rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onEdit}>수정하기</button>
-                <button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onDelete}>삭제하기</button>
+              <div className="hidden sm:flex items-center gap-2 mt-1 sm:mt-0 sm:ml-4">
+                <button className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[var(--surface)]/80 rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-xs sm:text-sm font-semibold" onClick={onEdit}>수정하기</button>
+                <button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-xs sm:text-sm font-semibold" onClick={onDelete}>삭제하기</button>
               </div>
             )}
           </div>
           {/* 닉네임 */}
-          <div className="text-[18px] text-black dark:text-white">{userName}</div>
+          <div className="text-sm sm:text-base md:text-[18px] text-black dark:text-white truncate mb-2 sm:mb-0">{userName}</div>
+          {/* 모바일: 닉네임 아래 버튼 표시 */}
+          {isOwner && (
+            <div className="flex sm:hidden items-center gap-2 mt-2">
+              <button className="bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[var(--surface)]/80 rounded-full px-3 py-1 text-xs font-semibold" onClick={onEdit}>수정하기</button>
+              <button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-3 py-1 text-xs font-semibold" onClick={onDelete}>삭제하기</button>
+            </div>
+          )}
         </div>
       </div>
     </>
