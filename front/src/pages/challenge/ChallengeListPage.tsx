@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { dummyChallenges, getDynamicChallenges, getPastChallenges } from "../../data/Challenge/dummyChallenges";
 import ChallengeCard from "../../components/challenge/ChallengeCard";
 import { SectionCard } from "../../components/challenge/common";
-import WinnersSection from "../../components/challenge/WinnersSection";
-import CodeWinnersSection from "../../components/challenge/CodeWinnersSection";
+// 임시로 더미 데이터 컴포넌트 사용
+import WinnersSection from "../../components/challenge/WinnersSectionDummy";
+import CodeWinnersSection from "../../components/challenge/CodeWinnersSectionDummy";
 import { isAdmin } from "../../utils/authz";
 import type { ChallengeCardData } from "../../components/challenge/ChallengeCard";
 // 관리자 테이블/보상 로직은 전용 페이지로 이동됨
