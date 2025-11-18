@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import MonthSelect from "./MonthSelect";
+import YearSelect from "./YearSelect";
 import { AwardApi } from "../../api/awardApi";
 import Toast from "../common/Toast";
 
@@ -56,19 +57,9 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 		return Number.isFinite(n) ? n : null;
 	};
 
-	// 연도 유효성 검사
-	const currentYear = new Date().getFullYear();
-	const getYearError = (s: string): string | null => {
-		if (!s) return null;
-		if (s.length !== 4 || Number.isNaN(parseInt(s, 10))) return "날짜입력 형식이 아닙니다.";
-		if (parseInt(s, 10) > currentYear) return "이번년도 이전으로 설정해주세요.";
-		return null;
-	};
-	const yearError = getYearError(year);
-
 	// 폼 유효성
 	const requiredFilled = name.trim().length > 0 && org.trim().length > 0;
-	const yearValid = !!year && !yearError && year.length === 4;
+	const yearValid = !!year;
 	const isValid = requiredFilled && yearValid;
     const completeBtnCls = `px-4 h-[36px] rounded-[10px] text-[14px] ${isValid && !saving ? "bg-[#21B284] text-white" : "bg-[#E5E7EB] text-[#111827]"}`;
 
@@ -139,11 +130,7 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 				<div>
                     <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">수상일 <span className="text-green-500">*</span></label>
 						<div className="flex items-start gap-2 flex-nowrap">
-						<div className="relative flex-1 min-w-[120px]">
-                            <input type="text" maxLength={4} value={year} onChange={(e)=>setYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${yearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}`} placeholder="수상년도" aria-invalid={!!yearError} />
-							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{year.length}/4</span>
-							{yearError && <p className="mt-1 text-[12px] text-[#EF4444]">{yearError}</p>}
-						</div>
+						<YearSelect value={year} onChange={setYear} placeholder="수상년도" className="flex-1 min-w-[120px]" />
 						<MonthSelect value={month} onChange={setMonth} className="flex-1 min-w-[80px]" />
 					</div>
 				</div>
@@ -151,8 +138,24 @@ const AwardForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =>
 
 			{/* 설명 */}
             <div>
-                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명</label>
-                <textarea value={desc} onChange={(e)=>setDesc(e.target.value)} rows={6} className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="예) 맞춤형 대외활동 플랫폼 서비스를 개발하여 론칭하였습니다." />
+                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명 (최대 200자)</label>
+                <textarea 
+					value={desc} 
+					onChange={(e) => {
+						if (e.target.value.length <= 200) {
+							setDesc(e.target.value);
+						}
+					}} 
+					maxLength={200}
+					rows={6} 
+					className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" 
+					placeholder="예) 맞춤형 대외활동 플랫폼 서비스를 개발하여 론칭하였습니다." 
+				/>
+				<div className="flex justify-end mt-1">
+					<span className={`text-xs ${desc.length >= 200 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
+						{desc.length}/200
+					</span>
+				</div>
 			</div>
 
             <div className="flex items-center justify-between pt-1">
