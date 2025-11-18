@@ -348,9 +348,9 @@ export default function CommentPanel({
         onCancel={handleDeleteCancel}
       />
       {isMobile ? ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[99998] flex items-center justify-center p-3" onClick={onClose}>
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3" onClick={onClose}>
           <div className="absolute inset-0 bg-black/50" />
-          <div className="relative z-[99999] w-full max-w-[95vw]" onClick={(e) => e.stopPropagation()}>
+          <div className="relative z-[100001] w-full max-w-[95vw]" onClick={(e) => e.stopPropagation()}>
             {panelContent}
           </div>
         </div>,

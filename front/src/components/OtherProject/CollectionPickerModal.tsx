@@ -155,10 +155,10 @@ export default function CollectionPickerModal({ open, onClose, projectId, initia
   };
 
   const modalPortal = open ? (
-    <div className="fixed inset-0 z-[99998] flex items-center justify-center p-3 sm:p-4" aria-modal="true" role="dialog">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-4" aria-modal="true" role="dialog">
       <div className="absolute inset-0 bg-[rgba(0,0,0,0.55)]" onClick={onClose} />
       {/* 선택 모달 */}
-      <div className="relative z-[99999] w-full sm:max-w-[560px] max-w-[95vw] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
+      <div className="relative z-[100001] w-full sm:max-w-[560px] max-w-[95vw] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 h-12 sm:h-14 border-b border-black/10 dark:border-[var(--border-color)]">
           <div className="text-sm sm:text-[16px] font-semibold text-black dark:text-white">컬렉션 추가</div>
@@ -286,9 +286,9 @@ function CreateFolderModal({ onClose, onCreated }: { onClose: () => void; onCrea
   };
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[99998] flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-[rgba(0,0,0,0.55)]" onClick={onClose} />
-      <div className="relative z-[99999] w-full sm:max-w-[500px] max-w-[95vw] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
+      <div className="relative z-[100001] w-full sm:max-w-[500px] max-w-[95vw] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
         <div className="flex items-center justify-between px-4 sm:px-6 h-12 sm:h-14 border-b border-black/10 dark:border-[var(--border-color)]">
           <div className="text-sm sm:text-[16px] font-semibold text-black dark:text-white">컬렉션 폴더 만들기</div>
           <button aria-label="닫기" onClick={onClose} className="p-1.5 sm:p-2 rounded-md hover:bg-neutral-100 dark:hover:bg-white/5">
