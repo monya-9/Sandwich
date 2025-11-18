@@ -737,7 +737,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 
                 {/* 문자 수 표시 */}
                 <div className="flex justify-end">
-                    <span className={`text-xs ${text.length > 450 ? 'text-red-500' : text.length > 300 ? 'text-orange-500' : 'text-gray-400 dark:text-white/50'}`}>
+                    <span className={`text-xs ${text.length >= 500 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
                         {text.length}/500
                     </span>
                 </div>
