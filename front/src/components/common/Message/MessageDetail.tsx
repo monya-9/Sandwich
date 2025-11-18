@@ -44,8 +44,8 @@ type Props = {
 };
 
 /* ---------- 스타일 ---------- */
-const youBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-words";
-const meBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-words";
+const youBubble = "max-w-[calc(100vw-80px)] sm:max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-all";
+const meBubble = "max-w-[calc(100vw-80px)] sm:max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-all";
 
 /* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
