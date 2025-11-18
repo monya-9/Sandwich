@@ -86,7 +86,7 @@ function WinnerCard({ data }: { data: WinnerEntry }) {
             </div>
             
             {/* 점수 또는 크레딧 */}
-            <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+            <div className="bg-gray-800 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm w-16 sm:w-20 text-center mx-auto">
                 {data.score ? `${data.score.toFixed(2)}점` : credits ? `${credits.toLocaleString()}크레딧` : '0점'}
             </div>
         </div>

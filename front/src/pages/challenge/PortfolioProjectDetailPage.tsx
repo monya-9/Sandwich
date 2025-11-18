@@ -576,7 +576,7 @@ export default function PortfolioProjectDetailPage() {
     };
 
     return (
-        <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:py-6 md:px-6 md:py-10">
             {/* 토스트 */}
             <Toast
                 visible={toast.visible}
@@ -589,15 +589,15 @@ export default function PortfolioProjectDetailPage() {
             />
 
             {/* 헤더 */}
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-3 sm:mb-4 flex items-center gap-2 flex-wrap">
                 <button
                     onClick={() => nav(`/challenge/portfolio/${id}/vote`)}
-                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
+                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100 flex-shrink-0"
                     aria-label="뒤로가기"
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
+                <h1 className="text-[18px] sm:text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
                 {/* 상태 배지 */}
                 {(() => {
                     const now = new Date();
@@ -622,7 +622,7 @@ export default function PortfolioProjectDetailPage() {
             </div>
 
 
-            <SectionCard className="!px-5 !py-5">
+            <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5">
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2 justify-between">
                     <div className="flex items-center gap-2">
@@ -671,10 +671,10 @@ export default function PortfolioProjectDetailPage() {
                     
                     {/* 수정/삭제 버튼 (소유자이고 제출 기간 내이며 챌린지가 종료되지 않았을 때만 표시) */}
                     {isOwner && canEditOrDelete() && challengeStatus !== "ENDED" && !isChallengeEnded && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <button
                                 onClick={handleEdit}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-[12px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
                                 title="수정"
                             >
                                 <Edit2 className="h-3.5 w-3.5" />
@@ -682,7 +682,7 @@ export default function PortfolioProjectDetailPage() {
                             </button>
                             <button
                                 onClick={() => setDeleteModalOpen(true)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                                 title="삭제"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -701,9 +701,9 @@ export default function PortfolioProjectDetailPage() {
                     </div>
                 )}
 
-                <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{item.desc}</p>
+                <p className="whitespace-pre-line text-[13px] sm:text-[13.5px] leading-7 text-neutral-800">{item.desc}</p>
 
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex gap-2 flex-wrap">
                     {item.demoUrl && (
                         <a
                             className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
@@ -728,9 +728,9 @@ export default function PortfolioProjectDetailPage() {
 
                 {/* 추가 이미지들 */}
                 {item.assets && item.assets.length > 0 && (
-                    <div className="mt-6">
-                        <h3 className="mb-3 text-[14px] font-semibold text-neutral-900">추가 이미지</h3>
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    <div className="mt-4 sm:mt-6">
+                        <h3 className="mb-3 text-[13px] sm:text-[14px] font-semibold text-neutral-900">추가 이미지</h3>
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
                             {item.assets.map((asset, index) => (
                                 <div key={index} className="aspect-[4/3] overflow-hidden rounded-lg">
                                     <img 
