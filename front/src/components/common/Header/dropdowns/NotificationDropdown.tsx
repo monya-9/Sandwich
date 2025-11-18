@@ -118,7 +118,7 @@ const NotificationDropdown: React.FC<Props> = ({
                                         )}
 
                                         <div className="min-w-0 flex-1">
-                                            <p className="font-medium truncate text-xs sm:text-sm">{n.title}</p>
+                                            <p className="font-medium text-xs sm:text-sm line-clamp-2 break-words">{n.title}</p>
                                             {n.body ? (
                                                 <p className="text-gray-500 text-[10px] sm:text-xs line-clamp-2 whitespace-pre-line">
                                                     {n.body}
