@@ -246,7 +246,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
             <div className="relative px-2 pt-2 pb-2">
               {/* 뒤로가기 */}
               <button
-                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
+                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
                 onClick={() => { onClose(); onBackToMenu?.(); }}
                 aria-label="뒤로가기"
               >
@@ -263,14 +263,14 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
               </div>
               {/* 닫기(X): SuggestAction과 동일 크기/위치 */}
               <button
-                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
+                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1.5 leading-none"
                 onClick={onClose}
                 aria-label="닫기"
               >
                 ×
               </button>
               {/* 구분선 */}
-              <div className="mt-2 border-t border-gray-200" />
+              <div className="mt-2 border-t border-gray-200 dark:border-[var(--border-color)]" />
             </div>
 
             {/* 내용 영역 (타이틀/설명 + 폼 포함) */}
@@ -278,38 +278,38 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
               <div className="w-[400px] max-w-full mx-auto">
                 {/* 타이틀/설명 */}
                 <div className="text-center mb-3">
-                  <div className="text-[18px] font-bold">프로젝트 의뢰 및 프리랜서 제안하기</div>
-                  <div className="text-[12px] text-gray-500 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
+                  <div className="text-[18px] font-bold text-gray-800 dark:text-white">프로젝트 의뢰 및 프리랜서 제안하기</div>
+                  <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
                 </div>
 
                 <form className="flex flex-col gap-3" onSubmit={submitForm}>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">프로젝트 제목<span className="text-green-500">*</span></label>
-                    <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }} onBlur={() => setTitleTouched(true)} placeholder="제목을 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${(titleTouched && titleError) ? "border-rose-500" : "border-gray-300"}`} />
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">프로젝트 제목<span className="text-green-500">*</span></label>
+                    <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }} onBlur={() => setTitleTouched(true)} placeholder="제목을 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(titleTouched && titleError) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} />
                     {(titleTouched && titleError) && (<div className="text-[12px] text-rose-500">{titleError}</div>)}
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">연락처<span className="text-green-500">*</span></label>
-                    <input value={contact} onChange={(e) => { onChangeContact(e.target.value); setContactTouched(true); }} onBlur={() => setContactTouched(true)} inputMode="numeric" placeholder="'-' 제외 숫자만 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${(contactTouched && contactError) ? "border-rose-500" : "border-gray-300"}`} />
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">연락처<span className="text-green-500">*</span></label>
+                    <input value={contact} onChange={(e) => { onChangeContact(e.target.value); setContactTouched(true); }} onBlur={() => setContactTouched(true)} inputMode="numeric" placeholder="'-' 제외 숫자만 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(contactTouched && contactError) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} />
                     {(contactTouched && contactError) && (<div className="text-[12px] text-rose-500">{contactError}</div>)}
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">프로젝트 예산<span className="text-green-500">*</span></label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">프로젝트 예산<span className="text-green-500">*</span></label>
                     <div className="flex items-center gap-2">
-                      <input value={budget} onChange={(e) => { onChangeBudget(e.target.value); setBudgetTouched(true); }} onBlur={() => setBudgetTouched(true)} inputMode="numeric" pattern="[0-9]*" placeholder="최소 100,000원 이상 숫자만 입력" className={`flex-1 h-9 border rounded px-3 text-[14px] outline-none ${((budgetTouched && budgetError)) ? "border-rose-500" : "border-gray-300"}`} />
-                      <span className="text-[14px] text-gray-600">원</span>
+                      <input value={budget} onChange={(e) => { onChangeBudget(e.target.value); setBudgetTouched(true); }} onBlur={() => setBudgetTouched(true)} inputMode="numeric" pattern="[0-9]*" placeholder="최소 100,000원 이상 숫자만 입력" className={`flex-1 h-9 border rounded px-3 text-[14px] outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${((budgetTouched && budgetError)) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} />
+                      <span className="text-[14px] text-gray-600 dark:text-gray-400">원</span>
                     </div>
                     {(budgetTouched && budgetError) && (<div className="text-[12px] text-rose-500">{budgetError}</div>)}
-                    <label className="flex items-center gap-2 text-[12px] text-gray-600 select-none">
+                    <label className="flex items-center gap-2 text-[12px] text-gray-600 dark:text-gray-400 select-none">
                       <input type="checkbox" checked={negotiable} onChange={(e) => setNegotiable(e.target.checked)} className="w-4 h-4 accent-[#068334]" />
                       예산 협의 및 조정 의향이 있습니다.
                     </label>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">프로젝트 내용 (최대 500자)<span className="text-green-500">*</span></label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">프로젝트 내용 (최대 500자)<span className="text-green-500">*</span></label>
                     <textarea 
                       value={description} 
                       onChange={(e) => {
@@ -322,10 +322,10 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
                       onBlur={() => setDescTouched(true)} 
                       placeholder="프로젝트의 간략한 정보로 적어주세요(최소 10자 이상)" 
                       maxLength={500}
-                      className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none ${((descTouched && descError)) ? "border-rose-500" : "border-gray-300"}`} 
+                      className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${((descTouched && descError)) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} 
                     />
                     <div className="flex justify-end">
-                      <span className={`text-xs ${description.length > 450 ? 'text-red-500' : description.length > 300 ? 'text-orange-500' : 'text-gray-400'}`}>
+                      <span className={`text-xs ${description.length >= 500 ? 'text-red-500' : 'text-gray-400'}`}>
                         {description.length}/500
                       </span>
                     </div>
@@ -343,19 +343,19 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
 
                   {/* 레퍼런스 URL: 작성 입력 + 추가 버튼 */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">레퍼런스(URL)</label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">레퍼런스(URL)</label>
                     <div className="flex items-center gap-2">
                       <input
                         value={composerUrl}
                         onChange={(e) => setComposerUrl(e.target.value)}
                         placeholder="레퍼런스 URL을 입력해주세요."
-                        className={`flex-1 h-10 rounded px-3 text-[14px] outline-none border ${invalidComposer ? "border-rose-500" : "border-gray-300"}`}
+                        className={`flex-1 h-10 rounded px-3 text-[14px] outline-none border bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${invalidComposer ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`}
                       />
                       <button
                         type="button"
                         onClick={onClickAddComposer}
                         disabled={!composerUrl.trim()}
-                        className="w-10 h-10 rounded border border-gray-300 text-gray-700 text-[22px] leading-none disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-10 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 text-[22px] leading-none disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
                         aria-label="URL 추가"
                       >+
                       </button>
@@ -379,9 +379,9 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
                                   value={value}
                                   onChange={(e) => updateUrl(idx, e.target.value)}
                                   placeholder="레퍼런스 URL을 입력해주세요."
-                                  className={`flex-1 h-10 rounded px-3 text-[14px] outline-none border ${invalid ? "border-rose-500" : "border-gray-300"}`}
+                                  className={`flex-1 h-10 rounded px-3 text-[14px] outline-none border bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${invalid ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`}
                                 />
-                                <button type="button" onClick={() => removeUrl(idx)} className="w-10 h-10 rounded border border-gray-300 text-gray-700 flex items-center justify-center" aria-label="URL 삭제">🗑</button>
+                                <button type="button" onClick={() => removeUrl(idx)} className="w-10 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 flex items-center justify-center" aria-label="URL 삭제">🗑</button>
                               </div>
                               {invalid && (
                                 <div className="text-[12px] text-rose-500">{formatInvalid ? "올바른 URL 형식을 작성해주세요." : "URL 입력란을 작성해주세요."}</div>
@@ -394,10 +394,10 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">첨부파일</label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">첨부파일</label>
                     <div className="flex items-center gap-2">
                       <div
-                        className={`flex-1 h-10 border border-gray-300 rounded px-3 text-[14px] flex items-center cursor-pointer select-none ${file ? "text-gray-900" : "text-gray-500"}`}
+                        className={`flex-1 h-10 border border-gray-300 dark:border-[var(--border-color)] rounded px-3 text-[14px] flex items-center cursor-pointer select-none bg-white dark:bg-[var(--input-bg)] ${file ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}`}
                         onClick={() => fileInputRef.current?.click()}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
                         role="button"
@@ -406,7 +406,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
                       >
                         {file ? file.name : "업로드(10MB 이내 파일 선택)"}
                       </div>
-                      <button type="button" onClick={() => setFile(null)} className="w-10 h-10 rounded border border-gray-300 text-gray-700 flex items-center justify-center" aria-label="첨부 제거">🗑</button>
+                      <button type="button" onClick={() => setFile(null)} className="w-10 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 flex items-center justify-center" aria-label="첨부 제거">🗑</button>
                       <input ref={fileInputRef} type="file" onChange={onFileChange} className="hidden" />
                     </div>
                   </div>
@@ -416,7 +416,7 @@ export default function ProposalAction({ open, onClose, onBackToMenu, targetUser
 
             {/* 하단 고정 버튼 바 */}
             <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
-              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 text-gray-700">취소</button>
+              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300">취소</button>
               <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>
           </div>

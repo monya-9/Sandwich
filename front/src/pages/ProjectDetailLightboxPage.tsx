@@ -87,7 +87,7 @@ export default function ProjectDetailLightboxPage() {
   const closeLightbox = () => { try { nav(-1); } catch { nav("/search"); } };
 
   return (
-    <div className="min-h-screen w-full" style={{ background: pageBg }}>
+    <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black" style={{ background: pageBg }}>
       <div className="w-full flex justify-center items-start">
         <div className="flex flex-row items-start w-full" style={{ maxWidth: 1440 }}>
           {/* 캔버스 영역 */}
@@ -101,7 +101,7 @@ export default function ProjectDetailLightboxPage() {
               </div>
               {/* 작성자 하단 섹션 */}
               <div className="mt-12 border-t dark:border-[var(--border-color)] pt-8">
-                <div className="text-center font-bold text-[18px] text-black dark:text-black">{author?.nickname || "사용자"}</div>
+                <div className="text-center font-bold text-[18px] text-black dark:text-white">{author?.nickname || "사용자"}</div>
                 <div className="mt-6">
                   {others.length > 0 ? (
                     <div className="grid grid-cols-3 gap-4">

@@ -27,7 +27,9 @@ function WinnerCard({ w }: { w: SimpleWinner }) {
       fetchUserById(w.userId)
         .then(user => {
           if (user) {
-            if (user.username) setRealName(user.username);
+            // 닉네임 우선, 없으면 username 사용
+            if (user.nickname) setRealName(user.nickname);
+            else if (user.username) setRealName(user.username);
             if (user.profileImageUrl) setRealProfileImage(user.profileImageUrl);
           }
         })

@@ -370,13 +370,12 @@ export default function OtherProjectPage() {
     // forcePage=true일 때만 페이지 형식, 그 외(기본)는 모달
     if (forcePage) {
         return (
-            <div className="min-h-screen w-full bg-[#f5f6f8] font-gmarketsans">
+            <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black font-gmarketsans">
                 {styles}
-                <style>{`.op-actionbar, .op-actionbar * { color: #000 !important; }`}</style>
                 <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-4 md:py-8 lg:py-12">
                     <div className="flex flex-col lg:flex-row items-start w-full relative px-4 md:px-6 lg:px-0" style={{ maxWidth: MAX_WIDTH }}>
                         <div className="flex flex-col lg:flex-row items-start w-full">
-                            <section className="bg-white rounded-2xl shadow-2xl px-4 py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
+                            <section className="bg-white dark:bg-[var(--surface)] rounded-2xl shadow-2xl px-4 py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
                                 <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                                 <div className="mt-6 -mx-4 md:-mx-6 lg:-mx-8 mb-8">
                                     <div className="rounded-xl overflow-hidden" style={{ background: pageBg, minHeight: '600px' }}>
@@ -406,7 +405,7 @@ export default function OtherProjectPage() {
                             </section>
                             {!commentOpen && (
                                 <div 
-                                    className={`${forcePage ? 'op-actionbar' : ''} ${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-50' : ''}`}
+                                    className={`${forcePage ? 'op-actionbar' : ''} ${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white dark:bg-[var(--surface)] shadow-lg border-t border-gray-200 dark:border-[var(--border-color)] z-50' : ''}`}
                                     style={!isMobile ? { width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative", zIndex: 10 } : {}}
                                 >
                                     <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} isMobile={isMobile} />
@@ -414,7 +413,7 @@ export default function OtherProjectPage() {
                             )}
                         </div>
                         {commentOpen && (
-                            <div className="hidden lg:block" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                            <div className="hidden lg:block bg-white dark:bg-[var(--surface)] border-l border-gray-200 dark:border-[var(--border-color)]" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
                                 <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
                             </div>
                         )}
@@ -432,7 +431,7 @@ export default function OtherProjectPage() {
             <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-4 md:py-8 lg:py-12" onClick={() => { try { nav(-1); } catch { nav('/search'); } }}>
                 <div className="flex flex-col lg:flex-row items-start w-full relative px-2 md:px-4" style={{ maxWidth: MAX_WIDTH }}>
                     <div className="flex flex-col lg:flex-row items-start w-full">
-                        <section className="bg-white rounded-2xl shadow-2xl px-4 py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                        <section className="bg-white dark:bg-[var(--surface)] rounded-2xl shadow-2xl px-4 py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
                             <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                             <div className="mt-6 -mx-4 md:-mx-6 lg:-mx-8 mb-8">
                                 <div className="rounded-xl overflow-hidden" style={{ background: pageBg, minHeight: '600px' }}>
@@ -462,7 +461,7 @@ export default function OtherProjectPage() {
                         </section>
                         {!commentOpen && (
                             <div 
-                                className={`${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-[10001]' : ''}`}
+                                className={`${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white dark:bg-[var(--surface)] shadow-lg border-t border-gray-200 dark:border-[var(--border-color)] z-[10001]' : ''}`}
                                 style={!isMobile ? { width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" } : {}}
                                 onClick={(e) => e.stopPropagation()}
                             >
@@ -471,7 +470,7 @@ export default function OtherProjectPage() {
                         )}
                     </div>
                     {commentOpen && (
-                        <div className="hidden lg:block" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }} onClick={(e) => e.stopPropagation()}>
+                        <div className="hidden lg:block bg-white dark:bg-[var(--surface)] border-l border-gray-200 dark:border-[var(--border-color)]" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }} onClick={(e) => e.stopPropagation()}>
                             <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
                         </div>
                     )}
