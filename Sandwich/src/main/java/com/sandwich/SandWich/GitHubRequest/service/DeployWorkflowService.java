@@ -79,7 +79,17 @@ public class DeployWorkflowService {
                     run: |
                       if [ -f package.json ]; then
                         echo "package.json found — installing dependencies..."
-                        npm ci
+        
+                        # lockfile이 있으면 npm ci, 없으면 npm install
+                        if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+                          echo "Lockfile found — running npm ci..."
+                          npm ci
+                        else
+                          echo "No lockfile found — running npm install instead of npm ci..."
+                          npm install
+                        fi
+        
+                        # build 스크립트 있으면 빌드 실행
                         if npm run | grep -q " build"; then
                           echo "build script detected — running npm run build..."
                           npm run build || true
