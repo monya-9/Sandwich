@@ -416,7 +416,7 @@ export default function OtherProjectPage() {
                             <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
                                 <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                                 <div className="mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 mb-4 sm:mb-6 md:mb-8">
-                                    <div className="rounded-lg sm:rounded-xl overflow-hidden" style={{ background: pageBg }}>
+                                    <div className="rounded-lg sm:rounded-xl overflow-hidden bg-white dark:bg-black">
                                         <div className="px-0 py-3 sm:py-4 md:py-6">
                                             <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                                 <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
@@ -466,11 +466,11 @@ export default function OtherProjectPage() {
 
     // 기본: 모달 레이아웃
     const handleModalClose = () => {
-        // 앱 내에서 네비게이션으로 온 경우(state.fromApp 또는 state.page 있음) 뒤로 가기, 아니면 메인으로
-        if ((location.state as any)?.fromApp || (location.state as any)?.page) {
-            nav(-1);
-        } else {
+        // URL로 직접 접속한 경우 (state 없음) 메인으로, 아니면 뒤로 가기
+        if (!location.state) {
             nav('/');
+        } else {
+            nav(-1);
         }
     };
 
@@ -484,7 +484,7 @@ export default function OtherProjectPage() {
                         <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
                             <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
                             <div className="mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 mb-4 sm:mb-6 md:mb-8">
-                                <div className="rounded-lg sm:rounded-xl overflow-hidden" style={{ background: pageBg }}>
+                                <div className="rounded-lg sm:rounded-xl overflow-hidden bg-white dark:bg-black">
                                     <div className="px-0 py-3 sm:py-4 md:py-6">
                                         <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                             <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
