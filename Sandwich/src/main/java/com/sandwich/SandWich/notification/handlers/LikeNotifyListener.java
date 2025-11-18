@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.notification.handlers;
 
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.LikeCreatedEvent;
 import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
@@ -19,6 +20,7 @@ public class LikeNotifyListener {
 
     private final NotificationFanoutService fanout;
     private final ProjectRepository projectRepository;
+    private final SubmissionRepository submissionRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onLikeCreated(LikeCreatedEvent ev) {
@@ -35,7 +37,16 @@ public class LikeNotifyListener {
                 log.warn("[LikeNotify] PROJECT ownerId not found for projectId={}", id);
                 yield "/";
             }
-            case "COMMENT" -> "/posts/" + id + "#comment-" + id;  // 필요 시 원글 경로로 보정
+            case "CODE_SUBMISSION", "PORTFOLIO_SUBMISSION" -> {
+                var subOpt = submissionRepository.findById(id);
+                if (subOpt.isPresent()) {
+                    var sub = subOpt.get();
+                    Long chId = sub.getChallenge().getId();
+                    yield "/challenges/" + chId + "/submissions/" + sub.getId();
+                }
+                log.warn("[LikeNotify] SUBMISSION not found for id={}", id);
+                yield "/";
+            }
             default        -> "/";
         };
 

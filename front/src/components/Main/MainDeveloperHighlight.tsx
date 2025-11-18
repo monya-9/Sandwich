@@ -93,11 +93,13 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
         샌드위치 추천, HOT 개발자
       </h2>
 
-      <div className="relative px-4 md:px-6 lg:px-8">
+      <div className="relative px-4 md:px-16 lg:px-20 xl:px-8">
+        {/* 카드 리스트 */}
+        <div className="flex gap-3 md:gap-3 lg:gap-4 xl:gap-6 justify-center">
         {/* 왼쪽 버튼 - 캐러셀이 필요할 때만 표시 */}
         {needsCarousel && (
           <button
-            className={`absolute left-2 md:left-3 lg:left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-black text-black dark:text-white rounded-full shadow-md w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-lg md:text-xl lg:text-2xl z-10 transition-all ${
+            className={`absolute left-2 md:left-4 lg:left-6 xl:left-6 top-1/2 transform -translate-y-1/2 bg-white dark:bg-black text-black dark:text-white rounded-full shadow-lg w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-lg md:text-xl lg:text-2xl z-20 transition-all ${
               showPrev ? 'hover:scale-110 cursor-pointer opacity-100' : 'opacity-40 cursor-not-allowed'
             }`}
             onClick={() => showPrev && setStartIndex((prev) => Math.max(prev - cardsPerPage, 0))}
@@ -107,9 +109,6 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
             &lt;
           </button>
         )}
-
-        {/* 카드 리스트 */}
-        <div className="flex gap-3 md:gap-4 lg:gap-6 justify-center">
           {topUsers.map((developer) => (
             <div
               key={developer.userId}
@@ -169,12 +168,10 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
               </div>
             </div>
           ))}
-        </div>
-
         {/* 오른쪽 버튼 - 캐러셀이 필요할 때만 표시 */}
         {needsCarousel && (
           <button
-            className={`absolute right-2 md:right-3 lg:right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-black text-black dark:text-white rounded-full shadow-md w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-lg md:text-xl lg:text-2xl z-10 transition-all ${
+            className={`absolute right-2 md:right-4 lg:right-6 xl:right-6 top-1/2 transform -translate-y-1/2 bg-white dark:bg-black text-black dark:text-white rounded-full shadow-lg w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-lg md:text-xl lg:text-2xl z-20 transition-all ${
               showNext ? 'hover:scale-110 cursor-pointer opacity-100' : 'opacity-40 cursor-not-allowed'
             }`}
             onClick={() => showNext && setStartIndex((prev) => prev + cardsPerPage)}
@@ -184,6 +181,7 @@ const MainDeveloperHighlight: React.FC<Props> = () => {
             &gt;
           </button>
         )}
+        </div>
       </div>
     </section>
   );
