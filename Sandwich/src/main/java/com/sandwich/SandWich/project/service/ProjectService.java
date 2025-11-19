@@ -2,6 +2,7 @@ package com.sandwich.SandWich.project.service;
 
 import com.sandwich.SandWich.common.dto.PageResponse;
 import com.sandwich.SandWich.common.util.QRCodeGenerator;
+import com.sandwich.SandWich.discovery.service.HotDeveloperService;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
 import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
@@ -39,6 +40,7 @@ public class ProjectService {
     private final FollowRepository followRepository;
     private final Clock clock;
     private final CreditUseService creditUseService;
+    private final HotDeveloperService hotDeveloperService;
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
@@ -346,5 +348,6 @@ public class ProjectService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
         projectRepository.delete(project);
+        hotDeveloperService.evictAll();
     }
 }
