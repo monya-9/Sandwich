@@ -27,7 +27,7 @@ type PortfolioSubmitPayload = {
     language?: string;
     coverUrl?: string;
     images?: string[]; // 추가 이미지들
-    isPublic: boolean; // 공개 여부 (포트폴리오는 항상 공개, UI만 표시)
+    isPublic: boolean; // 공개 여부
 };
 
 // 기술 스택 옵션들
@@ -184,9 +184,10 @@ export default function PortfolioSubmitPage() {
     }, [id]);
 
     const [tab, setTab] = useState<"edit" | "preview">("edit");
-    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string; type?: 'success' | 'error' }>({
         visible: false,
-        message: ''
+        message: '',
+        type: 'success'
     });
     const [cropOpen, setCropOpen] = useState(false);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -201,7 +202,7 @@ export default function PortfolioSubmitPage() {
         language: "",
         coverUrl: "",
         images: [],
-        isPublic: true, // 기본값: 공개 (포트폴리오는 항상 공개)
+        isPublic: true, // 기본값: 공개
     });
 
     // 수정 모드일 때 기존 제출물 로드
@@ -229,7 +230,8 @@ export default function PortfolioSubmitPage() {
                     console.error('제출물 로드 실패:', error);
                     setSuccessToast({
                         visible: true,
-                        message: '제출물을 불러올 수 없습니다.'
+                        message: '제출물을 불러올 수 없습니다.',
+                        type: 'error'
                     });
                 }
             };
@@ -315,7 +317,8 @@ export default function PortfolioSubmitPage() {
             
             setSuccessToast({
                 visible: true,
-                message: errorMessage
+                message: errorMessage,
+                type: 'error'
             });
         }
         setCropOpen(false);
@@ -329,7 +332,8 @@ export default function PortfolioSubmitPage() {
             if (!result.ok) {
                 setSuccessToast({
                     visible: true,
-                    message: "이미지 파일 형식이 올바르지 않거나 용량이 너무 큽니다."
+                    message: "이미지 파일 형식이 올바르지 않거나 용량이 너무 큽니다.",
+                    type: 'error'
                 });
                 return;
             }
@@ -341,7 +345,8 @@ export default function PortfolioSubmitPage() {
         } catch (error) {
             setSuccessToast({
                 visible: true,
-                message: "이미지 처리에 실패했습니다. 다시 시도해주세요."
+                message: "이미지 처리에 실패했습니다. 다시 시도해주세요.",
+                type: 'error'
             });
         }
     };
@@ -363,7 +368,7 @@ export default function PortfolioSubmitPage() {
                 portfolio: form.language ? {
                     language: form.language.trim()
                 } : undefined,
-                isPublic: form.isPublic, // 공개 여부 (포트폴리오는 항상 공개되지만 일관성을 위해 전송)
+                isPublic: form.isPublic, // 공개 여부
             };
 
             if (isEditMode && editSubmissionId) {
@@ -402,6 +407,10 @@ export default function PortfolioSubmitPage() {
                 if (serverMessage) {
                     if (serverMessage.includes("Submission closed")) {
                         errorMessage = "제출 기간이 종료되었습니다.";
+                    } else if (serverMessage.includes("repoUrl")) {
+                        errorMessage = "깃허브 URL을 입력해주세요.";
+                    } else if (serverMessage.includes("demoUrl")) {
+                        errorMessage = "데모 URL을 입력해주세요.";
                     } else {
                         errorMessage = serverMessage;
                     }
@@ -419,7 +428,8 @@ export default function PortfolioSubmitPage() {
             
             setSuccessToast({
                 visible: true,
-                message: errorMessage
+                message: errorMessage,
+                type: 'error'
             });
         }
     };
@@ -429,7 +439,7 @@ export default function PortfolioSubmitPage() {
             <Toast
                 visible={successToast.visible}
                 message={successToast.message}
-                type="success"
+                type={successToast.type || "success"}
                 size="medium"
                 autoClose={3000}
                 closable={true}
@@ -709,7 +719,8 @@ export default function PortfolioSubmitPage() {
                                                 if (!result.ok) {
                                                     setSuccessToast({
                                                         visible: true,
-                                                        message: "이미지 파일 형식이 올바르지 않거나 용량이 너무 큽니다."
+                                                        message: "이미지 파일 형식이 올바르지 않거나 용량이 너무 큽니다.",
+                                                        type: 'error'
                                                     });
                                                     return;
                                                 }
@@ -749,7 +760,8 @@ export default function PortfolioSubmitPage() {
                                                 
                                                 setSuccessToast({
                                                     visible: true,
-                                                    message: errorMessage
+                                                    message: errorMessage,
+                                                    type: 'error'
                                                 });
                                             }
                                         }}
@@ -784,7 +796,7 @@ export default function PortfolioSubmitPage() {
                                         제출물을 다른 사용자에게 공개합니다
                                     </span>
                                 </label>
-                                <Help>포트폴리오 챌린지는 항상 공개됩니다. (투표를 위해 모든 제출물이 공개돼요)</Help>
+                                <Help>비공개로 설정하면 본인만 제출물을 볼 수 있습니다.</Help>
                             </Row>
 
                             {/* 종료된 챌린지 안내 */}
