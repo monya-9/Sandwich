@@ -320,10 +320,10 @@ export default function CodeSubmissionDetailPage() {
                 </div>
 
                 {/* 제목 */}
-                <div className="mb-2 text-[15px] sm:text-[16px] font-bold">{item.title}</div>
+                <div className="mb-2 text-[15px] sm:text-[16px] font-bold break-words">{item.title}</div>
 
                 {/* 본문 */}
-                <p className="whitespace-pre-wrap rounded-xl border border-neutral-200 bg-neutral-50/60 p-4 sm:p-5 text-[13px] sm:text-[13.5px] leading-7">
+                <p className="whitespace-pre-wrap break-words rounded-xl border border-neutral-200 bg-neutral-50/60 p-4 sm:p-5 text-[13px] sm:text-[13.5px] leading-7">
                     {item.desc}
                 </p>
                 

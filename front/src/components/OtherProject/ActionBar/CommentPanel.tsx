@@ -183,7 +183,7 @@ export default function CommentPanel({
     <li key={c.id} className="mb-2 sm:mb-3 border-b border-gray-100 dark:border-[var(--border-color)] pb-2">
       <div className="flex items-center gap-1.5 sm:gap-2">
         <b 
-          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs sm:text-sm dark:text-white"
+          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs sm:text-sm text-gray-900 dark:text-white"
           onClick={() => handleUserClick(c.userId)}
         >
           {c.username}
@@ -197,15 +197,15 @@ export default function CommentPanel({
           <input
             value={edit.value}
             onChange={e => setEdit({ id: c.id, value: e.target.value })}
-            className="border border-gray-200 p-1 rounded text-xs sm:text-sm flex-1 bg-white text-gray-900"
+            className="border border-gray-200 dark:border-[var(--border-color)] p-1 rounded text-xs sm:text-sm flex-1 bg-white dark:bg-[var(--surface-light)] text-gray-900 dark:text-white"
             maxLength={1000}
             disabled={!isLoggedIn}
           />
-          <button className="text-green-600 text-[10px] sm:text-xs whitespace-nowrap" onClick={handleEdit} disabled={!isLoggedIn}>저장</button>
-          <button className="text-gray-400 text-[10px] sm:text-xs whitespace-nowrap" onClick={() => setEdit(null)}>취소</button>
+          <button className="text-green-600 dark:text-green-400 text-[10px] sm:text-xs whitespace-nowrap" onClick={handleEdit} disabled={!isLoggedIn}>저장</button>
+          <button className="text-gray-400 dark:text-gray-500 text-[10px] sm:text-xs whitespace-nowrap" onClick={() => setEdit(null)}>취소</button>
         </div>
       ) : (
-        <div className="mt-1 text-xs sm:text-sm dark:text-gray-200">{c.comment}</div>
+        <div className="mt-1 text-xs sm:text-sm text-gray-900 dark:text-gray-200">{c.comment}</div>
       )}
 
       <div className="flex gap-1.5 sm:gap-2 mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
@@ -213,17 +213,17 @@ export default function CommentPanel({
         <button
           onClick={() => isLoggedIn ? setReply({ parentId: c.id, value: "" }) : undefined}
           disabled={!isLoggedIn}
-          className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : "hover:text-gray-700 dark:hover:text-gray-300"}
+          className={!isLoggedIn ? "text-gray-300 dark:text-gray-600 cursor-not-allowed" : "hover:text-gray-700 dark:hover:text-gray-300"}
         >답글</button>
         {isLoggedIn && myNickname && c.username === myNickname && (
           <>
             <button
               onClick={() => isLoggedIn ? setEdit({ id: c.id, value: c.comment }) : undefined}
               disabled={!isLoggedIn}
-              className={!isLoggedIn ? "text-gray-300 cursor-not-allowed" : "hover:text-gray-700 dark:hover:text-gray-300"}
+              className={!isLoggedIn ? "text-gray-300 dark:text-gray-600 cursor-not-allowed" : "hover:text-gray-700 dark:hover:text-gray-300"}
             >수정</button>
             <button
-              className={"text-red-500 hover:text-red-600" + (!isLoggedIn ? " text-gray-300 cursor-not-allowed" : "")}
+              className={"text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300" + (!isLoggedIn ? " text-gray-300 dark:text-gray-600 cursor-not-allowed" : "")}
               onClick={() => isLoggedIn ? handleDeleteClick(c.id) : undefined}
               disabled={!isLoggedIn}
             >삭제</button>
@@ -236,12 +236,12 @@ export default function CommentPanel({
           <input
             value={reply.value}
             onChange={e => setReply({ parentId: c.id, value: e.target.value })}
-            className="border border-gray-200 p-1 rounded text-xs sm:text-sm flex-1 bg-white text-gray-900"
+            className="border border-gray-200 dark:border-[var(--border-color)] p-1 rounded text-xs sm:text-sm flex-1 bg-white dark:bg-[var(--surface-light)] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             maxLength={1000}
             placeholder="대댓글을 입력하세요"
           />
-          <button className="text-blue-600 text-[10px] sm:text-xs whitespace-nowrap hover:text-blue-700" onClick={() => handleReply(c.id, reply.value)}>등록</button>
-          <button className="text-gray-400 text-[10px] sm:text-xs whitespace-nowrap hover:text-gray-600" onClick={() => setReply(null)}>취소</button>
+          <button className="text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs whitespace-nowrap hover:text-blue-700 dark:hover:text-blue-300" onClick={() => handleReply(c.id, reply.value)}>등록</button>
+          <button className="text-gray-400 dark:text-gray-500 text-[10px] sm:text-xs whitespace-nowrap hover:text-gray-600 dark:hover:text-gray-300" onClick={() => setReply(null)}>취소</button>
         </div>
       )}
 
@@ -263,8 +263,6 @@ export default function CommentPanel({
         height: isMobile ? '85vh' : "100%",
         maxHeight: isMobile ? '85vh' : 'none',
         borderRadius: "16px",
-        background: "#fff",
-        border: "none",
       }}
     >
       {/* 상단 영역 */}
@@ -275,36 +273,35 @@ export default function CommentPanel({
           onClick={onClose}
         >×</button>
         <div className="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-0.5">{projectName}</div>
-        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">{category}</div>
       </div>
       {/* 댓글 작성 영역 */}
-      <div className="flex flex-col gap-2 px-4 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 border-b border-gray-100 dark:border-[var(--border-color)]">
+      <div className="flex flex-col gap-2 px-4 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 border-b border-gray-100 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)]">
         {isLoggedIn ? (
           <>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
-              className="w-full h-16 sm:h-18 md:h-20 p-2 sm:p-2.5 md:p-3 border border-gray-200 dark:border-[var(--border-color)] rounded-xl bg-gray-50 dark:bg-[var(--surface)] text-xs sm:text-sm resize-none dark:text-white"
+              className="w-full h-16 sm:h-18 md:h-20 p-2 sm:p-2.5 md:p-3 border border-gray-200 dark:border-[var(--border-color)] rounded-xl bg-gray-50 dark:bg-[var(--surface-light)] text-gray-900 dark:text-white text-xs sm:text-sm resize-none placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="댓글을 남겨주세요"
             />
             <button
-              className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-1.5 md:py-2 bg-black text-white rounded-full font-bold text-xs sm:text-sm self-end hover:bg-gray-800 transition"
+              className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-1.5 md:py-2 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold text-xs sm:text-sm self-end hover:bg-gray-800 dark:hover:bg-gray-200 transition"
               onClick={handlePost}
             >
               댓글 작성
             </button>
           </>
         ) : (
-          <div className="w-full h-16 sm:h-18 md:h-20 flex items-center justify-center text-gray-400 text-xs sm:text-sm md:text-base px-2">
+          <div className="w-full h-16 sm:h-18 md:h-20 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs sm:text-sm md:text-base px-2">
             댓글을 작성하려면 <button
-              className="ml-1 text-blue-600 underline"
+              className="ml-1 text-blue-600 dark:text-blue-400 underline"
               onClick={() => window.location.href = "/login"}
             >로그인</button>이 필요합니다.
           </div>
         )}
       </div>
       {/* 댓글 리스트 */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 bg-white dark:bg-[var(--surface)]">
         {loading ? (
           <div className="text-sm text-gray-500 dark:text-gray-400">로딩중...</div>
         ) : (

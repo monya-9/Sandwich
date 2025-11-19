@@ -429,7 +429,8 @@ export default function PortfolioVotePage() {
                             )}
 
                             {/* 내 투표 정보 */}
-                            {myVote && (
+                            {/* TODO: 나중에 개발 예정 */}
+                            {/* {myVote && (
                                 <div className="mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
                                     <h3 className="text-base sm:text-lg font-semibold text-green-900 mb-2">✅ 내 투표</h3>
                                     <div className="text-xs sm:text-sm text-green-800">
@@ -439,16 +440,16 @@ export default function PortfolioVotePage() {
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
 
                             <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                             {submissions.map((submission) => {
                                 const likeInfo = submissionLikes[submission.id] || { liked: false, count: submission.likeCount || 0 };
                                 
                                 return (
-                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200 flex flex-col">
                                     {/* 1. 프로필 정보 */}
-                                    <div className="p-3 sm:p-4 pb-3">
+                                    <div className="p-3 sm:p-4 pb-3 flex-shrink-0">
                                         <div className="flex items-center gap-2 sm:gap-3">
                                             {/* 프로필 이미지 - 클릭 가능 */}
                                             <div 
@@ -505,7 +506,7 @@ export default function PortfolioVotePage() {
                                     </div>
                                     
                                     {/* 2. 썸네일 이미지 - 항상 표시 */}
-                                    <div className="relative h-40 sm:h-48 bg-gray-100 dark:bg-neutral-800">
+                                    <div className="relative h-32 sm:h-40 bg-gray-100 dark:bg-neutral-800 flex-shrink-0">
                                         {submission.coverUrl ? (
                                             <img 
                                                 src={submission.coverUrl} 
@@ -525,21 +526,21 @@ export default function PortfolioVotePage() {
                                         )}
                                     </div>
                                     
-                                    <div className="p-3 sm:p-4">
+                                    <div className="p-3 sm:p-4 flex-1 flex flex-col">
                                         {/* 3. 제목 */}
-                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2 line-clamp-2">
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2 line-clamp-2 break-words">
                                             {submission.title || `제출물 #${submission.id}`}
                                         </h3>
                                         
                                         {/* 4. 소개/설명 */}
                                         {submission.desc && (
-                                            <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-300 mb-3 sm:mb-4 line-clamp-3">
+                                            <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-300 mb-2 line-clamp-2 break-words">
                                                 {submission.desc}
                                             </p>
                                         )}
                                         
                                         {/* 5. 하단: 좋아요, 조회수, 댓글, 전체보기 */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-neutral-800">
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-neutral-800 mt-auto flex-shrink-0">
                                             <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-neutral-400">
                                                 {/* 좋아요 */}
                                                 <button 
