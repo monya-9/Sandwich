@@ -253,7 +253,7 @@ export default function CodeSubmissionListPage() {
                     </div>
                 </div>
             ) : submissions.length > 0 ? (
-                <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 items-stretch">
+                <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3" style={{ gridAutoRows: '220px' }}>
                     {submissions.filter(submission => submission != null).map((submission, index) => {
                         // 안전한 ID 추출 (실제 API는 id 필드 사용)
                         const submissionId = submission?.id || (index + 1);

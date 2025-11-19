@@ -597,7 +597,7 @@ export default function PortfolioProjectDetailPage() {
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <h1 className="text-[18px] sm:text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
+                <h1 className="text-[18px] sm:text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px] break-words">{item.title}</h1>
                 {/* 상태 배지 */}
                 {(() => {
                     const now = new Date();
@@ -701,7 +701,7 @@ export default function PortfolioProjectDetailPage() {
                     </div>
                 )}
 
-                <p className="whitespace-pre-line text-[13px] sm:text-[13.5px] leading-7 text-neutral-800">{item.desc}</p>
+                <p className="whitespace-pre-line break-words text-[13px] sm:text-[13.5px] leading-7 text-neutral-800">{item.desc}</p>
 
                 <div className="mt-4 flex gap-2 flex-wrap">
                     {item.demoUrl && (

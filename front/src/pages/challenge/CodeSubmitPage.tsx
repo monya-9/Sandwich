@@ -164,14 +164,16 @@ export default function CodeSubmitPage() {
                     if (!submission.code) {
                         setSuccessToast({
                             visible: true,
-                            message: '⚠️ 엔트리포인트 정보가 없습니다. 다시 입력 후 저장해주세요.'
+                            message: '⚠️ 엔트리포인트 정보가 없습니다. 다시 입력 후 저장해주세요.',
+                            type: 'error'
                         });
                     }
                 } catch (error) {
                     console.error('제출물 로드 실패:', error);
                     setSuccessToast({
                         visible: true,
-                        message: '제출물을 불러올 수 없습니다.'
+                        message: '제출물을 불러올 수 없습니다.',
+                        type: 'error'
                     });
                 } finally {
                     setSubmissionLoading(false);
@@ -181,9 +183,10 @@ export default function CodeSubmitPage() {
         }
     }, [isEditMode, editSubmissionId, id]);
     const [submitting, setSubmitting] = useState(false);
-    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string }>({
+    const [successToast, setSuccessToast] = useState<{ visible: boolean; message: string; type?: 'success' | 'error' }>({
         visible: false,
-        message: ''
+        message: '',
+        type: 'success'
     });
 
     // 프리뷰/작성 공통으로 쓰는 더미 상태
@@ -274,6 +277,8 @@ export default function CodeSubmitPage() {
                 if (serverMessage) {
                     if (serverMessage.includes("Submission closed")) {
                         errorMessage = "제출 기간이 종료되었습니다.";
+                    } else if (serverMessage.includes("repoUrl")) {
+                        errorMessage = "깃허브 URL을 입력해주세요.";
                     } else {
                         errorMessage = serverMessage;
                     }
@@ -288,7 +293,8 @@ export default function CodeSubmitPage() {
             
             setSuccessToast({
                 visible: true,
-                message: errorMessage
+                message: errorMessage,
+                type: 'error'
             });
         } finally {
             setSubmitting(false);
@@ -316,7 +322,7 @@ export default function CodeSubmitPage() {
             <Toast
                 visible={successToast.visible}
                 message={successToast.message}
-                type="success"
+                type={successToast.type || "success"}
                 size="medium"
                 autoClose={3000}
                 closable={true}
