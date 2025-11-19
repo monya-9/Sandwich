@@ -442,12 +442,12 @@ export default function PortfolioVotePage() {
                                 </div>
                             )} */}
 
-                            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gridAutoRows: '380px' }}>
+                            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                             {submissions.map((submission) => {
                                 const likeInfo = submissionLikes[submission.id] || { liked: false, count: submission.likeCount || 0 };
                                 
                                 return (
-                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200 h-full flex flex-col">
+                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200 flex flex-col">
                                     {/* 1. 프로필 정보 */}
                                     <div className="p-3 sm:p-4 pb-3 flex-shrink-0">
                                         <div className="flex items-center gap-2 sm:gap-3">
