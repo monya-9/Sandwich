@@ -563,13 +563,22 @@ const MyPageSettingPage: React.FC = () => {
 		// 값이 없으면 서버 업데이트 생략
 		if (values.length > 0) {
 			const posId = mapWorkNameToId(values[0]);
-				await persistProfilePartial({ positionId: posId }, false); // 토스트 표시하지 않음
+				
+				// 작업 분야 전용 API 사용
+				await UserApi.updatePosition(posId);
+				
+				// 로컬 프로필 상태 업데이트
+				const refreshed = await UserApi.getMe();
+				setProfile(refreshed);
 				
 				// 작업 분야 저장 성공 토스트 표시
 				setSuccessToast({
 					visible: true,
 					message: "작업 분야가 저장되었습니다."
 				});
+				
+				// 프로필 업데이트 이벤트 발생 (계정 검색 결과 새로고침용)
+				window.dispatchEvent(new CustomEvent('profile-updated'));
 		} else {
 			// 로컬만 변경된 경우에도 사용자 피드백 제공
 			setSuccessToast({
