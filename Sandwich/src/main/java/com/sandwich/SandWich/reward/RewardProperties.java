@@ -8,5 +8,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "reward")
 public class RewardProperties {
     private boolean enabled = true;
-    private boolean applyCredits = false;
+    private boolean applyCredits = true;
 }
