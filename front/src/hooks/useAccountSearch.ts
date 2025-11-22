@@ -49,6 +49,17 @@ export const useAccountSearch = () => {
     performSearch({ q: '', page: 0, size: 20 }); // ✅ 사이즈를 20으로 변경
   }, [performSearch]);
 
+  // 프로필 업데이트 이벤트 감지하여 검색 결과 새로고침
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      // 현재 검색 조건으로 다시 검색
+      performSearch({ q: searchTerm, page: currentPage, size: 20 });
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+  }, [searchTerm, currentPage, performSearch]);
+
   return {
     accounts,
     loading,

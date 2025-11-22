@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import { UserApi, UserProfileResponse } from "../../api/userApi";
 import WorkFieldModal from "./WorkFieldModal";
 import InterestFieldModal from "./InterestFieldModal";
+import SkillFieldModal from "./SkillFieldModal";
 
 import { positionMap, FALLBACK_INTERESTS_GENERAL } from "../../constants/position";
 import Toast from "../common/Toast";
@@ -13,6 +14,24 @@ import api from "../../api/axiosInstance";
 
 const MAX20 = 20;
 const MAX_FILE_MB = 10;
+
+const parseSkillString = (value?: string | null): string[] => {
+	if (!value) return [];
+	return value
+		.split(",")
+		.map((v) => v.trim())
+		.filter((v) => v.length > 0);
+};
+
+const readStoredSkills = (): string[] => {
+	try {
+		const raw = localStorage.getItem("skillFields") || sessionStorage.getItem("skillFields");
+		const parsed = raw ? JSON.parse(raw) : [];
+		return Array.isArray(parsed) ? parsed : [];
+	} catch {
+		return [];
+	}
+};
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div className="text-[14px] text-[#6B7280] dark:text-white/70 mb-2 tracking-[0.01em] leading-[1.7]">{children}</div>
@@ -119,6 +138,8 @@ const MyPageSettingPage: React.FC = () => {
 		const raw = localStorage.getItem("interestFields") || sessionStorage.getItem("interestFields");
 		try { return raw ? JSON.parse(raw) : []; } catch { return []; }
 	});
+	const [showSkillModal, setShowSkillModal] = useState(false);
+	const [skillFields, setSkillFields] = useState<string[]>(() => readStoredSkills());
 
 
 
@@ -145,6 +166,11 @@ const MyPageSettingPage: React.FC = () => {
 				const serverInterests = Array.isArray(me.interests) ? me.interests.map((i)=>i.name) : [];
 				setInterestFields(serverInterests);
 				try { localStorage.setItem("interestFields", JSON.stringify(serverInterests)); sessionStorage.setItem("interestFields", JSON.stringify(serverInterests)); } catch {}
+				const existingSkills = (() => { try { return JSON.parse(localStorage.getItem("skillFields") || sessionStorage.getItem("skillFields") || "null"); } catch { return null; } })();
+				const serverSkills = parseSkillString(me.skills);
+				const initSkills = Array.isArray(existingSkills) && existingSkills.length > 0 ? existingSkills : serverSkills;
+				setSkillFields(initSkills);
+				try { localStorage.setItem("skillFields", JSON.stringify(initSkills)); sessionStorage.setItem("skillFields", JSON.stringify(initSkills)); } catch {}
 
 				// 한 줄 프로필 및 URL 슬러그 초기화
 				const storedOneLine = (localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "").slice(0, MAX20);
@@ -167,6 +193,7 @@ const MyPageSettingPage: React.FC = () => {
 	const onOpenWorkModal = () => setShowWorkModal(true);
 
 	const onOpenInterestModal = () => setShowInterestModal(true);
+	const onOpenSkillModal = () => setShowSkillModal(true);
 
 	const handleUploadClick = () => fileInputRef.current?.click();
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -536,13 +563,22 @@ const MyPageSettingPage: React.FC = () => {
 		// 값이 없으면 서버 업데이트 생략
 		if (values.length > 0) {
 			const posId = mapWorkNameToId(values[0]);
-				await persistProfilePartial({ positionId: posId }, false); // 토스트 표시하지 않음
+				
+				// 작업 분야 전용 API 사용
+				await UserApi.updatePosition(posId);
+				
+				// 로컬 프로필 상태 업데이트
+				const refreshed = await UserApi.getMe();
+				setProfile(refreshed);
 				
 				// 작업 분야 저장 성공 토스트 표시
 				setSuccessToast({
 					visible: true,
 					message: "작업 분야가 저장되었습니다."
 				});
+				
+				// 프로필 업데이트 이벤트 발생 (계정 검색 결과 새로고침용)
+				window.dispatchEvent(new CustomEvent('profile-updated'));
 		} else {
 			// 로컬만 변경된 경우에도 사용자 피드백 제공
 			setSuccessToast({
@@ -588,6 +624,30 @@ const MyPageSettingPage: React.FC = () => {
 				message: errorMessage
 			});
 		}
+	};
+	const onConfirmSkillFields = async (values: string[]) => {
+		setSkillFields(values);
+		try {
+			localStorage.setItem("skillFields", JSON.stringify(values));
+			sessionStorage.setItem("skillFields", JSON.stringify(values));
+		} catch {}
+
+		try {
+			await persistProfilePartial({ skills: values.join(",") || "" }, false);
+			setSuccessToast({
+				visible: true,
+				message: values.length > 0 ? "기술 스택이 저장되었습니다." : "기술 스택이 모두 해제되었습니다."
+			});
+		} catch (error: any) {
+			const errorMessage = error?.response?.data?.message || error?.message || "기술 스택 저장에 실패했습니다. 다시 시도해주세요.";
+			setErrorToast({
+				visible: true,
+				message: errorMessage
+			});
+			return;
+		}
+
+		setShowSkillModal(false);
 	};
 
 
@@ -854,6 +914,25 @@ const MyPageSettingPage: React.FC = () => {
 								{interestFields.length === 0 ? "선택된 관심 분야가 없습니다." : interestFields.join(", ")}
 														</div>
 
+							{/* 기술 스택 */}
+							<div className="mb-2 flex items-center justify-between">
+								<FieldLabel>기술 스택</FieldLabel>
+								<button onClick={onOpenSkillModal} aria-label="기술 스택 설정" className="text-[13px] text-[#068334] hover:underline">기술 스택 설정</button>
+							</div>
+							<div className="mb-7">
+								{skillFields.length === 0 ? (
+									<div className="text-[13px] text-[#ADADAD]">선택된 기술 스택이 없습니다.</div>
+								) : (
+									<div className="flex flex-wrap gap-2">
+										{skillFields.map((skill) => (
+											<span key={skill} className="px-3 py-1 rounded-full text-[12px] border border-[#D1D5DB] bg-white dark:bg-[var(--surface)] text-[#111827] dark:text-white">
+												{skill}
+											</span>
+										))}
+									</div>
+								)}
+							</div>
+
 
 							{/* 소개 (편집 모드) */}
 							<div className="mt-8 mb-3">
@@ -917,6 +996,8 @@ const MyPageSettingPage: React.FC = () => {
 				<WorkFieldModal open={showWorkModal} initial={workFields as any} onClose={()=>setShowWorkModal(false)} onConfirm={(vals)=>onConfirmWorkFields(vals as any)} />
 				{/* 관심 분야 모달 */}
 				<InterestFieldModal open={showInterestModal} initial={interestFields as any} onClose={()=>setShowInterestModal(false)} onConfirm={(vals)=>onConfirmInterestFields(vals as any)} />
+				{/* 기술 스택 모달 */}
+				<SkillFieldModal open={showSkillModal} initial={skillFields} onClose={()=>setShowSkillModal(false)} onConfirm={onConfirmSkillFields} />
 
 			</div>
 		</div>

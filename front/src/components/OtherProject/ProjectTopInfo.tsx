@@ -154,7 +154,9 @@ export default function ProjectTopInfo({ projectName, userName, intro, ownerId, 
             <h1 className="text-base sm:text-lg md:text-xl font-bold text-black dark:text-white break-words">
               {projectName}
               {!!(intro && intro.trim()) && (
-                <span className="text-black dark:text-white font-normal"> - {intro}</span>
+                <span className="text-[15px] sm:text-[15px] md:text-[15px] text-black dark:text-white font-normal leading-tight ml-1">
+                  - {intro}
+                </span>
               )}
             </h1>
             {/* 데스크톱: 제목 옆에 버튼 표시 */}

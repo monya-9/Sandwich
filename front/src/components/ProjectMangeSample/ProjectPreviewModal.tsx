@@ -215,7 +215,9 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "í”„ë
 										<h1 className="text-xl font-bold text-black">
 											{displayTitle}
 											{!!(summary && summary.trim()) && (
-												<span className="text-black font-normal"> - {summary}</span>
+												<span className="text-[15px] sm:text-[15px] md:text-[15px] text-black font-normal leading-tight ml-1">
+													- {summary}
+												</span>
 											)}
 										</h1>
 										<div className="flex items-center gap-2 ml-4">

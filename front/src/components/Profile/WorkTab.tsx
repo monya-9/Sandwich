@@ -184,7 +184,7 @@ const WorkTab: React.FC = () => {
 			<Toast visible={toast.visible} message={toast.message} type={toast.type} size="medium" autoClose={2000} closable={true} onClose={() => setToast(prev => ({ ...prev, visible: false }))} />
 
 			{/* 그리드 */}
-			<div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+			<div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 				{(isReorderMode ? order.map(id => projects.find(p => p.id === id)!).filter(Boolean) : projects).map((project, idx) => {
 					const indexInList = isReorderMode ? order.indexOf(project.id) : idx;
 					return (
@@ -235,7 +235,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 
 	return (
 		<div
-			className={`relative rounded-xl ${isReorderMode ? "cursor-move overflow-hidden" : "cursor-pointer"}`}
+			className={`relative rounded-xl overflow-hidden ${isReorderMode ? "cursor-move" : "cursor-pointer"}`}
 			{...(isReorderMode ? { draggable: true, onDragStart: (e: any) => onDragStart(e, project.id), onDragOver: (e: any) => onDragOver(e), onDrop: (e: any) => onDrop(e, project.id) } : { onClick: goDetail })}
 		>
 			<div className="relative w-full aspect-[4/3] bg-gray-200 group" onMouseLeave={() => setMenuOpen(false)}>
