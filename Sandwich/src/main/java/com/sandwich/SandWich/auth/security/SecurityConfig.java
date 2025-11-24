@@ -180,7 +180,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/follow-counts").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/representative-careers").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/careers").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/educations").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/awards").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/career-projects").permitAll()
                         // slug 기반 공개 프로필
                         .requestMatchers(HttpMethod.GET, "/api/users/slug/**").permitAll()
                         // 사용자 보안 세분화 =====
