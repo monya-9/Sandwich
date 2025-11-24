@@ -1,11 +1,10 @@
 // 프로젝트 피드 메인 컨테이너 컴포넌트
-import React from 'react';
+import React, { useState } from 'react';
 import ProjectSearchBar from './ProjectSearchBar';
 import ProjectFilterOptions from './ProjectFilterOptions';
 import ProjectCardGrid from './ProjectCardGrid';
 import ProjectPagination from './ProjectPagination';
 import { useProjectFeed } from '../../hooks/useProjectFeed';
-import { useState } from 'react';
 
 interface ProjectFeedContainerProps {
   searchType: 'PORTFOLIO' | 'ACCOUNT';
@@ -26,7 +25,6 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
     error,
     filters,
     setFilters,
-    clearFilters,
     searchProjects,
     refresh,
     loadProjects
@@ -43,7 +41,7 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
 
   // 검색어 초기화 함수
   const handleClearSearch = () => {
-    const clearedFilters = { page: 0, size: 20, q: undefined }; // ✅ 사이즈를 20으로 변경
+    const clearedFilters = { page: 0, size: 20, q: undefined, followingOnly: false, uploadedWithin: undefined }; // ✅ 모든 필터 초기화
     setFilters(clearedFilters);
     setCurrentSearchQuery(''); // 검색어 입력창 초기화
     // loadProjects는 useEffect에서 자동으로 호출됨
@@ -54,8 +52,11 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       {/* 검색바와 필터 옵션 */}
-      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-2 sm:px-4 py-3 sm:py-6">
+      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-3 md:px-4 py-3 md:py-6">
         <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-3 md:mb-6">
+            <h1 className="text-base md:text-2xl font-bold text-gray-900 dark:text-white">포트폴리오 검색</h1>
+          </div>
           <ProjectSearchBar 
             onSearch={handleSearch}
             currentQuery={currentSearchQuery}
@@ -67,9 +68,11 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
           <ProjectFilterOptions 
             filters={filters}
             onFiltersChange={setFilters}
-            onClearFilters={clearFilters}
+            onClearFilters={handleClearSearch}
             onClearSearch={handleClearSearch}
             totalElements={totalElements}
+            searchType={searchType}
+            onSearchTypeChange={onSearchTypeChange}
           />
         </div>
       </div>
@@ -78,11 +81,11 @@ const ProjectFeedContainer: React.FC<ProjectFeedContainerProps> = ({
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {/* 검색 결과 텍스트 - 로딩 중이 아닐 때만 표시 */}
         {filters.q && filters.q.trim() && !isLoading && !isInitialLoading && (
-          <div className="text-center mb-4 sm:mb-8">
-            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
+          <div className="text-center mb-3 md:mb-8 px-4">
+            <h1 className="text-sm md:text-2xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">
               '{filters.q}'에 대한 검색 결과
             </h1>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-white/70">
+            <p className="text-xs md:text-base text-gray-600 dark:text-white/70">
               {totalElements.toLocaleString()}개의 포트폴리오를 발견했습니다.
             </p>
           </div>

@@ -91,8 +91,27 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
         } catch { return {}; }
     });
 
-    const scrollLeft = () => scrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
-    const scrollRight = () => scrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
+    const scrollLeft = () => {
+        const el = scrollRef.current;
+        if (!el) return;
+        
+        const cardWidth = windowWidth < 768 ? 280 : windowWidth < 1024 ? 350 : 450;
+        const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16;
+        const scrollAmount = cardWidth + gap;
+        
+        el.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    };
+    
+    const scrollRight = () => {
+        const el = scrollRef.current;
+        if (!el) return;
+        
+        const cardWidth = windowWidth < 768 ? 280 : windowWidth < 1024 ? 350 : 450;
+        const gap = windowWidth < 768 ? 8 : windowWidth < 1024 ? 12 : 16;
+        const scrollAmount = cardWidth + gap;
+        
+        el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    };
 
     const handleScroll = () => {
         if (!scrollRef.current) return;
@@ -340,7 +359,7 @@ const MainHeroSection = memo(({ projects }: { projects: Project[] }) => {
             {/* 프로젝트 카드 리스트 */}
             <div
                 ref={scrollRef}
-                className="custom-scrollbar flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 py-2 mt-2 md:mt-[10px] relative"
+                className="custom-scrollbar flex gap-2 md:gap-3 lg:gap-4 px-3 md:px-4 py-2 mt-2 md:mt-[10px] relative justify-center md:justify-start"
                 style={{ scrollSnapType: 'x mandatory', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {displayProjects.map((project, idx) => {

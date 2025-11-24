@@ -50,13 +50,13 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
     }, []);
 
     return (
-        <section className="mb-8">
+        <section className="mb-6 sm:mb-8">
             {/* 제목 */}
-            <h3 className="text-2xl font-extrabold mb-4 text-left ml-[15px] text-black dark:text-white flex items-center gap-2">
+            <h3 className="text-xl sm:text-2xl font-extrabold mb-3 sm:mb-4 text-left ml-[15px] text-black dark:text-white flex flex-wrap items-center gap-2">
                 <span>{item.title}</span>
                 {item.statusBadge && (
                     <span
-                        className={`inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium ${
+                        className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] sm:text-[12px] font-medium ${
                             item.statusBadgeClass || 'border-neutral-300 text-neutral-600'
                         }`}
                     >
@@ -66,35 +66,35 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
             </h3>
 
             {/* 카드 본문 */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/60 p-5 md:p-7">
-                <div className="mb-1 flex items-center justify-between">
-                    <p className="text-[15px] font-semibold text-black dark:text-neutral-100">{item.subtitle}</p>
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/60 p-4 sm:p-5 md:p-7">
+                <div className="mb-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <p className="text-[14px] sm:text-[15px] font-semibold text-black dark:text-neutral-100">{item.subtitle}</p>
                     {admin && item.adminEditHref && (
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <Link
                                 to={item.adminEditHref}
-                                className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
+                                className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
                             >
                                 챌린지 수정
                             </Link>
                             <button
                                 onClick={() => setDeleteOpen(true)}
-                                className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-red-600 hover:bg-red-50"
+                                className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold text-red-600 hover:bg-red-50"
                             >
                                 챌린지 삭제
                             </button>
                         </div>
                     )}
                 </div>
-                <div className="text-[13.5px] leading-6 text-neutral-800 dark:text-neutral-200">
+                <div className="text-[13px] sm:text-[13.5px] leading-6 text-neutral-800 dark:text-neutral-200">
                     {item.description}
                 </div>
 
                 {/* Summary 표시 */}
                 {item.summary && (
-                    <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-lg">
-                        <div className="font-medium text-neutral-700 dark:text-neutral-200 mb-2 text-sm">📋 문제 설명</div>
-                        <div className="text-[13px] leading-6 text-neutral-700 dark:text-neutral-300 whitespace-pre-line max-h-[120px] overflow-y-auto">
+                    <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-lg">
+                        <div className="font-medium text-neutral-700 dark:text-neutral-200 mb-2 text-[13px] sm:text-sm">📋 문제 설명</div>
+                        <div className="text-[12px] sm:text-[13px] leading-6 text-neutral-700 dark:text-neutral-300 whitespace-pre-line max-h-[120px] overflow-y-auto">
                             {item.summary}
                         </div>
                     </div>
@@ -102,7 +102,7 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
 
                 {/* 시작일 정보 - 문제 설명 박스 아래 */}
                 {item.startDate && (
-                    <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                    <div className="mt-2 sm:mt-3 text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">
                         📅 시작일: {item.startDate}
                     </div>
                 )}
@@ -112,14 +112,14 @@ export default function ChallengeCard({ item }: { item: ChallengeCardData }) {
                     {href === "#" ? (
                         <button
                             disabled
-                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
+                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
                         >
                             {item.ctaLabel}
                         </button>
                     ) : (
                         <Link
                             to={href}
-                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
+                            className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold text-black dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
                         >
                             {item.ctaLabel} →
                         </Link>

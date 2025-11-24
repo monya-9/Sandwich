@@ -138,7 +138,12 @@ const NotificationsPage: React.FC = () => {
                                     onClick={() => {
                                         noti.markOneRead(n.id);
                                         if (n.deepLink) {
-                                            navigate(n.deepLink);
+                                            // 프로젝트 페이지로 이동하는 경우 state 전달
+                                            if (n.deepLink.includes('/other-project/')) {
+                                                navigate(n.deepLink, { state: { fromApp: true } });
+                                            } else {
+                                                navigate(n.deepLink);
+                                            }
                                         }
                                     }}
                                     className={`w-full text-left p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors relative ${

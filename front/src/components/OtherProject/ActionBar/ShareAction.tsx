@@ -195,16 +195,16 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
         <>
           {/* 배경 */}
           <div
-           className="fixed inset-0 z-[10000]"
+           className="fixed inset-0 z-[100000]"
            style={{ background: "rgba(0, 0, 0, 0.65)" }}
            onClick={() => setOpen(false)}
           />
           {/* 데스크탑 기준 중앙 고정 & 적정 너비 */}
-          <div className="fixed z-[10001] inset-0 flex items-center justify-center">
+          <div className="fixed z-[100001] inset-0 flex items-center justify-center p-3 sm:p-4">
             <div
               className="
-                bg-white w-[520px] max-w-[95vw]
-                rounded-2xl shadow-2xl px-9 py-8
+                bg-white dark:bg-[var(--surface)] w-full sm:w-[520px] max-w-[95vw]
+                rounded-xl sm:rounded-2xl shadow-2xl px-4 py-6 sm:px-6 sm:py-7 md:px-9 md:py-8
                 relative flex flex-col
               "
               style={{ fontFamily: "GmarketSans, sans-serif" }}
@@ -212,108 +212,107 @@ export default function ShareAction({ shareUrl, thumbnailUrl, title, isMobile = 
               {/* 닫기 버튼 */}
               <button
                 onClick={() => setOpen(false)}
-                className="absolute right-8 top-8 text-gray-400 hover:text-black text-3xl"
+                className="absolute right-4 top-4 sm:right-6 sm:top-6 md:right-8 md:top-8 text-gray-400 hover:text-black dark:hover:text-white text-2xl sm:text-3xl"
                 aria-label="닫기"
               >✕</button>
 
               {/* 제목 - 왼쪽 정렬 */}
-              <div className="w-full font-bold text-[22px] mb-6 text-left pl-1 leading-tight">프로젝트 공유하기</div>
+              <div className="w-full font-bold text-lg sm:text-xl md:text-[22px] mb-4 sm:mb-5 md:mb-6 text-left pl-0 sm:pl-1 leading-tight dark:text-white">프로젝트 공유하기</div>
               {/* divider */}
-              <div className="w-full h-px bg-gray-200 mb-7" />
+              <div className="w-full h-px bg-gray-200 dark:bg-[var(--border-color)] mb-4 sm:mb-5 md:mb-7" />
 
               {/* 썸네일+제목/설명 왼쪽 정렬, 높이/글자 맞춤 */}
-              <div className="flex items-center w-full mb-7 pl-1">
+              <div className="flex items-center w-full mb-4 sm:mb-5 md:mb-7 pl-0 sm:pl-1">
                 <img
                   src={finalThumb}
                   alt="썸네일"
-                  className="w-14 h-14 rounded-lg bg-gray-100 object-cover flex-shrink-0"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gray-100 dark:bg-[var(--surface)] object-cover flex-shrink-0"
                 />
-                <div className="ml-4 flex flex-col justify-center">
-                  <div className="font-bold text-[15px] text-black leading-snug whitespace-pre-line">
+                <div className="ml-3 sm:ml-4 flex flex-col justify-center min-w-0 flex-1">
+                  <div className="font-bold text-sm sm:text-[15px] text-black dark:text-white leading-snug whitespace-pre-line line-clamp-2">
                     {finalTitle}
                   </div>
                 </div>
               </div>
               {/* divider */}
-              <div className="w-full h-px bg-gray-200 mb-6" />
+              <div className="w-full h-px bg-gray-200 dark:bg-[var(--border-color)] mb-4 sm:mb-5 md:mb-6" />
 
               {/* SNS 공유 아이콘 */}
-              <div className="flex justify-center gap-5 mb-8">
+              <div className="flex justify-center gap-3 sm:gap-4 md:gap-5 mb-5 sm:mb-6 md:mb-8 flex-wrap">
                 <button
                   onClick={handleLinkedInShare}
-                  className="flex flex-col items-center gap-2 group"
+                  className="flex flex-col items-center gap-1 sm:gap-2 group"
                   aria-label="LinkedIn에 공유"
                 >
-                  <div className="w-14 h-14 rounded-full bg-[#0A66C2] flex items-center justify-center transition-transform hover:scale-110">
-                    <FaLinkedin className="w-7 h-7 text-white" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#0A66C2] flex items-center justify-center transition-transform hover:scale-110">
+                    <FaLinkedin className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium">LinkedIn</span>
+                  <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">LinkedIn</span>
                 </button>
 
                 <button
                   onClick={handlePinterestShare}
-                  className="flex flex-col items-center gap-2 group"
+                  className="flex flex-col items-center gap-1 sm:gap-2 group"
                   aria-label="Pinterest에 공유"
                 >
-                  <div className="w-14 h-14 rounded-full bg-[#E60023] flex items-center justify-center transition-transform hover:scale-110">
-                    <FaPinterest className="w-7 h-7 text-white" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#E60023] flex items-center justify-center transition-transform hover:scale-110">
+                    <FaPinterest className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium">Pinterest</span>
+                  <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">Pinterest</span>
                 </button>
 
                 <button
                   onClick={handleXShare}
-                  className="flex flex-col items-center gap-2 group"
+                  className="flex flex-col items-center gap-1 sm:gap-2 group"
                   aria-label="X에 공유"
                 >
-                  <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center transition-transform hover:scale-110">
-                    <FaXTwitter className="w-7 h-7 text-white" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-black flex items-center justify-center transition-transform hover:scale-110">
+                    <FaXTwitter className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium">X</span>
+                  <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">X</span>
                 </button>
 
                 <button
                   onClick={handleNaverBlogShare}
-                  className="flex flex-col items-center gap-2 group"
+                  className="flex flex-col items-center gap-1 sm:gap-2 group"
                   aria-label="네이버 블로그에 공유"
                 >
-                  <div className="w-14 h-14 rounded-full bg-[#03C75A] flex items-center justify-center transition-transform hover:scale-110">
-                    <SiNaver className="w-7 h-7 text-white" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#03C75A] flex items-center justify-center transition-transform hover:scale-110">
+                    <SiNaver className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium">네이버</span>
+                  <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">네이버</span>
                 </button>
 
                 <button
                   onClick={handleKakaoShare}
-                  className="flex flex-col items-center gap-2 group"
+                  className="flex flex-col items-center gap-1 sm:gap-2 group"
                   aria-label="카카오톡에 공유"
                 >
-                  <div className="w-14 h-14 rounded-full bg-[#FEE500] flex items-center justify-center transition-transform hover:scale-110">
-                    <RiKakaoTalkFill className="w-8 h-8 text-[#3C1E1E]" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#FEE500] flex items-center justify-center transition-transform hover:scale-110">
+                    <RiKakaoTalkFill className="w-7 h-7 sm:w-8 sm:h-8 text-[#3C1E1E]" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium">카카오톡</span>
+                  <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">카카오톡</span>
                 </button>
               </div>
 
               <div className="flex w-full mt-1">
                 <input
                   type="text"
-                  className="flex-1 border border-gray-200 rounded-l-lg px-5 py-4 bg-gray-50 font-medium text-gray-900 min-w-0 text-xs overflow-x-auto"
+                  className="flex-1 border border-gray-200 dark:border-[var(--border-color)] rounded-l-lg px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 bg-gray-50 dark:bg-[var(--surface)] font-medium text-gray-900 dark:text-white min-w-0 text-xs overflow-x-auto"
                   value={finalShareUrl}
                   readOnly
                   style={{
                     fontFamily: "GmarketSans, sans-serif",
-                    fontSize: "13px",
+                    fontSize: "11px",
                     letterSpacing: "-0.01em"
                   }}
                   onFocus={e => e.target.select()}
                 />
                 <button
                   onClick={handleCopy}
-                  className="px-7 py-4 bg-gray-100 border-l border-gray-200 rounded-r-lg text-base font-bold hover:bg-gray-200 whitespace-nowrap"
+                  className="px-4 py-2 sm:px-5 sm:py-3 md:px-7 md:py-4 bg-gray-100 dark:bg-[var(--surface)] border-l border-gray-200 dark:border-[var(--border-color)] rounded-r-lg text-xs sm:text-sm md:text-base font-bold hover:bg-gray-200 dark:hover:bg-[#1a1a1a] whitespace-nowrap dark:text-white"
                   style={{
-                    fontFamily: "GmarketSans, sans-serif",
-                    fontSize: "15px"
+                    fontFamily: "GmarketSans, sans-serif"
                   }}
                 >URL 복사</button>
               </div>

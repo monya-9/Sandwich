@@ -194,6 +194,10 @@ export function toNotifyItem(raw: RawNotification): NotifyItem {
                 resourceText = resourceTitle ? `포스트 "${resourceTitle}"에` : "포스트에";
             } else if (resourceType === "COMMENT") {
                 resourceText = resourceTitle ? `댓글 "${resourceTitle}"에` : "댓글에";
+            } else if (resourceType === "PORTFOLIO_SUBMISSION") {
+                resourceText = resourceTitle ? `포트폴리오 제출물 "${resourceTitle}"에` : "포트폴리오 제출물에";
+            } else if (resourceType === "CODE_SUBMISSION") {
+                resourceText = resourceTitle ? `코드 제출물 "${resourceTitle}"에` : "코드 제출물에";
             } else {
                 resourceText = resourceTitle ? `"${resourceTitle}"에` : "댓글을";
             }
@@ -215,6 +219,10 @@ export function toNotifyItem(raw: RawNotification): NotifyItem {
                 resourceText = resourceTitle ? `포스트 "${resourceTitle}"에` : "포스트에";
             } else if (resourceType === "COMMENT") {
                 resourceText = resourceTitle ? `댓글 "${resourceTitle}"에` : "댓글에";
+            } else if (resourceType === "PORTFOLIO_SUBMISSION") {
+                resourceText = resourceTitle ? `포트폴리오 제출물 "${resourceTitle}"에` : "포트폴리오 제출물에";
+            } else if (resourceType === "CODE_SUBMISSION") {
+                resourceText = resourceTitle ? `코드 제출물 "${resourceTitle}"에` : "코드 제출물에";
             } else {
                 resourceText = resourceTitle ? `"${resourceTitle}"에` : "좋아요를";
             }

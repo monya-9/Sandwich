@@ -229,7 +229,7 @@ export default function CodeSubmissionListPage() {
     };
 
     return (
-        <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
+        <div className="mx-auto max-w-screen-xl px-4 py-4 sm:py-6 md:px-6 md:py-10">
             <ChallengePageHeader
                 title={getHeaderTitle()}
                 onBack={() => nav(`/challenge/code/${id}`)}
@@ -244,16 +244,16 @@ export default function CodeSubmissionListPage() {
             />
 
             {submissionsLoading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-12 sm:py-16">
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
                             <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
-                            <span className="text-lg font-medium">제출물을 불러오는 중...</span>
+                            <span className="text-base sm:text-lg font-medium">제출물을 불러오는 중...</span>
                         </div>
                     </div>
                 </div>
             ) : submissions.length > 0 ? (
-                <div className="grid gap-5 md:grid-cols-3 items-stretch">
+                <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3" style={{ gridAutoRows: '220px' }}>
                     {submissions.filter(submission => submission != null).map((submission, index) => {
                         // 안전한 ID 추출 (실제 API는 id 필드 사용)
                         const submissionId = submission?.id || (index + 1);

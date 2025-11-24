@@ -1,9 +1,8 @@
 // src/components/challenge/CodeWinnersSection.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchChallenges, fetchChallengeDetail } from "../../api/challengeApi";
-import { fetchAiLeaderboard } from "../../api/aiJudgeApi";
-import { fetchUserById } from "../../api/userMini";
+import { fetchChallenges } from "../../api/challengeApi";
+import api from "../../api/axiosInstance";
 
 type SimpleWinner = { rank: number; name: string; profileImageUrl?: string; userId?: number };
 
@@ -27,10 +26,10 @@ function WinnerCard({ w }: { w: SimpleWinner }) {
   };
   
   return (
-    <div className="text-center">
-      <div className="mb-2 text-3xl">{getMedalIcon(w.rank)}</div>
+    <div className="text-center px-2 sm:px-3">
+      <div className="mb-2 text-2xl sm:text-3xl">{getMedalIcon(w.rank)}</div>
       <div 
-        className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
         onClick={handleProfileClick}
       >
         {w.profileImageUrl ? (
@@ -41,20 +40,20 @@ function WinnerCard({ w }: { w: SimpleWinner }) {
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
-              target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${initial}</span>`;
+              target.parentElement!.innerHTML = `<span class="font-bold text-base sm:text-lg text-gray-700">${initial}</span>`;
             }}
           />
         ) : (
-          <span className="font-bold text-lg text-gray-700">{initial}</span>
+          <span className="font-bold text-base sm:text-lg text-gray-700">{initial}</span>
         )}
       </div>
       <div 
-        className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+        className="font-semibold text-gray-800 mb-2 break-words text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity px-1"
         onClick={handleProfileClick}
       >
         {w.name}
       </div>
-      <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">{w.rank}위</div>
+      <div className="bg-gray-800 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm w-16 sm:w-20 text-center mx-auto">{w.rank}위</div>
     </div>
   );
 }
@@ -76,46 +75,37 @@ export default function CodeWinnersSection() {
       // 이미 정렬되어 있으므로 첫 번째가 가장 최근 종료
       const latest = content[0];
 
-      // 2) week 추출 (ruleJson.week)
-      let week: string | null = null;
-      try {
-        const detail = await fetchChallengeDetail(latest.id);
-        // 1) 최우선: detail.aiWeek 컬럼
-        week = (detail as any)?.aiWeek || null;
-        if (!week) {
-          // 2) ruleJson 안의 week
-          const raw = (detail as any)?.ruleJson ?? latest.ruleJson;
-          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          week = parsed?.week || parsed?.aiWeek || null;
-        }
-      } catch {}
-      if (!week) { setWinners([]); return; }
-
-      // 3) AI 리더보드 상위 3 조회 + 이름 매핑
-      const lb = await fetchAiLeaderboard(week);
-      const top3 = (lb?.leaderboard || []).slice(0, 3);
-
-      const idSet = new Set<number>();
-      top3.forEach(e => { const n = Number(String(e.user)); if (Number.isFinite(n)) idSet.add(n); });
-      const idArr = Array.from(idSet);
-      const userMap = new Map<number, { name: string | null; profileImageUrl?: string }>();
-      await Promise.all(idArr.map(async (id) => {
-        const user = await fetchUserById(id);
-        const name = user?.nickname || user?.displayName || user?.username || user?.userName || null;
-        const profileImageUrl = user?.profileImageUrl || user?.profileImage || user?.avatarUrl || user?.avatar;
-        console.log(`👤 User ${id}:`, { name, profileImageUrl, rawUser: user });
-        userMap.set(id, { name, profileImageUrl });
-      }));
-
-      const winnersMapped: SimpleWinner[] = top3.map(e => {
-        const n = Number(String(e.user));
-        const fallback = `user ${e.user}`;
-        const userInfo = Number.isFinite(n) && userMap.has(n) ? userMap.get(n)! : { name: null, profileImageUrl: undefined };
-        const name = userInfo.name || fallback;
-        return { rank: e.rank, name, profileImageUrl: userInfo.profileImageUrl, userId: Number.isFinite(n) ? n : undefined };
+      // 2) 백엔드 API를 통해 AI 리더보드 조회 (상위 3명)
+      // 백엔드가 AI 서버 호출 + 유저 정보 매핑을 모두 처리해줌
+      const res = await api.get(`/challenges/${latest.id}/leaderboard`, {
+        params: { limit: 3 },
+        withCredentials: true,
       });
+      
+      const data = res.data;
+      if (!data?.found || !data?.items?.length) {
+        setWinners([]);
+        return;
+      }
+
+      // 3) 백엔드 응답을 SimpleWinner 형식으로 변환
+      const winnersMapped: SimpleWinner[] = data.items.map((item: any) => {
+        const owner = item.owner;
+        const name = owner?.username || `user ${item.user}`;
+        const profileImageUrl = owner?.profileImageUrl;
+        const userId = owner?.userId;
+        
+        return {
+          rank: item.rank,
+          name,
+          profileImageUrl,
+          userId,
+        };
+      });
+      
       setWinners(winnersMapped);
     } catch (e) {
+      console.error("코드 리더보드 로딩 실패:", e);
       setError("코드 리더보드를 불러오지 못했습니다.");
       setWinners([]);
     } finally {
@@ -156,9 +146,9 @@ export default function CodeWinnersSection() {
     <div className="mx-auto mt-5 max-w-screen-xl px-4 md:px-6">
       <div className="flex justify-center w-full">
         <div className="flex flex-col w-full items-stretch">
-          <h3 className="mb-3 text-2xl font-extrabold text-center">지난 코드 챌린지 TOP Winners</h3>
+          <h3 className="mb-3 text-xl sm:text-2xl font-extrabold text-center px-2">지난 코드 챌린지 TOP Winners</h3>
           {loading ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto">
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500 mx-auto mb-2"></div>
@@ -167,24 +157,24 @@ export default function CodeWinnersSection() {
               </div>
             </div>
           ) : error ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto">
               <div className="flex items-center justify-center h-full text-sm text-neutral-500">{error}</div>
             </div>
           ) : winners.length === 0 ? (
             // 데이터가 없을 때 안내 메시지 표시
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
-              <div className="text-base text-neutral-600 text-center font-medium">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto flex items-center justify-center">
+              <div className="text-sm sm:text-base text-neutral-600 text-center font-medium px-4">
                 지난 코드 챌린지 우승자 정보가 없습니다.
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
-              <div className="grid grid-cols-3 items-center w-full">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto flex items-center justify-center">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 items-center w-full max-w-2xl mx-auto">
                 {[2, 1, 3].map((rank) => {
                   const w = winners.find((x) => x.rank === rank);
                   return (
-                    <div key={rank} className="flex-1 flex justify-center">
-                      {w ? <WinnerCard w={w} /> : <div className="invisible"><div className="w-12 h-12" /></div>}
+                    <div key={rank} className="flex justify-center">
+                      {w ? <WinnerCard w={w} /> : <div className="invisible"><div className="w-10 h-10 sm:w-12 sm:h-12" /></div>}
                     </div>
                   );
                 })}

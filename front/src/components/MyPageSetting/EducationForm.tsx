@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import SelectDropdown from "./SelectDropdown";
+import YearSelect from "./YearSelect";
 import { EducationApi, EducationLevel, EducationStatus, MajorItem } from "../../api/educationApi";
 import { EducationItem } from "./EducationCard";
 import Toast from "../common/Toast";
@@ -87,16 +88,6 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 		return Number.isFinite(n) ? n : null;
 	};
 
-	// 연도 유효성 검사
-	const currentYear = new Date().getFullYear();
-	const getYearError = (s: string): string | null => {
-		if (!s) return null;
-		if (s.length !== 4 || Number.isNaN(parseInt(s, 10))) return "날짜입력 형식이 아닙니다.";
-		if (parseInt(s, 10) > currentYear) return "이번년도 이전으로 설정해주세요.";
-		return null;
-	};
-	const enterYearError = getYearError(enterYear);
-	const graduateYearError = getYearError(graduateYear);
 
 	// 폼 유효성
 	// 고등학교는 degree와 전공이 선택사항이므로 조건 수정
@@ -104,8 +95,8 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 	const requiredFilled = school.trim().length > 0 && 
 		(level !== "HIGH_SCHOOL" && level !== "BOOTCAMP" ? degree.trim().length > 0 : true) && 
 		(level !== "HIGH_SCHOOL" ? totalMajorsCount > 0 : true);
-	const enterValid = !!enterYear && !enterYearError && enterYear.length === 4;
-	const graduateValid = !!graduateYear && !graduateYearError && graduateYear.length === 4;
+	const enterValid = !!enterYear;
+	const graduateValid = !!graduateYear;
 	const isValid = requiredFilled && enterValid && graduateValid;
     const completeBtnCls = `px-4 h-[36px] rounded-[10px] text-[14px] ${isValid && !saving ? "bg-[#21B284] text-white" : "bg-[#E5E7EB] text-[#111827]"}`;
 
@@ -279,33 +270,19 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 					{level === "BOOTCAMP" ? "수강 기간" : "재학 기간"} <span className="text-green-500">*</span>
 				</label>
 				<div className="grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)] gap-2 md:grid-cols-[minmax(180px,1fr)_auto_minmax(180px,1fr)_minmax(200px,auto)] md:gap-x-3 md:gap-y-0 items-start">
-					<div className="relative min-w-0">
-                        <input 
-							type="text" 
-							maxLength={4} 
-							value={enterYear} 
-							onChange={(e)=>setEnterYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} 
-							className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${enterYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}`} 
-							placeholder={level === "BOOTCAMP" ? "시작년도" : "입학년도"} 
-							aria-invalid={!!enterYearError} 
-						/>
-						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{enterYear.length}/4</span>
-						{enterYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{enterYearError}</p>}
-					</div>
+					<YearSelect 
+						value={enterYear} 
+						onChange={setEnterYear} 
+						placeholder={level === "BOOTCAMP" ? "시작년도" : "입학년도"} 
+						className="min-w-0" 
+					/>
 					<span className="hidden md:flex items-center justify-center self-center text-[#6B7280] text-[14px] px-1">-</span>
-					<div className="relative min-w-0">
-                        <input 
-							type="text" 
-							maxLength={4} 
-							value={graduateYear} 
-							onChange={(e)=>setGraduateYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} 
-							className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${graduateYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}`} 
-							placeholder={level === "BOOTCAMP" ? "완료년도" : "졸업년도"} 
-							aria-invalid={!!graduateYearError} 
-						/>
-						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{graduateYear.length}/4</span>
-						{graduateYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{graduateYearError}</p>}
-					</div>
+					<YearSelect 
+						value={graduateYear} 
+						onChange={setGraduateYear} 
+						placeholder={level === "BOOTCAMP" ? "완료년도" : "졸업년도"} 
+						className="min-w-0" 
+					/>
                     <SelectDropdown 
 						value={statuses.find(s => s.value === status)?.label || "졸업"} 
 						options={statuses.map(s => s.label)} 
@@ -395,14 +372,24 @@ const EducationForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }
 			{/* 설명 - 고등학교가 아닐 때만 표시 */}
 			{level !== "HIGH_SCHOOL" && (
 				<div>
-					<label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명</label>
+					<label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명 (최대 200자)</label>
 					<textarea 
 						value={desc} 
-						onChange={(e)=>setDesc(e.target.value)} 
+						onChange={(e) => {
+							if (e.target.value.length <= 200) {
+								setDesc(e.target.value);
+							}
+						}} 
+						maxLength={200}
 						rows={6} 
 						className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" 
 						placeholder={level === "BOOTCAMP" ? "수강한 기술 스택이나 프로젝트 내용을 간단하게 작성해주세요." : "이수과목 또는 연구내용을 간단하게 작성해주세요."} 
 					/>
+					<div className="flex justify-end mt-1">
+						<span className={`text-xs ${desc.length >= 200 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
+							{desc.length}/200
+						</span>
+					</div>
 				</div>
 			)}
 

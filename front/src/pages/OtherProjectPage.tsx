@@ -314,7 +314,21 @@ export default function OtherProjectPage() {
         return {} as any;
     }, [contents]);
     const pageBg = (metaFromContents as any)?.bg || '#ffffff';
+    const savedTextColor = (metaFromContents as any)?.textColor;
     const gapPx = typeof (metaFromContents as any)?.gap === 'number' ? (metaFromContents as any).gap : 10;
+    
+    // 사용자가 설정한 배경색을 그대로 사용 (테마에 따라 변경하지 않음)
+    const effectiveBg = pageBg;
+    
+    // 텍스트 색상 결정: 저장된 값이 있으면 사용, 없으면 기본값(라이트=검은색, 다크=흰색)
+    const getDefaultTextColor = () => {
+        try {
+            return document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000';
+        } catch {
+            return '#000000';
+        }
+    };
+    const textColor = savedTextColor || getDefaultTextColor();
     const styles = (
         <style>
             {`
@@ -349,9 +363,47 @@ export default function OtherProjectPage() {
             .pm-preview-content .ql-editor > h5,
             .pm-preview-content .ql-editor > h6,
             .pm-preview-content .ql-editor > blockquote,
-            .pm-preview-content .ql-editor > pre { margin-left: 80px; margin-right: 80px; }
+            .pm-preview-content .ql-editor > pre { margin-left: 12px; margin-right: 12px; }
+            @media (min-width: 640px) {
+                .pm-preview-content .ql-editor > p,
+                .pm-preview-content .ql-editor > h1,
+                .pm-preview-content .ql-editor > h2,
+                .pm-preview-content .ql-editor > h3,
+                .pm-preview-content .ql-editor > h4,
+                .pm-preview-content .ql-editor > h5,
+                .pm-preview-content .ql-editor > h6,
+                .pm-preview-content .ql-editor > blockquote,
+                .pm-preview-content .ql-editor > pre { margin-left: 24px; margin-right: 24px; }
+            }
+            @media (min-width: 1024px) {
+                .pm-preview-content .ql-editor > p,
+                .pm-preview-content .ql-editor > h1,
+                .pm-preview-content .ql-editor > h2,
+                .pm-preview-content .ql-editor > h3,
+                .pm-preview-content .ql-editor > h4,
+                .pm-preview-content .ql-editor > h5,
+                .pm-preview-content .ql-editor > h6,
+                .pm-preview-content .ql-editor > blockquote,
+            .pm-preview-content .ql-editor > pre { margin-left: 48px; margin-right: 48px; }
+            }
             .pm-preview-content .ql-editor > p:has(> img:only-child),
             .pm-preview-content .ql-editor > p:has(> iframe:only-child) { margin-left: 0; margin-right: 0; }
+            .pm-preview-content .ql-editor h1 { font-size: 1.75rem; }
+            .pm-preview-content .ql-editor h2 { font-size: 1.5rem; }
+            .pm-preview-content .ql-editor h3 { font-size: 1.25rem; }
+            .pm-preview-content .ql-editor p { font-size: 0.875rem; line-height: 1.6; }
+            @media (min-width: 640px) {
+                .pm-preview-content .ql-editor h1 { font-size: 2rem; }
+                .pm-preview-content .ql-editor h2 { font-size: 1.75rem; }
+                .pm-preview-content .ql-editor h3 { font-size: 1.5rem; }
+                .pm-preview-content .ql-editor p { font-size: 0.9375rem; line-height: 1.65; }
+            }
+            @media (min-width: 1024px) {
+                .pm-preview-content .ql-editor h1 { font-size: 2.25rem; }
+                .pm-preview-content .ql-editor h2 { font-size: 2rem; }
+                .pm-preview-content .ql-editor h3 { font-size: 1.75rem; }
+                .pm-preview-content .ql-editor p { font-size: 1rem; line-height: 1.7; }
+            }
             .pm-preview-content img.pm-embed-padded,
             .pm-preview-content iframe.pm-embed-padded { padding: 0 var(--pm-pad, 0px) var(--pm-pad, 0px) var(--pm-pad, 0px); margin-bottom: calc(-1 * var(--pm-pad, 0px)); background: transparent; box-sizing: border-box; }
             .pm-preview-content img.pm-embed-padded + *,
@@ -370,17 +422,16 @@ export default function OtherProjectPage() {
     // forcePage=true일 때만 페이지 형식, 그 외(기본)는 모달
     if (forcePage) {
         return (
-            <div className="min-h-screen w-full bg-[#f5f6f8] font-gmarketsans">
+            <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black font-gmarketsans">
                 {styles}
-                <style>{`.op-actionbar, .op-actionbar * { color: #000 !important; }`}</style>
-                <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-4 md:py-8 lg:py-12">
-                    <div className="flex flex-col lg:flex-row items-start w-full relative px-4 md:px-6 lg:px-0" style={{ maxWidth: MAX_WIDTH }}>
+                <main className="w-full flex justify-center min-h-[calc(100vh-64px)] py-2 sm:py-4 md:py-8 lg:py-12">
+                    <div className="flex flex-col lg:flex-row items-start w-full relative px-2 sm:px-4 md:px-6 lg:px-0" style={{ maxWidth: MAX_WIDTH }}>
                         <div className="flex flex-col lg:flex-row items-start w-full">
-                            <section className="bg-white rounded-2xl shadow-2xl px-4 py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
+                            <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }}>
                                 <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
-                                <div className="mt-6 -mx-4 md:-mx-6 lg:-mx-8 mb-8">
-                                    <div className="rounded-xl overflow-hidden" style={{ background: pageBg, minHeight: '600px' }}>
-                                        <div className="px-0 py-8">
+                                <div className="mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 mb-4 sm:mb-6 md:mb-8">
+                                    <div className="rounded-lg sm:rounded-xl overflow-hidden" style={{ backgroundColor: effectiveBg }}>
+                                        <div className="px-0 py-3 sm:py-4 md:py-6" style={{ color: textColor }}>
                                             <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                                 <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
                                             </div>
@@ -388,7 +439,7 @@ export default function OtherProjectPage() {
                                     </div>
                                 </div>
                                 <TagList tags={headerCategories} />
-                                <div className="mb-8">
+                                <div className="mb-4 sm:mb-6 md:mb-8">
                                     <ProjectStatsBox
                                         likes={likesCount}
                                         views={viewsCount}
@@ -406,17 +457,20 @@ export default function OtherProjectPage() {
                             </section>
                             {!commentOpen && (
                                 <div 
-                                    className={`${forcePage ? 'op-actionbar' : ''} ${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-50' : ''}`}
+                                    className={`${forcePage ? 'op-actionbar' : ''} ${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white dark:bg-[var(--surface)] shadow-lg border-t border-gray-200 dark:border-[var(--border-color)] z-50' : ''}`}
                                     style={!isMobile ? { width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative", zIndex: 10 } : {}}
                                 >
                                     <ActionBar onCommentClick={() => setCommentOpen(true)} project={project} isMobile={isMobile} />
                                 </div>
                             )}
                         </div>
-                        {commentOpen && (
-                            <div className="hidden lg:block" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
-                                <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
+                        {commentOpen && !isMobile && (
+                            <div className="hidden lg:block bg-white dark:bg-[var(--surface)] border-l border-gray-200 dark:border-[var(--border-color)]" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+                                <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} isMobile={false} />
                             </div>
+                        )}
+                        {commentOpen && isMobile && (
+                            <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} isMobile={true} />
                         )}
                     </div>
                 </main>
@@ -425,18 +479,27 @@ export default function OtherProjectPage() {
     }
 
     // 기본: 모달 레이아웃
+    const handleModalClose = () => {
+        // URL로 직접 접속한 경우 (state 없음) 메인으로, 아니면 뒤로 가기
+        if (!location.state) {
+            nav('/');
+        } else {
+            nav(-1);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[10000] font-gmarketsans">
             {styles}
-            <div className="absolute inset-0 bg-black/70" onClick={() => { try { nav(-1); } catch { nav('/search'); } }} />
-            <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-4 md:py-8 lg:py-12" onClick={() => { try { nav(-1); } catch { nav('/search'); } }}>
+            <div className="absolute inset-0 bg-black/70" onClick={handleModalClose} />
+            <div className="relative z-10 w-full h-full flex justify-center items-start overflow-y-auto py-2 sm:py-4 md:py-8 lg:py-12" onClick={handleModalClose}>
                 <div className="flex flex-col lg:flex-row items-start w-full relative px-2 md:px-4" style={{ maxWidth: MAX_WIDTH }}>
                     <div className="flex flex-col lg:flex-row items-start w-full">
-                        <section className="bg-white rounded-2xl shadow-2xl px-4 py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                        <section className="bg-white dark:bg-[var(--surface)] rounded-xl sm:rounded-2xl shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-7 lg:px-8 lg:py-8 transition-all duration-300 w-full mb-16 sm:mb-20 lg:mb-0" style={{ maxWidth: commentOpen ? PROJECT_NARROW : PROJECT_WIDE, marginRight: 0, transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", boxShadow: "0 8px 32px 0 rgba(34,34,34,.16)" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
                             <ProjectTopInfo projectName={project.name} userName={project.owner} intro={headerSummary} ownerId={project.ownerId} ownerEmail={project.ownerEmail} ownerImageUrl={project.ownerImageUrl} isOwner={project.isOwner} projectId={project.id} initialIsFollowing={initialFollow} />
-                            <div className="mt-6 -mx-4 md:-mx-6 lg:-mx-8 mb-8">
-                                <div className="rounded-xl overflow-hidden" style={{ background: pageBg, minHeight: '600px' }}>
-                                    <div className="px-0 py-8">
+                            <div className="mt-4 sm:mt-6 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 mb-4 sm:mb-6 md:mb-8">
+                                <div className="rounded-lg sm:rounded-xl overflow-hidden" style={{ backgroundColor: effectiveBg }}>
+                                    <div className="px-0 py-3 sm:py-4 md:py-6" style={{ color: textColor }}>
                                         <div className="pm-preview-content ql-snow" style={{ ['--pm-gap' as any]: `${gapPx}px` }}>
                                             <div className="ql-editor" dangerouslySetInnerHTML={{ __html: joinedHtml }} />
                                         </div>
@@ -444,7 +507,7 @@ export default function OtherProjectPage() {
                                 </div>
                             </div>
                             <TagList tags={headerCategories} />
-                                <div className="mb-8">
+                                <div className="mb-4 sm:mb-6 md:mb-8">
                                 <ProjectStatsBox
                                     likes={likesCount}
                                     views={viewsCount}
@@ -462,7 +525,7 @@ export default function OtherProjectPage() {
                         </section>
                         {!commentOpen && (
                             <div 
-                                className={`${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-[10001]' : ''}`}
+                                className={`${isMobile ? 'fixed bottom-0 left-0 right-0 bg-white dark:bg-[var(--surface)] shadow-lg border-t border-gray-200 dark:border-[var(--border-color)] z-[10001]' : ''}`}
                                 style={!isMobile ? { width: ACTIONBAR_WIDTH, minWidth: ACTIONBAR_WIDTH, marginLeft: GAP, height: "100%", position: "relative" } : {}}
                                 onClick={(e) => e.stopPropagation()}
                             >
@@ -470,10 +533,13 @@ export default function OtherProjectPage() {
                             </div>
                         )}
                     </div>
-                    {commentOpen && (
-                        <div className="hidden lg:block" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", borderLeft: "1px solid #eee", background: "white", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }} onClick={(e) => e.stopPropagation()}>
-                            <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} />
+                    {commentOpen && !isMobile && (
+                        <div className="hidden lg:block bg-white dark:bg-[var(--surface)] border-l border-gray-200 dark:border-[var(--border-color)]" style={{ width: PANEL_WIDTH, minWidth: PANEL_WIDTH, maxWidth: PANEL_WIDTH, borderRadius: "24px", boxShadow: "0 8px 32px 0 rgba(34,34,34,.14)", overflow: "hidden", marginLeft: GAP, height: "100%", transition: "all 0.4s cubic-bezier(.62,.01,.3,1)", display: "flex", flexDirection: "column", alignItems: "stretch" }} onClick={(e) => e.stopPropagation()}>
+                            <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} isMobile={false} />
                         </div>
+                    )}
+                    {commentOpen && isMobile && (
+                        <CommentPanel onClose={() => setCommentOpen(false)} username={project.username} projectId={project.id} projectName={project.name} category={project.category} width={PANEL_WIDTH} isLoggedIn={isLoggedIn} isMobile={true} />
                     )}
                 </div>
             </div>

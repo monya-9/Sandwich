@@ -1,6 +1,15 @@
 // src/api/aiJudgeApi.ts
-// AI 채점 서버 공개 API 조회 전용 클라이언트
-// 프록시: 개발환경에서 /ext -> https://api.dnutzs.org/api 로 전달됨 (setupProxy.js 참조)
+// ⚠️ DEPRECATED: 이 파일의 함수들은 더 이상 사용되지 않습니다.
+// 
+// 배경:
+// - 프로덕션 환경에서 /ext/* 경로가 nginx 프록시를 타지 않고 백엔드로 직접 라우팅되어 500 에러 발생
+// - AI 서버 통신은 이제 모두 백엔드에서만 처리 (/api/challenges/{id}/leaderboard API 사용)
+// 
+// 마이그레이션:
+// - fetchAiLeaderboard(week) → api.get(`/challenges/${challengeId}/leaderboard`, { params: { limit } })
+// - 백엔드가 AI 서버 호출 + 유저 정보 매핑을 모두 처리하여 반환
+//
+// 이 파일은 향후 참고용으로만 유지되며, 실제 코드에서는 사용하지 마세요.
 
 import api from "./axiosInstance";
 

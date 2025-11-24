@@ -141,6 +141,7 @@ export function enableRecaptchaV3OnPaths(actionMap: Record<string, string>) {
         if (isPublicApi) {
             // Public API는 인증/reCAPTCHA 처리 없이 즉시 반환 (성능 최적화)
             return config;
+
         }
 
         // 1) ✅ 쿠키 전용: Authorization 헤더 세팅 제거

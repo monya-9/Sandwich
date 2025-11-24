@@ -348,7 +348,7 @@ export default function PortfolioVotePage() {
     };
 
     return (
-        <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 md:py-10">
+        <div className="mx-auto max-w-screen-xl px-4 py-4 sm:py-6 md:px-6 md:py-10">
             {/* 토스트 알림 */}
             <Toast
                 visible={toast.visible}
@@ -360,12 +360,11 @@ export default function PortfolioVotePage() {
                 onClose={() => setToast(prev => ({ ...prev, visible: false }))}
             />
             {loading ? (
-                /* 로딩 상태 - 전체 화면 */
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-12 sm:py-16">
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
                             <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
-                            <span className="text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
+                            <span className="text-base sm:text-lg font-medium">AI 챌린지 정보를 불러오는 중...</span>
                         </div>
                         <p className="text-sm text-neutral-500">잠시만 기다려주세요</p>
                     </div>
@@ -386,17 +385,17 @@ export default function PortfolioVotePage() {
                     />
 
                     {derivedStage === "VOTE_WAITING" && (
-                        <div className="mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                        <div className="mb-4 p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs sm:text-sm">
                             제출 마감 · 투표 대기 중입니다. 제출물만 확인할 수 있어요.
                         </div>
                     )}
 
                     {submissionsLoading ? (
-                        <div className="flex items-center justify-center py-16">
+                        <div className="flex items-center justify-center py-12 sm:py-16">
                             <div className="text-center">
                                 <div className="flex items-center justify-center gap-3 text-neutral-600 mb-4">
                                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-emerald-500"></div>
-                                    <span className="text-lg font-medium">제출물을 불러오는 중...</span>
+                                    <span className="text-base sm:text-lg font-medium">제출물을 불러오는 중...</span>
                                 </div>
                             </div>
                         </div>
@@ -404,9 +403,9 @@ export default function PortfolioVotePage() {
                         <>
                             {/* 투표 요약 정보 (관리자 전용, 한 번만 표시) */}
                             {admin && voteSummary.length > 0 && (
-                                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <h3 className="text-lg font-semibold text-blue-900 mb-3">📊 투표 현황(관리자)</h3>
-                                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                                <div className="mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-3">📊 투표 현황(관리자)</h3>
+                                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                                         {voteSummary.map((summary) => {
                                             const submission = submissions.find(s => s.id === summary.submissionId);
                                             const title = submission?.title || '(제목 없음)';
@@ -430,27 +429,28 @@ export default function PortfolioVotePage() {
                             )}
 
                             {/* 내 투표 정보 */}
-                            {myVote && (
-                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                                    <h3 className="text-lg font-semibold text-green-900 mb-2">✅ 내 투표</h3>
-                                    <div className="text-sm text-green-800">
+                            {/* TODO: 나중에 개발 예정 */}
+                            {/* {myVote && (
+                                <div className="mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <h3 className="text-base sm:text-lg font-semibold text-green-900 mb-2">✅ 내 투표</h3>
+                                    <div className="text-xs sm:text-sm text-green-800">
                                         제출물 #{myVote.submissionId}에 투표하셨습니다.
                                         <div className="mt-1 text-xs">
                                             UI/UX: {myVote.uiUx} | 창의성: {myVote.creativity} | 코드 품질: {myVote.codeQuality} | 난이도: {myVote.difficulty}
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
 
-                            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                             {submissions.map((submission) => {
                                 const likeInfo = submissionLikes[submission.id] || { liked: false, count: submission.likeCount || 0 };
                                 
                                 return (
-                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                                <div key={submission.id} className="bg-white dark:bg-neutral-900/60 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-200 flex flex-col">
                                     {/* 1. 프로필 정보 */}
-                                    <div className="p-4 pb-3">
-                                        <div className="flex items-center gap-3">
+                                    <div className="p-3 sm:p-4 pb-3 flex-shrink-0">
+                                        <div className="flex items-center gap-2 sm:gap-3">
                                             {/* 프로필 이미지 - 클릭 가능 */}
                                             <div 
                                                 className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -465,15 +465,15 @@ export default function PortfolioVotePage() {
                                                     <img 
                                                         src={submission.owner.profileImageUrl} 
                                                         alt={submission.owner.username}
-                                                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
+                                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover bg-gray-200"
                                                         onError={(e) => {
                                                             const target = e.target as HTMLImageElement;
                                                             target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(submission.owner?.username || 'U')}&background=e5e7eb&color=1f2937&size=40`;
                                                         }}
                                                     />
                                                 ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                        <span className="text-gray-800 font-semibold text-sm">
+                                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <span className="text-gray-800 font-semibold text-xs sm:text-sm">
                                                             {(() => {
                                                                 const username = submission.owner?.username || 'user@example.com';
                                                                 // username이 이메일 형식인지 확인하고 @ 앞부분 사용, 아니면 username 첫 글자 사용
@@ -487,7 +487,7 @@ export default function PortfolioVotePage() {
                                             
                                             {/* 사용자명 & 직책 */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-semibold text-gray-900 dark:text-neutral-100 truncate">
+                                                <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-neutral-100 truncate">
                                                     <span 
                                                         className="cursor-pointer hover:opacity-80 transition-opacity"
                                                         onClick={(e) => {
@@ -500,13 +500,13 @@ export default function PortfolioVotePage() {
                                                         {submission.owner?.username || '익명'}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-500 dark:text-neutral-400">개발자</div>
+                                                <div className="text-[11px] sm:text-xs text-gray-500 dark:text-neutral-400">개발자</div>
                                             </div>
                                         </div>
                                     </div>
                                     
                                     {/* 2. 썸네일 이미지 - 항상 표시 */}
-                                    <div className="relative h-48 bg-gray-100 dark:bg-neutral-800">
+                                    <div className="relative h-32 sm:h-40 bg-gray-100 dark:bg-neutral-800 flex-shrink-0">
                                         {submission.coverUrl ? (
                                             <img 
                                                 src={submission.coverUrl} 
@@ -526,22 +526,22 @@ export default function PortfolioVotePage() {
                                         )}
                                     </div>
                                     
-                                    <div className="p-4">
+                                    <div className="p-3 sm:p-4 flex-1 flex flex-col">
                                         {/* 3. 제목 */}
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2 line-clamp-2">
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2 line-clamp-2 break-words">
                                             {submission.title || `제출물 #${submission.id}`}
                                         </h3>
                                         
                                         {/* 4. 소개/설명 */}
                                         {submission.desc && (
-                                            <p className="text-sm text-gray-600 dark:text-neutral-300 mb-4 line-clamp-3">
+                                            <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-300 mb-2 line-clamp-2 break-words">
                                                 {submission.desc}
                                             </p>
                                         )}
                                         
                                         {/* 5. 하단: 좋아요, 조회수, 댓글, 전체보기 */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-neutral-800">
-                                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-neutral-400">
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-neutral-800 mt-auto flex-shrink-0">
+                                            <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-neutral-400">
                                                 {/* 좋아요 */}
                                                 <button 
                                                     onClick={(e) => handleLike(e, submission.id)}
@@ -573,14 +573,14 @@ export default function PortfolioVotePage() {
                                             {admin && derivedStage === "VOTING" ? (
                                                 <button
                                                     disabled
-                                                    className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-neutral-600 border border-gray-200 dark:border-neutral-800 rounded-md cursor-not-allowed opacity-50"
+                                                    className="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-gray-400 dark:text-neutral-600 border border-gray-200 dark:border-neutral-800 rounded-md cursor-not-allowed opacity-50"
                                                 >
                                                     전체보기
                                                 </button>
                                             ) : (
                                                 <Link 
                                                     to={`/challenge/portfolio/${id}/vote/${submission.id}`}
-                                                    className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                    className="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                                                 >
                                                     전체보기
                                                 </Link>
@@ -601,10 +601,10 @@ export default function PortfolioVotePage() {
                                 isAdmin={admin}
                             />
                         ) : (
-                            <div className="flex items-center justify-center py-16 text-center text-neutral-600">
+                            <div className="flex items-center justify-center py-12 sm:py-16 text-center text-neutral-600 px-4">
                                 <div>
-                                    <div className="text-lg font-semibold mb-2">제출물이 없습니다</div>
-                                    <div className="text-sm">현재는 제출마감 또는 투표 기간입니다. 제출물만 확인할 수 있어요.</div>
+                                    <div className="text-base sm:text-lg font-semibold mb-2">제출물이 없습니다</div>
+                                    <div className="text-xs sm:text-sm">현재는 제출마감 또는 투표 기간입니다. 제출물만 확인할 수 있어요.</div>
                                 </div>
                             </div>
                         )

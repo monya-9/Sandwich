@@ -44,8 +44,8 @@ type Props = {
 };
 
 /* ---------- 스타일 ---------- */
-const youBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm";
-const meBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm";
+const youBubble = "max-w-[calc(100vw-120px)] sm:max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-all";
+const meBubble = "max-w-[calc(100vw-120px)] sm:max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-all";
 
 /* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
@@ -586,7 +586,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 </div>
             </div>
 
-            <div id="chat-panel" ref={messageContainerRef} className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
+            <div id="chat-panel" ref={messageContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
                 {history.map((m) => {
                     const m2 = hydrated[m.messageId] ?? m;
                     const when = new Date(m2.createdAt || 0);
@@ -640,7 +640,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                         const isLong = content.length > maxLength;
                                         const displayContent = isLong ? content.substring(0, maxLength) + "..." : content;
                                         return (
-                                            <div className="whitespace-pre-wrap text-[11px] sm:text-sm text-gray-800">
+                                            <div className="whitespace-pre-wrap break-words text-[11px] sm:text-sm text-gray-800">
                                                 {displayContent}
                                                 {isLong && (
                                                     <button
@@ -692,7 +692,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                         <Download size={14} />
                                     </button>
                                 )}
-                                <span className="text-[9px] sm:text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[9px] sm:text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1 pl-0.5 sm:pl-0">{hhmm}</span>
                             </div>
                         </div>
                     );
@@ -737,7 +737,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 
                 {/* 문자 수 표시 */}
                 <div className="flex justify-end">
-                    <span className={`text-xs ${text.length > 450 ? 'text-red-500' : text.length > 300 ? 'text-orange-500' : 'text-gray-400 dark:text-white/50'}`}>
+                    <span className={`text-xs ${text.length >= 500 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
                         {text.length}/500
                     </span>
                 </div>

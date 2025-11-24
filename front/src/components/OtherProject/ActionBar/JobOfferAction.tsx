@@ -224,7 +224,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
         <>
           {/* 투명 캡처 오버레이: 부모의 어두운 배경 유지 */}
           <div
-            className="fixed inset-0 z-[10009]"
+            className="fixed inset-0 z-[100000]"
             onClick={onClose}
             onWheel={(e) => e.preventDefault()}
             onTouchMove={(e) => e.preventDefault()}
@@ -234,53 +234,53 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
           {/* 모달 박스 */}
           <div
             ref={modalBoxRef}
-            className="fixed left-1/2 top-1/2 z-[10010] w-[480px] max-w-[92vw] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-[100001] w-full sm:w-[480px] max-w-[95vw] max-h-[90vh] sm:max-h-[88vh] -translate-x-1/2 -translate-y-1/2 flex flex-col items-stretch overflow-hidden bg-white dark:bg-[var(--surface)] rounded-[12px] shadow-2xl"
             style={fixedModalSize ? { width: fixedModalSize.w, height: fixedModalSize.h } : undefined}
           >
             {/* 헤더 */}
             <div className="relative px-2 pt-2 pb-2">
               <button
-                className="absolute left-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
+                className="absolute left-1 sm:left-2 top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none"
                 onClick={() => { onClose(); onBackToMenu?.(); }}
                 aria-label="뒤로가기"
               >
                 ‹
               </button>
-              <div className="h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
+              <div className="h-10 sm:h-12 flex items-center justify-center gap-2 pointer-events-none text-gray-800 dark:text-white">
                 {profile?.profileImage ? (
-                  <img src={profile.profileImage} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                  <img src={profile.profileImage} alt="avatar" className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover" />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[12px]">{targetInitial}</div>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-200 dark:bg-[var(--avatar-bg)] text-black dark:text-white flex items-center justify-center text-[10px] sm:text-[12px]">{targetInitial}</div>
                 )}
-                <div className="text-[14px] font-medium">{targetName}</div>
+                <div className="text-[12px] sm:text-[14px] font-medium">{targetName}</div>
               </div>
               <button
-                className="absolute right-2 top-0.5 text-[50px] font-light text-gray-500 hover:text-black p-1.5 leading-none"
+                className="absolute right-1 sm:right-2 top-0.5 text-[40px] sm:text-[50px] font-light text-gray-500 hover:text-black dark:text-white/70 dark:hover:text-white p-1 sm:p-1.5 leading-none"
                 onClick={onClose}
                 aria-label="닫기"
               >
                 ×
               </button>
-              <div className="mt-2 border-t border-gray-200" />
+              <div className="mt-2 border-t border-gray-200 dark:border-[var(--border-color)]" />
             </div>
 
             {/* 내용 영역 */}
-            <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0" style={{ overscrollBehavior: "contain", scrollbarGutter: "stable both-edges" }}>
-              <div className="w-[400px] max-w-full mx-auto">
-                <div className="text-center mb-3">
-                  <div className="text-[18px] font-bold">채용 제안하기</div>
-                  <div className="text-[12px] text-gray-500 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
+            <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 overflow-y-auto flex-1 min-h-0" style={{ overscrollBehavior: "contain", scrollbarGutter: "stable both-edges" }}>
+              <div className="w-full sm:w-[400px] max-w-full mx-auto">
+                <div className="text-center mb-2 sm:mb-3">
+                  <div className="text-base sm:text-[18px] font-bold text-gray-800 dark:text-white">채용 제안하기</div>
+                  <div className="text-[10px] sm:text-[12px] text-gray-500 dark:text-gray-400 mt-1">내용을 자세히 입력할수록 회신 가능성이 높아집니다.</div>
                 </div>
 
                 <form className="flex flex-col gap-3" onSubmit={submitForm}>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">회사 이름<span className="text-green-500">*</span></label>
-                    <input value={company} onChange={(e) => { setCompany(e.target.value); setCompanyTouched(true); }} onBlur={() => setCompanyTouched(true)} placeholder="회사 이름을 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${(companyTouched && companyError) ? "border-rose-500" : "border-gray-300"}`} />
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">회사 이름<span className="text-green-500">*</span></label>
+                    <input value={company} onChange={(e) => { setCompany(e.target.value); setCompanyTouched(true); }} onBlur={() => setCompanyTouched(true)} placeholder="회사 이름을 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(companyTouched && companyError) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} />
                     {(companyTouched && companyError) && (<div className="text-[12px] text-rose-500">{companyError}</div>)}
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">연봉<span className="text-green-500">*</span></label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">연봉<span className="text-green-500">*</span></label>
                     <div className="flex items-start gap-2 flex-nowrap">
                       <div className="flex-1 min-w-0">
                         <input
@@ -291,13 +291,13 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
                           pattern="[0-9]*"
                           placeholder="최소 연봉 입력"
                           disabled={salaryNegotiable}
-                          className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${salaryNegotiable ? "bg-[#f5f5f5] text-transparent placeholder-transparent caret-transparent cursor-not-allowed border-[#e5e5e5]" : ((minTouched && minInvalid) ? "border-rose-500" : "border-gray-300")}`}
+                          className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${salaryNegotiable ? "bg-[#f5f5f5] dark:bg-[#2a2a2a] text-transparent placeholder-transparent caret-transparent cursor-not-allowed border-[#e5e5e5] dark:border-[#3a3a3a]" : `bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(minTouched && minInvalid) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`}`}
                           style={salaryNegotiable ? { WebkitTextFillColor: "transparent" } as React.CSSProperties : undefined}
                         />
                         {(minTouched && minInvalid) && (<div className="text-[12px] text-rose-500 mt-1">{minErrText}</div>)}
                       </div>
-                      <span className="text-[14px] text-gray-600 shrink-0 whitespace-nowrap self-center">만원</span>
-                      <span className="text-gray-400 shrink-0 self-center">-</span>
+                      <span className="text-[14px] text-gray-600 dark:text-gray-400 shrink-0 whitespace-nowrap self-center">만원</span>
+                      <span className="text-gray-400 dark:text-gray-500 shrink-0 self-center">-</span>
                       <div className="flex-1 min-w-0">
                         <input
                           value={maxSalary}
@@ -307,27 +307,27 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
                           pattern="[0-9]*"
                           placeholder="최대 연봉 입력"
                           disabled={salaryNegotiable}
-                          className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${salaryNegotiable ? "bg-[#f5f5f5] text-transparent placeholder-transparent caret-transparent cursor-not-allowed border-[#e5e5e5]" : ((maxTouched && maxInvalid) ? "border-rose-500" : "border-gray-300")}`}
+                          className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${salaryNegotiable ? "bg-[#f5f5f5] dark:bg-[#2a2a2a] text-transparent placeholder-transparent caret-transparent cursor-not-allowed border-[#e5e5e5] dark:border-[#3a3a3a]" : `bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(maxTouched && maxInvalid) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`}`}
                           style={salaryNegotiable ? { WebkitTextFillColor: "transparent" } as React.CSSProperties : undefined}
                         />
                         {(maxTouched && maxInvalid) && (<div className="text-[12px] text-rose-500 mt-1">{maxErrText}</div>)}
                       </div>
-                      <span className="text-[14px] text-gray-600 shrink-0 whitespace-nowrap self-center">만원</span>
+                      <span className="text-[14px] text-gray-600 dark:text-gray-400 shrink-0 whitespace-nowrap self-center">만원</span>
                     </div>
-                    <label className="flex items-center gap-2 text-[12px] text-gray-600 select-none">
+                    <label className="flex items-center gap-2 text-[12px] text-gray-600 dark:text-gray-400 select-none">
                       <input type="checkbox" checked={salaryNegotiable} onChange={(e) => setSalaryNegotiable(e.target.checked)} className="w-4 h-4 accent-[#068334]" />
                       연봉 협의 가능
                     </label>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">근무 위치<span className="text-green-500">*</span></label>
-                    <input value={location} onChange={(e) => { setLocation(e.target.value); setLocationTouched(true); }} onBlur={() => setLocationTouched(true)} placeholder="근무 위치를 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none ${(locationTouched && locationError) ? "border-rose-500" : "border-gray-300"}`} />
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">근무 위치<span className="text-green-500">*</span></label>
+                    <input value={location} onChange={(e) => { setLocation(e.target.value); setLocationTouched(true); }} onBlur={() => setLocationTouched(true)} placeholder="근무 위치를 입력해주세요." className={`w-full h-9 border rounded px-3 text-[14px] outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(locationTouched && locationError) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} />
                     {(locationTouched && locationError) && (<div className="text-[12px] text-rose-500">{locationError}</div>)}
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">내용 (최대 80자)<span className="text-green-500">*</span></label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">내용 (최대 80자)<span className="text-green-500">*</span></label>
                     <textarea 
                       value={description} 
                       onChange={(e) => {
@@ -340,10 +340,10 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
                       onBlur={() => setDescTouched(true)} 
                       placeholder="간단한 회사 소개 및 업무 내용을 입력해주세요." 
                       maxLength={80}
-                      className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none ${(descTouched && descError) ? "border-rose-500" : "border-gray-300"}`} 
+                      className={`w-full h-32 border rounded px-3 py-2 text-[14px] resize-none outline-none bg-white dark:bg-[var(--input-bg)] text-gray-900 dark:text-white dark:placeholder-gray-500 ${(descTouched && descError) ? "border-rose-500" : "border-gray-300 dark:border-[var(--border-color)]"}`} 
                     />
                     <div className="flex justify-end">
-                      <span className={`text-xs ${description.length > 70 ? 'text-red-500' : 'text-gray-400'}`}>
+                      <span className={`text-xs ${description.length >= 80 ? 'text-red-500' : 'text-gray-400'}`}>
                         {description.length}/80
                       </span>
                     </div>
@@ -351,10 +351,10 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[12px] font-semibold text-gray-700">첨부파일</label>
+                    <label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">첨부파일</label>
                     <div className="flex items-center gap-2">
                       <div
-                        className={`flex-1 h-10 border border-gray-300 rounded px-3 text-[14px] flex items-center cursor-pointer select-none ${file ? "text-gray-900" : "text-gray-500"}`}
+                        className={`flex-1 h-10 border border-gray-300 dark:border-[var(--border-color)] rounded px-3 text-[14px] flex items-center cursor-pointer select-none bg-white dark:bg-[var(--input-bg)] ${file ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}`}
                         onClick={() => fileInputRef.current?.click()}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
                         role="button"
@@ -363,7 +363,7 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
                       >
                         {file ? file.name : "업로드(10MB 이내 파일 선택)"}
                       </div>
-                      <button type="button" onClick={() => setFile(null)} className="w-10 h-10 rounded border border-gray-300 text-gray-700 flex items-center justify-center" aria-label="첨부 제거">🗑</button>
+                      <button type="button" onClick={() => setFile(null)} className="w-10 h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 flex items-center justify-center" aria-label="첨부 제거">🗑</button>
                       <input ref={fileInputRef} type="file" onChange={onFileChange} className="hidden" />
                     </div>
                   </div>
@@ -372,9 +372,9 @@ export default function JobOfferAction({ open, onClose, onBackToMenu, targetUser
             </div>
 
             {/* 하단 고정 버튼 바 */}
-            <div className="px-6 py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-3">
-              <button type="button" onClick={onClose} className="px-4 h-10 rounded border border-gray-300 text-gray-700">취소</button>
-              <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-5 h-10 rounded text-white ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
+            <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-t border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] flex items-center justify-end gap-2 sm:gap-3">
+              <button type="button" onClick={onClose} className="px-3 sm:px-4 h-9 sm:h-10 rounded border border-gray-300 dark:border-[var(--border-color)] text-gray-700 dark:text-gray-300 text-sm sm:text-base">취소</button>
+              <button disabled={!canSubmit || !targetUserId} onClick={submitForm as any} className={`px-4 sm:px-5 h-9 sm:h-10 rounded text-white text-sm sm:text-base ${canSubmit && targetUserId ? "bg-[#068334] hover:opacity-90" : "bg-gray-300 cursor-not-allowed"}`}>메시지 전송</button>
             </div>
           </div>
         </>,

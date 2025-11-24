@@ -19,7 +19,8 @@ import NotificationsPage from "./pages/NotificationsPage";
 // 마이페이지
 import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
 import CareerSettingPage from "./components/MyPageSetting/CareerSettingPage";
-import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
+// TODO: 이메일/SMS 알림 기능 개발 필요
+// import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
 import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
 // 챌린지
@@ -174,7 +175,8 @@ function App() {
 
                                 <Route path="/mypage" element={<MyPageSettingPage />} />
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
-                                <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
+                                {/* TODO: 이메일/SMS 알림 기능 개발 필요 */}
+                                {/* <Route path="/mypage/notifications" element={<NotificationSettingPage />} /> */}
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
                                 <Route path="/mypage/devices" element={<DeviceManagePage />} />
                                 <Route path="/mypage/account-deletion" element={<AccountDeletionPage />} />
