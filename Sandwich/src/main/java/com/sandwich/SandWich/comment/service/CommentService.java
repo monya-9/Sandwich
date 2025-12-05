@@ -52,19 +52,26 @@ public class CommentService {
         String resourceType = request.getCommentableType();
         Long resourceId = request.getCommentableId();
 
+        if (resourceType == null) {
+            log.warn("[COMMENT][EVENT] resourceType is null. commentableId={}", resourceId);
+            return; // 타입이 없으면 알림 발행 안 함
+        }
+
+        String normalizedType = resourceType.toUpperCase(Locale.ROOT);
+
         targetResolver.resolveTargetUserId(resourceType, resourceId)
                 .filter(tid -> !tid.equals(userId)) // 자기 자신이면 스킵
                 .ifPresent(tid -> {
                     String snippet = makeSnippet(comment.getComment(), 80);
                     events.publishEvent(new CommentCreatedEvent(
                             userId,
-                            resourceType == null ? "POST" : resourceType.toUpperCase(Locale.ROOT),
+                            normalizedType,
                             resourceId,
                             tid,
                             snippet
                     ));
                     log.info("[COMMENT][EVENT] actor={} target={} type={} id={} snippet={}",
-                            userId, tid, resourceType, resourceId, snippet);
+                            userId, tid, normalizedType, resourceId, snippet);
                 });
     }
 

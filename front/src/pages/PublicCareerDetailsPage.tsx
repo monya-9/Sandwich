@@ -11,6 +11,7 @@ export default function PublicCareerDetailsPage() {
 	const [userInfo, setUserInfo] = useState<{
 		nickname?: string | null;
 		username?: string | null;
+		profileSlug?: string | null;
 		profileImage?: string | null;
 		email?: string | null;
 	} | null>(null);
@@ -49,6 +50,8 @@ export default function PublicCareerDetailsPage() {
 
 	const displayName = (userInfo?.nickname || userInfo?.username || "사용자").trim();
 	const profileImageUrl = userInfo?.profileImage || "";
+	// URL에 표시할 slug: profileSlug 우선, 없으면 nickname, 없으면 username
+	const displaySlug = userInfo?.profileSlug || userInfo?.nickname || userInfo?.username;
 
 	if (loading) {
 		return (
@@ -83,7 +86,7 @@ export default function PublicCareerDetailsPage() {
 						<div>
 							<div className="text-[24px] md:text-[28px] text-black dark:text-white font-medium">{displayName}</div>
 							<div className="mt-1 text-[13px] md:text-[14px] text-black/70 dark:text-white/70 underline break-all">
-								{userInfo?.username ? `sandwich.com/${userInfo.username}` : `sandwich.com/user/${userIdNum}`}
+								{displaySlug ? `sandwich-dev.com/${displaySlug}` : `sandwich-dev.com/user/${userIdNum}`}
 							</div>
 						</div>
 						<div className="w-[80px] h-[80px] rounded-full bg-[#F3F4F6] dark:bg-[var(--avatar-bg)] overflow-hidden shrink-0 flex items-center justify-center">

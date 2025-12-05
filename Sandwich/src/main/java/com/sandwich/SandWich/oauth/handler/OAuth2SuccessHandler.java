@@ -60,7 +60,12 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     "계정 정보를 찾을 수 없습니다. 다시 로그인해 주세요.",
                     StandardCharsets.UTF_8
             );
-            response.sendRedirect(frontendUrl + "/oauth2/error?message=" + msg);
+
+            String redirectUrl = frontendUrl + "/oauth2/error"
+                    + "?provider=" + URLEncoder.encode(provider != null ? provider : "unknown", StandardCharsets.UTF_8)
+                    + "&message=" + msg;
+
+            response.sendRedirect(redirectUrl);
             return;
         }
         // ---- optional attributes from authorization request (remember / deviceName)
@@ -82,7 +87,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         boolean rememberFlag = "1".equalsIgnoreCase(remember) || "true".equalsIgnoreCase(remember);
         System.out.println("### [OAUTH2] userId=" + user.getId() + " rememberFlag=" + rememberFlag + " deviceName=" + deviceName);
 
-        boolean trustedNow = deviceTrustService.isTrusted(request);
+        boolean trustedNow = deviceTrustService.isTrusted(request, user.getId());
         System.out.println("### [OAUTH2] isTrusted=" + trustedNow);
 
         if (rememberFlag) {

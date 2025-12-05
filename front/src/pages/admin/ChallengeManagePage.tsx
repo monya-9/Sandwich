@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminFetchChallenges, fetchChallengeDetail, fetchPortfolioLeaderboard, type ChallengeListResponse, type ChallengeListItem, type ChallengeType, type ChallengeStatus } from "../../api/challengeApi";
-import { fetchAiLeaderboard } from "../../api/aiJudgeApi";
+import api from "../../api/axiosInstance";
 import { fetchUserNameById } from "../../api/userMini";
 import { adminCustomPayout, fetchCustomPayouts } from "../../api/challenge_creditApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
@@ -284,28 +284,25 @@ export default function ChallengeManagePage() {
                             setPayoutRows([{ rank: '🎖 참가자 전원', amount: participantAmt }]);
                         } else {
                             try {
-                                const ai = await fetchAiLeaderboard(aiWeek);
-                                const lb = Array.isArray(ai?.leaderboard) ? ai.leaderboard : [];
+                                // 백엔드 API를 통해 AI 리더보드 조회 (유저 정보 포함)
+                                const res = await api.get(`/challenges/${item.id}/leaderboard`, {
+                                    params: { limit: 200 },
+                                    withCredentials: true,
+                                });
+                                
+                                const data = res.data;
+                                const lb = Array.isArray(data?.items) ? data.items : [];
 
-                                // 숫자 id인 항목은 이름을 병렬 조회하여 표시 개선
-                                const idEntries = lb.map(e => ({ ...e, numId: Number.isFinite(Number(String(e.user))) ? Number(String(e.user)) : null }));
-                                const uniqueIds = Array.from(new Set(idEntries.map(e => e.numId).filter(Boolean))) as number[];
-                                const idToName = new Map<number, string | null>();
-                                await Promise.all(uniqueIds.map(async (uid) => {
-                                    const name = await fetchUserNameById(uid);
-                                    idToName.set(uid, name);
-                                }));
-
-                                const payouts = idEntries.map((e) => {
+                                const payouts = lb.map((e: any) => {
                                     const idx = (e.rank ?? 0) - 1;
                                     const isWinner = idx >= 0 && idx < topArr.length && topArr[idx] > 0;
                                     const amount = isWinner ? (topArr[idx] || 0) : participantAmt;
                                     const fallback = `user ${e.user}`;
-                                    const pretty = e.numId && idToName.has(e.numId) ? (idToName.get(e.numId) || fallback) : fallback;
+                                    const userName = e.owner?.username || fallback;
                                     return {
                                         rank: e.rank,
                                         amount,
-                                        userName: pretty,
+                                        userName,
                                         teamName: '',
                                     };
                                 });

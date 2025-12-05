@@ -44,7 +44,7 @@ const MessagesPage: React.FC = () => {
         [],
     );
 
-    const loadFirstPage = React.useCallback(async () => {
+    const loadFirstPage = React.useCallback(async (preserveSelection = false) => {
         if (loadingRef.current) return;
         loadingRef.current = true;
         try {
@@ -54,7 +54,8 @@ const MessagesPage: React.FC = () => {
             setHasMore(rooms.length === PAGE_SIZE);
             setPage(0);
 
-            if (routeRoomId && mapped.some((m) => m.roomId === routeRoomId)) {
+            // preserveSelection이 false일 때만 자동 선택 (초기 로드 시에만)
+            if (!preserveSelection && routeRoomId && mapped.some((m) => m.roomId === routeRoomId)) {
                 setSelectedRoomId(routeRoomId);
             }
         } catch (e) {
@@ -146,9 +147,10 @@ const MessagesPage: React.FC = () => {
             }
             
             // 전체 리스트는 디바운스 후 업데이트 (다른 방의 변경사항 반영)
+            // preserveSelection=true로 현재 선택된 메시지 유지
             if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
             refreshTimerRef.current = window.setTimeout(() => {
-                loadFirstPage();
+                loadFirstPage(true); // 현재 선택 유지
                 refreshTimerRef.current = null;
             }, 300);
         };
@@ -202,8 +204,8 @@ const MessagesPage: React.FC = () => {
     );
 
     return (
-        <main className="mx-auto max-w-6xl xl:max-w-6xl 2xl:max-w-[2600px] px-2 sm:px-4 xl:px-4 2xl:px-20 mt-2 sm:mt-4">
-            <section className="bg-white dark:bg-[var(--surface)] rounded-lg border dark:border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[calc(100vh-100px)] sm:h-[530px] md:h-[600px] xl:h-[600px] 2xl:h-[800px] min-h-0">
+        <main className="mx-auto max-w-6xl xl:max-w-6xl 2xl:max-w-[2600px] px-2 sm:px-4 xl:px-4 2xl:px-20 mt-2 sm:mt-4 pb-5">
+            <section className="bg-white dark:bg-[var(--surface)] rounded-lg border dark:border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[calc(100vh-120px)] min-h-[520px] max-h-[calc(100vh-120px)]">
                 {/* 모바일: 선택된 메시지가 없으면 목록, 있으면 상세 표시 */}
                 {/* 데스크탑: 항상 목록과 상세 함께 표시 */}
                 <div className={`flex flex-col ${selectedRoomId && 'hidden md:flex'} w-full md:w-[320px] xl:w-[320px] 2xl:w-[500px] shrink-0 border-r dark:border-[var(--border-color)]`}>
@@ -224,7 +226,7 @@ const MessagesPage: React.FC = () => {
                     )}
                 </div>
 
-                <div className={`flex-1 ${!selectedRoomId && 'hidden md:flex'}`}>
+                <div className={`flex-1 min-h-0 flex flex-col ${!selectedRoomId && 'hidden md:flex'}`}>
                     <MessageDetail
                         message={selectedMessage}
                         onSend={async (messageId, body) => {
@@ -273,8 +275,8 @@ const MessagesPage: React.FC = () => {
                                     });
                                 }
                             }
-                            // 백그라운드에서 전체 리스트 갱신
-                            loadFirstPage().catch(() => {});
+                            // 백그라운드에서 전체 리스트 갱신 (현재 선택 유지)
+                            loadFirstPage(true).catch(() => {});
                         }}
                         onBack={() => {
                             setSelectedRoomId(undefined);

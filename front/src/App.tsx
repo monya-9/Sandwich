@@ -19,7 +19,8 @@ import NotificationsPage from "./pages/NotificationsPage";
 // 마이페이지
 import MyPageSettingPage from "./components/MyPageSetting/MyPageSettingPage";
 import CareerSettingPage from "./components/MyPageSetting/CareerSettingPage";
-import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
+// TODO: 이메일/SMS 알림 기능 개발 필요
+// import NotificationSettingPage from "./components/MyPageSetting/NotificationSettingPage";
 import PushSettingPage from "./components/MyPageSetting/PushSettingPage";
 
 // 챌린지
@@ -143,8 +144,12 @@ function App() {
                         <Routes>
                             <Route element={<AppLayout />}>
                                 <Route index element={<MainPage />} />
-                                {/* Notefolio 스타일 상세 경로 */}
+                                
+                                {/* Notefolio 스타일 상세 경로 (두 개의 세그먼트) */}
                                 <Route path=":ownerId/:projectId" element={<RootProjectToOtherRedirect />} />
+                                
+                                {/* slug 기반 프로필 페이지 (단일 세그먼트, 숫자가 아닌 경우) */}
+                                <Route path="/:slug" element={<UserPublicProfilePage />} />
                                 
                                 {/* 기존 알림 호환 경로 (레거시) */}
                                 <Route path="/projects/:id" element={<LegacyProjectRedirect />} />
@@ -170,7 +175,8 @@ function App() {
 
                                 <Route path="/mypage" element={<MyPageSettingPage />} />
                                 <Route path="/mypage/career" element={<CareerSettingPage />} />
-                                <Route path="/mypage/notifications" element={<NotificationSettingPage />} />
+                                {/* TODO: 이메일/SMS 알림 기능 개발 필요 */}
+                                {/* <Route path="/mypage/notifications" element={<NotificationSettingPage />} /> */}
                                 <Route path="/mypage/push" element={<PushSettingPage />} />
                                 <Route path="/mypage/devices" element={<DeviceManagePage />} />
                                 <Route path="/mypage/account-deletion" element={<AccountDeletionPage />} />

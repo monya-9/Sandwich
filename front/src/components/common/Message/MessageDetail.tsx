@@ -44,8 +44,8 @@ type Props = {
 };
 
 /* ---------- 스타일 ---------- */
-const youBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
-const meBubble = "max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white";
+const youBubble = "max-w-[calc(100vw-120px)] sm:max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-gray-100 dark:bg-white/7 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-all";
+const meBubble = "max-w-[calc(100vw-120px)] sm:max-w-[520px] xl:max-w-[520px] 2xl:max-w-[520px] bg-green-50 dark:bg-green-900/25 border border-green-200/60 dark:border-green-400/20 rounded-2xl px-4 py-3 shadow-sm text-black dark:text-white text-[11px] sm:text-sm break-all";
 
 /* ---------- 유틸: 정렬/중복제거/병합 ---------- */
 function sortByCreatedAtThenId(a: ServerMessage, b: ServerMessage) {
@@ -110,6 +110,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
     const [uploading, setUploading] = React.useState(false);
     const [isComposing, setIsComposing] = React.useState(false);
     const [showEmoji, setShowEmoji] = React.useState(false);
+    const [showMessageModal, setShowMessageModal] = React.useState<{ visible: boolean; content: string }>({ visible: false, content: "" });
 
     const [myId, setMyId] = React.useState<number | null>(null);
     const [history, setHistory] = React.useState<ServerMessage[]>([]);
@@ -456,7 +457,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                     src={src}
                     fileName={p.name}
                     alt={p.name || "attachment"}
-                    className="block max-w-[320px] max-h-[320px] rounded-lg object-contain"
+                    className="block w-full max-w-full sm:max-w-[280px] md:max-w-[320px] max-h-[200px] sm:max-h-[280px] md:max-h-[320px] rounded-lg object-contain"
                 />
             );
         }
@@ -468,7 +469,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
     };
 
     return (
-        <>
+        <div className="flex-1 min-h-0 flex flex-col">
             <Toast
                 visible={errorToast.visible}
                 message={errorToast.message}
@@ -478,9 +479,29 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 closable={true}
                 onClose={() => setErrorToast(prev => ({ ...prev, visible: false }))}
             />
-            <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)] h-full">
+            {/* 메시지 자세히 보기 모달 */}
+            {showMessageModal.visible && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setShowMessageModal({ visible: false, content: "" })}>
+                    <div className="bg-white dark:bg-[var(--surface)] rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 max-w-2xl w-[95vw] sm:w-[90vw] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-800 dark:text-white">메시지 내용</h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowMessageModal({ visible: false, content: "" })}
+                                className="text-gray-500 hover:text-gray-700 dark:text-white/70 dark:hover:text-white text-xl sm:text-2xl leading-none p-1"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="whitespace-pre-wrap text-[11px] sm:text-xs md:text-sm text-gray-800 dark:text-white break-words">
+                            {showMessageModal.content}
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-[var(--surface)] overflow-hidden">
             {/* 헤더 */}
-            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-[var(--border-color)] flex items-center gap-2 sm:gap-3 text-black dark:text-white">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b dark:border-[var(--border-color)] flex items-center gap-2 sm:gap-3 text-black dark:text-white shrink-0">
                 {/* 모바일 뒤로가기 버튼 */}
                 {onBack && (
                     <button
@@ -565,7 +586,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 </div>
             </div>
 
-            <div id="chat-panel" ref={messageContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
+            <div id="chat-panel" ref={messageContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:p-6 flex flex-col gap-3 sm:gap-4 bg-white dark:bg-[var(--surface)]">
                 {history.map((m) => {
                     const m2 = hydrated[m.messageId] ?? m;
                     const when = new Date(m2.createdAt || 0);
@@ -610,13 +631,37 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                   })()
                                 : m2.type === "ATTACHMENT"
                                     ? renderAttachment(m2)
-                                    : <div className="whitespace-pre-wrap text-sm text-gray-800">{m2.content}</div>;
+                                    : (() => {
+                                        const content = m2.content || "";
+                                        // 모바일에서는 200자, 데스크탑에서는 300자 기준
+                                        // CSS breakpoint sm: 640px 기준
+                                        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                                        const maxLength = isMobile ? 200 : 300;
+                                        const isLong = content.length > maxLength;
+                                        const displayContent = isLong ? content.substring(0, maxLength) + "..." : content;
+                                        return (
+                                            <div className="whitespace-pre-wrap break-words text-[11px] sm:text-sm text-gray-800">
+                                                {displayContent}
+                                                {isLong && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowMessageModal({ visible: true, content });
+                                                        }}
+                                                        className="ml-2 mt-1 inline-block text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium text-[10px] sm:text-xs"
+                                                    >
+                                                        자세히 보기
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })();
 
                     return mine ? (
                         <div key={m.messageId} data-message-id={m.messageId} className="flex items-end gap-2 self-end max-w/full max-w-[100%]">
                             {/* ⬇️ 시간 + 작은 다운로드 버튼 (오른쪽 정렬 라인) */}
                             <div className="flex items-center gap-1 order-1">
-                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[9px] sm:text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
                                 {attSrc && (
                                     <button
                                         type="button"
@@ -647,7 +692,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                                         <Download size={14} />
                                     </button>
                                 )}
-                                <span className="text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1">{hhmm}</span>
+                                <span className="text-[9px] sm:text-[11px] text-gray-400 dark:text-white/50 shrink-0 translate-y-1 pl-0.5 sm:pl-0">{hhmm}</span>
                             </div>
                         </div>
                     );
@@ -656,14 +701,14 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
             </div>
 
             {/* 입력 */}
-            <div className="px-3 sm:px-6 py-2 sm:py-3 border-t dark:border-[var(--border-color)] flex flex-col gap-1.5 sm:gap-2 bg-white dark:bg-[var(--surface)]">
+            <div className="px-3 sm:px-6 py-2 sm:py-3 border-t dark:border-[var(--border-color)] flex flex-col gap-1.5 sm:gap-2 bg-white dark:bg-[var(--surface)] shrink-0">
                 <div className="flex items-end gap-1.5 sm:gap-2">
           <textarea
               ref={taRef}
               value={text}
               onChange={(e) => {
                   const newText = e.currentTarget.value;
-                  if (newText.length <= 80) {
+                  if (newText.length <= 500) {
                       setText(newText);
                   }
               }}
@@ -675,9 +720,9 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
               }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
-              placeholder="메시지 입력 (최대 80자)"
+              placeholder="메시지 입력 (최대 500자)"
               rows={1}
-              maxLength={80}
+              maxLength={500}
               className="flex-1 border border-gray-200 dark:border-[var(--border-color)] bg-white dark:bg-black rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-green-500/30 resize-none"
           />
                     <button
@@ -692,8 +737,8 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 
                 {/* 문자 수 표시 */}
                 <div className="flex justify-end">
-                    <span className={`text-xs ${text.length > 70 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
-                        {text.length}/80
+                    <span className={`text-xs ${text.length >= 500 ? 'text-red-500' : 'text-gray-400 dark:text-white/50'}`}>
+                        {text.length}/500
                     </span>
                 </div>
 
@@ -791,7 +836,7 @@ const MessageDetail: React.FC<Props> = ({ message, onSend, onBack }) => {
                 </div>
             </div>
         </div>
-        </>
+        </div>
     );
 };
 

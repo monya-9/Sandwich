@@ -28,12 +28,15 @@ public class SubmissionController {
             @PathVariable Long challengeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id,desc") String sort
+            @RequestParam(defaultValue = "id,desc") String sort,
+            @org.springframework.lang.Nullable
+            @AuthenticationPrincipal UserDetailsImpl user
     ) {
         String[] s = sort.split(",");
         var dir = (s.length > 1 && "asc".equalsIgnoreCase(s[1])) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(dir, s[0]));
-        return service.list(challengeId, pageable);
+        Long viewerId = (user == null ? null : user.getUser().getId());
+        return service.list(challengeId, pageable, viewerId);
     }
 
     @PutMapping("/{submissionId}")

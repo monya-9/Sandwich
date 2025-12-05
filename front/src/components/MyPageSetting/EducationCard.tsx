@@ -173,7 +173,7 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 				onConfirm={onDeleteConfirm}
 				onCancel={onDeleteCancel}
 			/>
-			<div className="w-full py-6">
+			<div className="w-full py-6 overflow-visible">
 			<div className="min-w-0">
 				<div className="flex items-center justify-between">
 					<div className={roleCls}>
@@ -200,7 +200,7 @@ const EducationCard: React.FC<Props> = ({ item, onUpdated, onEdit }) => {
 								<MoreHorizontal size={22} className={isPrivate ? textMuted : "text-[#6B7280]"} />
 							</button>
                             {menuOpen && (
-                                <div className="absolute right-0 top-full mt-0 w-48 bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl shadow-lg py-1 z-10">
+                                <div className="absolute right-0 top-full mt-0 w-48 bg-white dark:bg-[var(--surface)] border border-[#E5E7EB] dark:border-[var(--border-color)] rounded-xl shadow-lg py-1 z-50">
                                     <button className="w-full flex items-center gap-2 px-3 h-10 hover:bg-[#F5F7FA] dark:hover:bg-white/5 text-[#111827] dark:text-white" onClick={()=>{ setMenuOpen(false); onEdit && onEdit(item); }}>
                                         <Pencil size={16} className="text-[#6B7280] dark:text-white/70" /> 수정하기
 									</button>

@@ -59,6 +59,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 	// 닉네임/이메일 기반 표시 이름과 이니셜 계산
 	const storedNickname = (localStorage.getItem("userNickname") || sessionStorage.getItem("userNickname") || "").trim();
 	const storedEmail = (localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "").trim();
+	const storedProfileImage = (localStorage.getItem("userProfileImage") || sessionStorage.getItem("userProfileImage") || "").trim();
 	const finalOwnerName = storedNickname || ownerName;
 	const emailInitial = storedEmail ? storedEmail[0].toUpperCase() : "";
 	const ownerInitial = emailInitial || (finalOwnerName?.[0] || "").toUpperCase();
@@ -200,27 +201,32 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 					>
 						{/* 상단 헤더: 제목(-), 닉네임, 수정/삭제 */}
 						<div className="px-8">
-							<div className="w-full flex items-start gap-3 mb-6">
-								<div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 flex-shrink-0">
-									{ownerInitial}
+							<div className="w-full flex items-start gap-4 mb-6">
+								<div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 flex-shrink-0 overflow-hidden">
+									{storedProfileImage ? (
+										<img src={storedProfileImage} alt="avatar" className="w-full h-full object-cover" />
+									) : (
+										ownerInitial
+									)}
 								</div>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2 flex-wrap">
-										<h1 className="text-2xl font-bold text-black truncate">{displayTitle}</h1>
-										<div className="flex items-center gap-2 ml-20">
+								<div className="flex-1">
+									{/* 프로젝트 제목 - 한줄 소개 */}
+									<div className="flex items-center gap-2 flex-wrap mb-1">
+										<h1 className="text-xl font-bold text-black">
+											{displayTitle}
+											{!!(summary && summary.trim()) && (
+												<span className="text-[15px] sm:text-[15px] md:text-[15px] text-black font-normal leading-tight ml-1">
+													- {summary}
+												</span>
+											)}
+										</h1>
+										<div className="flex items-center gap-2 ml-4">
 											<button className="bg-white border border-[#E5E7EB] text-gray-700 hover:bg-gray-50 rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onEdit}>수정하기</button>
 											<button className="bg-[#F6323E] text-white hover:bg-[#e42b36] rounded-full px-4 py-1.5 text-sm font-semibold" onClick={onDelete}>삭제하기</button>
 										</div>
 									</div>
-									{!!(summary && summary.trim()) && (
-                              <div className="mt-2 relative">
-                                 <div className="inline-flex relative bg-white text-gray-900 text-[15px] px-4 py-2 rounded-3xl border border-gray-200 shadow-sm max-w-[640px] min-w-[72px] min-h-[36px] items-center justify-center text-center break-words">
-                                    {summary}
-                                    <div className="absolute left-4 -bottom-1 w-3 h-3 bg-white rotate-45 shadow-sm border-r border-b border-gray-200"></div>
-                                 </div>
-                              </div>
-                           )}
-                           <div className="text-gray-600 text-sm mt-1 truncate">{finalOwnerName}</div>
+									{/* 닉네임 */}
+									<div className="text-[18px] text-black">{finalOwnerName}</div>
 								</div>
 							</div>
 						</div>
@@ -276,7 +282,7 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 									category={category}
                                     ownerName={finalOwnerName}
                                     ownerEmail={storedEmail}
-                                    ownerImageUrl={undefined}
+                                    ownerImageUrl={storedProfileImage || undefined}
                                     ownerId={0}
 								/>
 							</div>
@@ -333,3 +339,8 @@ export default function ProjectPreviewModal({ open, onClose, projectName = "프�
 		</div>
 	);
 }
+
+
+
+
+

@@ -1,8 +1,9 @@
-import React, { useContext, useMemo, useState, useEffect } from "react";
+import React, { useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import ProfileCircle from "./ProfileCircle";
 import { getStaticUrl } from "../../../config/staticBase";
+import { MdComputer, MdLightMode, MdDarkMode } from "react-icons/md";
 
 interface Props {
     isOpen: boolean;
@@ -12,6 +13,8 @@ interface Props {
 
 // ✅ httpOnly 쿠키 기반: JWT 디코딩 대신 서버 API로 권한 확인
 // (deprecated - 이제 useEffect에서 비동기로 확인)
+
+type ThemeMode = "system" | "light" | "dark";
 
 const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
     const { isLoggedIn, email } = useContext(AuthContext);
@@ -55,6 +58,43 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
         if (safeEmail) return safeEmail.split("@")[0];
         return "사용자";
     }, [safeEmail, nicknameUpdateTrigger]);
+
+    // 테마 토글 상태
+    const initialMode: ThemeMode = useMemo(() => {
+        if (typeof window === "undefined") return "system";
+        let saved = "";
+        try {
+            saved = (localStorage.getItem("theme") || "").toLowerCase();
+        } catch {
+            saved = "";
+        }
+        return saved === "dark" || saved === "light" ? (saved as ThemeMode) : "system";
+    }, []);
+    const [mode, setMode] = useState<ThemeMode>(initialMode);
+
+    const resolveAndApply = useCallback((m: ThemeMode) => {
+        if (typeof window === "undefined") return;
+        const prefersDark =
+            typeof window.matchMedia === "function"
+                ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                : false;
+        const isDark = m === "dark" ? true : m === "light" ? false : prefersDark;
+        if (typeof document !== "undefined") {
+            document.documentElement.classList.toggle("dark", isDark);
+        }
+        try {
+            localStorage.setItem("theme", m);
+        } catch {}
+        setMode(m);
+    }, []);
+
+    const btnCls = (m: ThemeMode) =>
+        [
+            "h-8 w-8 flex items-center justify-center rounded-full transition-colors text-lg",
+            mode === m
+                ? "bg-green-500 text-white"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+        ].join(" ");
 
     // 닉네임 변경 이벤트 리스너
     useEffect(() => {
@@ -136,6 +176,35 @@ const SidebarMenu = ({ isOpen, onClose, onLogout }: Props) => {
                             <Link to="/mypage" onClick={onClose} className="text-base font-medium">
                                 마이페이지
                             </Link>
+                            <div className="mt-1">
+                                <div className="text-sm text-gray-900 dark:text-white mb-2">테마</div>
+                                <div className="flex items-center gap-1 rounded-full border border-gray-300 dark:border-white/20 p-1 w-fit">
+                                    <button
+                                        type="button"
+                                        aria-label="System theme"
+                                        className={btnCls("system")}
+                                        onClick={() => resolveAndApply("system")}
+                                    >
+                                        <MdComputer size={16} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-label="Light theme"
+                                        className={btnCls("light")}
+                                        onClick={() => resolveAndApply("light")}
+                                    >
+                                        <MdLightMode size={16} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-label="Dark theme"
+                                        className={btnCls("dark")}
+                                        onClick={() => resolveAndApply("dark")}
+                                    >
+                                        <MdDarkMode size={16} />
+                                    </button>
+                                </div>
+                            </div>
                         </>
                     )}
 

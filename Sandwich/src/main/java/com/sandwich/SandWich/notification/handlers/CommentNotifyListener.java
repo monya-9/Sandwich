@@ -1,5 +1,6 @@
 package com.sandwich.SandWich.notification.handlers;
 
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.CommentCreatedEvent;
 import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
@@ -19,16 +20,21 @@ public class CommentNotifyListener {
 
     private final NotificationFanoutService fanout;
     private final ProjectRepository projectRepository;
+    private final SubmissionRepository submissionRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCommentCreated(CommentCreatedEvent ev) {
-        String type = ev.getResourceType() == null ? "POST" : ev.getResourceType();
         Long id = ev.getResourceId();
+        String type = ev.getResourceType();
+
+        if (type == null) {
+            log.warn("[CommentNotify] resourceType is null for resourceId={}", id);
+            return;
+        }
 
         String deepLink;
         switch (type) {
-            case "PROJECT":
-                // 프로젝트 소유자 ID 조회 후 올바른 경로 생성
+            case "PROJECT": {
                 Long ownerId = projectRepository.findAuthorIdById(id).orElse(null);
                 if (ownerId != null) {
                     deepLink = "/other-project/" + ownerId + "/" + id;
@@ -37,12 +43,39 @@ public class CommentNotifyListener {
                     deepLink = "/";
                 }
                 break;
-            case "CHALLENGE":
+            }
+            case "CHALLENGE": {
                 deepLink = "/challenges/" + id;
                 break;
-            case "POST":
-            default:
-                deepLink = "/posts/" + id;
+            }
+            case "CODE_SUBMISSION": {
+                var subOpt = submissionRepository.findById(id);
+                if (subOpt.isPresent()) {
+                    var sub = subOpt.get();
+                    Long chId = sub.getChallenge().getId();
+                    deepLink = "/challenge/code/" + chId + "/submissions/" + sub.getId();
+                } else {
+                    log.warn("[CommentNotify] CODE_SUBMISSION not found for id={}", id);
+                    deepLink = "/";
+                }
+                break;
+            }
+            case "PORTFOLIO_SUBMISSION": {
+                var subOpt = submissionRepository.findById(id);
+                if (subOpt.isPresent()) {
+                    var sub = subOpt.get();
+                    Long chId = sub.getChallenge().getId();
+                    deepLink = "/challenge/portfolio/" + chId + "/vote/" + sub.getId();
+                } else {
+                    log.warn("[CommentNotify] PORTFOLIO_SUBMISSION not found for id={}", id);
+                    deepLink = "/";
+                }
+                break;
+            }
+            default: {
+                log.warn("[CommentNotify] Unknown resourceType={}, id={}", type, id);
+                deepLink = "/";
+            }
         }
 
         var payload = NotifyPayload.builder()

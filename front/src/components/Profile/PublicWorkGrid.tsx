@@ -76,7 +76,7 @@ export default function PublicWorkGrid({ userId }: { userId: number }) {
           const coverUrl = cover ? cover : '';
           const title = (p as any).title ? (p as any).title : '';
           const ownerId = (p as any).owner?.id || (p as any).authorId || userId;
-          const goDetail = () => navigate(`/other-project/${ownerId}/${(p as any).id}`);
+          const goDetail = () => navigate(`/other-project/${ownerId}/${(p as any).id}`, { state: { fromApp: true } });
           return (
             <div key={p.id} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={goDetail}>
               <div className="relative w-full aspect-[4/3] bg-gray-200 group">

@@ -144,9 +144,17 @@ export default function PortfolioProjectDetailPage() {
                 const submissionDetail = await fetchChallengeSubmissionDetail(id, pid);
                 setItem(submissionDetail);
                 setLikeCount(submissionDetail.likeCount || 0);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('포트폴리오 상세 로드 실패:', err);
-                setError('제출물을 찾을 수 없습니다.');
+                
+                // 에러 메시지 상세화 (포트폴리오는 항상 공개이지만 일관성을 위해)
+                if (err?.response?.status === 404) {
+                    setError('제출물을 찾을 수 없습니다.');
+                } else if (err?.response?.status === 403) {
+                    setError('접근 권한이 없습니다.');
+                } else {
+                    setError('제출물을 불러오는 중 오류가 발생했습니다.');
+                }
                 setItem(null);
             } finally {
                 setLoading(false);
@@ -230,11 +238,16 @@ export default function PortfolioProjectDetailPage() {
             } catch (error) {
                 console.error('투표 데이터 로드 실패:', error);
                 setMyVote(null);
+                // 에러 발생 시 별점도 초기화
+                setUx(0);
+                setTech(0);
+                setCre(0);
+                setPlan(0);
             }
         };
 
         // 투표 가능한 상태이거나 이미 투표한 상태라면 투표 데이터 로드
-        // 투표 가능한 기간에만 투표 데이터 로드
+        // 투표 기간 여부와 관계없이 항상 투표 데이터를 확인하여 상태 동기화
         const parseTs = (v?: string) => {
             if (!v) return null;
             const s = v.includes('T') ? v : v.replace(' ', 'T');
@@ -245,7 +258,10 @@ export default function PortfolioProjectDetailPage() {
         const vStart = parseTs(timeline.voteStartAt);
         const vEnd = parseTs(timeline.voteEndAt);
         const votingNow = !!(vStart && now >= vStart && (!vEnd || now <= vEnd));
-        if (votingNow && item) {
+        const votingPeriodDefined = !!(vStart || vEnd);
+        
+        // 투표 기간이 정의되어 있고 item이 로드된 경우 항상 투표 데이터 확인
+        if (votingPeriodDefined && item) {
             loadVoteData();
         }
     }, [id, challengeStatus, item, timeline.voteStartAt, timeline.voteEndAt]);
@@ -560,7 +576,7 @@ export default function PortfolioProjectDetailPage() {
     };
 
     return (
-        <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-10">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:py-6 md:px-6 md:py-10">
             {/* 토스트 */}
             <Toast
                 visible={toast.visible}
@@ -573,15 +589,15 @@ export default function PortfolioProjectDetailPage() {
             />
 
             {/* 헤더 */}
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-3 sm:mb-4 flex items-center gap-2 flex-wrap">
                 <button
                     onClick={() => nav(`/challenge/portfolio/${id}/vote`)}
-                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
+                    className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100 flex-shrink-0"
                     aria-label="뒤로가기"
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <h1 className="text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px]">{item.title}</h1>
+                <h1 className="text-[18px] sm:text-[22px] font-extrabold tracking-[-0.01em] md:text-[24px] break-all" style={{ overflowWrap: 'anywhere' }}>{item.title}</h1>
                 {/* 상태 배지 */}
                 {(() => {
                     const now = new Date();
@@ -606,7 +622,7 @@ export default function PortfolioProjectDetailPage() {
             </div>
 
 
-            <SectionCard className="!px-5 !py-5">
+            <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5">
                 {/* 작성자 */}
                 <div className="mb-3 flex items-center gap-2 justify-between">
                     <div className="flex items-center gap-2">
@@ -655,10 +671,10 @@ export default function PortfolioProjectDetailPage() {
                     
                     {/* 수정/삭제 버튼 (소유자이고 제출 기간 내이며 챌린지가 종료되지 않았을 때만 표시) */}
                     {isOwner && canEditOrDelete() && challengeStatus !== "ENDED" && !isChallengeEnded && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <button
                                 onClick={handleEdit}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-[12px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
                                 title="수정"
                             >
                                 <Edit2 className="h-3.5 w-3.5" />
@@ -666,7 +682,7 @@ export default function PortfolioProjectDetailPage() {
                             </button>
                             <button
                                 onClick={() => setDeleteModalOpen(true)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-[12px] text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                                 title="삭제"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -685,9 +701,9 @@ export default function PortfolioProjectDetailPage() {
                     </div>
                 )}
 
-                <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800">{item.desc}</p>
+                <p className="whitespace-pre-line break-all text-[13px] sm:text-[13.5px] leading-7 text-neutral-800" style={{ overflowWrap: 'anywhere' }}>{item.desc}</p>
 
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex gap-2 flex-wrap">
                     {item.demoUrl && (
                         <a
                             className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
@@ -712,9 +728,9 @@ export default function PortfolioProjectDetailPage() {
 
                 {/* 추가 이미지들 */}
                 {item.assets && item.assets.length > 0 && (
-                    <div className="mt-6">
-                        <h3 className="mb-3 text-[14px] font-semibold text-neutral-900">추가 이미지</h3>
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    <div className="mt-4 sm:mt-6">
+                        <h3 className="mb-3 text-[13px] sm:text-[14px] font-semibold text-neutral-900">추가 이미지</h3>
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
                             {item.assets.map((asset, index) => (
                                 <div key={index} className="aspect-[4/3] overflow-hidden rounded-lg">
                                     <img 

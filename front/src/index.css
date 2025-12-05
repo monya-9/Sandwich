@@ -307,8 +307,14 @@ input[type="text"], input[type="color"], input[type="number"] {
 }
 
 /* Quill 에디터 관련 스타일 오버라이드 - 배경색 제거 */
-.ql-editor, .ql-blank {
+/* 프로젝트 콘텐츠 영역은 인라인 스타일로 색상이 설정되므로 제외 */
+.ql-editor:not(.project-content-editor), .ql-blank {
   color: var(--text-primary) !important;
+}
+/* 프로젝트 콘텐츠 영역은 인라인 스타일 우선 */
+.pm-preview-content .ql-editor,
+.project-content-editor {
+  color: inherit !important;
 }
 
 /* Common avatar-style circles (rounded + gray bg) unify to header tone */

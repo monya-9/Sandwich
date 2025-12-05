@@ -10,6 +10,9 @@ import { fetchProjectFeed, fetchProjectsMeta } from '../api/projects';
 import { AuthContext } from '../context/AuthContext';
 
 const MainPage = () => {
+  // 로그인 상태 (가장 먼저 가져오기)
+  const { isLoggedIn } = useContext(AuthContext);
+  
   // 정렬 옵션을 sessionStorage에서 불러오기 (페이지 이동 시에도 유지)
   const selectedCategory: Category | '전체' = '전체'; // 카테고리 필터 제거로 고정
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
@@ -41,9 +44,6 @@ const MainPage = () => {
   const [actualProjects, setActualProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로딩 여부
-
-  // 로그인 상태
-  const { isLoggedIn } = useContext(AuthContext);
 
   // 로그인 사용자 ID (스토리지 저장 규칙 준수)
   const userId = useMemo(() => {
@@ -78,18 +78,21 @@ const MainPage = () => {
 
   // 실제 프로젝트 데이터 가져오기 (업로드 시간 필터 변경 시)
   useEffect(() => {
+    // 경쟁 상태 방지를 위한 취소 플래그
+    let isCancelled = false;
+    
     const loadProjects = async () => {
       setLoadingProjects(true);
       
       // 캐시 키 생성
       const cacheKey = `projects:${selectedUploadTime}`;
       
-      // 캐시에서 먼저 복원 (즉시 표시)
+      // 캐시에서 먼저 복원 (즉시 표시) - 초기 로드 시에만
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached && isInitialLoad) {
           const parsedCache = JSON.parse(cached) as Project[];
-          if (Array.isArray(parsedCache) && parsedCache.length > 0) {
+          if (Array.isArray(parsedCache) && parsedCache.length > 0 && !isCancelled) {
             setActualProjects(parsedCache);
           }
         }
@@ -117,6 +120,9 @@ const MainPage = () => {
           uploadedWithin,
         });
 
+        // ✅ API 응답 받았지만 이미 취소된 경우 무시
+        if (isCancelled) return;
+
         const projects = response.content || [];
 
         // 프로젝트 메타 정보 가져오기 (좋아요, 댓글, 조회수)
@@ -125,6 +131,9 @@ const MainPage = () => {
           try {
             const projectIds = projects.map(p => p.id);
             const metaData = await fetchProjectsMeta(projectIds);
+            
+            // ✅ 메타 정보 받았지만 이미 취소된 경우 무시
+            if (isCancelled) return;
             
             // 메타 정보를 프로젝트에 병합
             const projectsWithMeta = projects.map(project => ({
@@ -144,6 +153,8 @@ const MainPage = () => {
             }
           } catch (metaError) {
             // ✅ 메타 API 실패 시 기본값으로 표시
+            if (isCancelled) return;
+            
             console.warn('프로젝트 메타 정보 조회 실패, 기본값 사용:', metaError);
             const projectsWithDefaults = projects.map(project => ({
               ...project,
@@ -160,10 +171,14 @@ const MainPage = () => {
           }
           setIsInitialLoad(false);
         } else {
-          setActualProjects([]);
-          setIsInitialLoad(false);
+          if (!isCancelled) {
+            setActualProjects([]);
+            setIsInitialLoad(false);
+          }
         }
       } catch (error) {
+        if (isCancelled) return;
+        
         console.error('프로젝트 로딩 실패:', error);
         // 에러 발생 시 기존 데이터 유지 (초기 로딩이 아닌 경우)
         if (isInitialLoad) {
@@ -171,12 +186,38 @@ const MainPage = () => {
         }
         setIsInitialLoad(false);
       } finally {
-        setLoadingProjects(false);
+        if (!isCancelled) {
+          setLoadingProjects(false);
+        }
       }
     };
 
     loadProjects();
+    
+    // ✅ Cleanup: 컴포넌트 언마운트 또는 의존성 변경 시 이전 요청 취소
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedUploadTime, isInitialLoad]);
+
+  // 로그인 시 자동으로 샌드위치 픽으로 전환
+  useEffect(() => {
+    if (isLoggedIn && selectedSort !== '샌드위치 픽') {
+      setSelectedSort('샌드위치 픽');
+      setTempSelectedSort('샌드위치 픽');
+      try {
+        sessionStorage.setItem('mainPage:selectedSort', '샌드위치 픽');
+      } catch {}
+    }
+  }, [isLoggedIn]);
+
+  // ✅ 모달이 닫힐 때마다 temp 상태를 실제 상태로 동기화
+  useEffect(() => {
+    if (!isSortModalOpen) {
+      setTempSelectedSort(selectedSort);
+      setTempSelectedUploadTime(selectedUploadTime);
+    }
+  }, [isSortModalOpen]); // ✅ 오직 모달 열림/닫힘만 감지
 
   useEffect(() => {
     if (!userId || Number.isNaN(userId) || !isLoggedIn) return; // 로그인 사용자 없으면 스킵
@@ -187,7 +228,8 @@ const MainPage = () => {
       setIsNewUser(false);
       
       try {
-        const response = await fetchUserRecommendations(userId);
+        // 상위 50개 AI 추천 프로젝트 가져오기
+        const response = await fetchUserRecommendations(userId, 50);
         
         // total이 0이면 신규 유저로 판단하여 기본 최신순 프로젝트 사용
         if (response.total === 0) {
@@ -280,25 +322,45 @@ const MainPage = () => {
   }, [userId, isLoggedIn, cacheKey]);
 
   const handleOpenSortModal = () => {
+    // ✅ 모달 열 때마다 현재 값으로 동기화
     setTempSelectedSort(selectedSort);
     setTempSelectedUploadTime(selectedUploadTime);
     setIsSortModalOpen(true);
   };
 
-  const handleCloseSortModal = () => setIsSortModalOpen(false);
+  const handleCloseSortModal = () => {
+    // ✅ 취소 시 temp 값을 원래 값으로 되돌림 (다음 열기를 위해)
+    setTempSelectedSort(selectedSort);
+    setTempSelectedUploadTime(selectedUploadTime);
+    setIsSortModalOpen(false);
+  };
 
   const handleApplySortModal = () => {
-    setSelectedSort(tempSelectedSort);
-    setSelectedUploadTime(tempSelectedUploadTime);
-    setIsSortModalOpen(false);
+    // ✅ 상태 업데이트를 먼저 처리
+    const newSort = tempSelectedSort;
+    let newTime = tempSelectedUploadTime;
+    
+    // ✅ 샌드위치 픽 선택 시 업로드 시간을 전체기간으로 리셋
+    if (newSort === '샌드위치 픽') {
+      newTime = '전체기간';
+    }
     
     // 선택한 정렬 옵션을 sessionStorage에 저장
     try {
-      sessionStorage.setItem('mainPage:selectedSort', tempSelectedSort);
-      sessionStorage.setItem('mainPage:selectedUploadTime', tempSelectedUploadTime);
+      sessionStorage.setItem('mainPage:selectedSort', newSort);
+      sessionStorage.setItem('mainPage:selectedUploadTime', newTime);
     } catch {
       // sessionStorage 사용 불가 시 무시
     }
+    
+    // ✅ 모달 먼저 닫기
+    setIsSortModalOpen(false);
+    
+    // ✅ 모달이 완전히 닫힌 후 상태 업데이트 (useEffect 충돌 방지)
+    setTimeout(() => {
+      setSelectedSort(newSort);
+      setSelectedUploadTime(newTime);
+    }, 0);
   };
 
   const handleQuickSortToSandwichPick = () => {
@@ -315,59 +377,119 @@ const MainPage = () => {
   // 카테고리 필터 적용 (실제 데이터 사용)
   // TODO: 백엔드에서 categories 데이터가 추가되면 필터링 활성화
   // 현재는 categories 데이터가 없어서 '전체'와 동일하게 모든 프로젝트 표시
-  const filteredProjects: Project[] = actualProjects.filter((project) => {
-    // 임시: 카테고리 필터 무시하고 모든 프로젝트 표시
-    return true;
-    // const matchesCategory =
-    //   selectedCategory === '전체' || project.categories?.includes(selectedCategory);
-    // return matchesCategory;
-  });
+  const filteredProjects: Project[] = useMemo(() => {
+    return actualProjects.filter((project) => {
+      // 임시: 카테고리 필터 무시하고 모든 프로젝트 표시
+      return true;
+      // const matchesCategory =
+      //   selectedCategory === '전체' || project.categories?.includes(selectedCategory);
+      // return matchesCategory;
+    });
+  }, [actualProjects, selectedCategory]);
 
   // 클라이언트 사이드 정렬 적용
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    if (selectedSort === '최신순') {
-      // 최신순: 생성일 기준 내림차순 (uploadDate가 없으면 id로 정렬)
-      if (a.uploadDate && b.uploadDate) {
-        return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
+  const sortedProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => {
+      if (selectedSort === '최신순') {
+        // 최신순: 생성일 기준 내림차순 (uploadDate가 없으면 id로 정렬)
+        if (a.uploadDate && b.uploadDate) {
+          return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
+        }
+        return b.id - a.id; // fallback: id 기준 정렬
+      } else if (selectedSort === '추천순') {
+        // 추천순: 좋아요 수 기준 내림차순
+        return (b.likes || 0) - (a.likes || 0);
+      } else if (selectedSort === '샌드위치 픽') {
+        // 샌드위치 픽: 좋아요, 댓글, 조회수를 가중치로 계산
+        const scoreA = (a.likes || 0) * 2 + (a.comments || 0) * 1.5 + (a.views || 0) * 0.5;
+        const scoreB = (b.likes || 0) * 2 + (b.comments || 0) * 1.5 + (b.views || 0) * 0.5;
+        return scoreB - scoreA;
       }
-      return b.id - a.id; // fallback: id 기준 정렬
-    } else if (selectedSort === '추천순') {
-      // 추천순: 좋아요 수 기준 내림차순
-      return (b.likes || 0) - (a.likes || 0);
-    } else if (selectedSort === '샌드위치 픽') {
-      // 샌드위치 픽: 좋아요, 댓글, 조회수를 가중치로 계산
-      const scoreA = (a.likes || 0) * 2 + (a.comments || 0) * 1.5 + (a.views || 0) * 0.5;
-      const scoreB = (b.likes || 0) * 2 + (b.comments || 0) * 1.5 + (b.views || 0) * 0.5;
-      return scoreB - scoreA;
-    }
-    return 0;
-  });
+      return 0;
+    });
+  }, [filteredProjects, selectedSort]);
 
   // 정렬 옵션에 따라 AI 추천 적용 여부 결정 (신규 유저는 제외)
-  const useReco = isLoggedIn && selectedSort === '샌드위치 픽' && !isNewUser;
-  const hasReco = useReco && !!(recoProjects && recoProjects.length > 0);
+  const useReco = useMemo(() => 
+    isLoggedIn && selectedSort === '샌드위치 픽' && !isNewUser,
+    [isLoggedIn, selectedSort, isNewUser]
+  );
+  
+  const hasReco = useMemo(() => 
+    useReco && !!(recoProjects && recoProjects.length > 0),
+    [useReco, recoProjects]
+  );
 
   // 카테고리 필터를 추천 프로젝트에도 적용
   // TODO: 백엔드에서 categories 데이터가 추가되면 필터링 활성화
-  const filteredRecoProjects = (recoProjects || []).filter((project) => {
-    // 임시: 카테고리 필터 무시하고 모든 프로젝트 표시
-    return true;
-    // const matchesCategory =
-    //   selectedCategory === '전체' || project.categories?.includes(selectedCategory);
-    // return matchesCategory;
-  });
+  const filteredRecoProjects = useMemo(() => 
+    (recoProjects || []).filter((project) => {
+      // 임시: 카테고리 필터 무시하고 모든 프로젝트 표시
+      return true;
+      // const matchesCategory =
+      //   selectedCategory === '전체' || project.categories?.includes(selectedCategory);
+      // return matchesCategory;
+    }),
+    [recoProjects, selectedCategory]
+  );
+
+  // 화면 크기에 따른 메인 그리드 개수
+  const [mainGridCount, setMainGridCount] = useState(10);
+  
+  useEffect(() => {
+    const updateMainGridCount = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setMainGridCount(4); // 모바일: 2개 × 2줄
+      } else if (width < 768) {
+        setMainGridCount(4); // sm: 2개 × 2줄
+      } else if (width < 1024) {
+        setMainGridCount(6); // md: 3개 × 2줄
+      } else {
+        setMainGridCount(10); // lg/xl: 5개 × 2줄
+      }
+    };
+
+    updateMainGridCount();
+    window.addEventListener('resize', updateMainGridCount);
+    return () => window.removeEventListener('resize', updateMainGridCount);
+  }, []);
 
   // 렌더 소스 선택 (정렬된 데이터 사용)
-  const gridPrimary = hasReco ? filteredRecoProjects.slice(0, 10) : sortedProjects.slice(0, 10);
-  const heroProjects = hasReco
-    ? filteredRecoProjects.slice(0, 7)
-    : sortedProjects.slice(0, 7);
-  const gridMore = hasReco
-    ? (filteredRecoProjects.length > 10 ? filteredRecoProjects.slice(10) : sortedProjects.slice(10))
-    : sortedProjects.slice(10);
+  const gridPrimary = useMemo(() => 
+    hasReco ? filteredRecoProjects.slice(0, mainGridCount) : sortedProjects.slice(0, mainGridCount),
+    [hasReco, filteredRecoProjects, sortedProjects, mainGridCount]
+  );
+  
+  const heroProjects = useMemo(() => 
+    hasReco ? filteredRecoProjects.slice(0, 7) : sortedProjects.slice(0, 7),
+    [hasReco, filteredRecoProjects, sortedProjects]
+  );
+  
+  const gridMore = useMemo(() => 
+    hasReco
+      ? (filteredRecoProjects.length > mainGridCount ? filteredRecoProjects.slice(mainGridCount) : sortedProjects.slice(mainGridCount))
+      : sortedProjects.slice(mainGridCount),
+    [hasReco, filteredRecoProjects, sortedProjects, mainGridCount]
+  );
 
-  // 그리드 제목: '샌드위치 픽'일 때만 AI 추천으로 표기
-  const gridTitle = useReco ? 'AI 추천 프로젝트' : '전체 프로젝트';
+  // 그리드 제목: 정렬 방식에 따라 변경
+  const gridTitle = useMemo(() => {
+    if (useReco) {
+      return 'AI 추천 프로젝트';
+    }
+    
+    switch (selectedSort) {
+      case '최신순':
+        return '최신 프로젝트';
+      case '추천순':
+        return '추천 프로젝트';
+      case '샌드위치 픽':
+        return '샌드위치 PICK 프로젝트';
+      default:
+        return '전체 프로젝트';
+    }
+  }, [useReco, selectedSort]);
 
   return (
     <div className="min-h-screen">
@@ -447,7 +569,7 @@ const MainPage = () => {
         <MainDeveloperHighlight />
 
         {gridMore.length > 0 && (
-          <MainProjectGrid title={useReco ? 'AI 추천 프로젝트 계속 보기' : '계속해서 프로젝트를 살펴보세요!'} projects={gridMore} />
+          <MainProjectGrid title={`${gridTitle} 계속 보기`} projects={gridMore} />
         )}
 
         {isSortModalOpen && (

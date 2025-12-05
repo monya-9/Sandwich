@@ -75,8 +75,8 @@ export default function PublicCollectionsGrid() {
   return (
     <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {folders.map((f) => (
-        <div key={f.id} className="relative rounded-xl border border-[#E5E7EB] overflow-hidden cursor-pointer group bg-white" onClick={() => navigate(`/users/${userId}/collections/${f.id}`)}>
-          <div className="relative w-full aspect-[4/3] bg-gray-200">
+        <div key={f.id} className="relative rounded-xl border border-[#E5E7EB] dark:border-[var(--border-color)] overflow-hidden cursor-pointer group bg-white dark:bg-[var(--surface)]" onClick={() => navigate(`/users/${userId}/collections/${f.id}`)}>
+          <div className="relative w-full aspect-[4/3] bg-gray-200 dark:bg-[#1a1d20]">
             <div className="absolute inset-0">
               {coversById[f.id]?.[0] && (
                 <div className="absolute left-0 top-0 w-1/2 h-1/2 overflow-hidden">
@@ -108,8 +108,8 @@ export default function PublicCollectionsGrid() {
             </div>
           </div>
           <div className="mt-2 px-2 py-2">
-            <div className="text-[15px] font-medium line-clamp-1">{f.title || "이름 없음"}</div>
-            <div className="text-[12px] text-black/50">총 {(countsById[f.id] ?? f.itemCount ?? 0)}개의 작업  |  공개 컬렉션</div>
+            <div className="text-[15px] font-medium line-clamp-1 text-black dark:text-white">{f.title || "이름 없음"}</div>
+            <div className="text-[12px] text-black/50 dark:text-white/50">총 {(countsById[f.id] ?? f.itemCount ?? 0)}개의 작업  |  공개 컬렉션</div>
           </div>
         </div>
       ))}

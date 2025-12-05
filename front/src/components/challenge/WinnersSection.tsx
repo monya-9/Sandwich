@@ -41,15 +41,15 @@ function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
     };
 
     return (
-        <div className="text-center">
+        <div className="text-center px-2 sm:px-3">
             {/* 메달 아이콘 */}
-            <div className="mb-2 text-3xl">
+            <div className="mb-2 text-2xl sm:text-3xl">
                 {getMedalIcon(rank)}
             </div>
             
             {/* 프로필 이미지 또는 이니셜 - 클릭 가능 */}
             <div 
-                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={handleProfileClick}
             >
                 {profileImageUrl ? (
@@ -60,24 +60,24 @@ function WinnerCard({ data }: { data: WinnerEntry | LeaderboardEntry }) {
                         onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
-                            target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${userInitial}</span>`;
+                            target.parentElement!.innerHTML = `<span class="font-bold text-base sm:text-lg text-gray-700">${userInitial}</span>`;
                         }}
                     />
                 ) : (
-                    <span className="font-bold text-lg text-gray-700">{userInitial}</span>
+                    <span className="font-bold text-base sm:text-lg text-gray-700">{userInitial}</span>
                 )}
             </div>
             
             {/* 이름과 팀 이름 - 클릭 가능 */}
             <div 
-                className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                className="font-semibold text-gray-800 mb-2 break-words text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity px-1"
                 onClick={handleProfileClick}
             >
                 {displayName}
             </div>
             
             {/* 크레딧 또는 점수 */}
-            <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+            <div className="bg-gray-800 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm w-16 sm:w-20 text-center mx-auto">
                 {'totalScore' in data && data.totalScore ? `${data.totalScore.toFixed(2)}점` : 
                  data.credits ? `${data.credits.toLocaleString()} 크레딧` : 
                  'voteCount' in data ? `${data.voteCount || 0}표` : '0표'}
@@ -138,13 +138,13 @@ function WinnersBox({ items, loading, error }: {
     ].filter(Boolean) as (WinnerEntry | LeaderboardEntry)[];
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full box-border mx-auto flex items-center justify-center">
-            <div className="grid grid-cols-3 items-center w-full">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 min-h-[240px] w-full box-border mx-auto flex items-center justify-center">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 items-center w-full max-w-2xl mx-auto">
                 {[2, 1, 3].map((rank) => {
                     const w = items.find((x) => x.rank === rank);
                     return (
-                        <div key={rank} className="flex-1 flex justify-center">
-                            {w ? <WinnerCard data={w} /> : <div className="invisible"><div className="w-12 h-12" /></div>}
+                        <div key={rank} className="flex justify-center">
+                            {w ? <WinnerCard data={w} /> : <div className="invisible"><div className="w-10 h-10 sm:w-12 sm:h-12" /></div>}
                         </div>
                     );
                 })}
@@ -167,6 +167,12 @@ export default function WinnersSection() {
             const challengesResponse = await fetchChallenges(0, 10, "PORTFOLIO", "ENDED", { sort: "endAt,desc" });
             const endedPortfolioChallenges = challengesResponse.content;
             
+            console.log('🧩 ENDED 포트폴리오 챌린지 목록:', endedPortfolioChallenges.map(c => ({
+                id: c.id,
+                title: c.title,
+                endAt: c.endAt,
+            })));
+            
             if (endedPortfolioChallenges.length === 0) {
                 setWinners([]);
                 setError(null);
@@ -175,11 +181,11 @@ export default function WinnersSection() {
 
             // 2. 가장 최근 종료된 포트폴리오 챌린지 선택
             const latestChallenge = endedPortfolioChallenges[0]; // 이미 날짜순 정렬되어 있음
+            console.log('✅ WinnersSection이 선택한 latestChallenge:', latestChallenge.id, latestChallenge.title);
             
             // 3. 해당 챌린지의 리더보드 가져오기
             const leaderboardData = await fetchPortfolioLeaderboard(latestChallenge.id, 3);
-            
-            console.log('리더보드 데이터:', leaderboardData.entries);
+            console.log('🏆 리더보드 raw 응답:', leaderboardData);
             
             setWinners(leaderboardData.entries.slice(0, 3));
             setError(null);
@@ -226,7 +232,7 @@ export default function WinnersSection() {
             <div className="flex justify-center w-full">
                 {/* 포트폴리오만 - 더 넓게 표시 */}
                 <div className="flex flex-col w-full items-stretch">
-                    <h3 className="mb-3 text-2xl font-extrabold text-center">
+                    <h3 className="mb-3 text-xl sm:text-2xl font-extrabold text-center px-2">
                         지난 포트폴리오 챌린지 TOP Winners
                     </h3>
                     <WinnersBox items={winners} loading={loading} error={error} />

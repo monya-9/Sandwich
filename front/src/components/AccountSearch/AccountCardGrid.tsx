@@ -49,16 +49,16 @@ const AccountCardGrid: React.FC<AccountCardGridProps> = ({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8">
       {/* 검색 결과 헤더 - 스크린샷과 동일한 스타일 */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="text-center px-4">
+        <h2 className="text-sm md:text-2xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">
           {searchTerm ? 
             `'${searchTerm}'에 대한 검색 결과` : 
             currentPage === 0 ? '전체 계정' : null
           }
         </h2>
-        <p className="text-gray-600 text-lg">
+        <p className="text-xs md:text-lg text-gray-600 dark:text-white/70">
           {searchTerm ? 
             `${accounts.length}명의 계정을 발견하였습니다.` : 
             currentPage === 0 ? 
@@ -68,8 +68,8 @@ const AccountCardGrid: React.FC<AccountCardGridProps> = ({
         </p>
       </div>
 
-      {/* 계정 카드 그리드 - 4개씩 한 줄로, 검색바 길이에 맞춤 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full max-w-none">
+      {/* 계정 카드 그리드 - 모바일 반응형: 1개 → 2개 → 3개 → 4개 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 w-full max-w-none">
         {accounts.map((account) => (
           <AccountCard
             key={account.id}

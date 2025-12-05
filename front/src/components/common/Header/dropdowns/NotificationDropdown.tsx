@@ -92,7 +92,13 @@ const NotificationDropdown: React.FC<Props> = ({
                                     className="w-full text-left p-1.5 sm:p-2 rounded-lg text-xs sm:text-sm hover:bg-gray-50 cursor-pointer focus:outline-none"
                                     onClick={() => {
                                         onClickItem(n.id);
-                                        nav(n.deepLink || "/");
+                                        // 프로젝트 페이지로 이동하는 경우 state 전달
+                                        const link = n.deepLink || "/";
+                                        if (link.includes('/other-project/')) {
+                                            nav(link, { state: { fromApp: true } });
+                                        } else {
+                                            nav(link);
+                                        }
                                     }}
                                 >
                                     <UnreadBadge
@@ -118,7 +124,7 @@ const NotificationDropdown: React.FC<Props> = ({
                                         )}
 
                                         <div className="min-w-0 flex-1">
-                                            <p className="font-medium truncate text-xs sm:text-sm">{n.title}</p>
+                                            <p className="font-medium text-xs sm:text-sm line-clamp-2 break-words">{n.title}</p>
                                             {n.body ? (
                                                 <p className="text-gray-500 text-[10px] sm:text-xs line-clamp-2 whitespace-pre-line">
                                                     {n.body}

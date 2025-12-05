@@ -69,7 +69,7 @@ export default function CodeEditPage() {
         }
     };
 
-    if (loading) return <div className="p-6 text-[13.5px]">불러오는 중…</div>;
+    if (loading) return <div className="p-4 sm:p-6 text-[13px] sm:text-[13.5px]">불러오는 중…</div>;
 
     return (
         <>
@@ -82,31 +82,31 @@ export default function CodeEditPage() {
                 closable={true}
                 onClose={() => setSuccessToast(prev => ({ ...prev, visible: false }))}
             />
-            <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6 md:py-10">
-            <h1 className="mb-4 text-[20px] font-extrabold tracking-[-0.01em] md:text-[22px]">코드 제출 수정</h1>
-            <SectionCard className="!px-5 !py-5">
-                <div className="space-y-4">
+            <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:py-6 md:px-6 md:py-10">
+            <h1 className="mb-3 sm:mb-4 text-[18px] font-extrabold tracking-[-0.01em] sm:text-[20px] md:text-[22px]">코드 제출 수정</h1>
+            <SectionCard className="!px-4 !py-4 sm:!px-5 sm:!py-5">
+                <div className="space-y-3 sm:space-y-4">
                     <div className="flex flex-col gap-1">
-                        <label className="text-[13px] font-semibold text-neutral-800">제목</label>
+                        <label className="text-[12px] sm:text-[13px] font-semibold text-neutral-800">제목</label>
                         <input
-                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px]"
+                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px]"
                             value={form.title}
                             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                         />
                     </div>
                     <div className="flex flex-col gap-1">
-                        <label className="text-[13px] font-semibold text-neutral-800">리포지토리</label>
+                        <label className="text-[12px] sm:text-[13px] font-semibold text-neutral-800">리포지토리</label>
                         <input
-                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px]"
+                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px]"
                             value={form.repoUrl}
                             onChange={(e) => setForm((f) => ({ ...f, repoUrl: e.target.value }))}
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
-                            <label className="text-[13px] font-semibold text-neutral-800">언어</label>
+                            <label className="text-[12px] sm:text-[13px] font-semibold text-neutral-800">언어</label>
                             <select
-                                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px]"
+                                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px]"
                                 value={form.language}
                                 onChange={(e) => setForm((f) => ({ ...f, language: e.target.value as "node" | "python" }))}
                             >
@@ -115,19 +115,19 @@ export default function CodeEditPage() {
                             </select>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <label className="text-[13px] font-semibold text-neutral-800">엔트리포인트</label>
+                            <label className="text-[12px] sm:text-[13px] font-semibold text-neutral-800">엔트리포인트</label>
                             <input
-                                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px]"
+                                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px]"
                                 value={form.entrypoint}
                                 onChange={(e) => setForm((f) => ({ ...f, entrypoint: e.target.value }))}
                             />
                         </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <label className="text-[13px] font-semibold text-neutral-800">비고</label>
+                        <label className="text-[12px] sm:text-[13px] font-semibold text-neutral-800">비고</label>
                         <textarea
                             rows={3}
-                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13.5px]"
+                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] sm:text-[13.5px]"
                             value={form.note}
                             onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                         />

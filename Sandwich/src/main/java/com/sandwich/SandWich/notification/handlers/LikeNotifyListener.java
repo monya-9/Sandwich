@@ -1,5 +1,7 @@
 package com.sandwich.SandWich.notification.handlers;
 
+import com.sandwich.SandWich.challenge.repository.SubmissionRepository;
+import com.sandwich.SandWich.comment.repository.CommentRepository;
 import com.sandwich.SandWich.notification.dto.NotifyPayload;
 import com.sandwich.SandWich.notification.events.LikeCreatedEvent;
 import com.sandwich.SandWich.notification.fanout.NotificationFanoutService;
@@ -19,6 +21,8 @@ public class LikeNotifyListener {
 
     private final NotificationFanoutService fanout;
     private final ProjectRepository projectRepository;
+    private final SubmissionRepository submissionRepository;
+    private final CommentRepository commentRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onLikeCreated(LikeCreatedEvent ev) {
@@ -35,8 +39,77 @@ public class LikeNotifyListener {
                 log.warn("[LikeNotify] PROJECT ownerId not found for projectId={}", id);
                 yield "/";
             }
-            case "POST"    -> "/posts/" + id;
-            case "COMMENT" -> "/posts/" + id + "#comment-" + id; // 필요 시 원글 경로로 보정
+            case "CODE_SUBMISSION" -> {
+                var subOpt = submissionRepository.findById(id);
+                if (subOpt.isPresent()) {
+                    var sub = subOpt.get();
+                    Long chId = sub.getChallenge().getId();
+                    yield "/challenge/code/" + chId + "/submissions/" + sub.getId();
+                }
+                log.warn("[LikeNotify] CODE_SUBMISSION not found for id={}", id);
+                yield "/";
+            }
+            case "PORTFOLIO_SUBMISSION" -> {
+                var subOpt = submissionRepository.findById(id);
+                if (subOpt.isPresent()) {
+                    var sub = subOpt.get();
+                    Long chId = sub.getChallenge().getId();
+                    yield "/challenge/portfolio/" + chId + "/vote/" + sub.getId();
+                }
+                log.warn("[LikeNotify] PORTFOLIO_SUBMISSION not found for id={}", id);
+                yield "/";
+            }
+            case "COMMENT" -> {
+                // 댓글에 좋아요 -> 댓글이 달린 원본 리소스로 이동
+                var commentOpt = commentRepository.findById(id);
+                if (commentOpt.isPresent()) {
+                    var comment = commentOpt.get();
+                    String commentableType = comment.getCommentableType();
+                    Long commentableId = comment.getCommentableId();
+                    
+                    if (commentableType == null || commentableId == null) {
+                        log.warn("[LikeNotify] COMMENT id={} has no commentableType/Id", id);
+                        yield "/";
+                    }
+                    
+                    // 댓글이 달린 대상에 따라 deepLink 생성
+                    String normalizedType = commentableType.toUpperCase();
+                    switch (normalizedType) {
+                        case "PROJECT": {
+                            Long ownerId = projectRepository.findAuthorIdById(commentableId).orElse(null);
+                            if (ownerId != null) {
+                                yield "/other-project/" + ownerId + "/" + commentableId + "#comment-" + id;
+                            }
+                            log.warn("[LikeNotify] COMMENT->PROJECT ownerId not found for projectId={}", commentableId);
+                            yield "/";
+                        }
+                        case "CODE_SUBMISSION": {
+                            var sub = submissionRepository.findById(commentableId).orElse(null);
+                            if (sub != null && sub.getChallenge() != null) {
+                                Long chId = sub.getChallenge().getId();
+                                yield "/challenge/code/" + chId + "/submissions/" + commentableId + "#comment-" + id;
+                            }
+                            log.warn("[LikeNotify] COMMENT->CODE_SUBMISSION not found for id={}", commentableId);
+                            yield "/";
+                        }
+                        case "PORTFOLIO_SUBMISSION": {
+                            var sub = submissionRepository.findById(commentableId).orElse(null);
+                            if (sub != null && sub.getChallenge() != null) {
+                                Long chId = sub.getChallenge().getId();
+                                yield "/challenge/portfolio/" + chId + "/vote/" + commentableId + "#comment-" + id;
+                            }
+                            log.warn("[LikeNotify] COMMENT->PORTFOLIO_SUBMISSION not found for id={}", commentableId);
+                            yield "/";
+                        }
+                        default: {
+                            log.warn("[LikeNotify] COMMENT->Unknown commentableType={}", commentableType);
+                            yield "/";
+                        }
+                    }
+                }
+                log.warn("[LikeNotify] COMMENT not found for id={}", id);
+                yield "/";
+            }
             default        -> "/";
         };
 

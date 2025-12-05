@@ -184,7 +184,7 @@ const WorkTab: React.FC = () => {
 			<Toast visible={toast.visible} message={toast.message} type={toast.type} size="medium" autoClose={2000} closable={true} onClose={() => setToast(prev => ({ ...prev, visible: false }))} />
 
 			{/* 그리드 */}
-			<div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+			<div className="mt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 				{(isReorderMode ? order.map(id => projects.find(p => p.id === id)!).filter(Boolean) : projects).map((project, idx) => {
 					const indexInList = isReorderMode ? order.indexOf(project.id) : idx;
 					return (
@@ -230,7 +230,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 	const onError = () => { if (!triedAlt) { setTriedAlt(true); setSrc(swapJpgPng(src)); } };
 
 	const ownerId = (project as any).owner?.id || (project as any).authorId;
-	const goDetail = () => navigate(`/other-project/${ownerId}/${project.id}`);
+	const goDetail = () => navigate(`/other-project/${ownerId}/${project.id}`, { state: { fromApp: true } });
 	const goEdit = () => navigate(`/project/edit/${ownerId}/${project.id}`);
 
 	return (
@@ -250,7 +250,7 @@ function ProjectCard({ project, indexInList, isReorderMode, onDragStart, onDragO
 					···
 				</button>
                 {menuOpen && (
-                    <div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-10`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
+                    <div className={`absolute ${isReorderMode ? 'top-12 right-2' : 'top-12 left-2'} bg-white dark:bg-[var(--surface)] rounded-md shadow-lg border border-black/10 dark:border-[var(--border-color)] overflow-hidden z-50`} onClick={(e) => e.stopPropagation()} onMouseLeave={() => setMenuOpen(false)}>
                         <button className="px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left text-black dark:text-white" onClick={goEdit}>수정하기</button>
                         <button className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-white/5 w-full text-left" onClick={() => onRequestDelete(ownerId, (project as any).id)}>삭제하기</button>
 					</div>

@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import { UserApi, UserProfileResponse } from "../../api/userApi";
 import WorkFieldModal from "./WorkFieldModal";
 import InterestFieldModal from "./InterestFieldModal";
+import SkillFieldModal from "./SkillFieldModal";
 
 import { positionMap, FALLBACK_INTERESTS_GENERAL } from "../../constants/position";
 import Toast from "../common/Toast";
@@ -13,6 +14,24 @@ import api from "../../api/axiosInstance";
 
 const MAX20 = 20;
 const MAX_FILE_MB = 10;
+
+const parseSkillString = (value?: string | null): string[] => {
+	if (!value) return [];
+	return value
+		.split(",")
+		.map((v) => v.trim())
+		.filter((v) => v.length > 0);
+};
+
+const readStoredSkills = (): string[] => {
+	try {
+		const raw = localStorage.getItem("skillFields") || sessionStorage.getItem("skillFields");
+		const parsed = raw ? JSON.parse(raw) : [];
+		return Array.isArray(parsed) ? parsed : [];
+	} catch {
+		return [];
+	}
+};
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div className="text-[14px] text-[#6B7280] dark:text-white/70 mb-2 tracking-[0.01em] leading-[1.7]">{children}</div>
@@ -85,6 +104,8 @@ const MyPageSettingPage: React.FC = () => {
 	const [bio, setBio] = useState("");
 	const [isEditingBio, setIsEditingBio] = useState<boolean>(false);
 	const [tempBio, setTempBio] = useState<string>("");
+	const [isEditingOneLineProfile, setIsEditingOneLineProfile] = useState<boolean>(false);
+	const [tempOneLineProfile, setTempOneLineProfile] = useState<string>("");
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,6 +138,8 @@ const MyPageSettingPage: React.FC = () => {
 		const raw = localStorage.getItem("interestFields") || sessionStorage.getItem("interestFields");
 		try { return raw ? JSON.parse(raw) : []; } catch { return []; }
 	});
+	const [showSkillModal, setShowSkillModal] = useState(false);
+	const [skillFields, setSkillFields] = useState<string[]>(() => readStoredSkills());
 
 
 
@@ -143,6 +166,11 @@ const MyPageSettingPage: React.FC = () => {
 				const serverInterests = Array.isArray(me.interests) ? me.interests.map((i)=>i.name) : [];
 				setInterestFields(serverInterests);
 				try { localStorage.setItem("interestFields", JSON.stringify(serverInterests)); sessionStorage.setItem("interestFields", JSON.stringify(serverInterests)); } catch {}
+				const existingSkills = (() => { try { return JSON.parse(localStorage.getItem("skillFields") || sessionStorage.getItem("skillFields") || "null"); } catch { return null; } })();
+				const serverSkills = parseSkillString(me.skills);
+				const initSkills = Array.isArray(existingSkills) && existingSkills.length > 0 ? existingSkills : serverSkills;
+				setSkillFields(initSkills);
+				try { localStorage.setItem("skillFields", JSON.stringify(initSkills)); sessionStorage.setItem("skillFields", JSON.stringify(initSkills)); } catch {}
 
 				// 한 줄 프로필 및 URL 슬러그 초기화
 				const storedOneLine = (localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "").slice(0, MAX20);
@@ -165,6 +193,7 @@ const MyPageSettingPage: React.FC = () => {
 	const onOpenWorkModal = () => setShowWorkModal(true);
 
 	const onOpenInterestModal = () => setShowInterestModal(true);
+	const onOpenSkillModal = () => setShowSkillModal(true);
 
 	const handleUploadClick = () => fileInputRef.current?.click();
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,6 +274,7 @@ const MyPageSettingPage: React.FC = () => {
 			github: partial.github ?? (base.github || ""),
 			linkedin: partial.linkedin ?? (base.linkedin || ""),
 			profileImageUrl: (partial.profileImageUrl !== undefined) ? partial.profileImageUrl : (base.profileImage || ""),
+			coverImageUrl: base.coverImage || null,
 		};
 		
 		try {
@@ -323,6 +353,35 @@ const MyPageSettingPage: React.FC = () => {
 		}
 	};
 
+	// 한 줄 프로필 편집 관련 함수들
+	const handleEditOneLineProfile = () => {
+		setTempOneLineProfile(oneLineProfile);
+		setIsEditingOneLineProfile(true);
+	};
+
+	const handleCancelOneLineProfileEdit = () => {
+		setTempOneLineProfile("");
+		setIsEditingOneLineProfile(false);
+	};
+
+	const handleSaveOneLineProfile = async () => {
+		const trimmed = tempOneLineProfile.trim().slice(0, MAX20);
+		setOneLineProfile(trimmed);
+		setIsEditingOneLineProfile(false);
+		setTempOneLineProfile("");
+		
+		// 로컬 스토리지에 저장
+		try {
+			localStorage.setItem(scopedKey("profileOneLine"), trimmed);
+			sessionStorage.setItem(scopedKey("profileOneLine"), trimmed);
+			setSuccessToast({
+				visible: true,
+				message: "한 줄 프로필이 저장되었습니다."
+			});
+			try { window.dispatchEvent(new Event("profile-one-line-updated")); } catch {}
+		} catch {}
+	};
+
 	// 사용자 이름(닉네임) 검사 + 저장: 전용 PATCH API 사용
 	const checkAndSaveUserName = useCallback(async (value: string) => {
 		const trimmed = value.trim();
@@ -356,6 +415,7 @@ const MyPageSettingPage: React.FC = () => {
 					github: base.github || "",
 					linkedin: base.linkedin || "",
 					profileImageUrl: base.profileImage || null,
+					coverImageUrl: base.coverImage || null,
 				});
 			}
 			const refreshed = await UserApi.getMe();
@@ -489,34 +549,8 @@ const MyPageSettingPage: React.FC = () => {
 
 
 
-	// 마우스 클릭 시(포커스 유지와 무관) 즉시 저장
-	useEffect(() => {
-		const handleMouseDown = () => {
-			// 로컬 저장 변경 시 배너
-			try {
-				let localChanged = false;
-				const one = oneLineRef.current.trim();
-				const prevOne = localStorage.getItem(scopedKey("profileOneLine")) || sessionStorage.getItem(scopedKey("profileOneLine")) || "";
-				if (one !== prevOne) {
-					localStorage.setItem(scopedKey("profileOneLine"), one);
-					sessionStorage.setItem(scopedKey("profileOneLine"), one);
-					localChanged = true;
-					}
-				if (localChanged) {
-					setSuccessToast({
-						visible: true,
-						message: "설정 내용이 저장되었습니다."
-					});
-					try { window.dispatchEvent(new Event("profile-one-line-updated")); } catch {}
-				}
-			} catch {}
-		};
-		document.addEventListener("mousedown", handleMouseDown, true);
-		return () => document.removeEventListener("mousedown", handleMouseDown, true);
-	}, [profile, email, checkAndSaveBio, scopedKey]);
-
 	// 입력 변경 핸들러들
-	const onOneLineChange = (e: React.ChangeEvent<HTMLInputElement>) => setOneLineProfile(e.target.value.slice(0, MAX20));
+	const onOneLineChange = (e: React.ChangeEvent<HTMLInputElement>) => setTempOneLineProfile(e.target.value.slice(0, MAX20));
 
 	const onConfirmWorkFields = async (values: string[]) => {
 		setWorkFields(values);
@@ -529,13 +563,22 @@ const MyPageSettingPage: React.FC = () => {
 		// 값이 없으면 서버 업데이트 생략
 		if (values.length > 0) {
 			const posId = mapWorkNameToId(values[0]);
-				await persistProfilePartial({ positionId: posId }, false); // 토스트 표시하지 않음
+				
+				// 작업 분야 전용 API 사용
+				await UserApi.updatePosition(posId);
+				
+				// 로컬 프로필 상태 업데이트
+				const refreshed = await UserApi.getMe();
+				setProfile(refreshed);
 				
 				// 작업 분야 저장 성공 토스트 표시
 				setSuccessToast({
 					visible: true,
 					message: "작업 분야가 저장되었습니다."
 				});
+				
+				// 프로필 업데이트 이벤트 발생 (계정 검색 결과 새로고침용)
+				window.dispatchEvent(new CustomEvent('profile-updated'));
 		} else {
 			// 로컬만 변경된 경우에도 사용자 피드백 제공
 			setSuccessToast({
@@ -582,6 +625,30 @@ const MyPageSettingPage: React.FC = () => {
 			});
 		}
 	};
+	const onConfirmSkillFields = async (values: string[]) => {
+		setSkillFields(values);
+		try {
+			localStorage.setItem("skillFields", JSON.stringify(values));
+			sessionStorage.setItem("skillFields", JSON.stringify(values));
+		} catch {}
+
+		try {
+			await persistProfilePartial({ skills: values.join(",") || "" }, false);
+			setSuccessToast({
+				visible: true,
+				message: values.length > 0 ? "기술 스택이 저장되었습니다." : "기술 스택이 모두 해제되었습니다."
+			});
+		} catch (error: any) {
+			const errorMessage = error?.response?.data?.message || error?.message || "기술 스택 저장에 실패했습니다. 다시 시도해주세요.";
+			setErrorToast({
+				visible: true,
+				message: errorMessage
+			});
+			return;
+		}
+
+		setShowSkillModal(false);
+	};
 
 
 	return (
@@ -616,7 +683,7 @@ const MyPageSettingPage: React.FC = () => {
 						<main className={`${(isNarrow && view !== "profile") ? "hidden" : "flex-1 space-y-0"}`}>
 							{/* 모바일 상단 헤더: 좌측 고정 ‹, 중앙 제목 정렬 */}
 							<div className="lg:hidden grid grid-cols-[40px_1fr_40px] items-center mb-3">
-								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827]">‹</button>
+								<button type="button" aria-label="뒤로가기" onClick={() => navigate("/mypage")} className="justify-self-start px-2 py-1 -ml-2 text-[30px] leading-none text-[#111827] dark:text-white">‹</button>
 								<div className="justify-self-center text-[16px] font-medium text-center">프로필 설정</div>
 								<span />
 							</div>
@@ -755,13 +822,15 @@ const MyPageSettingPage: React.FC = () => {
 							{/* 샌드위치 URL (닉네임 기반 자동 생성) */}
 							<div className="mb-7">
 								<FieldLabel>샌드위치 URL</FieldLabel>
-								<div className="flex rounded-[10px] overflow-hidden h-[48px] md:h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
-                                        <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich.com/</div>
-									<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
-										{isEditingNickname 
-											? (tempNickname.trim() ? tempNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')
-											: (profile?.profileSlug || (userName.trim() ? userName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요'))
-										}
+								<div className="flex rounded-[10px] overflow-hidden min-h-[48px] md:min-h-[55px] border border-[#E5E7EB] dark:border-[var(--border-color)] min-w-0">
+                                        <div className="px-3 md:px-4 flex items-center text-[13px] md:text-[14px] text-[#6B7280] dark:text-white/60 bg-[#F3F4F6] dark:bg-[#111111] border-r border-[#E5E7EB] dark:border-[var(--border-color)] whitespace-nowrap">sandwich-dev.com/</div>
+									<div className="flex-1 px-3 py-2 md:px-3 md:py-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#6B7280] dark:text-white/60 flex items-center">
+										<span className="break-all leading-snug">
+											{isEditingNickname 
+												? (tempNickname.trim() ? tempNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요')
+												: (profile?.profileSlug || (userName.trim() ? userName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : '닉네임을 입력하세요'))
+											}
+										</span>
 									</div>
 								</div>
 								<div className="mt-2 text-[12px] text-[#6B7280] dark:text-white/60">
@@ -769,21 +838,62 @@ const MyPageSettingPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* 한 줄 프로필 */}
+							{/* 한 줄 프로필 (편집 모드) */}
 							<div className="mb-7">
 								<FieldLabel>한 줄 프로필</FieldLabel>
-								<div className="relative">
-									<input
-										type="text"
-										value={oneLineProfile}
-										onChange={onOneLineChange}
-										placeholder="띄어쓰기 포함 20자 이내로 입력해주세요."
-											aria-label="한 줄 프로필"
-											maxLength={MAX20}
-                                        className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
-									/>
-									<Counter value={oneLineProfile.length} />
-								</div>
+								
+								{!isEditingOneLineProfile ? (
+									// 읽기 모드
+									<div className="flex items-center justify-between">
+										<div className="flex-1 h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 text-[14px] tracking-[0.01em] bg-[#F9FAFB] dark:bg-[var(--surface)] text-[#111827] dark:text-white">
+											{oneLineProfile || "한 줄 프로필을 입력해주세요"}
+										</div>
+										<button
+											type="button"
+											onClick={handleEditOneLineProfile}
+											className="ml-3 px-4 h-[48px] md:h-[55px] rounded-[10px] text-[14px] bg-[#21B284] text-white hover:bg-[#1a9a73] transition-colors"
+										>
+											수정
+										</button>
+									</div>
+								) : (
+									// 편집 모드
+									<div>
+										<div className="relative">
+											<input
+												type="text"
+												value={tempOneLineProfile}
+												onChange={onOneLineChange}
+												placeholder="띄어쓰기 포함 20자 이내로 입력해주세요."
+												aria-label="한 줄 프로필"
+												maxLength={MAX20}
+												className="w-full h-[48px] md:h-[55px] py-0 leading-[48px] md:leading-[55px] rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] px-3 outline-none text-[14px] tracking-[0.01em] placeholder-[#ADADAD] dark:bg-[var(--surface)] dark:text-white focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10"
+											/>
+											<Counter value={tempOneLineProfile.length} />
+										</div>
+										<div className="mt-3 flex justify-end gap-2">
+											<button
+												type="button"
+												onClick={handleCancelOneLineProfileEdit}
+												className="px-4 h-[36px] rounded-[10px] text-[14px] border border-[#E5E7EB] dark:border-[var(--border-color)] bg-white dark:bg-[var(--surface)] text-[#111827] dark:text-white hover:bg-[#F9FAFB] dark:hover:bg-[#111111] transition-colors"
+											>
+												취소
+											</button>
+											<button
+												type="button"
+												onClick={handleSaveOneLineProfile}
+												disabled={tempOneLineProfile.trim() === oneLineProfile}
+												className={`px-4 h-[36px] rounded-[10px] text-[14px] transition-colors ${
+													tempOneLineProfile.trim() !== oneLineProfile
+														? "bg-[#21B284] text-white hover:bg-[#1a9a73]" 
+														: "bg-[#E5E7EB] text-[#111827] cursor-not-allowed"
+												}`}
+											>
+												저장
+											</button>
+										</div>
+									</div>
+								)}
 							</div>
 
 							{/* 작업 분야 */}
@@ -803,6 +913,25 @@ const MyPageSettingPage: React.FC = () => {
                             <div className={`text-[13px] mb-7 ${interestFields.length === 0 ? "text-[#ADADAD]" : "text-black dark:text-white"}`}>
 								{interestFields.length === 0 ? "선택된 관심 분야가 없습니다." : interestFields.join(", ")}
 														</div>
+
+							{/* 기술 스택 */}
+							<div className="mb-2 flex items-center justify-between">
+								<FieldLabel>기술 스택</FieldLabel>
+								<button onClick={onOpenSkillModal} aria-label="기술 스택 설정" className="text-[13px] text-[#068334] hover:underline">기술 스택 설정</button>
+							</div>
+							<div className="mb-7">
+								{skillFields.length === 0 ? (
+									<div className="text-[13px] text-[#ADADAD]">선택된 기술 스택이 없습니다.</div>
+								) : (
+									<div className="flex flex-wrap gap-2">
+										{skillFields.map((skill) => (
+											<span key={skill} className="px-3 py-1 rounded-full text-[12px] border border-[#D1D5DB] bg-white dark:bg-[var(--surface)] text-[#111827] dark:text-white">
+												{skill}
+											</span>
+										))}
+									</div>
+								)}
+							</div>
 
 
 							{/* 소개 (편집 모드) */}
@@ -867,6 +996,8 @@ const MyPageSettingPage: React.FC = () => {
 				<WorkFieldModal open={showWorkModal} initial={workFields as any} onClose={()=>setShowWorkModal(false)} onConfirm={(vals)=>onConfirmWorkFields(vals as any)} />
 				{/* 관심 분야 모달 */}
 				<InterestFieldModal open={showInterestModal} initial={interestFields as any} onClose={()=>setShowInterestModal(false)} onConfirm={(vals)=>onConfirmInterestFields(vals as any)} />
+				{/* 기술 스택 모달 */}
+				<SkillFieldModal open={showSkillModal} initial={skillFields} onClose={()=>setShowSkillModal(false)} onConfirm={onConfirmSkillFields} />
 
 			</div>
 		</div>

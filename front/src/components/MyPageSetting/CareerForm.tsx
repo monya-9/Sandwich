@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import MonthSelect from "./MonthSelect";
+import YearSelect from "./YearSelect";
 import { CareerApi } from "../../api/careerApi";
 import Toast from "../common/Toast";
 
@@ -38,6 +39,7 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 		message: ''
 	});
 
+
 	useEffect(() => {
 		if (!initial) return;
 		setRole(initial.role ?? "");
@@ -51,28 +53,15 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 		setIsMainCareer(!!initial.isRepresentative);
 	}, [initial]);
 
-    const disabledInputCls = isCurrent ? " bg-[#E5E7EB] dark:bg-[var(--border-color)] text-transparent placeholder-transparent cursor-not-allowed" : "";
-
 	const toNumber = (s: string): number | null => {
 		const n = parseInt((s || "").trim(), 10);
 		return Number.isFinite(n) ? n : null;
 	};
 
-	// 연도 유효성 검사
-	const currentYear = new Date().getFullYear();
-	const getYearError = (s: string): string | null => {
-		if (!s) return null;
-		if (s.length !== 4 || Number.isNaN(parseInt(s, 10))) return "날짜입력 형식이 아닙니다.";
-		if (parseInt(s, 10) > currentYear) return "이번년도 이전으로 설정해주세요.";
-		return null;
-	};
-	const joinYearError = getYearError(joinYear);
-	const leaveYearError = isCurrent ? null : getYearError(leaveYear);
-
 	// 폼 유효성
 	const requiredFilled = role.trim().length > 0 && company.trim().length > 0;
-	const joinValid = !!joinYear && !joinYearError && joinYear.length === 4;
-	const leaveValid = isCurrent ? true : (!!leaveYear && !leaveYearError && leaveYear.length === 4);
+	const joinValid = !!joinYear;
+	const leaveValid = isCurrent ? true : !!leaveYear;
 	const isValid = requiredFilled && joinValid && leaveValid;
     const completeBtnCls = `px-4 h-[36px] rounded-[10px] text-[14px] ${isValid && !saving ? "bg-[#21B284] text-white" : "bg-[#E5E7EB] text-[#111827]"}`;
 
@@ -140,11 +129,7 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 					<div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_1fr_auto_1fr_1fr_auto] md:items-start md:gap-x-3 md:gap-y-0">
 					{/* 왼쪽(입사) */}
 					<div className="flex items-start gap-2 flex-1 min-w-0 md:contents">
-						<div className="relative basis-1/2 md:basis-auto min-w-0">
-                            <input type="text" maxLength={4} value={joinYear} onChange={(e)=>setJoinYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${joinYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}`} placeholder="입사년도" aria-invalid={!!joinYearError} />
-							<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{joinYear.length}/4</span>
-							{joinYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{joinYearError}</p>}
-						</div>
+						<YearSelect value={joinYear} onChange={setJoinYear} placeholder="입사년도" className="basis-1/2 md:basis-auto min-w-0" />
 						<MonthSelect value={joinMonth} onChange={setJoinMonth} className="basis-1/2 md:basis-auto min-w-0" />
 					</div>
 					{/* 구분자: md 이상에서만 표시 (auto 폭) */}
@@ -153,11 +138,7 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 					<div className="flex items-start gap-2 flex-1 min-w-0 md:contents">
 						{/* 퇴사 년/월을 그룹으로 묶어 좌측과 동일 가용폭 확보 */}
 						<div className="flex flex-1 min-w-0 gap-2 md:contents md:pr-0">
-                            <div className="relative basis-1/2 md:basis-auto min-w-0">
-                                <input type="text" maxLength={4} value={leaveYear} onChange={(e)=>setLeaveYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${leaveYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}` + disabledInputCls} placeholder="퇴사년도" disabled={isCurrent} aria-invalid={!!leaveYearError} />
-								<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{leaveYear.length}/4</span>
-								{leaveYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{leaveYearError}</p>}
-							</div>
+							<YearSelect value={leaveYear} onChange={setLeaveYear} placeholder="퇴사년도" className="basis-1/2 md:basis-auto min-w-0" disabled={isCurrent} />
 							<MonthSelect value={leaveMonth} onChange={setLeaveMonth} className="basis-1/2 md:basis-auto min-w-0" disabled={isCurrent} />
 						</div>
                         <label className="hidden md:inline-flex items-center gap-2 text-[14px] text-[#111827] dark:text-white ml-0 whitespace-nowrap shrink-0 h-[55px]">
@@ -177,8 +158,24 @@ const CareerForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) =
 
 			{/* 설명 */}
             <div>
-                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명</label>
-                <textarea value={desc} onChange={(e)=>setDesc(e.target.value)} rows={6} className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="회사에서 담당한 업무 및 성과를 작성해주세요." />
+                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명 (최대 200자)</label>
+                <textarea 
+					value={desc} 
+					onChange={(e) => {
+						if (e.target.value.length <= 200) {
+							setDesc(e.target.value);
+						}
+					}} 
+					maxLength={200}
+					rows={6} 
+					className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" 
+					placeholder="회사에서 담당한 업무 및 성과를 작성해주세요." 
+				/>
+				<div className="flex justify-end mt-1">
+					<span className={`text-xs ${desc.length >= 200 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
+						{desc.length}/200
+					</span>
+				</div>
 			</div>
 
 			{/* 대표 커리어 설정 + 액션 버튼 (한 줄 정렬) */}

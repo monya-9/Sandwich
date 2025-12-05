@@ -30,6 +30,7 @@ export type UserProfileRequest = {
 	github?: string | null;
 	linkedin?: string | null;
 	profileImageUrl?: string | null;
+	coverImageUrl?: string | null;
 };
 
 // 대표 커리어(경력/학력/수상/프로젝트) 요약 응답
@@ -78,6 +79,14 @@ export const UserApi = {
 	},
 	async getPosition(): Promise<PositionDto> {
 		const res = await api.get<PositionDto>("/users/position");
+		return res.data;
+	},
+	async updatePosition(positionId: number): Promise<void> {
+		await api.put("/users/position", { positionId });
+	},
+	// slug로 프로필 조회 (인증 불필요)
+	async getProfileBySlug(slug: string): Promise<UserProfileResponse> {
+		const res = await api.get<UserProfileResponse>(`/users/slug/${slug}`);
 		return res.data;
 	},
 };

@@ -28,7 +28,7 @@ import api from "../../api/axiosInstance";
 /* ---------- Small UI ---------- */
 function GreenBox({ children }: { children: React.ReactNode }) {
     return (
-        <div className="rounded-2xl border-2 border-emerald-400/70 bg-white p-4 md:p-5 text-[13.5px] leading-6 text-neutral-800">
+        <div className="rounded-2xl border-2 border-emerald-400/70 bg-white p-3 sm:p-4 md:p-5 text-[13px] sm:text-[13.5px] leading-6 text-neutral-800">
             {children}
         </div>
     );
@@ -73,17 +73,15 @@ function RewardsTable({
         <div className="mb-6">
             <SectionTitle>{title}</SectionTitle>
             <GreenBox>
-                <div className="grid grid-cols-4 gap-2 text-[13px]">
+                <div className="grid grid-cols-3 gap-2 text-[12px] sm:text-[13px]">
                     <div className="font-semibold">순위</div>
                     <div className="font-semibold">크레딧</div>
                     <div className="font-semibold">환산</div>
-                    <div className="font-semibold">의미</div>
                     {rewards?.map((r, i) => (
                         <React.Fragment key={i}>
                             <div>{r.rank}</div>
                             <div>{r.credit}</div>
                             <div>{r.krw}</div>
-                            <div>{r.note}</div>
                         </React.Fragment>
                     ))}
                 </div>
@@ -181,46 +179,18 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
         );
     }
 
-    // 데이터가 없을 때 더미 우승자 카드 표시
+    // 데이터가 없을 때 안내 메시지 표시
     if (winners.length === 0) {
-        const dummyWinners = [
-            { rank: 2, userName: "2등", teamName: "팀", userInitial: "2", credits: 5000 },
-            { rank: 1, userName: "1등", teamName: "팀", userInitial: "1", credits: 10000 },
-            { rank: 3, userName: "3등", teamName: "팀", userInitial: "3", credits: 3000 }
-        ];
-
         return (
             <div className="mb-6">
                 <h2 className="text-xl font-bold mb-4 text-center">
                     지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
                 </h2>
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                    <div className="flex justify-between items-start w-full">
-                        {dummyWinners.map((winner) => (
-                            <div key={winner.rank} className="flex-1 flex justify-center">
-                                <div className="text-center">
-                                    {/* 메달 아이콘 */}
-                                    <div className="mb-2 text-3xl">
-                                        {getMedalIcon(winner.rank)}
-                                    </div>
-                                    
-                                    {/* 이니셜 */}
-                                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                        <span className="font-bold text-lg text-gray-500">{winner.userInitial}</span>
-                                    </div>
-                                    
-                                    {/* 이름과 팀 이름 */}
-                                    <div className="font-semibold text-gray-500 mb-1 break-words text-sm">
-                                        {winner.userName} • {winner.teamName}
-                                    </div>
-                                    
-                                    {/* 점수 */}
-                                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-sm font-medium">
-                                        {winner.credits.toLocaleString()}C
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                <div className="bg-white rounded-2xl border border-gray-200 p-8 h-[240px] w-full">
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-base text-neutral-600 text-center font-medium">
+                            아직 리더보드가 없습니다.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -238,23 +208,23 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
 
     return (
         <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4 text-center">
+            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-center px-2">
                 지난 {type === "CODE" ? "코드" : "포트폴리오"} 챌린지 TOP Winners
             </h2>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <div className="flex justify-between items-start w-full">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+                <div className="flex justify-between items-start w-full gap-2 sm:gap-4">
                     {orderedWinners.map((winner) => {
                         console.log('👤 Winner:', { rank: winner.rank, userName: winner.userName, profileImageUrl: winner.profileImageUrl });
                         return (<div key={winner.userId} className="flex-1 flex justify-center">
-                            <div className="text-center">
+                            <div className="text-center px-1 sm:px-2">
                                 {/* 메달 아이콘 */}
-                                <div className="mb-2 text-3xl">
+                                <div className="mb-2 text-2xl sm:text-3xl">
                                     {getMedalIcon(winner.rank)}
                                 </div>
                                 
                                 {/* 프로필 이미지 또는 이니셜 - 클릭 가능 */}
                                 <div 
-                                    className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                                     onClick={() => {
                                         if (winner.userId) {
                                             navigate(`/users/${winner.userId}`);
@@ -269,17 +239,17 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
                                                 target.style.display = 'none';
-                                                target.parentElement!.innerHTML = `<span class="font-bold text-lg text-gray-700">${winner.userInitial}</span>`;
+                                                target.parentElement!.innerHTML = `<span class="font-bold text-base sm:text-lg text-gray-700">${winner.userInitial}</span>`;
                                             }}
                                         />
                                     ) : (
-                                        <span className="font-bold text-lg text-gray-700">{winner.userInitial}</span>
+                                        <span className="font-bold text-base sm:text-lg text-gray-700">{winner.userInitial}</span>
                                     )}
                                 </div>
                                 
                                 {/* 이름과 팀 이름 - 클릭 가능 */}
                                 <div 
-                                    className="font-semibold text-gray-800 mb-1 break-words text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                    className="font-semibold text-gray-800 mb-2 break-words text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity px-1"
                                     onClick={() => {
                                         if (winner.userId) {
                                             navigate(`/users/${winner.userId}`);
@@ -290,7 +260,7 @@ function TopWinners({ type, challengeId }: { type: "CODE" | "PORTFOLIO", challen
                                 </div>
                                 
                                 {/* 크레딧 또는 점수 */}
-                                <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+                                <div className="bg-gray-800 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm inline-block">
                                     {winner.credits ? `${winner.credits.toLocaleString()} 크레딧` : 
                                      winner.totalScore ? `${winner.totalScore.toFixed(2)}점` : 
                                      `${winner.voteCount || 0}표`}
@@ -577,7 +547,7 @@ export default function ChallengeDetailPage() {
     const goSecondary = () => {
         if (!data) return;
         const href = secondaryHref(type, id);
-        const needsLogin = type === "PORTFOLIO";
+        const needsLogin = true; // 코드 챌린지와 포트폴리오 모두 로그인 필요
         if (needsLogin && !isLoggedIn) return setLoginModalOpen(true);
         navigate(href);
     };
@@ -706,16 +676,16 @@ export default function ChallengeDetailPage() {
                     )}
 
             {/* 헤더 */}
-            <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={onBack}
                         aria-label="뒤로가기"
-                        className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"
+                        className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100 flex-shrink-0"
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </button>
-                    <h1 className="text-[22px] font-extrabold tracking-[-0.01em] text-neutral-900 md:text-[24px] flex items-center gap-2">
+                    <h1 className="text-[18px] sm:text-[22px] font-extrabold tracking-[-0.01em] text-neutral-900 md:text-[24px] flex flex-wrap items-center gap-2">
                         <span>{data.title}</span>
                         {(() => {
                             const labelAndClass = () => {
@@ -731,7 +701,7 @@ export default function ChallengeDetailPage() {
                             };
                             const v = labelAndClass();
                             return (
-                                <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium ${v.c}`}>
+                                <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] sm:text-[12px] font-medium ${v.c}`}>
                                     {v.t}
                                 </span>
                             );
@@ -739,10 +709,10 @@ export default function ChallengeDetailPage() {
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                     <button
                         onClick={() => setOpen((v) => !v)}
-                        className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[12.5px] hover:bg-neutral-50"
+                        className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-[12px] sm:text-[12.5px] hover:bg-neutral-50"
                     >
                         상세 {open ? "접기" : "펼치기"} <ChevronDown className={`h-4 w-4 ${open ? "rotate-180" : ""}`} />
                     </button>
@@ -750,12 +720,12 @@ export default function ChallengeDetailPage() {
             </div>
 
             {/* 상단 CTA */}
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-3 sm:mb-4 flex flex-wrap gap-2">
                 {/* 포트폴리오: 제출 기간에만 제출 버튼 표시 (관리자 제외) */}
                 {(type === "PORTFOLIO" ? derivedStage === "SUBMISSION_OPEN" : challengeStatus !== "ENDED") && !admin && (
                     <button
                         onClick={goPrimary}
-                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
+                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                     >
                         <span>{type === "CODE" ? "📥" : "📤"}</span> {primaryLabel(type)} →
                     </button>
@@ -765,7 +735,7 @@ export default function ChallengeDetailPage() {
 
                 <button
                     onClick={goSecondary}
-                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
+                    className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold hover:bg-neutral-50 dark:bg-neutral-800 dark:text-white dark:border-neutral-600 dark:hover:bg-neutral-700"
                 >
                     <span>{type === "CODE" ? "🗂️" : (derivedStage === "VOTING" ? "🗳️" : "🗂️")}</span> {secondaryLabel(type, challengeStatus, derivedStage)} →
                 </button>
@@ -785,16 +755,16 @@ export default function ChallengeDetailPage() {
 
             {/* 본문 */}
             {open && (
-                <SectionCard className="!px-6 !py-5 md:!px-8 md:!py-6" outerClassName="mt-2">
+                <SectionCard className="!px-4 !py-4 sm:!px-6 sm:!py-5 md:!px-8 md:!py-6" outerClassName="mt-2">
                     {/* 설명 헤더 + 관리자 액션을 같은 선상에 배치 */}
-                    <div className="mb-6">
-                        <div className="mb-2 flex items-center justify-between">
+                    <div className="mb-4 sm:mb-6">
+                        <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                             <SectionTitle>{type === "CODE" ? "📘 문제 설명" : "📘 챌린지 설명"}</SectionTitle>
                             {admin && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <Link
                                         to={`/admin/challenges/${id}`}
-                                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-neutral-50"
+                                        className="inline-flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold hover:bg-neutral-50"
                                     >
                                         챌린지 수정
                                     </Link>
@@ -803,14 +773,14 @@ export default function ChallengeDetailPage() {
                                             setPendingDeleteId(id);
                                             setDeleteModalOpen(true);
                                         }}
-                                        className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-red-600 hover:bg-red-50"
+                                        className="inline-flex items-center gap-1 rounded-xl border border-red-300 bg-white px-2.5 sm:px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold text-red-600 hover:bg-red-50"
                                     >
                                         챌린지 삭제
                                     </button>
                                 </div>
                             )}
                         </div>
-                        <p className="whitespace-pre-line text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-100">{data.description}</p>
+                        <p className="whitespace-pre-line text-[13px] sm:text-[13.5px] leading-7 text-neutral-800 dark:text-neutral-100">{data.description}</p>
                     </div>
 
                     {/* 필수 조건 (모든 챌린지 타입) */}
@@ -831,7 +801,12 @@ export default function ChallengeDetailPage() {
                     {/* 유형별 */}
                     {type === "CODE" ? (
                         <>
-                            <ScheduleList items={(data as CodeChallengeDetail).schedule || []} />
+                            <ScheduleList items={[
+                                { label: '챌린지 시작', date: '매주 월요일 00:00' },
+                                { label: '문제 제출 마감', date: '매주 일요일 23:59' },
+                                { label: 'AI 자동 채점 → 점수/코멘트 반영(수 분 소요)', date: '월요일 00:00 ~ 03:00' },
+                                { label: '결과 발표', date: '월요일 10:00' },
+                            ]} />
                             <AIScoringList items={(data as CodeChallengeDetail).aiScoring || []} />
                             <RewardsTable rewards={(data as CodeChallengeDetail).rewards || []} />
                             
@@ -933,7 +908,7 @@ export default function ChallengeDetailPage() {
                     {type === "CODE" ? (
                         <>
                             {/* 코드 챌린지 - 심사 기준 */}
-                            <div className="mb-6">
+                            <div>
                                 <SectionTitle>💡 심사 기준</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     <li>자리 수를 먼저 최대화한 뒤 각 자리에서 가능한 가장 큰 수를 고르는 전략(그리디+보정) 제시</li>
@@ -942,36 +917,16 @@ export default function ChallengeDetailPage() {
                                     <li>창의적인 접근(DP/증명/튜닝) 환영</li>
                                 </ul>
                             </div>
-
-                            {/* 코드 챌린지 - 안내 */}
-                            <div>
-                                <SectionTitle>📣 안내</SectionTitle>
-                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    <li>챌린지 시작: 월요일 00:00 (KST) ~ 문제 제출 마감: 일요일 23:59</li>
-                                    <li>AI 자동 채점 → 점수/코멘트 반영(수 분 소요)</li>
-                                    {/* 포트폴리오 전용 문구 제거: 코드 챌린지에는 투표 점수 합산/자동 지급 안내 미표시 */}
-                                </ul>
-                            </div>
                         </>
                     ) : (
                         <>
                             {/* 포트폴리오 챌린지 - 운영/공정성 */}
-                            <div className="mb-6">
+                            <div>
                                 <SectionTitle>🛡 운영/공정성</SectionTitle>
                                 <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
                                     <li>운영 정책/공정성: 챌린지당 1표, 본인 작품 투표 불가, 투표 기간 내에만 가능</li>
                                     <li>UI/UX, 기술력, 창의성, 기획력의 종합 점수(별점 합산)로 순위 산정</li>
                                     <li>제출물은 표절/저작권을 침해하지 않도록 주의(참고 출처 표기 권장)</li>
-                                </ul>
-                            </div>
-
-                            {/* 포트폴리오 챌린지 - 안내 */}
-                            <div>
-                                <SectionTitle>📣 안내</SectionTitle>
-                                <ul className="list-disc space-y-1 pl-5 text-[13.5px] leading-7 text-neutral-800">
-                                    <li>챌린지 기간: 매월 1일 ~ 말일</li>
-                                    <li>투표 기간: 다음달 1일 ~ 3일</li>
-                                    <li>결과 발표: 다음달 4일, 보상은 크레딧으로 자동 지급</li>
                                 </ul>
                             </div>
                         </>

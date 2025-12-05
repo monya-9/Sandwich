@@ -69,6 +69,11 @@ public class Project extends BaseEntity {
     private Integer portNumber;
     private String extraRepoUrl;
 
+    // GitHub 설정 정보 (배포용)
+    private String githubOwner;
+    private String githubRepo;
+    private String githubBaseBranch;
+
     // 배포 기능 사용 여부
     @Column(name = "deploy_enabled")
     private Boolean deployEnabled;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import MonthSelect from "./MonthSelect";
+import YearSelect from "./YearSelect";
 import { CareerProjectApi } from "../../api/careerProjectApi";
 import Toast from "../common/Toast";
 
@@ -57,21 +58,10 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 		return Number.isFinite(n) ? n : null;
 	};
 
-	// 연도 유효성 검사
-	const currentYear = new Date().getFullYear();
-	const getYearError = (s: string): string | null => {
-		if (!s) return null;
-		if (s.length !== 4 || Number.isNaN(parseInt(s, 10))) return "날짜입력 형식이 아닙니다.";
-		if (parseInt(s, 10) > currentYear) return "이번년도 이전으로 설정해주세요.";
-		return null;
-	};
-	const startYearError = getYearError(startYear);
-	const endYearError = isOngoing ? null : getYearError(endYear);
-
 	// 폼 유효성
 	const requiredFilled = projectName.trim().length > 0 && role.trim().length > 0;
-	const startValid = !!startYear && !startYearError && startYear.length === 4;
-	const endValid = isOngoing ? true : (!!endYear && !endYearError && endYear.length === 4);
+	const startValid = !!startYear;
+	const endValid = isOngoing ? true : !!endYear;
 	const isValid = requiredFilled && startValid && endValid;
     const completeBtnCls = `px-4 h-[36px] rounded-[10px] text-[14px] ${isValid && !saving ? "bg-[#21B284] text-white" : "bg-[#E5E7EB] text-[#111827]"}`;
 
@@ -136,11 +126,7 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 					<div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_1fr_auto_1fr_1fr_auto] md:items-start md:gap-x-3 md:gap-y-0">
 						{/* 왼쪽(시작) */}
 						<div className="flex items-start gap-2 flex-1 min-w-0 md:contents">
-                            <div className="relative basis-1/2 md:basis-auto min-w-0">
-                                <input type="text" maxLength={4} value={startYear} onChange={(e)=>setStartYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${startYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}`} placeholder="시작년도" aria-invalid={!!startYearError} />
-								<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{startYear.length}/4</span>
-								{startYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{startYearError}</p>}
-							</div>
+							<YearSelect value={startYear} onChange={setStartYear} placeholder="시작년도" className="basis-1/2 md:basis-auto min-w-0" />
 							<MonthSelect value={startMonth} onChange={setStartMonth} className="basis-1/2 md:basis-auto min-w-0" />
 						</div>
 						{/* 구분자: md 이상에서만 표시 (가운데 정렬) */}
@@ -148,11 +134,7 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 						{/* 오른쪽(종료) */}
 						<div className="flex items-start gap-2 flex-1 min-w-0 md:contents">
 							<div className="flex flex-1 min-w-0 gap-2 md:contents md:pr-0">
-                                <div className="relative basis-1/2 md:basis-auto min-w-0">
-                                    <input type="text" maxLength={4} value={endYear} onChange={(e)=>setEndYear(e.target.value.replace(/[^0-9]/g, "").slice(0,4))} className={`w-full min-h-[62px] py-0 leading-[62px] rounded-[10px] px-3 pr-8 outline-none text-[14px] border ${endYearError ? "border-[#EF4444] focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20" : "border-[#E5E7EB] dark:border-[var(--border-color)] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white"}` + disabledInputCls} placeholder="종료년도" disabled={isOngoing} aria-invalid={!!endYearError} />
-									<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9CA3AF]">{endYear.length}/4</span>
-									{endYearError && <p className="mt-1 text-[12px] text-[#EF4444]">{endYearError}</p>}
-								</div>
+								<YearSelect value={endYear} onChange={setEndYear} placeholder="종료년도" className="basis-1/2 md:basis-auto min-w-0" disabled={isOngoing} />
 								<MonthSelect value={endMonth} onChange={setEndMonth} className="basis-1/2 md:basis-auto min-w-0" disabled={isOngoing} />
 							</div>
                             <label className="hidden md:inline-flex items-center gap-2 text-[14px] text-[#111827] dark:text-white ml-0 whitespace-nowrap shrink-0 h-[55px]">
@@ -172,8 +154,24 @@ const ProjectForm: React.FC<Props> = ({ onCancel, onDone, initial, editingId }) 
 
 			{/* 설명 */}
             <div>
-                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명</label>
-                <textarea value={desc} onChange={(e)=>setDesc(e.target.value)} rows={6} className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" placeholder="프로젝트에서 담당한 업무 및 성과를 작성해주세요." />
+                <label className="block text-[13px] text-[#6B7280] dark:text-white/60 mb-2">설명 (최대 200자)</label>
+                <textarea 
+					value={desc} 
+					onChange={(e) => {
+						if (e.target.value.length <= 200) {
+							setDesc(e.target.value);
+						}
+					}} 
+					maxLength={200}
+					rows={6} 
+					className="w-full rounded-[10px] border border-[#E5E7EB] dark:border-[var(--border-color)] p-3 outline-none text-[14px] focus:border-[#068334] focus:ring-2 focus:ring-[#068334]/10 dark:bg-[var(--surface)] dark:text-white" 
+					placeholder="프로젝트에서 담당한 업무 및 성과를 작성해주세요." 
+				/>
+				<div className="flex justify-end mt-1">
+					<span className={`text-xs ${desc.length >= 200 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}`}>
+						{desc.length}/200
+					</span>
+				</div>
 			</div>
 
 			{/* 대표 커리어 설정 */}

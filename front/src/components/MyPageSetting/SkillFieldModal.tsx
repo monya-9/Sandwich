@@ -30,23 +30,21 @@ const OPTIONS = [
 	"Jenkins",
 ] as const;
 
-type Option = typeof OPTIONS[number];
-
 interface Props {
 	open: boolean;
-	initial: Option[];
+	initial: string[];
 	onClose: () => void;
-	onConfirm: (values: Option[]) => void;
+	onConfirm: (values: string[]) => void;
 }
 
 const SkillFieldModal: React.FC<Props> = ({ open, initial, onClose, onConfirm }) => {
-	const [selected, setSelected] = useState<Option[]>([]);
+	const [selected, setSelected] = useState<string[]>([]);
 
 	useEffect(() => {
 		if (open) setSelected(initial.slice());
 	}, [open, initial]);
 
-	const toggle = (opt: Option) => {
+	const toggle = (opt: string) => {
 		setSelected((prev) => {
 			const exists = prev.includes(opt);
 			if (exists) return prev.filter((v) => v !== opt);
@@ -62,8 +60,8 @@ const SkillFieldModal: React.FC<Props> = ({ open, initial, onClose, onConfirm })
 				{/* 헤더 */}
 				<div className="px-6 py-4 border-b flex items-start justify-between">
 					<div>
-						<div className="text-[18px] font-medium text-black">지식/기술 설정</div>
-						<div className="text-[13px] text-[#6B7280] mt-1">관심 있는 기술 스택을 자유롭게 선택해주세요.</div>
+						<div className="text-[18px] font-medium text-black">기술 스택 설정</div>
+						<div className="text-[13px] text-[#6B7280] mt-1">현재 본인이 보유하고 있는 기술 스택을 선택해주세요.</div>
 					</div>
 					<button
 						type="button"

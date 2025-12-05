@@ -249,18 +249,18 @@ const CollectionsTab: React.FC = () => {
                         <div className="relative z-[20051] w-full max-w-[500px] rounded-[12px] bg-white dark:bg-[var(--surface)] shadow-2xl">
                             <div className="flex items-center justify-between px-6 h-14 border-b border-black/10 dark:border-[var(--border-color)]">
                                 <div className="text-[16px] font-semibold text-black dark:text-white">{editingId ? "컬렉션 폴더 수정하기" : "컬렉션 폴더 만들기"}</div>
-								<button aria-label="닫기" onClick={resetAndClose} className="p-2 rounded-md hover:bg-neutral-100">
-									<X className="w-4 h-4" />
+								<button aria-label="닫기" onClick={resetAndClose} className="p-2 rounded-md hover:bg-neutral-100 dark:hover:bg-white/5">
+									<X className="w-4 h-4 text-black dark:text-white" />
 								</button>
 							</div>
                             <form onSubmit={onSubmit} className="px-6 py-4 space-y-4 max-h-[70vh] min-h-[420px] overflow-y-auto">
                                 <div>
                                     <label className="block text-[13px] text-black/70 dark:text-white/70 mb-1">컬렉션 이름</label>
-                                    <input value={name} onChange={(e) => setName(e.target.value.slice(0,30))} placeholder="이름을 입력해주세요 (최대 30자)" className="w-full h-[44px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 text-[14px] bg-white dark:bg-[var(--surface)] dark:text-white" />
+                                    <input value={name} onChange={(e) => setName(e.target.value.slice(0,30))} placeholder="이름을 입력해주세요 (최대 30자)" className="w-full h-[44px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 text-[14px] bg-white dark:bg-[var(--surface)] text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40" />
                                 </div>
                                 <div>
                                     <label className="block text-[13px] text-black/70 dark:text-white/70 mb-1">컬렉션 소개</label>
-                                    <textarea value={desc} onChange={(e) => setDesc(e.target.value.slice(0,1000))} placeholder="소개를 입력해주세요. (최대 1000자)" className="w-full min-h-[120px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 py-2 text-[14px] bg-white dark:bg-[var(--surface)] dark:text-white resize-y" />
+                                    <textarea value={desc} onChange={(e) => setDesc(e.target.value.slice(0,1000))} placeholder="소개를 입력해주세요. (최대 1000자)" className="w-full min-h-[120px] rounded-md border border-[#D1D5DB] dark:border-[var(--border-color)] px-3 py-2 text-[14px] bg-white dark:bg-[var(--surface)] text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 resize-y" />
                                 </div>
                                 <label className="inline-flex items-center gap-2 text-[13px] text-black/80 dark:text-white/80">
                                     <input type="checkbox" checked={isPrivate} onChange={(e)=>setIsPrivate(e.target.checked)} />

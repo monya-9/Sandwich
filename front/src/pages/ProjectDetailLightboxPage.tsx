@@ -83,25 +83,44 @@ export default function ProjectDetailLightboxPage() {
     return {} as any;
   }, [contents]);
   const pageBg = (meta as any)?.bg || "#f5f6f8";
+  const savedTextColor = (meta as any)?.textColor;
+  
+  // 사용자가 설정한 배경색을 그대로 사용 (테마에 따라 변경하지 않음)
+  const effectiveBg = pageBg;
+  
+  // 텍스트 색상 결정: 저장된 값이 있으면 사용, 없으면 기본값(라이트=검은색, 다크=흰색)
+  const getDefaultTextColor = () => {
+    try {
+      return document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000';
+    } catch {
+      return '#000000';
+    }
+  };
+  const textColor = savedTextColor || getDefaultTextColor();
 
   const closeLightbox = () => { try { nav(-1); } catch { nav("/search"); } };
 
   return (
-    <div className="min-h-screen w-full" style={{ background: pageBg }}>
+    <div className="min-h-screen w-full bg-[#f5f6f8] dark:bg-black">
+      <style>{`
+        .project-content-editor.ql-editor {
+          color: ${textColor} !important;
+        }
+      `}</style>
       <div className="w-full flex justify-center items-start">
         <div className="flex flex-row items-start w-full" style={{ maxWidth: 1440 }}>
           {/* 캔버스 영역 */}
           <div className="flex-1 overflow-x-hidden">
             <div className="max-w-[1200px] mx-auto py-6 px-6">
-              <div className="ql-snow">
-                <div className="ql-editor" dangerouslySetInnerHTML={{ __html: normalizedHtml }} />
+              <div className="ql-snow" style={{ backgroundColor: effectiveBg, color: textColor }}>
+                <div className="ql-editor project-content-editor" style={{ color: textColor }} dangerouslySetInnerHTML={{ __html: normalizedHtml }} />
               </div>
               <div className="mt-6">
                 <ProjectStatsBox likes={0} views={0} comments={0} projectName={projectDetail?.title || ""} date={new Date().toLocaleDateString()} category={projectDetail?.tools || ""} projectId={projectId} />
               </div>
               {/* 작성자 하단 섹션 */}
               <div className="mt-12 border-t dark:border-[var(--border-color)] pt-8">
-                <div className="text-center font-bold text-[18px] text-black dark:text-black">{author?.nickname || "사용자"}</div>
+                <div className="text-center font-bold text-[18px] text-black dark:text-white">{author?.nickname || "사용자"}</div>
                 <div className="mt-6">
                   {others.length > 0 ? (
                     <div className="grid grid-cols-3 gap-4">
@@ -131,6 +150,11 @@ export default function ProjectDetailLightboxPage() {
                 shareUrl: projectDetail.shareUrl,
                 coverUrl: projectDetail.coverUrl,
                 isOwner: false,
+                deployEnabled: projectDetail.deployEnabled,
+                qrCodeEnabled: projectDetail.qrCodeEnabled,
+                demoUrl: projectDetail.demoUrl,
+                frontendBuildCommand: projectDetail.frontendBuildCommand,
+                backendBuildCommand: projectDetail.backendBuildCommand,
               }} onCommentClick={() => {}} />
             )}
           </div>

@@ -26,4 +26,9 @@ public class ProjectRequest {
     private String extraRepoUrl;
     private Boolean deployEnabled;
 
+    // GitHub 설정 정보 (배포용)
+    private String githubOwner;
+    private String githubRepo;
+    private String githubBaseBranch;
+
 }

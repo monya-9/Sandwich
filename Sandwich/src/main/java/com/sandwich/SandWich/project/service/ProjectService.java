@@ -2,6 +2,7 @@ package com.sandwich.SandWich.project.service;
 
 import com.sandwich.SandWich.common.dto.PageResponse;
 import com.sandwich.SandWich.common.util.QRCodeGenerator;
+import com.sandwich.SandWich.discovery.service.HotDeveloperService;
 import com.sandwich.SandWich.project.domain.Project;
 import com.sandwich.SandWich.project.dto.ProjectDetailResponse;
 import com.sandwich.SandWich.project.dto.ProjectListItemResponse;
@@ -39,6 +40,7 @@ public class ProjectService {
     private final FollowRepository followRepository;
     private final Clock clock;
     private final CreditUseService creditUseService;
+    private final HotDeveloperService hotDeveloperService;
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
@@ -49,6 +51,9 @@ public class ProjectService {
     // 공유 URL 도메인 (dev / prod 환경에 따라 변경 가능)
     private static final String SHARE_BASE_URL = "https://sandwich-dev.com";
 
+    // 데모(배포) URL 도메인 (CloudFront)
+    private static final String DEMO_BASE_URL = "https://d11ngnf9bl79gb.cloudfront.net";
+
     @Transactional
     public ProjectResponse createProject(ProjectRequest request, User user) {
         Project project = new Project();
@@ -58,7 +63,9 @@ public class ProjectService {
         project.setImage(request.getImage());
         project.setTools(request.getTools());
         project.setRepositoryUrl(request.getRepositoryUrl());
-        project.setDemoUrl(request.getDemoUrl());
+
+        project.setDemoUrl(null);
+
         project.setStartYear(request.getStartYear());
         project.setEndYear(request.getEndYear());
         project.setIsTeam(request.getIsTeam());
@@ -69,6 +76,11 @@ public class ProjectService {
         project.setBackendBuildCommand(request.getBackendBuildCommand());
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
+        
+        // GitHub 설정 정보
+        project.setGithubOwner(request.getGithubOwner());
+        project.setGithubRepo(request.getGithubRepo());
+        project.setGithubBaseBranch(request.getGithubBaseBranch());
 
         // 배포 여부 플래그
         Boolean deployEnabled = (request.getDeployEnabled() != null && request.getDeployEnabled());
@@ -77,9 +89,16 @@ public class ProjectService {
         // 1차 저장
         Project saved = projectRepository.save(project);
 
-        // 공유 URL (SandWich 상세 페이지) 생성
-        String previewUrl = SHARE_BASE_URL + "/" + user.getUsername() + "/" + saved.getId();
-        saved.setShareUrl(previewUrl);
+        // --- 공유 URL (SandWich 상세 페이지) 생성 ---
+        String shareUrl = SHARE_BASE_URL + "/" + user.getUsername() + "/" + saved.getId();
+        saved.setShareUrl(shareUrl);
+
+        // --- 배포가 ON이면 demoUrl도 서버에서 생성 ---
+        if (Boolean.TRUE.equals(deployEnabled)) {
+            String demoUrl = buildDemoUrl(user, saved);
+            saved.setDemoUrl(demoUrl);
+            log.info("[DEMO_URL][CREATE] projectId={} demoUrl={}", saved.getId(), demoUrl);
+        }
 
         // --- 정책 검증 1: deployEnabled=false 인데 qrCodeEnabled=true 이면 금지 ---
         if (Boolean.TRUE.equals(request.getQrCodeEnabled()) && !Boolean.TRUE.equals(deployEnabled)) {
@@ -121,10 +140,21 @@ public class ProjectService {
                     user.getId(), saved.getId(), PROJECT_DEPLOY_COST, remaining);
         }
 
-        // 다시 저장 (shareUrl + qrImageUrl 포함)
+        // 다시 저장 (shareUrl + demoUrl + qrImageUrl 포함)
         projectRepository.save(saved);
 
-        return new ProjectResponse(saved.getId(), previewUrl);
+        return new ProjectResponse(saved.getId(), shareUrl);
+    }
+
+    /**
+     * DevOps랑 약속된 규칙으로 demoUrl 생성
+     * 지금은 예시로 userId/projectId/index.html 로 구성해둠.
+     * 실제 규칙에 맞게 내부만 바꾸면 됨.
+     */
+    private String buildDemoUrl(User user, Project project) {
+        Long userId = user.getId();
+        Long projectId = project.getId();
+        return DEMO_BASE_URL + "/" + userId + "/" + projectId + "/index.html";
     }
 
     @Transactional(readOnly = true)
@@ -153,6 +183,9 @@ public class ProjectService {
                 .backendBuildCommand(project.getBackendBuildCommand())
                 .portNumber(project.getPortNumber())
                 .extraRepoUrl(project.getExtraRepoUrl())
+                .githubOwner(project.getGithubOwner())
+                .githubRepo(project.getGithubRepo())
+                .githubBaseBranch(project.getGithubBaseBranch())
                 .owner(project.getUser() != null ? new ProjectDetailResponse.Owner(project.getUser()) : null)
                 .build();
     }
@@ -164,7 +197,6 @@ public class ProjectService {
         return PageResponse.of(mapped);
     }
 
-    // 필터/팔로우/검색 대응 (정렬 최신순 고정)
     @Transactional(readOnly = true)
     public PageResponse<ProjectListItemResponse> findAllProjects(
             String q,
@@ -229,16 +261,15 @@ public class ProjectService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
 
-        // 배포 ON/OFF 토글 감지용
         Boolean beforeDeployEnabled = project.getDeployEnabled();
 
-        // 필드 업데이트
         project.setTitle(request.getTitle());
         project.setDescription(request.getDescription());
         project.setImage(request.getImage());
         project.setTools(request.getTools());
         project.setRepositoryUrl(request.getRepositoryUrl());
-        project.setDemoUrl(request.getDemoUrl());
+
+        // demoUrl도 이제는 서버가 관리 → 요청 값은 무시
         project.setStartYear(request.getStartYear());
         project.setEndYear(request.getEndYear());
         project.setIsTeam(request.getIsTeam());
@@ -249,12 +280,27 @@ public class ProjectService {
         project.setBackendBuildCommand(request.getBackendBuildCommand());
         project.setPortNumber(request.getPortNumber());
         project.setExtraRepoUrl(request.getExtraRepoUrl());
+        
+        // GitHub 설정 정보
+        project.setGithubOwner(request.getGithubOwner());
+        project.setGithubRepo(request.getGithubRepo());
+        project.setGithubBaseBranch(request.getGithubBaseBranch());
 
         Boolean afterDeployEnabled =
                 request.getDeployEnabled() != null && request.getDeployEnabled();
         project.setDeployEnabled(afterDeployEnabled);
 
-        // --- 정책 검증 1: deployEnabled=false 인데 qrCodeEnabled=true 인 경우 방지 ---
+        // 배포가 새로 켜지는 순간 demoUrl 생성
+        boolean wasDisabled = (beforeDeployEnabled == null || !beforeDeployEnabled);
+        boolean nowEnabled = Boolean.TRUE.equals(afterDeployEnabled);
+
+        if (nowEnabled && (wasDisabled || project.getDemoUrl() == null)) {
+            String demoUrl = buildDemoUrl(actor, project);
+            project.setDemoUrl(demoUrl);
+            log.info("[DEMO_URL][UPDATE] projectId={} demoUrl={}", project.getId(), demoUrl);
+        }
+
+        // deploy=false 인데 qr=true → 금지
         if (Boolean.TRUE.equals(project.getQrCodeEnabled()) && !Boolean.TRUE.equals(project.getDeployEnabled())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -262,10 +308,8 @@ public class ProjectService {
             );
         }
 
-        // --- QR 생성/갱신 정책 ---
-        // 조건: 배포 ON + qrCodeEnabled = true + demoUrl 존재
+        // QR 생성/갱신: 배포 ON + qrCodeEnabled = true + demoUrl 존재
         if (Boolean.TRUE.equals(project.getDeployEnabled()) && Boolean.TRUE.equals(project.getQrCodeEnabled())) {
-
             String demoUrl = project.getDemoUrl();
             if (demoUrl == null || demoUrl.isBlank()) {
                 throw new ResponseStatusException(
@@ -279,18 +323,11 @@ public class ProjectService {
             String qrImageUrl = s3Uploader.uploadQrImage(qrImage);
             project.setQrImageUrl(qrImageUrl);
             log.info("[QR 업로드][UPDATE] projectId={} S3 URL={}", project.getId(), qrImageUrl);
-        } else {
-            // 선택: qrCodeEnabled=false 로 바꾼 경우 QR 이미지 제거하고 싶으면 사용
-            // project.setQrImageUrl(null);
         }
 
         projectRepository.save(project);
 
-        // --- 크레딧 차감 정책 ---
-        // before=false/null → after=true 인 시점에만 10,000 차감
-        boolean wasDisabled = (beforeDeployEnabled == null || !beforeDeployEnabled);
-        boolean nowEnabled = Boolean.TRUE.equals(afterDeployEnabled);
-
+        // 크레딧: before=false/null → after=true 인 시점에만 차감
         if (wasDisabled && nowEnabled) {
             long remaining = creditUseService.useCredits(
                     actor.getId(),
@@ -310,6 +347,7 @@ public class ProjectService {
         if (!project.getUser().getId().equals(actor.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
         }
-        projectRepository.delete(project); // orphanRemoval=true 로 콘텐츠/뷰 등 함께 삭제
+        projectRepository.delete(project);
+        hotDeveloperService.evictAll();
     }
 }
