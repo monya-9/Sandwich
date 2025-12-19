@@ -92,26 +92,79 @@ def _take_until(text, start_pos, next_pat):
     return text[start_pos:end]
 
 def extract_examples(summary: str):
+    """
+    summary에서 예시 입력/출력을 뽑아 tests 리스트로 만든다.
+    포맷:
+      예시 입력:
+      <여러 줄 입력...>
+      예시 출력:
+      <다음 줄 또는 첫 번째 비어있지 않은 줄에 정답>
+
+    예전처럼 '예시 출력: 2' 한 줄에 나오는 경우와
+    W47처럼 다음 줄에 나오는 경우 둘 다 지원.
+    """
     s = (summary or "").replace("\r\n","\n")
-    tests, ins, outs = [], list(IN_TAG.finditer(s)), list(OUT_TAG.finditer(s))
+    tests = []
+    ins = list(IN_TAG.finditer(s))
+    outs = list(OUT_TAG.finditer(s))
+
     for im in ins:
-        block = _take_until(s, im.end(), OUT_TAG).strip("\n ")
-        if block and not block.endswith("\n"): block += "\n"
+        # 이 입력 이후에 나오는 첫 번째 출력 태그 찾기
         om = next((o for o in outs if o.start() > im.end()), None)
-        if not om: continue
-        line = s[om.end():].split("\n",1)[0].strip()
-        mnum = re.search(r"-?\d+", line)
-        out_tok = mnum.group(0) if mnum else (line.split()[0] if line else "")
-        if block and out_tok: tests.append({"stdin": block, "stdout": out_tok})
+
+        # 입력 블록: 입력 태그 이후 ~ 다음 출력 태그 이전까지
+        block = _take_until(s, im.end(), OUT_TAG).strip("\n ")
+        if block and not block.endswith("\n"):
+            block += "\n"
+
+        # 출력값 추출
+        out_tok = ""
+        if om:
+            # 출력 태그 이후의 텍스트를 줄 단위로 나눈다
+            rest_lines = s[om.end():].splitlines()
+
+            # 1) 첫 줄에서 숫자/토큰 시도 (예: "예시 출력: 2" 형식)
+            if rest_lines:
+                first = rest_lines[0].strip()
+                if first:
+                    mnum = re.search(r"-?\d+(?:\.\d+)?", first)
+                    if mnum:
+                        out_tok = mnum.group(0)
+                    else:
+                        out_tok = first.split()[0]
+
+            # 2) 첫 줄이 비어 있거나 숫자가 없으면
+            #    이후 첫 번째 비어있지 않은 줄에서 숫자/토큰 찾기
+            if not out_tok:
+                for line in rest_lines[1:]:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    mnum = re.search(r"-?\d+(?:\.\d+)?", line)
+                    if mnum:
+                        out_tok = mnum.group(0)
+                    else:
+                        out_tok = line.split()[0]
+                    break
+
+        if block and out_tok:
+            tests.append({"stdin": block, "stdout": out_tok})
+
+    # 중복 제거
     uniq, seen = [], set()
     for t in tests:
-        k=(t["stdin"], t["stdout"])
-        if k in seen: continue
-        seen.add(k); uniq.append(t)
+        k = (t["stdin"], t["stdout"])
+        if k in seen:
+            continue
+        seen.add(k)
+        uniq.append(t)
     return uniq
 
 def write_tests(week: str, tests):
-    if not tests: raise RuntimeError("no example tests found in summary")
+    if not tests:
+        # 여기서 바로 죽으니까 .json이 안 만들어졌던 것.
+        # extract_examples가 개선되면 정상 생성됨.
+        raise RuntimeError("no example tests found in summary")
     dst = TESTS_DIR / f"{week}.json"
     dst.write_text(json.dumps({"tests": tests}, ensure_ascii=False, indent=2), encoding="utf-8")
     return dst
