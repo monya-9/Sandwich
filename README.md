@@ -96,10 +96,10 @@ void throwExceptionWhenRateLimitExceeded() throws Exception {
            .andExpect(status().isTooManyRequests())
            .andExpect(jsonPath("$.code").value("RATE_LIMIT_MINUTE"));
 }
-2. JWT Token 로직 검증 (Unit Test) 토큰 생성 및 파싱, 그리고 잘못된 토큰 입력 시의 예외 처리를 검증합니다.
+```
+**2. JWT Token 로직 검증 (Unit Test) 토큰 생성 및 파싱, 그리고 잘못된 토큰 입력 시의 예외 처리를 검증합니다.**
 
-Java
-
+```Java
 @Test
 void accessToken_생성_및_이메일_추출_성공() {
     String email = "testuser@example.com";
@@ -119,10 +119,11 @@ void 잘못된_토큰_입력시_JwtInvalidException_발생() {
         jwtUtil.parseClaims(invalidToken);
     });
 }
-3. reCAPTCHA 필터 검증 (Slice Test) 보안이 필요한 경로에 토큰 없이 접근할 경우 차단되는지 확인합니다.
+```
 
-Java
-
+**3. reCAPTCHA 필터 검증 (Slice Test) 보안이 필요한 경로에 토큰 없이 접근할 경우 차단되는지 확인합니다.**
+   
+```Java
 @Test 
 @DisplayName("검증 대상 경로 + 토큰 없음 → 400 RECAPTCHA_FAIL")
 void failWhenMissingTokenOnTargetPath() throws Exception {
@@ -130,6 +131,6 @@ void failWhenMissingTokenOnTargetPath() throws Exception {
            .andExpect(status().isBadRequest())
            .andExpect(jsonPath("$.code").value("RECAPTCHA_FAIL"));
 }
-
+```
 ----
 ## ⚙️ 설치 및 실행 방법
