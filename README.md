@@ -59,7 +59,7 @@
 
 ## 🧪 Testing Strategy
 
-서비스의 핵심 비즈니스 로직인 **인증(Auth), 보안(Security), 요청 제어(Rate Limit)**의 안정성을 확보하기 위해 단위 테스트와 슬라이스 테스트를 수행했습니다.
+서비스의 핵심 비즈니스 로직인 **인증(Auth), 보안(Security), 요청 제어(Rate Limit)** 의 안정성을 확보하기 위해 단위 테스트와 슬라이스 테스트를 수행했습니다.
 
 ### 🛠 Tech Stack
 - **Framework**: JUnit 5
