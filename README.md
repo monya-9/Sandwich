@@ -116,7 +116,7 @@ void failWhenMissingTokenOnTargetPath() throws Exception {
     m.perform(post("/api/auth/login"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("RECAPTCHA_FAIL"));
-}```
+}
 
 ----
 ## ⚙️ 설치 및 실행 방법
