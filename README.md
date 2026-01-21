@@ -92,4 +92,31 @@ void throwExceptionWhenRateLimitExceeded() throws Exception {
            .andExpect(jsonPath("$.code").value("RATE_LIMIT_MINUTE"));
 }
 
+// JwtUtil
+@Test
+void accessToken_생성_및_이메일_추출_성공() {
+    String email = "testuser@example.com";
+    String role = "ROLE_USER";
+    String token = jwtUtil.createAccessToken(email, role);
+    String extractedEmail = jwtUtil.extractUsername(token);
+    assertEquals(email, extractedEmail);
+}
+
+@Test
+void 잘못된_토큰_입력시_JwtInvalidException_발생() {
+    String invalidToken = "this.is.not.a.valid.token";
+    assertThrows(JwtInvalidException.class, () -> {
+        jwtUtil.parseClaims(invalidToken);
+    });
+}
+
+// reCAPTCHA
+@Test @DisplayName("검증 대상 경로 + 토큰 없음 → 400 RECAPTCHA_FAIL")
+void failWhenMissingTokenOnTargetPath() throws Exception {
+    m.perform(post("/api/auth/login"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("RECAPTCHA_FAIL"));
+}```
+
+----
 ## ⚙️ 설치 및 실행 방법
