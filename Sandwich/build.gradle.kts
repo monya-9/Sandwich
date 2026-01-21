@@ -2,7 +2,28 @@ plugins {
    java
    id("org.springframework.boot") version "3.3.11"
    id("io.spring.dependency-management") version "1.1.7"
+   id("jacoco")
 }
+
+jacoco {
+   toolVersion = "0.8.11"
+}
+
+tasks.test {
+   useJUnitPlatform()
+   finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+   dependsOn(tasks.test)
+
+   reports {
+      html.required.set(true)
+      xml.required.set(true)
+      csv.required.set(false)
+   }
+}
+
 
 group = "com.sandwich"
 version = "0.0.1-SNAPSHOT"
@@ -38,7 +59,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.34")
    developmentOnly("org.springframework.boot:spring-boot-devtools")
    implementation ("org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE")
-   implementation ("me.paulschwarz:spring-dotenv:2.5.4")
+//   implementation ("me.paulschwarz:spring-dotenv:2.5.4")
    implementation("com.google.zxing:core:3.5.1")
    implementation("com.google.zxing:javase:3.5.1")
    implementation("com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.4")
