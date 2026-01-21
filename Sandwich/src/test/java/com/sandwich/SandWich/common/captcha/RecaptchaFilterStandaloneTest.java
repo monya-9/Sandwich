@@ -57,14 +57,30 @@ class RecaptchaFilterStandaloneTest {
     private RecaptchaProperties enabledProps() {
         RecaptchaProperties p = new RecaptchaProperties();
         p.setEnabled(true);
-        p.setPaths("/api/auth/login,/api/auth/signup");
-        p.setThreshold(0.5);
         p.setTestBypassToken("dev-ok");
-        p.setSecret("dummy");
+
+        p.getV3().setPaths("/api/auth/login,/api/auth/signup");
+        p.getV3().setThreshold(0.5);
+        p.getV3().setSecret("dummy");
+
         return p;
     }
+
     // 검증기 스텁: dev-ok만 성공
-    private RecaptchaVerifier stubVerifier() { return token -> "dev-ok".equals(token); }
+    private RecaptchaVerifier stubVerifier() {
+        return new RecaptchaVerifier() {
+            @Override
+            public boolean verifyV3(String token, String secret, Double threshold) {
+                return "dev-ok".equals(token);
+            }
+
+            @Override
+            public boolean verifyV2(String token, String secret) {
+                return "dev-ok".equals(token);
+            }
+        };
+    }
+
 
     @Test @DisplayName("검증 대상 경로 + 토큰 없음 → 400 RECAPTCHA_FAIL")
     void failWhenMissingTokenOnTargetPath() throws Exception {
@@ -92,7 +108,7 @@ class RecaptchaFilterStandaloneTest {
     void passWhenDisabled() throws Exception {
         RecaptchaProperties p = new RecaptchaProperties();
         p.setEnabled(false);
-        p.setPaths("/api/auth/login");
+        p.getV3().setPaths("/api/auth/login");
         MockMvc m = mvc(p, stubVerifier());
         m.perform(post("/api/auth/login"))
                 .andExpect(status().isOk());
