@@ -57,4 +57,39 @@
 
 ---
 
+## 🧪 Testing Strategy
+
+서비스의 핵심 비즈니스 로직인 **인증(Auth), 보안(Security), 요청 제어(Rate Limit)**의 안정성을 확보하기 위해 단위 테스트와 슬라이스 테스트를 수행했습니다.
+
+### 🛠 Tech Stack
+- **Framework**: JUnit 5
+- **Mocking**: Mockito (Service 계층 의존성 격리)
+- **Slice Test**: MockMvc (Standalone Setup을 통한 필터/인터셉터 독립 검증)
+
+### ✅ Key Test Cases
+
+| Category | Test Target | Description |
+| :--- | :--- | :--- |
+| **Auth** | `JwtUtil` | Access/Refresh Token 생성, 파싱 및 만료 예외 처리 검증 |
+| **Infra** | `RedisUtil` | Redis 저장소의 Token 저장, 조회, TTL 만료 및 삭제 로직 검증 |
+| **Security** | `RecaptchaFilter` | 검증 대상 경로 접근 시 토큰 누락(`400`) 및 우회 토큰(`200`) 동작 확인 |
+| **Limit** | `RateLimitInterceptor` | 분당/일일 요청 제한 초과 시 `429 Too Many Requests` 예외 발생 검증 |
+| **Email** | `VerificationService` | 인증 코드 일치/불일치/만료 시나리오별 성공 및 예외 처리 검증 |
+
+### 💻 Code Snippet (Rate Limit)
+
+```java
+@Test
+@DisplayName("분당 요청 제한 초과 시 429 Too Many Requests 반환")
+void throwExceptionWhenRateLimitExceeded() throws Exception {
+    // 1. 첫 번째 요청: 성공 (200 OK)
+    mockMvc.perform(post("/api/challenges/1/votes"))
+           .andExpect(status().isOk());
+
+    // 2. 두 번째 요청: 제한 초과 (429 Too Many Requests)
+    mockMvc.perform(post("/api/challenges/1/votes"))
+           .andExpect(status().isTooManyRequests())
+           .andExpect(jsonPath("$.code").value("RATE_LIMIT_MINUTE"));
+}
+
 ## ⚙️ 설치 및 실행 방법
